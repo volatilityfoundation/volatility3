@@ -21,10 +21,9 @@ class Sessions(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
@@ -32,12 +31,17 @@ class Sessions(interfaces.plugins.PluginInterface):
                                          optional = True)
         ]
 
-    def _generator(self, procs):
+    def _generator(self):
+        kernel = self.context.modules[self.config['kernel']]
+        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         # Collect all the values as we will want to group them later
         sessions = {}
 
-        for proc in procs:
+        for proc in pslist.PsList.list_processes(self.context,
+                                                 kernel.layer_name,
+                                                 kernel.symbol_table_name,
+                                                 filter_func = filter_func):
 
             session_id = proc.get_session_id()
 
@@ -56,7 +60,7 @@ class Sessions(interfaces.plugins.PluginInterface):
                 if var.lower() == 'sessionname':
                     session_type = val
 
-            # Concat Domain and User 
+            # Concat Domain and User
             full_user = f'{user_domain}/{user_name}'
             if full_user == '/':
                 full_user = renderers.NotAvailableValue()
@@ -85,12 +89,5 @@ class Sessions(interfaces.plugins.PluginInterface):
 
     def run(self):
 
-        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
-
         return renderers.TreeGrid([("Session ID", int), ('Session Type', str), ("Process ID", int), ("Process", str),
-                                   ("User Name", str), ("Create Time", datetime.datetime)],
-                                  self._generator(
-                                      pslist.PsList.list_processes(self.context,
-                                                                   self.config['primary'],
-                                                                   self.config['nt_symbols'],
-                                                                   filter_func = filter_func)))
+                                   ("User Name", str), ("Create Time", datetime.datetime)], self._generator())
