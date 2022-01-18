@@ -74,10 +74,6 @@ class Timeliner(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.StringRequirement(name = 'plugins',
-                                           description = "Comma separated list of plugins to run",
-                                           optional = True,
-                                           default = None),
             requirements.BooleanRequirement(
                 name = 'record-config',
                 description = "Whether to record the state of all the plugins once complete",
