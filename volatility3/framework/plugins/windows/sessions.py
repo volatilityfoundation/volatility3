@@ -9,11 +9,12 @@ from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.plugins.windows import pslist
+from volatility3.plugins import timeliner
 
 vollog = logging.getLogger(__name__)
 
 
-class Sessions(interfaces.plugins.PluginInterface):
+class Sessions(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """lists Processes with Session information extracted from Environmental Variables"""
 
     _required_framework_version = (2, 0, 0)
@@ -86,6 +87,15 @@ class Sessions(interfaces.plugins.PluginInterface):
             for row in rows:
                 yield 0, (row.get('session_id'), row.get('session_type'), row.get('process_id'),
                           row.get('process_name'), row.get('user_name'), row.get('process_start'))
+
+    def generate_timeline(self):
+        for row in self._generator():
+            _depth, row_data = row
+            # Only add to timeline if we have the username
+            # Without the user context PSList output is identical
+            if isinstance(row_data[4], str):
+                description = f"Process: {row_data[2]} {row_data[3]} started by user {row_data[4]}"
+                yield (description, timeliner.TimeLinerType.CREATED, row_data[5])
 
     def run(self):
 
