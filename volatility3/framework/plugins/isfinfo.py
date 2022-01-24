@@ -1,17 +1,16 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-import base64
 import json
 import logging
 import os
 import pathlib
 import zipfile
-from typing import List, Type, Any, Generator
+from typing import Generator, List
 
 from volatility3 import schemas, symbols
-from volatility3.framework import interfaces, renderers, constants
-from volatility3.framework.automagic import mac, linux, symbol_cache
+from volatility3.framework import constants, interfaces, renderers
+from volatility3.framework.automagic import symbol_cache
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.layers import resources
@@ -23,7 +22,7 @@ class IsfInfo(plugins.PluginInterface):
     """Determines information about the currently available ISF files, or a specific one"""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -39,7 +38,10 @@ class IsfInfo(plugins.PluginInterface):
             requirements.BooleanRequirement(name = 'validate',
                                             description = 'Validate against schema if possible',
                                             default = False,
-                                            optional = True)
+                                            optional = True),
+            requirements.VersionRequirement(name = 'SQLiteCache',
+                                            component = symbol_cache.SqliteCache,
+                                            version = (1, 0, 0))
         ]
 
     @classmethod
@@ -61,14 +63,6 @@ class IsfInfo(plugins.PluginInterface):
                         for extension in constants.ISF_EXTENSIONS:
                             if filename.endswith(extension):
                                 yield pathlib.Path(base_name).as_uri()
-
-    def _get_banner(self, clazz: Type[symbol_cache.SymbolBannerCache], data: Any) -> str:
-        """Gets a banner from an ISF file"""
-        banner_symbol = data.get('symbols', {}).get(clazz.symbol_name, {}).get('constant_data',
-                                                                               renderers.NotAvailableValue())
-        if not isinstance(banner_symbol, interfaces.renderers.BaseAbsentValue):
-            banner_symbol = str(base64.b64decode(banner_symbol), encoding = 'latin-1')
-        return banner_symbol
 
     def _generator(self):
         if self.config.get('isf', None) is not None:
@@ -101,7 +95,6 @@ class IsfInfo(plugins.PluginInterface):
         # Process the filtered list
         for entry in filtered_list:
             num_types = num_enums = num_bases = num_symbols = 0
-            windows_info = linux_banner = mac_banner = renderers.NotAvailableValue()
             valid = "Unknown"
             with resources.ResourceAccessor().open(url = entry) as fp:
                 try:
@@ -111,20 +104,20 @@ class IsfInfo(plugins.PluginInterface):
                     num_enums = len(data.get('enums', []))
                     num_bases = len(data.get('base_types', []))
 
-                    linux_banner = self._get_banner(linux.LinuxBannerCache, data)
-                    mac_banner = self._get_banner(mac.MacBannerCache, data)
-                    if not linux_banner and not mac_banner:
-                        windows_info = os.path.splitext(os.path.basename(entry))[0]
+                    identifier_cache = symbol_cache.SqliteCache(constants.IDENTIFIERS_PATH)
+                    identifier = identifier_cache.get_identifier(location = entry)
+                    if identifier:
+                        identifier = identifier.decode('utf-8', errors = 'replace')
+                    else:
+                        identifier = renderers.NotAvailableValue()
                     valid = check_valid(data)
                 except (UnicodeDecodeError, json.decoder.JSONDecodeError):
                     vollog.warning(f"Invalid ISF: {entry}")
-            yield (0, (entry, valid, num_bases, num_types, num_symbols, num_enums, windows_info, linux_banner,
-                       mac_banner))
+            yield (0, (entry, valid, num_bases, num_types, num_symbols, num_enums, identifier))
 
     # Try to open the file, load it as JSON, read the data from it
 
     def run(self):
         return renderers.TreeGrid([("URI", str), ("Valid", str),
                                    ("Number of base_types", int), ("Number of types", int), ("Number of symbols", int),
-                                   ("Number of enums", int), ("Windows info", str), ("Linux banner", str),
-                                   ("Mac banner", str)], self._generator())
+                                   ("Number of enums", int), ("Identifying infomration", str)], self._generator())

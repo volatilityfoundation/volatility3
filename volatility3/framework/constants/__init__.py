@@ -68,10 +68,13 @@ if sys.platform == 'win32':
 os.makedirs(CACHE_PATH, exist_ok = True)
 
 LINUX_BANNERS_PATH = os.path.join(CACHE_PATH, "linux_banners.cache")
-""""Default location to record information about available linux banners"""
+"""Default location to record information about available linux banners"""
 
 MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
-""""Default location to record information about available mac banners"""
+"""Default location to record information about available mac banners"""
+
+IDENTIFIERS_PATH = os.path.join(CACHE_PATH, "identifiers.cache")
+"""Default location to record information about available identifiers"""
 
 BUG_URL = "https://github.com/volatilityfoundation/volatility3/issues"
 
