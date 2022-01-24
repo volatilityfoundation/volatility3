@@ -284,7 +284,7 @@ class SqliteCache(CacheManagerInterface):
                 f"SELECT cached FROM cache WHERE remote = True and cached < datetime('now', {self.cache_period})")
             remote_identifiers = RemoteIdentifierFormat(constants.REMOTE_ISF_URL)
             progress_callback(50, 'Reading remote ISF list')
-            for operating_system in ['mac', 'linux', 'windows']:
+            for operating_system in constants.OS_CATEGORIES:
                 identifiers = remote_identifiers.process({}, operating_system = operating_system)
                 for identifier, location in identifiers:
                     cursor.execute(
