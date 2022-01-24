@@ -149,6 +149,8 @@ class SqliteCache(CacheManagerInterface):
     _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
+    cache_period = '-3 days'
+
     def __init__(self, filename: str):
         super().__init__(filename)
         try:
@@ -220,12 +222,14 @@ class SqliteCache(CacheManagerInterface):
         files_to_timestamp = on_disk_locations.intersection(cached_locations)
         if files_to_timestamp:
             result = self._database.cursor().execute("SELECT location FROM cache WHERE local = True "
-                                                     "AND cached < date('now', '-3 days');")
+                                                     f"AND cached < date('now', {self.cache_period});")
             for row in result:
                 if row['location'] in files_to_timestamp:
                     cache_update.add(row['location'])
 
         idextractors = list(volatility3.framework.class_subclasses(IdentifierProcessor))
+
+        # New or not recently updated
 
         counter = 0
         files_to_process = new_locations.union(cache_update)
@@ -271,11 +275,15 @@ class SqliteCache(CacheManagerInterface):
                 vollog.log(constants.LOGLEVEL_VVVV, excp)
         self._database.commit()
 
+        # Remote Entries
+
         if not constants.OFFLINE and constants.REMOTE_ISF_URL:
             progress_callback(0, 'Reading remote ISF list')
+            cursor = self._database.cursor()
+            cursor.execute(
+                f"SELECT cached FROM cache WHERE remote = True and cached < datetime('now', {self.cache_period})")
             remote_identifiers = RemoteIdentifierFormat(constants.REMOTE_ISF_URL)
             progress_callback(50, 'Reading remote ISF list')
-            cursor = self._database.cursor()
             for operating_system in ['mac', 'linux', 'windows']:
                 identifiers = remote_identifiers.process({}, operating_system = operating_system)
                 for identifier, location in identifiers:
@@ -285,6 +293,8 @@ class SqliteCache(CacheManagerInterface):
                     )
             progress_callback(100, 'Reading remote ISF list')
             self._database.commit()
+
+        # Missing entries
 
         if missing_locations:
             self._database.cursor().execute(
