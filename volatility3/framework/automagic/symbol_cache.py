@@ -10,7 +10,7 @@ import urllib
 import urllib.parse
 import urllib.request
 from abc import abstractmethod
-from typing import Dict, Generator, List, Optional
+from typing import Dict, Generator, List, Optional, Tuple
 
 import volatility3.framework
 import volatility3.schemas
@@ -158,10 +158,11 @@ class SqliteCache(CacheManagerInterface):
             self._database = self._connect_storage(filename)
 
     def _connect_storage(self, path: str):
-        database = sqlite3.connect(path, isolation_level = None)
+        database = sqlite3.connect(path)
         database.row_factory = sqlite3.Row
         database.cursor().execute(
             'CREATE TABLE IF NOT EXISTS cache (location TEXT UNIQUE NOT NULL, identifier TEXT, operating_system TEXT, local BOOL, cached DATETIME)')
+        database.commit()
         return database
 
     def find_location(self, identifier: bytes, operating_system: Optional[str]) -> Optional[str]:
@@ -229,6 +230,7 @@ class SqliteCache(CacheManagerInterface):
         counter = 0
         files_to_process = new_locations.union(cache_update)
         number_files_to_process = len(files_to_process)
+        cursor = self._database.cursor()
         for location in files_to_process:
             # Open location
             counter += 1
@@ -246,7 +248,7 @@ class SqliteCache(CacheManagerInterface):
                     if identifier is not None:
                         # We don't try to validate schemas here, we do that on first use
                         # Store in database
-                        self._database.cursor().execute(
+                        cursor.execute(
                             "INSERT OR REPLACE INTO cache (location, identifier, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
                             (
                                 location,
@@ -256,7 +258,7 @@ class SqliteCache(CacheManagerInterface):
                             ))
                         vollog.log(constants.LOGLEVEL_VV, f"Identified {location} as {identifier}")
                     else:
-                        self._database.cursor().execute(
+                        cursor.execute(
                             "INSERT OR REPLACE INTO cache (location, identifier, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
                             (
                                 location,
@@ -267,21 +269,27 @@ class SqliteCache(CacheManagerInterface):
                         vollog.log(constants.LOGLEVEL_VVVV, f"No identifier found for {location}")
             except Exception as excp:
                 vollog.log(constants.LOGLEVEL_VVVV, excp)
+        self._database.commit()
 
         if not constants.OFFLINE and constants.REMOTE_ISF_URL:
+            progress_callback(0, 'Reading remote ISF list')
             remote_identifiers = RemoteIdentifierFormat(constants.REMOTE_ISF_URL)
+            progress_callback(50, 'Reading remote ISF list')
+            cursor = self._database.cursor()
             for operating_system in ['mac', 'linux', 'windows']:
                 identifiers = remote_identifiers.process({}, operating_system = operating_system)
-                for identifier in identifiers:
-                    for location in identifiers[identifier]:
-                        self._database.cursor().execute(
-                            "INSERT OR REPLACE INTO cache(identifier, location, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now')",
-                            (location, identifier, operating_system, False)
-                        )
+                for identifier, location in identifiers:
+                    cursor.execute(
+                        "INSERT OR REPLACE INTO cache(identifier, location, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
+                        (location, identifier, operating_system, False)
+                    )
+            progress_callback(100, 'Reading remote ISF list')
+            self._database.commit()
 
         if missing_locations:
             self._database.cursor().execute(
                 f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})", *missing_locations)
+            self._database.commit()
 
     def get_identifier_dictionary(self, operating_system: Optional[str] = None, local_only: bool = False) -> \
             Dict[bytes, str]:
@@ -350,23 +358,23 @@ class RemoteIdentifierFormat:
             return True
         return False
 
-    def process(self, identifiers: Dict[bytes, List[str]], operating_system: Optional[str]):
+    def process(self, identifiers: Dict[bytes, List[str]], operating_system: Optional[str]) -> Generator[
+        Tuple[bytes, str], None, None]:
         raise ValueError("Identifier List version not verified")
 
-    def process_v1(self, identifiers: Optional[Dict[bytes, List[str]]], operating_system: Optional[str]):
+    def process_v1(self, identifiers: Optional[Dict[bytes, List[str]]], operating_system: Optional[str]) -> Generator[
+        Tuple[bytes, str], None, None]:
         if operating_system in self._data:
             for identifier in self._data[operating_system]:
                 binary_identifier = base64.b64decode(identifier)
                 file_list = identifiers.get(binary_identifier, [])
                 for value in self._data[operating_system][identifier]:
-                    if value not in file_list:
-                        file_list = file_list + [value]
-                    identifiers[binary_identifier] = file_list
+                    yield binary_identifier, value
         if 'additional' in self._data:
             for location in self._data['additional']:
                 try:
                     subrbf = RemoteIdentifierFormat(location)
-                    subrbf.process(identifiers, operating_system)
+                    yield from subrbf.process(identifiers, operating_system)
                 except IOError:
                     vollog.debug(f"Remote file not found: {location}")
         return identifiers
