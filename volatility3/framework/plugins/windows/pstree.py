@@ -68,7 +68,11 @@ class PsTree(interfaces.plugins.PluginInterface):
                 memory = self.context.layers[layer_name]
                 (_, _, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 
-            self._processes[proc.UniqueProcessId] = proc, offset
+            try:
+                self._processes[proc.UniqueProcessId] = proc, offset
+            except exceptions.InvalidAddressException:
+                vollog.info("Invalid process at address {:#x}. Skipping".format(proc.vol.offset))
+                continue
 
         # Build the child/level maps
         for pid in self._processes:
