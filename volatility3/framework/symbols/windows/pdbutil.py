@@ -131,8 +131,14 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         # Check it is actually the MZ header
         if mz_sig != b"MZ":
             return None
-
-        nt_header_start = ord(layer.read(offset + 0x3C, 1))
+        
+        nt_header_start = struct.unpack("<I", layer.read(offset + 0x3C, 4))[0]
+        pe_sig = layer.read(offset + nt_header_start, 2)
+        
+        # Check it is actually the Nt Headers
+        if pe_sig != b"PE":
+            return None
+        
         optional_header_size = struct.unpack('<H', layer.read(offset + nt_header_start + 0x14, 2))[0]
         # Just enough to tell us the max size
         pe_header = layer.read(offset, nt_header_start + 0x16 + optional_header_size)
