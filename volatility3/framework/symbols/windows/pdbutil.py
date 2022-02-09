@@ -357,4 +357,4 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
 
                 guid = (16 * '{:02X}').format(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, ga, gb, gc, gd, ge, gf)
                 if match.start(0) < self.chunk_size:
-                    yield (guid, a, pdb_name, match.start(0))
+                    yield (guid, a, pdb_name, data_offset + match.start(0))
