@@ -15,7 +15,6 @@ class LdrModules(interfaces.plugins.PluginInterface):
     def get_requirements(cls):
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'vadinfo', component = vadinfo.VadInfo, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -43,6 +42,7 @@ class LdrModules(interfaces.plugins.PluginInterface):
         for proc in procs:
             proc_layer_name = proc.add_process_layer()
 
+            # Build dictionaries from different module lists, where the DllBase address is the key and value is the module object
             load_order_mod = dict((mod.DllBase, mod)
                                 for mod in proc.load_order_modules())
             init_order_mod = dict((mod.DllBase, mod)
@@ -50,18 +50,20 @@ class LdrModules(interfaces.plugins.PluginInterface):
             mem_order_mod = dict((mod.DllBase, mod)
                                 for mod in proc.mem_order_modules())
 
+            # Build dictionary of mapped files, where the VAD start address is the key and value is the file name of the mapped file
             mapped_files = {}
             for vad in vadinfo.VadInfo.list_vads(proc, filter_func = filter_func):
                 dos_header = self.context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                    offset = vad.get_start(),
                                    layer_name = proc_layer_name)
                 try:
+                    # Filter out VADs that do not start with a MZ header
                     if dos_header.e_magic != 0x5A4D:
                         continue
                 except exceptions.PagedInvalidAddressException:
                     continue
 
-                mapped_files[int(vad.get_start())] = str(vad.get_file_name() or '')
+                mapped_files[vad.get_start()] = vad.get_file_name()
 
             for base in mapped_files.keys():
                 # Does the base address exist in the PEB DLL lists?
@@ -74,10 +76,10 @@ class LdrModules(interfaces.plugins.PluginInterface):
                                                 max_length = proc.ImageFileName.vol.count,
                                                 errors = 'replace')),
                             format_hints.Hex(base),
-                            str(load_mod != None),
-                            str(init_mod != None),
-                            str(mem_mod != None),
-                            str(mapped_files[base])])
+                            load_mod != None,
+                            init_mod != None,
+                            mem_mod != None,
+                            mapped_files[base]])
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
@@ -86,9 +88,9 @@ class LdrModules(interfaces.plugins.PluginInterface):
         return renderers.TreeGrid([("Pid", int),
                         ("Process", str),
                         ("Base", format_hints.Hex),
-                        ("InLoad", str),
-                        ("InInit", str),
-                        ("InMem", str),
+                        ("InLoad", bool),
+                        ("InInit", bool),
+                        ("InMem", bool),
                         ("MappedPath", str)],
                         self._generator(
                            pslist.PsList.list_processes(context = self.context,
