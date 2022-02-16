@@ -43,6 +43,12 @@ primitives = {
         "signed": False,
         "size": 1
     }),
+    0x30: ("bool8", {
+        "endian": "little",
+        "kind": "bool",
+        "signed": False,
+        "size": 1
+    }),
     0x68: ("int8", {
         "endian": "little",
         "kind": "int",
@@ -67,7 +73,13 @@ primitives = {
         "signed": True,
         "size": 2
     }),
-    # 0x7a: ("rchar16", {}),
+    0x7a: ("rchar16", {
+        "type": "pointer",
+        "subtype": {
+            "kind": "base",
+            "name": "wchar",
+        },
+    }),
     # 0x7b: ("rchar32", {}),
     0x11: ("short", {
         "endian": "little",
@@ -548,6 +560,11 @@ class PdbReader:
 
     def name_strip(self, name):
         """Strips unnecessary components from the start of a symbol name."""
+        if name.startswith("?") and len(name.split("@@")) == 3:
+            new_name = name.split("@@")[0][1:]
+
+            return new_name
+
         new_name = name
 
         if new_name[:1] in ["_", "@", "\u007F"]:
@@ -755,8 +772,17 @@ class PdbReader:
         'LF_BITFIELD': ('LF_BITFIELD', False, None),
         'LF_UDT_SRC_LINE': ('LF_UDT_SRC_LINE', False, None),
         'LF_UDT_MOD_SRC_LINE': ('LF_UDT_MOD_SRC_LINE', False, None),
-        'LF_BUILDINFO': ('LF_BUILDINFO', False, None)
+        'LF_BUILDINFO': ('LF_BUILDINFO', False, None),
+        'LF_NESTTYPE': ('LF_NESTTYPE', True, None),
+        'LF_MFUNC_ID': ('LF_MFUNC_ID', True, None),
+        'LF_MFUNCTION': ('LF_MFUNCTION', False, None),
+        'LF_METHOD': ('LF_METHOD', True, None),
+        'LF_STMEMBER': ('LF_STMEMBER', True, None),
+        'LF_ONEMETHOD': ('LF_ONEMETHOD', True, None),
+        'LF_BCLASS': ('LF_BCLASS', False, None),
     }
+
+    types_to_skip = ["LF_METHODLIST"]
 
     def consume_type(
             self, module: interfaces.context.ModuleInterface, offset: int, length: int
@@ -765,12 +791,12 @@ class PdbReader:
         """Returns a (leaf_type, name, object) Tuple for a type, and the number
         of bytes consumed."""
         leaf_type = self.context.object(module.get_enumeration("LEAF_TYPE"),
-                                        layer_name = module._layer_name,
+                                        layer_name = module.layer_name,
                                         offset = offset)
         consumed = leaf_type.vol.base_type.size
         remaining = length - consumed
-
-        type_handler, has_name, value_attribute = self.type_handlers.get(leaf_type.lookup(),
+        leaf_type_name = leaf_type.lookup()
+        type_handler, has_name, value_attribute = self.type_handlers.get(leaf_type_name,
                                                                          ('LF_UNKNOWN', False, None))
 
         if type_handler in ['LF_FIELDLIST']:
@@ -803,11 +829,24 @@ class PdbReader:
                 else:
                     name = self.parse_string(parsed_obj.name, leaf_type < leaf_type.LF_ST_MAX,
                                              size = remaining - name_offset)
+                    current_consumed = parsed_obj.vol.size + len(name) + 1
                 parsed_obj.name = name
             else:
                 name = None
+                current_consumed = consumed + parsed_obj.vol.size
+
+            if leaf_type == leaf_type.LF_BCLASS:
+                parsed_obj.offset = 0
+                name = "BClass"
+            if leaf_type == leaf_type.LF_MFUNCTION:
+                parsed_obj.name = "void"
+                name = "void"
+
             result = leaf_type, name, parsed_obj
             consumed += current_consumed
+        elif leaf_type_name in self.types_to_skip:
+            result = leaf_type, None, None
+            consumed += remaining
         else:
             raise TypeError(f"Unhandled leaf_type: {leaf_type}")
 
@@ -828,7 +867,9 @@ class PdbReader:
             vollog.warning("Fields structure did not contain a list of fields")
             return result
         for field in fields_struct:
-            _, name, member = field
+            leaf_type, name, member = field
+            if leaf_type in [leaf_type.LF_NESTTYPE, leaf_type.LF_METHOD, leaf_type.LF_STMEMBER, leaf_type.LF_ONEMETHOD]:
+                continue
             result[name] = {"offset": member.offset, "type": self.get_type_from_index(member.field_type)}
         return result
 
