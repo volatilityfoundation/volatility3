@@ -5,13 +5,11 @@
 import datetime
 import logging
 
-from volatility3.framework import constants, renderers, interfaces
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework import exceptions
 from volatility3.framework.renderers import conversion, format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import mft
-
 from volatility3.plugins import timeliner, yarascan
 
 vollog = logging.getLogger(__name__)
@@ -55,7 +53,6 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         si_object = symbol_table + constants.BANG + "STANDARD_INFORMATION_ENTRY"
         fn_object = symbol_table + constants.BANG + "FILE_NAME_ENTRY"
 
-
         # Scan the layer for Raw MFT records and parse the fields
         for offset, _rule_name, _name, _value in layer.scan(context = self.context,
                                                             scanner = yarascan.YaraScanner(rules = rules)):
@@ -68,10 +65,9 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                   offset = offset + attr_base_offset,
                                                   layer_name = layer.name)
 
-
                 # There is no field that has a count of Attributes
                 # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
-                
+
                 while attr_header.AttrType.is_valid_choice:
                     vollog.debug(f"Attr Type: {attr_header.AttrType.lookup()}")
 
@@ -123,6 +119,10 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                   conversion.wintime_to_datetime(attr_data.ModifiedTime),
                                   conversion.wintime_to_datetime(attr_data.UpdatedTime),
                                   conversion.wintime_to_datetime(attr_data.AccessedTime), file_name)
+
+                    # If there's no advancement the loop will never end, so break it now
+                    if attr_header.Length == 0:
+                        break
 
                     # Update the base offset to point to the next attribute
                     attr_base_offset += attr_header.Length

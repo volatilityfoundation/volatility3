@@ -106,6 +106,15 @@ class Timeliner(interfaces.plugins.PluginInterface):
         row from each plugin."""
         # Generate the results for each plugin
         data = []
+
+        # Open the bodyfile now, so we can start outputting to it immediately
+        if self.config.get('create-bodyfile', True):
+            file_data = self.open("volatility.body")
+            fp = io.TextIOWrapper(file_data, write_through = True)
+        else:
+            file_data = None
+            fp = None
+
         for plugin in runable_plugins:
             plugin_name = plugin.__class__.__name__
             self._progress_callback((runable_plugins.index(plugin) * 100) // len(runable_plugins),
@@ -126,17 +135,9 @@ class Timeliner(interfaces.plugins.PluginInterface):
                         times.get(TimeLinerType.ACCESSED, renderers.NotApplicableValue()),
                         times.get(TimeLinerType.CHANGED, renderers.NotApplicableValue())
                     ]))
-            except Exception:
-                vollog.log(logging.INFO, f"Exception occurred running plugin: {plugin_name}")
-                vollog.log(logging.DEBUG, traceback.format_exc())
-        for data_item in sorted(data, key = self._sort_function):
-            yield data_item
 
-        # Write out a body file if necessary
-        if self.config.get('create-bodyfile', True):
-            with self.open("volatility.body") as file_data:
-                with io.TextIOWrapper(file_data, write_through = True) as fp:
-                    for (plugin_name, item) in self.timeline:
+                    # Write each entry because the body file doesn't need to be sorted
+                    if fp:
                         times = self.timeline[(plugin_name, item)]
                         # Body format is: MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime
 
@@ -147,6 +148,18 @@ class Timeliner(interfaces.plugins.PluginInterface):
                                 self._text_format(times.get(TimeLinerType.MODIFIED, "")),
                                 self._text_format(times.get(TimeLinerType.CHANGED, "")),
                                 self._text_format(times.get(TimeLinerType.CREATED, ""))))
+            except Exception:
+                vollog.log(logging.INFO, f"Exception occurred running plugin: {plugin_name}")
+                vollog.log(logging.DEBUG, traceback.format_exc())
+
+        for data_item in sorted(data, key = self._sort_function):
+            yield data_item
+
+        # Write out a body file if necessary
+        if self.config.get('create-bodyfile', True):
+            if fp:
+                fp.close()
+                file_data.close()
 
     def _sanitize_body_format(self, value):
         return value.replace("|", "_")
