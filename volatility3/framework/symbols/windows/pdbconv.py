@@ -74,13 +74,17 @@ primitives = {
         "size": 2
     }),
     0x7a: ("rchar16", {
-        "type": "pointer",
-        "subtype": {
-            "kind": "base",
-            "name": "wchar",
-        },
+        "endian": "little",
+        "kind": "int",
+        "signed": True,
+        "size": 2
     }),
-    # 0x7b: ("rchar32", {}),
+    0x7b: ("rchar32", {
+        "endian": "little",
+        "kind": "int",
+        "signed": True,
+        "size": 4
+    }),
     0x11: ("short", {
         "endian": "little",
         "kind": "int",
