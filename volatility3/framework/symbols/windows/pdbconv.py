@@ -786,6 +786,7 @@ class PdbReader:
         'LF_BCLASS': ('LF_BCLASS', False, None),
     }
 
+    # Skipping these types won't effect the parsing of fieldlists.
     types_to_skip = ["LF_METHODLIST"]
 
     def consume_type(
@@ -872,6 +873,7 @@ class PdbReader:
             return result
         for field in fields_struct:
             leaf_type, name, member = field
+            # These types contain information about the structure or class, and are not relevant to its parsing. Skip them for now.
             if leaf_type in [leaf_type.LF_NESTTYPE, leaf_type.LF_METHOD, leaf_type.LF_STMEMBER, leaf_type.LF_ONEMETHOD]:
                 continue
             result[name] = {"offset": member.offset, "type": self.get_type_from_index(member.field_type)}
