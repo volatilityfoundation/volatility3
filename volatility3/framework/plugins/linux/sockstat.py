@@ -80,10 +80,10 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_handler = self._sock_family_handlers.get(family)
         if sock_handler:
             try:
-                sock_fields = sock_handler(sock)
+                unix_sock, sock_stat = sock_handler(sock)
                 self._update_extended_socket_filters_info(sock, extended)
 
-                return *sock_fields, extended
+                return unix_sock, sock_stat, extended
             except exceptions.SymbolError as e:
                 # Cannot finds the *_sock type in the symbols
                 vollog.log(constants.LOGLEVEL_V, "Error processing socket family '%s': %s", family, e)
