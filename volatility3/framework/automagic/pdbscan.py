@@ -192,9 +192,15 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         if not physical:
             layer_to_scan = virtual_layer_name
 
+        start_scan_address = 0
+        if not physical and context.layers[layer_to_scan].metadata.architecture in ["Intel64"]:
+            # TODO: change this value accordingly when 5-Level paging is supported.
+            start_scan_address = (0x1f0 << 39)
+
         kernel_pdb_names = [bytes(name + ".pdb", "utf-8") for name in constants.windows.KERNEL_MODULE_NAMES]
         kernels = PDBUtility.pdbname_scan(ctx = context,
                                           layer_name = layer_to_scan,
+                                          start = start_scan_address,
                                           page_size = vlayer.page_size,
                                           pdb_names = kernel_pdb_names,
                                           progress_callback = progress_callback)
