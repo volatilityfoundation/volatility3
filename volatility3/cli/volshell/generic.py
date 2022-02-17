@@ -82,7 +82,7 @@ class Volshell(interfaces.plugins.PluginInterface):
     Volshell mode        : {mode}
     Current Layer        : {self.current_layer}
     Current Symbol Table : {self.current_symbol_table}
-    Current Kernel       : {self.current_kernel_name}
+    Current Kernel Name  : {self.current_kernel_name}
 """
 
         sys.ps1 = f"({self.current_layer}) >>> "

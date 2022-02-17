@@ -29,9 +29,10 @@ operating system mode for volshell, and the current layer available for use.
 
         Call help() to see available functions
 
-        Volshell mode       : Generic
-        Current Layer       : primary
-        Current Symbol Table: None
+        Volshell mode        : Generic
+        Current Layer        : primary
+        Current Symbol Table : None
+        Current Kernel Name  : None
 
     (primary) >>>
 
