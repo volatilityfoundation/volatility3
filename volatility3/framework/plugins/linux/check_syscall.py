@@ -152,7 +152,7 @@ class Check_syscall(plugins.PluginInterface):
         except exceptions.SymbolError:
             ia32_symbol = None
 
-        if ia32_symbol != None:
+        if ia32_symbol is not None:
             ia32_info = self._get_table_info(vmlinux, "ia32_sys_call_table", ptr_sz)
             tables.append(("32bit", ia32_info))
 

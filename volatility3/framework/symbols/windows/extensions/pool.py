@@ -128,8 +128,8 @@ class POOL_HEADER(objects.StructType):
                         #  ---------------
                         if addr - optional_headers_length < 0:
                             continue
-                        padding_length = struct.unpack(
-                            "<I", infomask_data[addr - optional_headers_length:addr - optional_headers_length + 4])[0]
+                        padding_length, = struct.unpack(
+                            "<I", infomask_data[addr - optional_headers_length:addr - optional_headers_length + 4])
                         padding_length -= lengths_of_optional_headers[padding_available or 0]
 
                     # Certain versions of windows have PADDING_INFO lengths that are too long

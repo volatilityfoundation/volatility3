@@ -543,7 +543,7 @@ class CommandLine:
                 self._file = io.open(fd, mode = 'w+b')
                 CLIFileHandler.__init__(self, filename)
                 for item in dir(self._file):
-                    if not item.startswith('_') and not item in ['closed', 'close', 'mode', 'name']:
+                    if not item.startswith('_') and item not in ('closed', 'close', 'mode', 'name'):
                         setattr(self, item, getattr(self._file, item))
 
             def __getattr__(self, item):

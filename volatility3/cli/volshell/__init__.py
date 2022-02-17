@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import sys
+import glob
 
 import volatility3.plugins
 import volatility3.symbols
@@ -137,8 +138,7 @@ class VolShell(cli.CommandLine):
             console.setLevel(10 - (partial_args.verbosity - 2))
 
         if partial_args.clear_cache:
-            for cache_filename in glob.glob(os.path.join(constants.CACHE_PATH, '*.cache')):
-                os.unlink(cache_filename)
+            framework.clear_cache()
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
@@ -238,9 +238,14 @@ class VolShell(cli.CommandLine):
                 vollog.debug("Writing out configuration data to config.json")
                 with open("config.json", "w") as f:
                     json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
+        except exceptions.UnsatisfiedException as excp:
+            self.process_unsatisfied_exceptions(excp)
+            parser.exit(1, f"Unable to validate the plugin requirements: {[x for x in excp.unsatisfied]}\n")
 
+        try:
             # Construct and run the plugin
-            constructed.run()
+            if constructed:
+                constructed.run()
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
             parser.exit(1, f"Unable to validate the plugin requirements: {[x for x in excp.unsatisfied]}\n")

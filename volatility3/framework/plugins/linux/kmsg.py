@@ -4,9 +4,9 @@
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Iterator, Tuple, Generator
+from typing import Generator, Iterator, List, Tuple
 
-from volatility3.framework import renderers, interfaces, constants, contexts, class_subclasses
+from volatility3.framework import class_subclasses, constants, contexts, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
@@ -15,39 +15,39 @@ vollog = logging.getLogger(__name__)
 
 
 class DescStateEnum(Enum):
-    desc_miss = -1          # ID mismatch (pseudo state)
-    desc_reserved = 0x0     # reserved, in use by writer
-    desc_committed = 0x1    # committed by writer, could get reopened
-    desc_finalized = 0x2    # committed, no further modification allowed
-    desc_reusable = 0x3     # free, not yet used by any writer
+    desc_miss = -1  # ID mismatch (pseudo state)
+    desc_reserved = 0x0  # reserved, in use by writer
+    desc_committed = 0x1  # committed by writer, could get reopened
+    desc_finalized = 0x2  # committed, no further modification allowed
+    desc_reusable = 0x3  # free, not yet used by any writer
 
 
 class ABCKmsg(ABC):
     """Kernel log buffer reader"""
     LEVELS = (
-        "emerg",     # system is unusable
-        "alert",     # action must be taken immediately
-        "crit",      # critical conditions
-        "err",       # error conditions
-        "warn",      # warning conditions
-        "notice",    # normal but significant condition
-        "info",      # informational
-        "debug",     # debug-level messages
+        "emerg",  # system is unusable
+        "alert",  # action must be taken immediately
+        "crit",  # critical conditions
+        "err",  # error conditions
+        "warn",  # warning conditions
+        "notice",  # normal but significant condition
+        "info",  # informational
+        "debug",  # debug-level messages
     )
 
     FACILITIES = (
-        "kern",      # kernel messages
-        "user",      # random user-level messages
-        "mail",      # mail system
-        "daemon",    # system daemons
-        "auth",      # security/authorization messages
-        "syslog",    # messages generated internally by syslogd
-        "lpr",       # line printer subsystem
-        "news",      # network news subsystem
-        "uucp",      # UUCP subsystem
-        "cron",      # clock daemon
+        "kern",  # kernel messages
+        "user",  # random user-level messages
+        "mail",  # mail system
+        "daemon",  # system daemons
+        "auth",  # security/authorization messages
+        "syslog",  # messages generated internally by syslogd
+        "lpr",  # line printer subsystem
+        "news",  # network news subsystem
+        "uucp",  # UUCP subsystem
+        "cron",  # clock daemon
         "authpriv",  # security/authorization messages (private)
-        "ftp"        # FTP daemon
+        "ftp"  # FTP daemon
     )
 
     def __init__(
@@ -247,12 +247,20 @@ class KmsgFiveTen(ABCKmsg):
     The data block ring 'text_data_ring' contains the records' text strings.
     A pointer to the high level structure is kept in the prb pointer which is
     initialized to a static ringbuffer.
+
+    .. code-block:: c
+
         static struct printk_ringbuffer *prb = &printk_rb_static;
+
     In SMP systems with more than 64 CPUs this ringbuffer size is dynamically
     allocated according the number of CPUs based on the value of
     CONFIG_LOG_CPU_MAX_BUF_SHIFT. The prb pointer is updated consequently to
     this dynamic ringbuffer in setup_log_buf().
+
+    .. code-block:: c
+
         prb = &printk_rb_dynamic;
+
     Behind scenes, log_buf is still used as external buffer.
     When the static printk_ringbuffer struct is initialized, _DEFINE_PRINTKRB
     sets text_data_ring.data pointer to the address in log_buf which points to
@@ -262,12 +270,14 @@ class KmsgFiveTen(ABCKmsg):
     buffer via the prb_init function.
     In that case, the original external static buffer in __log_buf and
     printk_rb_static are unused.
-        ...
+
+    .. code-block:: c
+
         new_log_buf = memblock_alloc(new_log_buf_len, LOG_ALIGN);
         prb_init(&printk_rb_dynamic, new_log_buf, ...);
         log_buf = new_log_buf;
         prb = &printk_rb_dynamic;
-        ...
+
     See printk.c and printk_ringbuffer.c in kernel/printk/ folder for more
     details.
     """

@@ -110,9 +110,9 @@ class LayerWriter(plugins.PluginInterface):
     def _generate_layers(self):
         """List layer names from this run"""
         for name in self.context.layers:
-            yield (0, (name, ))
+            yield (0, (name, self.context.layers[name].__class__.__name__))
 
     def run(self):
         if self.config['list']:
-            return renderers.TreeGrid([("Layer name", str)], self._generate_layers())
+            return renderers.TreeGrid([("Layer name", str), ('Layer type', str)], self._generate_layers())
         return renderers.TreeGrid([("Status", str)], self._generator())

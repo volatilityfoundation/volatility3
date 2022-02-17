@@ -40,7 +40,7 @@ BANG = "!"
 # We use the SemVer 2.0.0 versioning scheme
 VERSION_MAJOR = 2  # Number of releases of the library with a breaking change
 VERSION_MINOR = 0  # Number of changes that only add to the interface
-VERSION_PATCH = 0  # Number of changes that do not change the interface
+VERSION_PATCH = 2  # Number of changes that do not change the interface
 VERSION_SUFFIX = ""
 
 # TODO: At version 2.0.0, remove the symbol_shift feature
@@ -78,6 +78,7 @@ BUG_URL = "https://github.com/volatilityfoundation/volatility3/issues"
 ProgressCallback = Optional[Callable[[float, str], None]]
 """Type information for ProgressCallback objects"""
 
+OS_CATEGORIES = ['windows', 'mac', 'linux']
 
 class Parallelism(enum.IntEnum):
     """An enumeration listing the different types of parallelism applied to

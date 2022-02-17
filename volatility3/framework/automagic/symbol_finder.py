@@ -5,7 +5,7 @@
 import logging
 from typing import Any, Iterable, List, Tuple, Type, Optional, Callable
 
-from volatility3.framework import interfaces, constants
+from volatility3.framework import interfaces, constants, layers
 from volatility3.framework.automagic import symbol_cache
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import scanners

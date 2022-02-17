@@ -40,6 +40,9 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
     priority = 10
     """An ordering to indicate how soon this automagic should be run"""
 
+    exclusion_list = []
+    """A list of plugin categories (typically operating systems) which the plugin will not operate on"""
+
     def __init__(self, context: interfaces.context.ContextInterface, config_path: str, *args, **kwargs) -> None:
         super().__init__(context, config_path)
         for requirement in self.get_requirements():

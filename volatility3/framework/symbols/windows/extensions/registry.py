@@ -264,15 +264,18 @@ class CM_KEY_VALUE(objects.StructType):
         if self_type == RegValueTypes.REG_DWORD:
             if len(data) != struct.calcsize("<L"):
                 raise ValueError(f"Size of data does not match the type of registry value {self.get_name()}")
-            return struct.unpack("<L", data)[0]
+            res, = struct.unpack("<L", data)
+            return res
         if self_type == RegValueTypes.REG_DWORD_BIG_ENDIAN:
             if len(data) != struct.calcsize(">L"):
                 raise ValueError(f"Size of data does not match the type of registry value {self.get_name()}")
-            return struct.unpack(">L", data)[0]
+            res, =  struct.unpack(">L", data)
+            return res
         if self_type == RegValueTypes.REG_QWORD:
             if len(data) != struct.calcsize("<Q"):
                 raise ValueError(f"Size of data does not match the type of registry value {self.get_name()}")
-            return struct.unpack("<Q", data)[0]
+            res, = struct.unpack("<Q", data)
+            return res
         if self_type in [
                 RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK, RegValueTypes.REG_MULTI_SZ,
                 RegValueTypes.REG_BINARY, RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR, RegValueTypes.REG_RESOURCE_LIST,

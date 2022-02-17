@@ -182,6 +182,17 @@ class QuickTextRenderer(CLIRenderer):
         outfd.write("\n")
 
 
+class NoneRenderer(CLIRenderer):
+    """Outputs no results"""
+    name = "none"
+
+    def get_render_options(self):
+        pass
+
+    def render(self, grid: interfaces.renderers.TreeGrid) -> None:
+        if not grid.populated:
+            grid.populate(lambda x, y: True, True)
+
 class CSVRenderer(CLIRenderer):
     _type_renderers = {
         format_hints.Bin: quoted_optional(lambda x: f"0b{x:b}"),
@@ -272,9 +283,10 @@ class PrettyTextRenderer(CLIRenderer):
                 column = grid.columns[column_index]
                 renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
                 data = renderer(node.values[column_index])
+                field_width = max([len(self.tab_stop(x)) for x in f"{data}".split("\n")])
                 max_column_widths[column.name] = max(max_column_widths.get(column.name, len(column.name)),
-                                                     len(f"{data}"))
-                line[column] = data
+                                                     field_width)
+                line[column] = data.split("\n")
             accumulator.append((node.path_depth, line))
             return accumulator
 
@@ -296,7 +308,25 @@ class PrettyTextRenderer(CLIRenderer):
         column_titles = [""] + [column.name for column in grid.columns]
         outfd.write(format_string.format(*column_titles))
         for (depth, line) in final_output:
-            outfd.write(format_string.format("*" * depth, *[line[column] for column in grid.columns]))
+            nums_line = max([len(line[column]) for column in line])
+            for column in line:
+                line[column] = line[column] + ([""] * (nums_line - len(line[column])))
+            for index in range(nums_line):
+                if index == 0:
+                    outfd.write(format_string.format("*" * depth, *[self.tab_stop(line[column][index]) for column in grid.columns]))
+                else:
+                    outfd.write(format_string.format(" " * depth, *[self.tab_stop(line[column][index]) for column in grid.columns]))
+
+    def tab_stop(self, line: str) -> str:
+        tab_width = 8
+        while line.find('\t') >= 0:
+            i = line.find('\t')
+            if (tab_width > 0):
+                pad = " " * (tab_width - (i % tab_width))
+            else:
+                pad = ""
+            line = line.replace("\t", pad, 1)
+        return line
 
 
 class JsonRenderer(CLIRenderer):

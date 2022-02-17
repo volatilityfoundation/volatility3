@@ -6,9 +6,9 @@ import collections
 import collections.abc
 import logging
 import struct
-from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, Union as TUnion, overload
+from typing import Any, ClassVar, Dict, Iterable, List, Optional, Tuple, Type, Union as TUnion, overload
 
-from volatility3.framework import interfaces, constants
+from volatility3.framework import constants, interfaces
 from volatility3.framework.objects import templates, utility
 
 vollog = logging.getLogger(__name__)

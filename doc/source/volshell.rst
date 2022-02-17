@@ -22,7 +22,7 @@ be run.
 When volshell starts, it will show the version of volshell, a brief message indicating how to get more help, the current
 operating system mode for volshell, and the current layer available for use.
 
-.. code-block:: python
+::
 
     Volshell (Volatility 3 Framework) 1.0.1
     Readline imported successfully	PDB scanning finished
@@ -53,7 +53,7 @@ run our examples against.
 We'll start by creating a process variable, and putting the first result from `ps()` in it.  Since the shell is a
 python environment, we can do the following:
 
-.. code-block:: python
+::
 
     (primary) >>> proc = ps()[0]
     (primary) >>> proc
@@ -68,7 +68,7 @@ built-in mechanism for providing more information about a structure, called `dis
 either a type name (which if not prefixed with symbol table name, will use the kernel symbol table identified by the
 automagic).
 
-.. code-block:: python
+::
 
     (primary) >>> dt('_EPROCESS')
     nt_symbols1!_EPROCESS (2624 bytes)
@@ -80,7 +80,7 @@ automagic).
 
 It can also be provided with an object and will interpret the data for each in the process:
 
-.. code-block:: python
+::
 
     (primary) >>> dt(proc)
     nt_symbols1!_EPROCESS (2624 bytes)
@@ -92,7 +92,7 @@ It can also be provided with an object and will interpret the data for each in t
 
 These values can be accessed directory as attributes
 
-.. code-block:: python
+::
 
     (primary) >>> proc.UniqueProcessId
     356
@@ -100,7 +100,7 @@ These values can be accessed directory as attributes
 Pointer structures contain the value they point to, but attributes accessed are forwarded to the object they point to.
 This means that pointers do not need to be explicitly dereferenced to access underling objects.
 
-.. code-block:: python
+::
 
     (primary) >>> proc.Pcb.DirectoryTableBase
     4355817472
@@ -112,7 +112,7 @@ It's possible to run any plugin by importing it appropriately and passing it to 
 method.  In the following example we'll provide no additional parameters.  Volatility will show us which parameters
 were required:
 
-.. code-block:: python
+::
 
     (primary) >>> from volatility3.plugins.windows import pslist
     (primary) >>> display_plugin_output(pslist.PsList)
@@ -124,14 +124,14 @@ was fulfilled.
 We can see all the options that the plugin can accept by access the `get_requirements()` method of the plugin.
 This is a classmethod, so can be called on an uninstantiated copy of the plugin.
 
-.. code-block:: python
+::
 
     (primary) >>> pslist.PsList.get_requirements()
     [<TranslationLayerRequirement: primary>, <SymbolTableRequirement: nt_symbols>, <BooleanRequirement: physical>, <ListRequirement: pid>, <BooleanRequirement: dump>]
 
 We can provide arguments via the `dpo` method call:
 
-.. code-block:: python
+::
 
     (primary) >>> display_plugin_output(pslist.PsList, primary = self.current_layer, nt_symbols = self.config['nt_symbols'])
 
@@ -149,7 +149,7 @@ by the `dpo` method is always `context`.
 Instead of print the results directly to screen, they can be gathered into a TreeGrid objects for direct access by
 using the `generate_treegrid` or `gt` command.
 
-.. code-block:: python
+::
 
     (primary) >>> treegrid = gt(pslist.PsList, primary = self.current_layer, nt_symbols = self.config['nt_symbols'])
     (primary) >>> treegrid.populate()

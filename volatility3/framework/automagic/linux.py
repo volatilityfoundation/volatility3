@@ -147,6 +147,7 @@ class LinuxBannerCache(symbol_cache.SymbolBannerCache):
     os = "linux"
     symbol_name = "linux_banner"
     banner_path = constants.LINUX_BANNERS_PATH
+    exclusion_list = ['mac', 'windows']
 
 
 class LinuxSymbolFinder(symbol_finder.SymbolFinder):
@@ -156,3 +157,4 @@ class LinuxSymbolFinder(symbol_finder.SymbolFinder):
     banner_cache = LinuxBannerCache
     symbol_class = "volatility3.framework.symbols.linux.LinuxKernelIntermedSymbols"
     find_aslr = lambda cls, *args: LinuxIntelStacker.find_aslr(*args)[1]
+    exclusion_list = ['mac', 'windows']

@@ -272,20 +272,26 @@ class TreeGrid(interfaces.renderers.TreeGrid):
     def _append(self, parent: Optional[interfaces.renderers.TreeNode], values: Any) -> TreeNode:
         """Adds a new node at the top level if parent is None, or under the
         parent node otherwise, after all other children."""
-        children = self.children(parent)
-        return self._insert(parent, len(children), values)
+        return self._insert(parent, None, values)
 
-    def _insert(self, parent: Optional[interfaces.renderers.TreeNode], position: int, values: Any) -> TreeNode:
+    def _insert(self, parent: Optional[interfaces.renderers.TreeNode], position: Optional[int], values: Any) -> TreeNode:
         """Inserts an element into the tree at a specific position."""
         parent_path = ""
         children = self._find_children(parent)
         if parent is not None:
             parent_path = parent.path + self.path_sep
-        newpath = parent_path + str(position)
+        if position is None:
+            newpath = parent_path + str(len(children))
+        else:
+            newpath = parent_path + str(position)
+            for node, _ in children[position:]:
+                self.visit(node, lambda child, _: child.path_changed(newpath, True), None)
+
         tree_item = TreeNode(newpath, self, parent, values)
-        for node, _ in children[position:]:
-            self.visit(node, lambda child, _: child.path_changed(newpath, True), None)
-        children.insert(position, (tree_item, []))
+        if position is None:
+            children.append((tree_item, []))
+        else:
+            children.insert(position, (tree_item, []))
         return tree_item
 
     def is_ancestor(self, node, descendant):
