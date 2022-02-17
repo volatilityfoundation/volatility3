@@ -514,8 +514,12 @@ class PdbReader:
                 if self._omap_mapping:
                     address = self.omap_lookup(address)
                 stripped_name = self.name_strip(name)
+                if stripped_name in self.symbols:
+                    vollog.warning(f"{stripped_name} already present at symbols, non stripped name {name} will be used!")
+                    stripped_name = name
+                
                 self.symbols[stripped_name] = {"address": address}
-                if name != self.name_strip(name):
+                if name != stripped_name:
                     self.symbols[stripped_name]["linkage_name"] = name
             offset += sym.length + 2  # Add on length itself
 
