@@ -146,8 +146,13 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 return None
             return (virtual_layer_name, kernel['mz_offset'], kernel)
 
+        vollog.debug("Kernel base determination - optimized scan virtual layer")
+        valid_kernel = self._method_layer_pdb_scan(context, vlayer, test_virtual_kernel, True, False, progress_callback)
+        if valid_kernel != None:
+            return valid_kernel
+
         vollog.debug("Kernel base determination - slow scan virtual layer")
-        return self._method_layer_pdb_scan(context, vlayer, test_virtual_kernel, False, progress_callback)
+        return self._method_layer_pdb_scan(context, vlayer, test_virtual_kernel, False, False, progress_callback)
 
     def method_fixed_mapping(self,
                              context: interfaces.context.ContextInterface,
@@ -175,12 +180,13 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 vollog.debug(f"Potential kernel_virtual_offset caused a page fault: {hex(kvo)}")
 
         vollog.debug("Kernel base determination - testing fixed base address")
-        return self._method_layer_pdb_scan(context, vlayer, test_physical_kernel, True, progress_callback)
+        return self._method_layer_pdb_scan(context, vlayer, test_physical_kernel, False, True, progress_callback)
 
     def _method_layer_pdb_scan(self,
                                context: interfaces.context.ContextInterface,
                                vlayer: layers.intel.Intel,
                                test_kernel: Callable,
+                               optimized: bool = False,
                                physical: bool = True,
                                progress_callback: constants.ProgressCallback = None) -> Optional[ValidKernelType]:
         # TODO: Verify this is a windows image
@@ -193,7 +199,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             layer_to_scan = virtual_layer_name
 
         start_scan_address = 0
-        if not physical and context.layers[layer_to_scan].metadata.architecture in ["Intel64"]:
+        if optimized and not physical and context.layers[layer_to_scan].metadata.architecture in ["Intel64"]:
             # TODO: change this value accordingly when 5-Level paging is supported.
             start_scan_address = (0x1f0 << 39)
 
