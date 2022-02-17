@@ -515,9 +515,7 @@ class PdbReader:
                     address = self.omap_lookup(address)
                 stripped_name = self.name_strip(name)
                 if stripped_name in self.symbols:
-                    vollog.warning(f"{stripped_name} already present at symbols, non stripped name {name} will be used!")
-                    stripped_name = name
-                
+                    vollog.warning(f"Multiple definitions for symbol: {stripped_name}. Lookup will resolve to {name}")
                 self.symbols[stripped_name] = {"address": address}
                 if name != stripped_name:
                     self.symbols[stripped_name]["linkage_name"] = name
