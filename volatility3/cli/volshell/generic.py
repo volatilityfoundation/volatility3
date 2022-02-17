@@ -31,8 +31,9 @@ class Volshell(interfaces.plugins.PluginInterface):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__current_layer: Optional[str] = None
+        self.__current_symbol_table: Optional[str] = None
+        self.__current_kernel_name: Optional[str] = None
         self.__console = None
-        self.__kernel = None
 
     def random_string(self, length: int = 32) -> str:
         return ''.join(random.sample(string.ascii_uppercase + string.digits, length))
@@ -78,9 +79,10 @@ class Volshell(interfaces.plugins.PluginInterface):
         banner = f"""
     Call help() to see available functions
 
-    Volshell mode       : {mode}
-    Current Layer       : {self.current_layer}
-    Current Symbol Table: {self.current_symbol_table}
+    Volshell mode        : {mode}
+    Current Layer        : {self.current_layer}
+    Current Symbol Table : {self.current_symbol_table}
+    Current Kernel       : {self.current_kernel_name}
 """
 
         sys.ps1 = f"({self.current_layer}) >>> "
@@ -121,7 +123,10 @@ class Volshell(interfaces.plugins.PluginInterface):
                 (['dw', 'display_words'], self.display_words), (['dd',
                                                                  'display_doublewords'], self.display_doublewords),
                 (['dq', 'display_quadwords'], self.display_quadwords), (['dis', 'disassemble'], self.disassemble),
-                (['cl', 'change_layer'], self.change_layer), (['context'], self.context), (['self'], self),
+                (['cl', 'change_layer'], self.change_layer),
+                (['cs', 'change_symboltable'], self.change_symbol_table),
+                (['ck', 'change_kernel'], self.change_kernel),
+                (['context'], self.context), (['self'], self),
                 (['dpo', 'display_plugin_output'], self.display_plugin_output),
                 (['gt', 'generate_treegrid'], self.generate_treegrid), (['rt',
                                                                          'render_treegrid'], self.render_treegrid),
@@ -180,19 +185,51 @@ class Volshell(interfaces.plugins.PluginInterface):
 
     @property
     def current_symbol_table(self):
-        return None
+        if self.__current_symbol_table is None and self.kernel:
+            self.__current_symbol_table = self.kernel.symbol_table_name
+        return self.__current_symbol_table
+
+    @property
+    def current_kernel_name(self):
+        if self.__current_kernel_name is None:
+            self.__current_kernel_name = self.config.get('kernel', None)
+        return self.__current_kernel_name
 
     @property
     def kernel(self):
-        """No default kernel for generic volshell"""
-        return None
+        """Returns the current kernel object"""
+        if self.current_kernel_name not in self.context.modules:
+            return None
+        return self.context.modules[self.current_kernel_name]
 
-    def change_layer(self, layer_name = None):
+    def change_layer(self, layer_name: str = None):
         """Changes the current default layer"""
         if not layer_name:
             layer_name = self.current_layer
-        self.__current_layer = layer_name
+        if layer_name not in self.context.layers:
+            print(f"Layer {layer_name} not present in context")
+        else:
+            self.__current_layer = layer_name
         sys.ps1 = f"({self.current_layer}) >>> "
+
+    def change_symbol_table(self, symbol_table_name: str = None):
+        """Changes the current_symbol_table"""
+        if not symbol_table_name:
+            print("No symbol table provided, not changing current symbol table")
+        if symbol_table_name not in self.context.symbol_space:
+            print(f"Symbol table {symbol_table_name} not present in context symbol_space")
+        else:
+            self.__current_symbol_table = symbol_table_name
+        print(f"Current Symbol Table: {self.current_symbol_table}")
+
+    def change_kernel(self, kernel_name: str = None):
+        if not kernel_name:
+            print("No kernel module name provided, not changing current kernel")
+        if kernel_name not in self.context.modules:
+            print(f"Kernel module {kernel_name} not found in the context module list")
+        else:
+            self.__current_kernel_name = kernel_name
+        print(f"Current kernel : {self.current_kernel_name}")
 
     def display_bytes(self, offset, count = 128, layer_name = None):
         """Displays byte values and ASCII characters"""

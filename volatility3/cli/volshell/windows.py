@@ -63,16 +63,6 @@ class Volshell(generic.Volshell):
         return super().display_symbols(symbol_table)
 
     @property
-    def kernel(self):
-        if self.__kernel is None:
-            self.__kernel = self.context.modules[self.config['kernel']]
-        return self.__kernel
-
-    @property
-    def current_symbol_table(self):
-        return self.kernel.symbol_table_name
-
-    @property
     def current_layer(self):
         if self.__current_layer is None:
             self.__current_layer = self.kernel.layer_name

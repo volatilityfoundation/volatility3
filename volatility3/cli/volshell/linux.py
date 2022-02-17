@@ -37,7 +37,7 @@ class Volshell(generic.Volshell):
     def list_tasks(self):
         """Returns a list of task objects from the primary layer"""
         # We always use the main kernel memory and associated symbols
-        return list(pslist.PsList.list_tasks(self.context, self.current_layer, self.current_symbol_table))
+        return list(pslist.PsList.list_tasks(self.context, self.current_kernel_name))
 
     def construct_locals(self) -> List[Tuple[List[str], Any]]:
         result = super().construct_locals()
@@ -64,16 +64,6 @@ class Volshell(generic.Volshell):
         if symbol_table is None:
             symbol_table = self.config['vmlinux']
         return super().display_symbols(symbol_table)
-
-    @property
-    def kernel(self):
-        if self.__kernel is None:
-            self.__kernel = self.context.modules[self.config['kernel']]
-        return self.__kernel
-
-    @property
-    def current_symbol_table(self):
-        return self.kernel.symbol_table_name
 
     @property
     def current_layer(self):
