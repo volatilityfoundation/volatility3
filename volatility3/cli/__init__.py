@@ -19,14 +19,14 @@ import os
 import sys
 import tempfile
 import traceback
-from typing import Dict, Type, Union, Any
+from typing import Any, Dict, Type, Union
 from urllib import parse, request
 
 import volatility3.plugins
 import volatility3.symbols
 from volatility3 import framework
 from volatility3.cli import text_renderer, volargparse
-from volatility3.framework import automagic, constants, contexts, exceptions, interfaces, plugins, configuration
+from volatility3.framework import automagic, configuration, constants, contexts, exceptions, interfaces, plugins
 from volatility3.framework.automagic import stacker
 from volatility3.framework.configuration import requirements
 

@@ -8,11 +8,11 @@ import random
 import string
 import struct
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union, Type, Iterable
-from urllib import request, parse
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union
+from urllib import parse, request
 
 from volatility3.cli import text_renderer, volshell
-from volatility3.framework import renderers, interfaces, objects, plugins, exceptions
+from volatility3.framework import exceptions, interfaces, objects, plugins, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, physical, resources
 
@@ -32,6 +32,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         super().__init__(*args, **kwargs)
         self.__current_layer: Optional[str] = None
         self.__console = None
+        self.__kernel = None
 
     def random_string(self, length: int = 32) -> str:
         return ''.join(random.sample(string.ascii_uppercase + string.digits, length))
@@ -57,8 +58,6 @@ class Volshell(interfaces.plugins.PluginInterface):
             Return a TreeGrid but this is always empty since the point of this plugin is to run interactively
         """
 
-        self.__current_layer = self.config['primary']
-
         # Try to enable tab completion
         try:
             import readline
@@ -79,9 +78,10 @@ class Volshell(interfaces.plugins.PluginInterface):
         banner = f"""
     Call help() to see available functions
 
-    Volshell mode: {mode}
-    Current Layer: {self.current_layer}
-        """
+    Volshell mode       : {mode}
+    Current Layer       : {self.current_layer}
+    Current Symbol Table: {self.current_symbol_table}
+"""
 
         sys.ps1 = f"({self.current_layer}) >>> "
         self.__console = code.InteractiveConsole(locals = self._construct_locals_dict())
@@ -174,12 +174,23 @@ class Volshell(interfaces.plugins.PluginInterface):
 
     @property
     def current_layer(self):
+        if self.__current_layer is None:
+            self.__current_layer = self.config['primary']
         return self.__current_layer
+
+    @property
+    def current_symbol_table(self):
+        return None
+
+    @property
+    def kernel(self):
+        """No default kernel for generic volshell"""
+        return None
 
     def change_layer(self, layer_name = None):
         """Changes the current default layer"""
         if not layer_name:
-            layer_name = self.config['primary']
+            layer_name = self.current_layer
         self.__current_layer = layer_name
         sys.ps1 = f"({self.current_layer}) >>> "
 
