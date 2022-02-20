@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import sys
+import pathlib
 import tempfile
 import traceback
 from typing import Dict, Type, Union, Any
@@ -335,6 +336,25 @@ class CommandLine:
             self.process_exceptions(excp)
 
     @classmethod
+    def fileurl_to_path(cls, fileurl: str) -> str:
+        """Returns absolute path from a file URL.
+
+        Args:
+            fileurl: the URL file path
+
+        Returns:
+            The absolute full path of the fileurl
+        """
+        scheme, netloc, path, _, _ = parse.urlsplit(fileurl)
+        assert scheme == 'file'
+
+        if netloc:
+            netloc = "\\\\" + netloc
+
+        path = request.url2pathname(netloc + path)
+        return parse.unquote(path)
+
+    @classmethod
     def location_from_file(cls, filename: str) -> str:
         """Returns the URL location from a file parameter (which may be a URL)
 
@@ -347,13 +367,17 @@ class CommandLine:
         # We want to work in URLs, but we need to accept absolute and relative files (including on windows)
         single_location = parse.urlparse(filename, '')
         if single_location.scheme == '' or len(single_location.scheme) == 1:
-            single_location = parse.urlparse(parse.urljoin('file:', request.pathname2url(os.path.abspath(filename))))
+            single_location = parse.urlparse(pathlib.Path(os.path.abspath(filename)).as_uri())
         if single_location.scheme == 'file':
-            if not os.path.exists(request.url2pathname(single_location.path)):
+            if not os.path.exists(cls.fileurl_to_path(single_location.geturl())):
                 filename = request.url2pathname(single_location.path)
                 if not filename:
                     raise ValueError("File URL looks incorrect (potentially missing /)")
                 raise ValueError(f"File does not exist: {filename}")
+            if single_location.netloc != '':
+                # urlopen needs double `//` to open UNC paths so fix it here.
+                return parse.urlunparse(single_location).replace("file://", "file:////")
+
         return parse.urlunparse(single_location)
 
     def process_exceptions(self, excp):
