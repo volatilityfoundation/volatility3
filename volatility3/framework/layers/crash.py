@@ -29,7 +29,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     VALIDDUMP = 0x504d5544
 
     crashdump_json = 'crash'
-    supported_dumptypes = [0x01, 0x05]  # we need 0x5 for 32-bit bitmaps
+    supported_dumptypes = [0x01, 0x05, 0x06]  # we need 0x5 for 32-bit bitmaps
     dump_header_name = '_DUMP_HEADER'
 
     _magic_struct = struct.Struct('<II')
@@ -103,7 +103,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
                     (run.BasePage * 0x1000, offset * 0x1000, run.PageCount * 0x1000, run.PageCount * 0x1000))
                 offset += run.PageCount
 
-        elif self.dump_type == 0x05:
+        elif self.dump_type in [0x05, 0x06]:
             summary_header = self.get_summary_header()
             first_bit = None  # First bit in a run
             first_offset = 0  # File offset of first bit
@@ -189,7 +189,7 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
     VALIDDUMP = 0x34365544
     crashdump_json = 'crash64'
     dump_header_name = '_DUMP_HEADER64'
-    supported_dumptypes = [0x1, 0x05]
+    supported_dumptypes = [0x1, 0x05, 0x06]
     headerpages = 2
 
 
