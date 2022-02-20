@@ -115,7 +115,7 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         mask = context.layers[object_info.layer_name].address_mask
         normalized_offset = object_info.offset & mask
 
-        self._vol = collections.ChainMap({}, object_info, {'type_name': type_name, 'offset': normalized_offset}, kwargs)
+        self._vol = collections.ChainMap({}, {'type_name': type_name, 'offset': normalized_offset}, object_info, kwargs)
         self._context = context
 
     def __getattr__(self, attr: str) -> Any:

@@ -136,7 +136,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
             if k not in ["context", "data_format", "object_info", "type_name"]:
                 kwargs[k] = v
         kwargs['new_value'] = self.__new_value
-        return (self._context, self._vol.maps[-2]['type_name'], self._vol.maps[-3], self._data_format), kwargs
+        return (self._context, self._vol.maps[-3]['type_name'], self._vol.maps[-2], self._data_format), kwargs
 
     @classmethod
     def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
