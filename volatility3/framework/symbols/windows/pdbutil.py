@@ -146,7 +146,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         max_size = pe_data.OPTIONAL_HEADER.SizeOfImage
 
         # Proper data
-        virtual_data = layer.read(offset, max_size)
+        virtual_data = layer.read(offset, max_size, pad=True)
         pe_data = pefile.PE(data = virtual_data)
 
         # De-virtualize the memory
