@@ -105,7 +105,9 @@ class ResourceAccessor(object):
         if sys.platform == 'win32':
             # We only need to worry about UNC paths on windows, on linux they'd be smb:// and need pysmb or similar
             parsed_url = urllib.parse.urlparse(url, scheme = 'file')
-            if parsed_url.scheme == 'file' and parsed_url.netloc:
+            # Only worry about file scheme URLs, make sure that there's either a host or
+            # the unparsing left an extra slash at the start (which will get lost with urlunparse)
+            if parsed_url.scheme == 'file' and (parsed_url.netloc or parsed_url.path.startswith('//')):
                 # Change the netloc to '/' and then prepend the netloc to the path
                 # Urlunparse will remove extra initial slashes from path, hence setting netloc
                 new_url = urllib.parse.urlunparse((parsed_url.scheme, '/',
