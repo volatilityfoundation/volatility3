@@ -45,6 +45,12 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
 
             symbol_files = linux_banners.get(banner, None)
             if symbol_files:
+                if len(symbol_files) > 1:
+                    using = "*"
+                    vollog.warning(f"Multiple symbol files identified (using {using}):")
+                    for symbol_file in symbol_files:
+                        vollog.warning(f" {using} {symbol_file}")
+                        using = " "
                 isf_path = symbol_files[0]
                 table_name = context.symbol_space.free_table_name('LintelStacker')
                 table = linux.LinuxKernelIntermedSymbols(context,
