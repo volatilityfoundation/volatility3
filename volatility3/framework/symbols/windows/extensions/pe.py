@@ -109,7 +109,7 @@ class IMAGE_DOS_HEADER(objects.StructType):
         size_of_image = nt_header.OptionalHeader.SizeOfImage
 
         # no legitimate PE is going to be larger than this
-        if size_of_image > (1024 * 1024 * 100):
+        if size_of_image > (1024 * 1024 * 1024 * 2):
             raise ValueError(f"The claimed SizeOfImage is too large: {size_of_image}")
 
         read_layer = self._context.layers[layer_name]
