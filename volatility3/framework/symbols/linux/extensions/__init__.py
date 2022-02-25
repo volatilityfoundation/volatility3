@@ -565,7 +565,7 @@ class net(objects.StructType):
             raise AttributeError("Unable to find net_namespace inode")
 
 class sock(objects.StructType):
-    def __get_vol_kernel_module_name(self):
+    def _get_vol_kernel_module_name(self):
         symbol_table_arr = self.vol.type_name.split("!", 1)
         symbol_table = symbol_table_arr[0] if len(symbol_table_arr) == 2 else None
 
@@ -592,7 +592,7 @@ class sock(objects.StructType):
         if not self.sk_socket:
             return 0
 
-        kernel_module_name = self.__get_vol_kernel_module_name()
+        kernel_module_name = self._get_vol_kernel_module_name()
         kernel = self._context.modules[kernel_module_name]
         socket_alloc = linux.LinuxUtilities.container_of(self.sk_socket, "socket_alloc", "socket", kernel)
         vfs_inode = socket_alloc.vfs_inode
