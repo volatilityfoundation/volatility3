@@ -142,10 +142,9 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
                     object_info: interfaces.objects.ObjectInformation) -> TUnion[int, float, bool, bytes, str]:
         # Don't try to lookup a 0 length data format, incase it's at an invalid offset.  Length 0 means b''
+        data = b''
         if data_format.length > 0:
             data = context.layers.read(object_info.layer_name, object_info.offset, data_format.length)
-        else:
-            data = b''
         return convert_data_to_value(data, cls._struct_type, data_format)
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
