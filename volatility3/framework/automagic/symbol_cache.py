@@ -104,7 +104,7 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         """Returns the location of the symbol file given the identifier
 
         Args:
-            identifier: string that uniquely identifies a particular symbolt table
+            identifier: string that uniquely identifies a particular symbol table
             operating_system: optional string to restrict identifiers to just those for a particular operating system
 
         Returns:
@@ -144,6 +144,18 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         """Returns all identifiers for a particular operating system"""
         pass
 
+    def get_location_statistics(self, location: str) -> Optional[Tuple[int, int, int, int]]:
+        """Returns ISF statistics based on the location
+
+        Returns:
+            A tuple of base_types, types, enums, symbols, or None is location not found"""
+
+    def get_verified(self, location: str) -> bool:
+        """Returns whether a location ISF has been verified against its schema"""
+
+    def set_verified(self, location: str, state: bool = True) -> None:
+        """Sets the verified state of a location based on whether it has been successfully verified against its schema"""
+
 
 class SqliteCache(CacheManagerInterface):
     _required_framework_version = (2, 0, 0)
@@ -163,7 +175,23 @@ class SqliteCache(CacheManagerInterface):
         database = sqlite3.connect(path)
         database.row_factory = sqlite3.Row
         database.cursor().execute(
-            'CREATE TABLE IF NOT EXISTS cache (location TEXT UNIQUE NOT NULL, identifier TEXT, operating_system TEXT, local BOOL, cached DATETIME)')
+            f'CREATE TABLE IF NOT EXISTS database_info (schema_version INT DEFAULT {constants.CACHE_SQLITE_SCEMA_VERSION})')
+        schema_version = database.cursor().execute('SELECT schema_version FROM database_info').fetchone()
+        if not schema_version:
+            database.cursor().execute(f'INSERT INTO database_info VALUES ({constants.CACHE_SQLITE_SCEMA_VERSION})')
+        elif schema_version['schema_version'] == constants.CACHE_SQLITE_SCEMA_VERSION:
+            # All good, so pass and move on
+            pass
+        else:
+            vollog.info(f"Previous cache schema version found: {schema_version['schema_version']}")
+            # TODO: Implement code if the schema changes
+            # Current this should never happen so we start over again
+            database.close()
+            os.unlink(path)
+            return self._connect_storage(path)
+        database.cursor().execute(
+            'CREATE TABLE IF NOT EXISTS cache (location TEXT UNIQUE NOT NULL, identifier TEXT, operating_system TEXT, verified BOOL DEFAULT False,'
+            'stats_base_types INT DEFAULT 0, stats_types INT DEFAULT 0, stats_enums INT DEFAULT 0, stats_symbols INT DEFAULT 0, local BOOL, cached DATETIME)')
         database.commit()
         return database
 
@@ -207,6 +235,25 @@ class SqliteCache(CacheManagerInterface):
             return row['identifier']
         return None
 
+    def get_location_statistics(self, location: str) -> Optional[Tuple[int, int, int, int]]:
+        results = self._database.cursor().execute(
+            'SELECT stats_base_types, stats_types, stats_enums, stats_symbols FROM cache WHERE location = ?',
+            (location,)).fetchall()
+        for row in results:
+            return row['stats_base_types'], row['stats_types'], row['stats_enums'], row['stats_symbols']
+        return None
+
+    def get_verified(self, location: str) -> bool:
+        results = self._database.cursor().execute('SELECT verified FROM cache WHERE location = ?',
+                                                  (location,)).fetchall()
+        for row in results:
+            return row['verified']
+        return False
+
+    def set_verified(self, location: str, state: bool = True) -> None:
+        self._database.cursor().execute('UPDATE cache (verified) VALUES (?) WHERE location = ?',
+                                        (state, location,))
+
     def update(self, progress_callback = None):
         """Locates all files under the symbol directories.  Updates the cache with additions, modifications and removals.
         This also updates remote locations based on a cache timeout.
@@ -245,32 +292,39 @@ class SqliteCache(CacheManagerInterface):
                     with resources.ResourceAccessor().open(location) as fp:
                         json_obj = json.load(fp)
                         identifier = None
+
+                        # Get stats
+                        stats_base_types = len(json_obj.get('base_types', {}))
+                        stats_types = len(json_obj.get('types', {}))
+                        stats_enums = len(json_obj.get('enums', {}))
+                        stats_symbols = len(json_obj.get('symbols', {}))
+
+                        operating_system = None
                         for idextractor in idextractors:
                             identifier = idextractor.get_identifier(json_obj)
-                            operating_system = idextractor.operating_system
                             if identifier is not None:
+                                operating_system = idextractor.operating_system
                                 break
+
+                        # We don't try to validate schemas here, we do that on first use
+                        # Store in database
+                        cursor.execute(
+                            "INSERT OR REPLACE INTO cache (location, identifier, operating_system, "
+                            "stats_base_types, stats_types, stats_enums, stats_symbols, "
+                            "local, cached) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))",
+                            (
+                                location,
+                                identifier,
+                                operating_system,
+                                stats_base_types,
+                                stats_types,
+                                stats_enums,
+                                stats_symbols,
+                                self.is_url_local(location)
+                            ))
                         if identifier is not None:
-                            # We don't try to validate schemas here, we do that on first use
-                            # Store in database
-                            cursor.execute(
-                                "INSERT OR REPLACE INTO cache (location, identifier, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
-                                (
-                                    location,
-                                    identifier,
-                                    operating_system,
-                                    self.is_url_local(location)
-                                ))
                             vollog.log(constants.LOGLEVEL_VV, f"Identified {location} as {identifier}")
                         else:
-                            cursor.execute(
-                                "INSERT OR REPLACE INTO cache (location, identifier, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
-                                (
-                                    location,
-                                    None,
-                                    None,
-                                    self.is_url_local(location)
-                                ))
                             vollog.log(constants.LOGLEVEL_VVVV, f"No identifier found for {location}")
                 except Exception as excp:
                     vollog.log(constants.LOGLEVEL_VVVV, excp)

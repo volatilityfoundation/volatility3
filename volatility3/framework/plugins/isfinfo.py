@@ -41,7 +41,11 @@ class IsfInfo(plugins.PluginInterface):
                                             optional = True),
             requirements.VersionRequirement(name = 'SQLiteCache',
                                             component = symbol_cache.SqliteCache,
-                                            version = (1, 0, 0))
+                                            version = (1, 0, 0)),
+            requirements.BooleanRequirement(name = 'live',
+                                            description = 'Traverse all files, rather than use the cache',
+                                            default = False,
+                                            optional = True)
         ]
 
     @classmethod
@@ -92,28 +96,36 @@ class IsfInfo(plugins.PluginInterface):
             def check_valid(data):
                 return "Unknown"
 
-        # Process the filtered list
-        for entry in filtered_list:
-            num_types = num_enums = num_bases = num_symbols = 0
-            valid = "Unknown"
-            with resources.ResourceAccessor().open(url = entry) as fp:
-                try:
-                    data = json.load(fp)
-                    num_symbols = len(data.get('symbols', []))
-                    num_types = len(data.get('user_types', []))
-                    num_enums = len(data.get('enums', []))
-                    num_bases = len(data.get('base_types', []))
+        if self.config['live']:
+            # Process the filtered list
+            for entry in filtered_list:
+                num_types = num_enums = num_bases = num_symbols = 0
+                valid = "Unknown"
+                with resources.ResourceAccessor().open(url = entry) as fp:
+                    try:
+                        data = json.load(fp)
+                        num_symbols = len(data.get('symbols', []))
+                        num_types = len(data.get('user_types', []))
+                        num_enums = len(data.get('enums', []))
+                        num_bases = len(data.get('base_types', []))
 
-                    identifier_cache = symbol_cache.SqliteCache(constants.IDENTIFIERS_PATH)
-                    identifier = identifier_cache.get_identifier(location = entry)
-                    if identifier:
-                        identifier = identifier.decode('utf-8', errors = 'replace')
-                    else:
-                        identifier = renderers.NotAvailableValue()
-                    valid = check_valid(data)
-                except (UnicodeDecodeError, json.decoder.JSONDecodeError):
-                    vollog.warning(f"Invalid ISF: {entry}")
-            yield (0, (entry, valid, num_bases, num_types, num_symbols, num_enums, identifier))
+                        identifier_cache = symbol_cache.SqliteCache(constants.IDENTIFIERS_PATH)
+                        identifier = identifier_cache.get_identifier(location = entry)
+                        if identifier:
+                            identifier = identifier.decode('utf-8', errors = 'replace')
+                        else:
+                            identifier = renderers.NotAvailableValue()
+                        valid = check_valid(data)
+                    except (UnicodeDecodeError, json.decoder.JSONDecodeError):
+                        vollog.warning(f"Invalid ISF: {entry}")
+                yield (0, (entry, valid, num_bases, num_types, num_symbols, num_enums, identifier))
+        else:
+            cache = symbol_cache.SqliteCache(constants.IDENTIFIERS_PATH)
+            valid = 'Unknown'
+            for identifier, location in cache.get_identifier_dictionary().items():
+                num_bases, num_types, num_enums, num_symbols = cache.get_location_statistics(location)
+                if identifier:
+                    yield (0, (location, valid, num_bases, num_types, num_symbols, num_enums, str(identifier)))
 
     # Try to open the file, load it as JSON, read the data from it
 
