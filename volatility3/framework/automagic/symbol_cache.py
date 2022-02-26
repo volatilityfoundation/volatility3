@@ -14,6 +14,7 @@ from typing import Dict, Generator, List, Optional, Tuple
 
 import volatility3.framework
 import volatility3.schemas
+from volatility3 import schemas
 from volatility3.framework import constants, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import resources
@@ -150,11 +151,8 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         Returns:
             A tuple of base_types, types, enums, symbols, or None is location not found"""
 
-    def get_verified(self, location: str) -> bool:
-        """Returns whether a location ISF has been verified against its schema"""
-
-    def set_verified(self, location: str, state: bool = True) -> None:
-        """Sets the verified state of a location based on whether it has been successfully verified against its schema"""
+    def get_hash(self, location: str) -> bool:
+        """Returns the hash of the JSON from within a location ISF"""
 
 
 class SqliteCache(CacheManagerInterface):
@@ -190,7 +188,7 @@ class SqliteCache(CacheManagerInterface):
             os.unlink(path)
             return self._connect_storage(path)
         database.cursor().execute(
-            'CREATE TABLE IF NOT EXISTS cache (location TEXT UNIQUE NOT NULL, identifier TEXT, operating_system TEXT, verified BOOL DEFAULT False,'
+            'CREATE TABLE IF NOT EXISTS cache (location TEXT UNIQUE NOT NULL, identifier TEXT, operating_system TEXT, hash TEXT,'
             'stats_base_types INT DEFAULT 0, stats_types INT DEFAULT 0, stats_enums INT DEFAULT 0, stats_symbols INT DEFAULT 0, local BOOL, cached DATETIME)')
         database.commit()
         return database
@@ -243,16 +241,11 @@ class SqliteCache(CacheManagerInterface):
             return row['stats_base_types'], row['stats_types'], row['stats_enums'], row['stats_symbols']
         return None
 
-    def get_verified(self, location: str) -> bool:
-        results = self._database.cursor().execute('SELECT verified FROM cache WHERE location = ?',
+    def get_hash(self, location: str) -> Optional[str]:
+        results = self._database.cursor().execute('SELECT hash FROM cache WHERE location = ?',
                                                   (location,)).fetchall()
         for row in results:
-            return row['verified']
-        return False
-
-    def set_verified(self, location: str, state: bool = True) -> None:
-        self._database.cursor().execute('UPDATE cache (verified) VALUES (?) WHERE location = ?',
-                                        (state, location,))
+            return row['hash']
 
     def update(self, progress_callback = None):
         """Locates all files under the symbol directories.  Updates the cache with additions, modifications and removals.
@@ -291,6 +284,7 @@ class SqliteCache(CacheManagerInterface):
                 try:
                     with resources.ResourceAccessor().open(location) as fp:
                         json_obj = json.load(fp)
+                        hash = schemas.create_json_hash(json_obj)
                         identifier = None
 
                         # Get stats
@@ -309,13 +303,14 @@ class SqliteCache(CacheManagerInterface):
                         # We don't try to validate schemas here, we do that on first use
                         # Store in database
                         cursor.execute(
-                            "INSERT OR REPLACE INTO cache (location, identifier, operating_system, "
+                            "INSERT OR REPLACE INTO cache (location, identifier, operating_system, hash,"
                             "stats_base_types, stats_types, stats_enums, stats_symbols, "
-                            "local, cached) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))",
+                            "local, cached) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))",
                             (
                                 location,
                                 identifier,
                                 operating_system,
+                                hash,
                                 stats_base_types,
                                 stats_types,
                                 stats_enums,

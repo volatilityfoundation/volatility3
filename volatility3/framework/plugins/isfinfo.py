@@ -125,6 +125,18 @@ class IsfInfo(plugins.PluginInterface):
             for identifier, location in cache.get_identifier_dictionary().items():
                 num_bases, num_types, num_enums, num_symbols = cache.get_location_statistics(location)
                 if identifier:
+                    json_hash = cache.get_hash(location)
+                    if json_hash and json_hash in schemas.cached_validations:
+                        valid = 'True (cached)'
+                    if self.config['validate']:
+                        # Even if we're not live, if we've been explicitly asked to validate, then do-so
+                        with resources.ResourceAccessor().open(url = location) as fp:
+                            try:
+                                data = json.load(fp)
+                                valid = check_valid(data)
+                            except (UnicodeDecodeError, json.decoder.JSONDecodeError):
+                                vollog.warning(f"Invalid ISF: {location}")
+
                     yield (0, (location, valid, num_bases, num_types, num_symbols, num_enums, str(identifier)))
 
     # Try to open the file, load it as JSON, read the data from it
