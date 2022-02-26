@@ -7,15 +7,16 @@ import datetime
 import functools
 import logging
 import math
-from typing import Iterable, Iterator, Optional, Union, Tuple, List
+from typing import Iterable, Iterator, List, Optional, Tuple, Union
 
 from volatility3.framework import constants, exceptions, interfaces, objects, renderers, symbols
 from volatility3.framework.layers import intel
 from volatility3.framework.renderers import conversion
 from volatility3.framework.symbols import generic
-from volatility3.framework.symbols.windows.extensions import pool, pe, kdbg
+from volatility3.framework.symbols.windows.extensions import kdbg, pe, pool
 
 vollog = logging.getLogger(__name__)
+
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
@@ -461,10 +462,13 @@ class UNICODE_STRING(objects.StructType):
         # We explicitly do *not* catch errors here, we allow an exception to be thrown
         # (otherwise there's no way to determine anything went wrong)
         # It's up to the user of this method to catch exceptions
-        return self.Buffer.dereference().cast("string",
-                                              max_length = self.Length,
-                                              errors = "replace",
-                                              encoding = "utf16")
+
+        # We manually construct an object rather than casting a dereferenced pointer in case
+        # the buffer length is 0 and the pointer is a NULL pointer
+        return self._context.object(self.vol.type_name.split(constants.BANG)[0] + constants.BANG + 'string',
+                                    layer_name = self.Buffer.vol.layer_name,
+                                    offset = self.Buffer,
+                                    max_length = self.Length, errors = 'replace', encoding = 'utf16')
 
     String = property(get_string)
 
