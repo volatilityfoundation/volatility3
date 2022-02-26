@@ -222,7 +222,7 @@ class SqliteCache(CacheManagerInterface):
         files_to_timestamp = on_disk_locations.intersection(cached_locations)
         if files_to_timestamp:
             result = self._database.cursor().execute("SELECT location FROM cache WHERE local = True "
-                                                     f"AND cached < date('now', {self.cache_period});")
+                                                     f"AND cached < date('now', '{self.cache_period}');")
             for row in result:
                 if row['location'] in files_to_timestamp:
                     cache_update.add(row['location'])
@@ -235,45 +235,47 @@ class SqliteCache(CacheManagerInterface):
         files_to_process = new_locations.union(cache_update)
         number_files_to_process = len(files_to_process)
         cursor = self._database.cursor()
-        for location in files_to_process:
-            # Open location
-            counter += 1
-            progress_callback(counter * 100 / number_files_to_process,
-                              "Updating caches for {number_files_to_process} files...")
-            try:
-                with resources.ResourceAccessor().open(location) as fp:
-                    json_obj = json.load(fp)
-                    identifier = None
-                    for idextractor in idextractors:
-                        identifier = idextractor.get_identifier(json_obj)
-                        operating_system = idextractor.operating_system
+        try:
+            for location in files_to_process:
+                # Open location
+                counter += 1
+                progress_callback(counter * 100 / number_files_to_process,
+                                  f"Updating caches for {number_files_to_process} files...")
+                try:
+                    with resources.ResourceAccessor().open(location) as fp:
+                        json_obj = json.load(fp)
+                        identifier = None
+                        for idextractor in idextractors:
+                            identifier = idextractor.get_identifier(json_obj)
+                            operating_system = idextractor.operating_system
+                            if identifier is not None:
+                                break
                         if identifier is not None:
-                            break
-                    if identifier is not None:
-                        # We don't try to validate schemas here, we do that on first use
-                        # Store in database
-                        cursor.execute(
-                            "INSERT OR REPLACE INTO cache (location, identifier, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
-                            (
-                                location,
-                                identifier,
-                                operating_system,
-                                self.is_url_local(location)
-                            ))
-                        vollog.log(constants.LOGLEVEL_VV, f"Identified {location} as {identifier}")
-                    else:
-                        cursor.execute(
-                            "INSERT OR REPLACE INTO cache (location, identifier, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
-                            (
-                                location,
-                                None,
-                                None,
-                                self.is_url_local(location)
-                            ))
-                        vollog.log(constants.LOGLEVEL_VVVV, f"No identifier found for {location}")
-            except Exception as excp:
-                vollog.log(constants.LOGLEVEL_VVVV, excp)
-        self._database.commit()
+                            # We don't try to validate schemas here, we do that on first use
+                            # Store in database
+                            cursor.execute(
+                                "INSERT OR REPLACE INTO cache (location, identifier, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
+                                (
+                                    location,
+                                    identifier,
+                                    operating_system,
+                                    self.is_url_local(location)
+                                ))
+                            vollog.log(constants.LOGLEVEL_VV, f"Identified {location} as {identifier}")
+                        else:
+                            cursor.execute(
+                                "INSERT OR REPLACE INTO cache (location, identifier, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
+                                (
+                                    location,
+                                    None,
+                                    None,
+                                    self.is_url_local(location)
+                                ))
+                            vollog.log(constants.LOGLEVEL_VVVV, f"No identifier found for {location}")
+                except Exception as excp:
+                    vollog.log(constants.LOGLEVEL_VVVV, excp)
+        finally:
+            self._database.commit()
 
         # Remote Entries
 
