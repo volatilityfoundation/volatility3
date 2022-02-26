@@ -8,8 +8,14 @@ import random
 import string
 import sys
 from functools import wraps
+from pathlib import Path
 from typing import Callable, Any, List, Tuple, Dict
 
+from rich.console import Console
+from rich.highlighter import ReprHighlighter
+from rich.live import Live
+from rich.table import Table
+from rich.theme import Theme
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.renderers import format_hints
 
@@ -193,6 +199,7 @@ class NoneRenderer(CLIRenderer):
         if not grid.populated:
             grid.populate(lambda x, y: True, True)
 
+
 class CSVRenderer(CLIRenderer):
     _type_renderers = {
         format_hints.Bin: quoted_optional(lambda x: f"0b{x:b}"),
@@ -284,8 +291,7 @@ class PrettyTextRenderer(CLIRenderer):
                 renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
                 data = renderer(node.values[column_index])
                 field_width = max([len(self.tab_stop(x)) for x in f"{data}".split("\n")])
-                max_column_widths[column.name] = max(max_column_widths.get(column.name, len(column.name)),
-                                                     field_width)
+                max_column_widths[column.name] = max(max_column_widths.get(column.name, len(column.name)), field_width)
                 line[column] = data.split("\n")
             accumulator.append((node.path_depth, line))
             return accumulator
@@ -313,9 +319,13 @@ class PrettyTextRenderer(CLIRenderer):
                 line[column] = line[column] + ([""] * (nums_line - len(line[column])))
             for index in range(nums_line):
                 if index == 0:
-                    outfd.write(format_string.format("*" * depth, *[self.tab_stop(line[column][index]) for column in grid.columns]))
+                    outfd.write(
+                        format_string.format("*" * depth,
+                                             *[self.tab_stop(line[column][index]) for column in grid.columns]))
                 else:
-                    outfd.write(format_string.format(" " * depth, *[self.tab_stop(line[column][index]) for column in grid.columns]))
+                    outfd.write(
+                        format_string.format(" " * depth,
+                                             *[self.tab_stop(line[column][index]) for column in grid.columns]))
 
     def tab_stop(self, line: str) -> str:
         tab_width = 8
@@ -327,6 +337,51 @@ class PrettyTextRenderer(CLIRenderer):
                 pad = ""
             line = line.replace("\t", pad, 1)
         return line
+
+
+class RichRenderer(CLIRenderer):
+    _type_renderers = QuickTextRenderer._type_renderers
+
+    name = "rich"
+
+    def get_render_options(self):
+        pass
+
+    def render(self, grid: interfaces.renderers.TreeGrid) -> None:
+        """Renders each column immediately to stdout using Rich Live and Table output.
+
+            Args:
+                grid: The TreeGrid object to render
+        """
+        # Allow user to configure tables as they would like from ini file
+        rich_theme_path = Path(__file__).parents[2] / "config/richrenderer.ini"
+        if rich_theme_path.exists() and rich_theme_path.is_file():
+            theme = Theme.read(str(rich_theme_path.resolve()))
+        else:
+            theme = None
+
+        console = Console(theme = theme)
+        table = Table(*[c.name for c in grid.columns],
+                      highlight = True,
+                      border_style = theme.styles.get("table.border", None) if theme else None)
+
+        with Live(table, console = console):
+            console.print()
+
+            # This function doesn't need to return anything at all and just updates existing Table object
+            def visitor(node: interfaces.renderers.TreeNode, accumulator: None) -> None:
+                row = []
+                for column_index in range(len(grid.columns)):
+                    column = grid.columns[column_index]
+                    renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
+                    column_rich_text = renderer(node.values[column_index])
+                    row.append(str(column_rich_text))
+                table.add_row(*row)
+
+            if not grid.populated:
+                grid.populate(visitor, None)
+            else:
+                grid.visit(node = None, function = visitor, initial_accumulator = None)
 
 
 class JsonRenderer(CLIRenderer):
@@ -353,8 +408,8 @@ class JsonRenderer(CLIRenderer):
         outfd = sys.stdout
 
         outfd.write("\n")
-        final_output: Tuple[Dict[str, List[interfaces.renderers.TreeNode]], List[interfaces.renderers.TreeNode]] = (
-            {}, [])
+        final_output: Tuple[Dict[str, List[interfaces.renderers.TreeNode]],
+                            List[interfaces.renderers.TreeNode]] = ({}, [])
 
         def visitor(
             node: interfaces.renderers.TreeNode, accumulator: Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]
