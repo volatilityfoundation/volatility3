@@ -365,7 +365,7 @@ class RichRenderer(CLIRenderer):
                       highlight = True,
                       border_style = theme.styles.get("table.border", None) if theme else None)
 
-        with Live(table, console = console):
+        with Live(table, console = console, auto_refresh=False, vertical_overflow="overflow") as live:
             console.print()
 
             # This function doesn't need to return anything at all and just updates existing Table object
@@ -377,6 +377,7 @@ class RichRenderer(CLIRenderer):
                     column_rich_text = renderer(node.values[column_index])
                     row.append(str(column_rich_text))
                 table.add_row(*row)
+                live.refresh()
 
             if not grid.populated:
                 grid.populate(visitor, None)
