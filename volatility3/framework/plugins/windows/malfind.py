@@ -13,6 +13,12 @@ from volatility3.plugins.windows import pslist, vadinfo
 
 vollog = logging.getLogger(__name__)
 
+try:
+    import capstone
+    
+    has_capstone = True
+except ImportError:
+    has_capstone = False
 
 class Malfind(interfaces.plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code."""
