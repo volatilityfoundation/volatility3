@@ -134,7 +134,11 @@ class Malfind(interfaces.plugins.PluginInterface):
                 else:
                     architecture = "intel64"
 
-                disasm = interfaces.renderers.Disassembly(data, vad.get_start(), architecture)
+                if has_capstone:
+                    disasm = interfaces.renderers.Disassembly(data, vad.get_start(), architecture)
+                else:
+                    raise exceptions.MissingModuleException(
+                        "capstone", "Requires capstone to disassembly data")
 
                 file_output = "Disabled"
                 if self.config['dump']:
