@@ -294,6 +294,8 @@ class CommandLine:
                     vollog.debug(f"Read out configuration data from {config_path}")
                     json_val = json.load(f)
                     ctx.config.splice(plugin_config_path, interfaces.configuration.HierarchicalDict(json_val))
+            else:
+                vollog.warning(f"{config_path} does not exist. No configuration was read!")
 
         # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
         automagics = automagic.choose_automagic(automagics, plugin)
