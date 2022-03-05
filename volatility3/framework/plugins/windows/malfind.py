@@ -129,7 +129,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                     architecture = "intel64"
 
                 disasm = interfaces.renderers.Disassembly(data, vad.get_start(), architecture)
-               
+
                 file_output = "Disabled"
                 if self.config['dump']:
                     file_output = "Error outputting to file"
