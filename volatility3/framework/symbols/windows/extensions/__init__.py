@@ -307,12 +307,15 @@ class MMVAD(MMVAD_SHORT):
         try:
             # this is for xp and 2003
             if self.has_member("ControlArea"):
-                file_name = self.ControlArea.FilePointer.FileName.get_string()
+                filename_obj = self.ControlArea.FilePointer.FileName
 
             # this is for vista through windows 7
             else:
-                file_name = self.Subsection.ControlArea.FilePointer.dereference().cast(
-                    "_FILE_OBJECT").FileName.get_string()
+                filename_obj = self.Subsection.ControlArea.FilePointer.dereference().cast(
+                    "_FILE_OBJECT").FileName
+
+            if filename_obj.Length > 0:
+                file_name = filename_obj.get_string()
 
         except exceptions.InvalidAddressException:
             pass
@@ -902,8 +905,8 @@ class CONTROL_AREA(objects.StructType):
                 return False
 
             # The first SubsectionBase should not be page aligned
-            #subsection = self.get_subsection()
-            #if subsection.SubsectionBase & self.PAGE_MASK == 0:
+            # subsection = self.get_subsection()
+            # if subsection.SubsectionBase & self.PAGE_MASK == 0:
             #    return False
         except exceptions.InvalidAddressException:
             return False
@@ -952,7 +955,7 @@ class CONTROL_AREA(objects.StructType):
             subsection_offset = starting_sector * 0x200
 
             # Similar to the check in is_valid(), make sure the SubsectionBase is not page aligned.
-            #if subsection.SubsectionBase & self.PAGE_MASK == 0:
+            # if subsection.SubsectionBase & self.PAGE_MASK == 0:
             #    break
 
             ptecount = 0
@@ -983,8 +986,8 @@ class CONTROL_AREA(objects.StructType):
                     # Currently just a temporary workaround to deal with custom bit flag
                     # in the PFN field for pages in transition state.
                     # See https://github.com/volatilityfoundation/volatility3/pull/475
-                    physoffset = (mmpte.u.Trans.PageFrameNumber & (( 1 << 33 ) - 1 ) ) << 12
-                    
+                    physoffset = (mmpte.u.Trans.PageFrameNumber & ((1 << 33) - 1)) << 12
+
                     yield physoffset, file_offset, self.PAGE_SIZE
 
                 # Go to the next PTE entry
