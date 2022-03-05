@@ -270,7 +270,8 @@
                     "offset": 8,
                     "type": {
                         "kind": "base",
-                        "name": "unsigned char"                      }
+                        "name": "unsigned char"                      
+                    }
                 },
                 "NameLength": {
                     "offset": 9,
@@ -322,7 +323,8 @@
                     "offset": 8,
                     "type": {
                         "kind": "base",
-                        "name": "unsigned short"                      }
+                        "name": "unsigned short"                      
+                    }
                 }
             },
             "kind": "struct",
