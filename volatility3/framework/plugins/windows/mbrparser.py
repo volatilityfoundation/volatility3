@@ -2,13 +2,11 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import datetime
 import logging
 
 from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
-from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import mbr
 from volatility3.plugins import yarascan
 
@@ -52,19 +50,13 @@ class MBRParser(interfaces.plugins.PluginInterface):
 
     def _generator(self):
         layer = self.context.layers[self.config['primary']]
-        rules = yarascan.YaraScan.process_yara_options({'yara_rules': '/\x55\xaa/'})
-        symbol_table = intermed.IntermediateSymbolTable.create(context = self.context,
-                                                               config_path = self.config_path,
-                                                               sub_path = "windows",
-                                                               filename = "mbr",
-                                                               class_types = {
-                                                                   'PARTITION_ENTRY': mbr.PARTITION_ENTRY,
-                                                               })
+        # TODO : YARA RULE HEX
+        rules = yarascan.YaraScan.process_yara_options({'yara_rules': "55 aa"})
 
         for offset, _rule_name, _name, _value in layer.scan(context = self.context,
                                                             scanner = yarascan.YaraScanner(rules = rules)):
             try:
-                yield 1, (format_hints.Hex(offset), _value)
+                yield 0, (format_hints.Hex(offset), _name)
 
             except exceptions.PagedInvalidAddressException:
                 pass
@@ -72,5 +64,5 @@ class MBRParser(interfaces.plugins.PluginInterface):
     def run(self):
         return renderers.TreeGrid([
             ('Offset', format_hints.Hex),
-            ('Record Type', str),
+            ("Name", str)
         ], self._generator())

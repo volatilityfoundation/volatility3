@@ -8,23 +8,49 @@
         },
         "format": "6.1.0"
     },
-    {
-        'PARTITION_ENTRY': [ 0x10, {
-            'BootableFlag': [0x0, ['char']],   # 0x80 is bootable
-            'StartingCHS': [0x1, ['array', 3, ['unsigned char']]],
-            'PartitionType': [0x4, ['char']],
-            'EndingCHS': [0x5, ['array', 3, ['unsigned char']]],
-            'StartingLBA': [0x8, ['unsigned int']],
-            'SizeInSectors': [0xc, ['int']],
-        }],
-        'PARTITION_TABLE': [ 0x200, {
-            'DiskSignature': [ 0x1b8, ['array', 4, ['unsigned char']]],
-            'Unused': [ 0x1bc, ['unsigned short']],
-            'Entry1': [ 0x1be, ['PARTITION_ENTRY']],
-            'Entry2': [ 0x1ce, ['PARTITION_ENTRY']],
-            'Entry3': [ 0x1de, ['PARTITION_ENTRY']],
-            'Entry4': [ 0x1ee, ['PARTITION_ENTRY']],
-            'Signature': [0x1fe, ['unsigned short']],
-        }]
-    }
+    "base_types": {
+        "unsigned long": {
+            "kind": "int", 
+            "size": 4, 
+            "signed": false, 
+            "endian": "little"
+        }, 
+        "unsigned long long": {
+            "kind": "int", 
+            "size": 8, 
+            "signed": false, 
+            "endian": "little"
+        }, 
+        "long": {
+            "kind": "int", 
+            "size": 4, 
+            "signed": true, 
+            "endian": "little"
+        },
+        "unsigned int": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        }, 
+        "unsigned short": {
+            "kind": "int", 
+            "size": 2, 
+            "signed": false, 
+            "endian": "little"
+        },
+        "unsigned char": {
+            "kind": "int", 
+            "size": 1, 
+            "signed": false, 
+            "endian": "little"
+        },
+        "wchar": {
+            "kind": "int", 
+            "size": 2, 
+            "signed": true, 
+            "endian": "little"
+        }
+      },
+      "symbols": {}
 }
