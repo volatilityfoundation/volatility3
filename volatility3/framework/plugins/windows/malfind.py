@@ -13,12 +13,6 @@ from volatility3.plugins.windows import pslist, vadinfo
 
 vollog = logging.getLogger(__name__)
 
-try:
-    import capstone
-    
-    has_capstone = True
-except ImportError:
-    has_capstone = False
 
 class Malfind(interfaces.plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code."""
@@ -134,12 +128,8 @@ class Malfind(interfaces.plugins.PluginInterface):
                 else:
                     architecture = "intel64"
 
-                if has_capstone:
-                    disasm = interfaces.renderers.Disassembly(data, vad.get_start(), architecture)
-                else:
-                    raise exceptions.MissingModuleException(
-                        "capstone", "Requires capstone to disassembly data")
-
+                disasm = interfaces.renderers.Disassembly(data, vad.get_start(), architecture)
+               
                 file_output = "Disabled"
                 if self.config['dump']:
                     file_output = "Error outputting to file"
