@@ -28,9 +28,9 @@ The self-referential indices for older versions of windows are listed below:
 """
 import logging
 import struct
-from typing import Generator, List, Optional, Tuple, Type, Iterable
+from typing import Generator, Iterable, List, Optional, Tuple, Type
 
-from volatility3.framework import interfaces, layers, constants
+from volatility3.framework import constants, interfaces, layers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel
 
@@ -116,10 +116,27 @@ class DtbSelfRefPae(DtbSelfReferential):
                          mask = 0x3FFFFFFFFFF000,
                          reserved_bits = 0x0)
 
-    def __call__(self, *args, **kwargs):
-        dtb = super().__call__(*args, **kwargs)
+    @staticmethod
+    def _and_bytes(abytes, bbytes):
+        return bytes([a & b for a, b in zip(abytes[::-1], bbytes[::-1])][::-1])
+
+    def __call__(self, data: bytes, data_offset: int, page_offset: int) -> Optional[Tuple[int, int]]:
+        dtb = super().__call__(data, data_offset, page_offset)
         if dtb:
-            return dtb[0] - 0x4000, dtb[1]
+            # Find the top page
+            top_pae_page = dtb[0] - 0x4000
+            # The top page should map to the next four pages after it
+            # Build what we expect the page table to be
+            expected_table = b''.join([struct.pack(self.ptr_struct, top_pae_page + (i * 0x1000)) for i in range(1, 5)])
+            # Mask off the page bits of top level page map
+            page_table_mask = b"\x00\xf0\xff\xff\xff\xff\xff\xff" * 4
+            page_table = data[top_pae_page - data_offset: top_pae_page - data_offset + (4 * self.ptr_size)]
+            # Compare them
+            anded_bytes = self._and_bytes(page_table, page_table_mask)
+            if (anded_bytes == expected_table):
+                return top_pae_page, dtb[1]
+            # Return None since the dtb value *isn't* None
+            return None
         return dtb
 
 
