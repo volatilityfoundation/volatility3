@@ -134,7 +134,7 @@
                           "kind": "base",
                           "name": "unsigned char"
                         }
-                      }
+                    }
                 },
                 "UpdateSequenceOffset": {
                     "offset": 4,
@@ -192,7 +192,7 @@
                         "name": "unsigned int"
                     }
                 },
-                "AlocatedSize": {
+                "AllocatedSize": {
                     "offset": 28,
                     "type":{
                         "kind": "base",
