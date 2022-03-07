@@ -201,6 +201,24 @@ class task_struct(generic.GenericIntelProcess):
 
             yield (start, end - start)
 
+    def get_thread_nodes(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns a list of the task_struct based on the list_head 
+        thread_node structure."""
+
+        task_symbol_table_name = self.get_symbol_table_name()
+
+        parent = self.group_leader
+        for task in self.thread_node.to_list(
+            f"{task_symbol_table_name}{constants.BANG}task_struct",
+            "thread_node"
+        ):
+
+            if task.group_leader != parent: continue
+
+            yield task
+
+
+
 
 class fs_struct(objects.StructType):
 
