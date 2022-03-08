@@ -141,7 +141,7 @@ class Context(interfaces.context.ContextInterface):
             layer_name: The layer within the context in which the module exists
             offset: The offset at which the module exists in the layer
             native_layer_name: The default native layer for objects constructed by the module
-            size: The size, in bytes, that the module occupys from offset location within the layer named layer_name
+            size: The size, in bytes, that the module occupies from offset location within the layer named layer_name
         """
         if size:
             return SizedModule.create(self,
