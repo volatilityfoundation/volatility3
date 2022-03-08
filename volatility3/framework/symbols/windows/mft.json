@@ -134,7 +134,7 @@
                           "kind": "base",
                           "name": "unsigned char"
                         }
-                      }
+                    }
                 },
                 "UpdateSequenceOffset": {
                     "offset": 4,
@@ -192,7 +192,7 @@
                         "name": "unsigned int"
                     }
                 },
-                "AlocatedSize": {
+                "AllocatedSize": {
                     "offset": 28,
                     "type":{
                         "kind": "base",
@@ -270,7 +270,8 @@
                     "offset": 8,
                     "type": {
                         "kind": "base",
-                        "name": "unsigned char"                      }
+                        "name": "unsigned char"                      
+                    }
                 },
                 "NameLength": {
                     "offset": 9,
@@ -322,7 +323,8 @@
                     "offset": 8,
                     "type": {
                         "kind": "base",
-                        "name": "unsigned short"                      }
+                        "name": "unsigned short"                      
+                    }
                 }
             },
             "kind": "struct",
