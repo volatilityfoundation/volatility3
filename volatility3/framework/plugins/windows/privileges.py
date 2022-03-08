@@ -55,14 +55,14 @@ class Privs(interfaces.plugins.PluginInterface):
             try:
                 process_token = task.Token.dereference().cast("_TOKEN")
             except exceptions.InvalidAddressException:
-                vollog.log(constants.LOGLEVEL_VVV, 'Skeep invalid token.')
+                vollog.log(constants.LOGLEVEL_VVV, 'Skip invalid token.')
                 continue
 
             for value, present, enabled, default in process_token.privileges():
                 # Skip privileges whose bit positions cannot be
                 # translated to a privilege name
                 if not self.privilege_info.get(int(value)):
-                    vollog.log(constants.LOGLEVEL_VVV, f'Skeep invalid privilege ({value}).')
+                    vollog.log(constants.LOGLEVEL_VVV, f'Skip invalid privilege ({value}).')
                     continue
 
                 name, desc = self.privilege_info.get(int(value))

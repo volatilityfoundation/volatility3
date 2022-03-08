@@ -206,7 +206,7 @@ class Bytes(PrimitiveObject, bytes):
                 length: int = 1,
                 **kwargs) -> 'Bytes':
         """Creates the appropriate class and returns it so that the native type
-        is inherritted.
+        is inherited.
 
         The only reason the kwargs is added, is so that the
         inheriting types can override __init__ without needing to
