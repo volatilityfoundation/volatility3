@@ -5,7 +5,7 @@
 import logging
 import hashlib
 
-from volatility3.framework import constants, interfaces, renderers, symbols
+from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import scanners
 from volatility3.framework.renderers import format_hints
@@ -27,13 +27,19 @@ class MBRScan(interfaces.plugins.PluginInterface):
                                            architectures = ["Intel32", "Intel64"])            
         ]
 
+    @classmethod
+    def get_hash(cls, data:bytes) -> str:
+        return hashlib.md5(data).hexdigest()
+
     def _generator(self):
         kernel = self.context.modules[self.config['kernel']]
         physical_layer_name = self.context.layers[kernel.layer_name].config.get('memory_layer', None)
         
+        # Decide of Memory Dump Architecture
         layer = self.context.layers[physical_layer_name]
         architecture = "intel" if not symbols.symbol_table_is_64bit(self.context, kernel.symbol_table_name) else "intel64"
 
+        # Read in the Symbol File
         symbol_table = intermed.IntermediateSymbolTable.create(context = self.context,
                                                                config_path = self.config_path,
                                                                sub_path = "windows",
@@ -45,43 +51,51 @@ class MBRScan(interfaces.plugins.PluginInterface):
 
         partition_table_object = symbol_table + constants.BANG + "PARTITION_TABLE"
         
+        # Define Signature and Data Length
         mbr_signature = b"\x55\xAA"
         mbr_length = 0x200
-        boot_code_length = 0x1B8
+        bootcode_length = 0x1B8
 
+        # Scan the Layer for Raw Master Boot Record (MBR) and parse the fields
         for offset, _value in layer.scan(context = self.context, scanner = scanners.MultiStringScanner(patterns = [mbr_signature])):
-            mbr_start_offset = offset - (mbr_length - len(mbr_signature))
-            partition_table = self.context.object(partition_table_object, offset = mbr_start_offset, layer_name = layer.name)
+            try:
+                mbr_start_offset = offset - (mbr_length - len(mbr_signature))
+                partition_table = self.context.object(partition_table_object, offset = mbr_start_offset, layer_name = layer.name)
 
-            full_mbr = layer.read(mbr_start_offset, mbr_length, pad = True)
-            boot_code = full_mbr[:boot_code_length]
-            
-            if boot_code:
-                all_zeros = boot_code.count(b"\x00") == len(boot_code)
-
-            if not all_zeros:
-                bootcode_hash = hashlib.md5(boot_code).hexdigest()
-                full_bootcode_hash = hashlib.md5(full_mbr).hexdigest()
-
-                partition_entries = [ partition_table.FirstEntry, partition_table.SecondEntry,
-                                        partition_table.ThirdEntry, partition_table.FourthEntry ]
-                partition_info = ""
-
-                for index, partition_entry_object in enumerate(partition_entries):
-                    partition_entry_object.set_index(index)
-                    partition_info += str(partition_entry_object)
+                # Extract only BootCode
+                full_mbr = layer.read(mbr_start_offset, mbr_length, pad = True)
+                bootcode = full_mbr[:bootcode_length]
                 
-                yield 0, (
-                        format_hints.Hex(offset),
-                        partition_table.get_disk_signature(),
-                        bootcode_hash,
-                        full_bootcode_hash,
-                        partition_info,
-                        interfaces.renderers.Disassembly(boot_code, 0, architecture),
-                        format_hints.HexBytes(boot_code)
-                )
-            else:
-                vollog.log(constants.LOGLEVEL_VV, f"Not a valid MBR: Data all zeroed out : {format_hints.Hex(offset)}")
+                if bootcode:
+                    all_zeros = bootcode.count(b"\x00") == len(bootcode)
+
+                if not all_zeros:
+                    partition_entries = [ 
+                                            partition_table.FirstEntry,
+                                            partition_table.SecondEntry,
+                                            partition_table.ThirdEntry,
+                                            partition_table.FourthEntry
+                                        ]
+                    partition_info = "\n"
+
+                    for index, partition_entry_object in enumerate(partition_entries):
+                        partition_entry_object.set_index(index)
+                        partition_info += str(partition_entry_object)
+                    
+                    yield 0, (
+                            format_hints.Hex(offset),
+                            partition_table.get_disk_signature(),
+                            self.get_hash(bootcode),
+                            self.get_hash(full_mbr),
+                            partition_info,
+                            interfaces.renderers.Disassembly(bootcode, 0, architecture),
+                            format_hints.HexBytes(bootcode)
+                    )
+                else:
+                    vollog.log(constants.LOGLEVEL_VV, f"Not a valid MBR: Data all zeroed out : {format_hints.Hex(offset)}")
+            
+            except exceptions.PagedInvalidAddressException:
+                pass
 
     def run(self):
         return renderers.TreeGrid([
