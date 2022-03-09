@@ -31,7 +31,7 @@ class BytesScanner(layers.ScannerInterface):
 
 class RegExScanner(layers.ScannerInterface):
     """A scanner that can be provided with a bytes-object regular expression pattern
-    The scanner will scqn all blocks for the regular expression and report the absolute offset of any finds
+    The scanner will scan all blocks for the regular expression and report the absolute offset of any finds
 
     The default flags include DOTALL, since the searches are through binary data and the newline character should
     have no specific significance in such searches"""
@@ -95,7 +95,7 @@ class MultiStringScanner(layers.ScannerInterface):
                 else:
                     suffixes.append(re.escape(bytes([entry])))
             else:
-                # If we've fininshed one of the strings at this point, remember it for later
+                # If we've finished one of the strings at this point, remember it for later
                 finished = True
 
         if len(suffixes) == 1:
