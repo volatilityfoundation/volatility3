@@ -3,6 +3,7 @@
 #
 
 import logging
+import hashlib
 
 from volatility3.framework import constants, interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
@@ -52,22 +53,30 @@ class MBRScan(interfaces.plugins.PluginInterface):
             mbr_start_offset = offset - (mbr_length - len(mbr_signature))
             partition_table = self.context.object(partition_table_object, offset = mbr_start_offset, layer_name = layer.name)
 
-            boot_code = layer.read(mbr_start_offset, boot_code_length, pad = True)
+            full_mbr = layer.read(mbr_start_offset, mbr_length, pad = True)
+            boot_code = full_mbr[:boot_code_length]
             
             if boot_code:
                 all_zeros = boot_code.count(b"\x00") == len(boot_code)
 
             if not all_zeros:
-                
-                first_entry = partition_table.FirstEntry
-                second_entry = partition_table.SecondEntry
-                third_entry = partition_table.ThirdEntry
-                fourth_entry = partition_table.FourthEntry
+                bootcode_hash = hashlib.md5(boot_code).hexdigest()
+                full_bootcode_hash = hashlib.md5(full_mbr).hexdigest()
 
+                partition_entries = [ partition_table.FirstEntry, partition_table.SecondEntry,
+                                        partition_table.ThirdEntry, partition_table.FourthEntry ]
+                partition_info = ""
+
+                for index, partition_entry_object in enumerate(partition_entries):
+                    partition_entry_object.set_index(index)
+                    partition_info += str(partition_entry_object)
+                
                 yield 0, (
                         format_hints.Hex(offset),
                         partition_table.get_disk_signature(),
-                        str(partition_table.FirstEntry),
+                        bootcode_hash,
+                        full_bootcode_hash,
+                        partition_info,
                         interfaces.renderers.Disassembly(boot_code, 0, architecture),
                         format_hints.HexBytes(boot_code)
                 )
@@ -76,9 +85,11 @@ class MBRScan(interfaces.plugins.PluginInterface):
 
     def run(self):
         return renderers.TreeGrid([
-            ("Offset", format_hints.Hex),
+            ("Potential MBR at Physical Offset", format_hints.Hex),
             ("Disk Signature", str),
-            ("First Entry", str),
+            ("Bootcode md5", str),
+            ("Bootcode (FULL) md5", str),
+            ("Partition Entries Info", str),
             ("Disasm", interfaces.renderers.Disassembly),
             ("Hexdump", format_hints.HexBytes)
         ], self._generator())
