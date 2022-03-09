@@ -34,10 +34,10 @@
             "endian": "little"
         },
         "int": {
-            "endian": "little",
             "kind": "int",
+            "size": 4,
             "signed": true,
-            "size": 4
+            "endian": "little"
         }, 
         "unsigned short": {
             "kind": "int", 
@@ -51,12 +51,6 @@
             "signed": false, 
             "endian": "little"
         },
-        "char": {
-            "endian": "little",
-            "kind": "char",
-            "signed": true,
-            "size": 1
-        },
         "wchar": {
             "kind": "int", 
             "size": 2, 
@@ -66,14 +60,6 @@
     },
     "symbols": {},
     "enums": {
-        "BootableFlag":{
-            "base": "unsigned char",
-            "constants": {
-                "Bootable": 0,
-                "Non-Bootable": 128
-            },
-            "size": 1
-        },
         "PartitionTypes": {
             "base": "unsigned char",
             "constants": {
@@ -140,8 +126,8 @@
                 "BootableFlag": {
                     "offset": 0,
                     "type": {
-                        "kind": "enum",
-                        "name": "BootableFlag"
+                        "kind": "base",
+                        "name": "unsigned char"
                     }
                 },
                 "StartingCHS": {
