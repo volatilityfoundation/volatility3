@@ -56,25 +56,27 @@ class MBRScan(interfaces.plugins.PluginInterface):
             
             if boot_code:
                 all_zeros = boot_code.count(b"\x00") == len(boot_code)
-            
-            if not all_zeros:
-                partition_type = partition_table.FirstEntry.PartitionType
 
-                
-                if partition_type.is_valid_choice:
-                    yield 0, (
-                            format_hints.Hex(offset),
-                            partition_type.lookup(),
-                            interfaces.renderers.Disassembly(boot_code, 0, architecture),
-                            format_hints.HexBytes(boot_code)
-                    )
+            if not all_zeros:
+                partition_entry_list = ["FirstEntry", "SecondEntry", "ThirdEntry", "FourthEntry"]
+                #partition_type = getattr(partition_table, "FirstEntry").PartitionType 
+                yield 0, (
+                        format_hints.Hex(offset),
+                        partition_table.FirstEntry.get_bootable_flag(),
+                        partition_table.FirstEntry.get_partition_type(),
+                        format_hints.Hex(partition_table.FirstEntry.get_starting_chs())
+                        #interfaces.renderers.Disassembly(boot_code, 0, architecture),
+                        #format_hints.HexBytes(boot_code)
+                )
             else:
                 vollog.log(constants.LOGLEVEL_VV, f"Not a valid MBR: Data all zeroed out : {format_hints.Hex(offset)}")
 
     def run(self):
         return renderers.TreeGrid([
-            ('Offset', format_hints.Hex),
-            ('PartitionType', str),
-            ("Disasm", interfaces.renderers.Disassembly),
-            ("Hexdump", format_hints.HexBytes)
+            ("Offset", format_hints.Hex),
+            ("Bootable", bool),
+            ("Partition Type", str),
+            ("Starting CHS",format_hints.Hex)
+            #("Disasm", interfaces.renderers.Disassembly),
+            #("Hexdump", format_hints.HexBytes)
         ], self._generator())
