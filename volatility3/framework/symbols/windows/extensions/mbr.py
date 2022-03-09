@@ -7,8 +7,12 @@ from volatility3.framework import objects
 class PARTITION_TABLE(objects.StructType):
 
     def get_disk_signature(self) -> str:
-        signature = self.DiskSignature.values
-        return signature
+        return "{0:02x}-{1:02x}-{2:02x}-{3:02x}".format(
+                self.DiskSignature[0], 
+                self.DiskSignature[1],
+                self.DiskSignature[2],
+                self.DiskSignature[3]
+        )
 
 class PARTITION_ENTRY(objects.StructType):
     
@@ -46,15 +50,25 @@ class PARTITION_ENTRY(objects.StructType):
         return self.SizeInSectors
     
     def __str__(self):
-        processed_entry = ""
-        processed_entry = "Boot flag: {0:#x} {1}\n".format(self.is_bootable(), "(Bootable)" if self.is_bootable() else '')
-        processed_entry += "Partition type: {0:#x} ({1})\n".format(self.get_value(self.PartitionType), self.get_type())
-        processed_entry += "Starting Sector (LBA): {0:#x} ({0})\n".format(self.StartingLBA)
-        processed_entry += "Starting CHS: Cylinder: {0} Head: {1} Sector: {2}\n".format(self.StartingCylinder(),
-                            self.StartingCHS[0],
-                            self.StartingSector())
-        processed_entry += "Ending CHS: Cylinder: {0} Head: {1} Sector: {2}\n".format(self.EndingCylinder(),
-                            self.EndingCHS[0],
-                            self.EndingSector())
-        processed_entry += "Size in sectors: {0:#x} ({0})\n\n".format(self.SizeInSectors)
+        processed_entry = "========= Partition Info =========\n"
+        processed_entry += "Boot Flag: {0:#x} {1}\n".format(
+                                self.is_bootable(),
+                                "(Bootable)" if self.is_bootable() else ''
+                            )
+        processed_entry += "Partition Type: {0:#x} ({1})\n".format(
+                                self.PartitionType,
+                                self.get_partition_type()
+                            )
+        processed_entry += "Starting Sector (LBA): {0:#x} ({0})\n".format(self.get_starting_lba())
+        processed_entry += "Starting CHS: Cylinder: {0} Head: {1} Sector: {2}\n".format(
+                                self.get_starting_cylinder(),
+                                self.get_starting_chs(),
+                                self.get_starting_sector()
+                            )
+        processed_entry += "Ending CHS: Cylinder: {0} Head: {1} Sector: {2}\n".format(
+                                self.get_ending_cylinder(),
+                                self.get_ending_chs(),
+                                self.get_ending_sector()
+                            )
+        processed_entry += "Size in sectors: {0:#x} ({0})\n\n".format(self.get_size_in_sectors())
         return processed_entry

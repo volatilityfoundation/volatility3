@@ -58,15 +58,18 @@ class MBRScan(interfaces.plugins.PluginInterface):
                 all_zeros = boot_code.count(b"\x00") == len(boot_code)
 
             if not all_zeros:
-                partition_entry_list = ["FirstEntry", "SecondEntry", "ThirdEntry", "FourthEntry"]
-                #partition_type = getattr(partition_table, "FirstEntry").PartitionType 
+                
+                first_entry = partition_table.FirstEntry
+                second_entry = partition_table.SecondEntry
+                third_entry = partition_table.ThirdEntry
+                fourth_entry = partition_table.FourthEntry
+
                 yield 0, (
                         format_hints.Hex(offset),
-                        partition_table.FirstEntry.get_bootable_flag(),
-                        partition_table.FirstEntry.get_partition_type(),
-                        format_hints.Hex(partition_table.FirstEntry.get_starting_chs())
-                        #interfaces.renderers.Disassembly(boot_code, 0, architecture),
-                        #format_hints.HexBytes(boot_code)
+                        partition_table.get_disk_signature(),
+                        str(partition_table.FirstEntry),
+                        interfaces.renderers.Disassembly(boot_code, 0, architecture),
+                        format_hints.HexBytes(boot_code)
                 )
             else:
                 vollog.log(constants.LOGLEVEL_VV, f"Not a valid MBR: Data all zeroed out : {format_hints.Hex(offset)}")
@@ -74,9 +77,8 @@ class MBRScan(interfaces.plugins.PluginInterface):
     def run(self):
         return renderers.TreeGrid([
             ("Offset", format_hints.Hex),
-            ("Bootable", bool),
-            ("Partition Type", str),
-            ("Starting CHS",format_hints.Hex)
-            #("Disasm", interfaces.renderers.Disassembly),
-            #("Hexdump", format_hints.HexBytes)
+            ("Disk Signature", str),
+            ("First Entry", str),
+            ("Disasm", interfaces.renderers.Disassembly),
+            ("Hexdump", format_hints.HexBytes)
         ], self._generator())
