@@ -2,6 +2,8 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
+import struct
+
 from volatility3.framework import objects
 
 class PARTITION_TABLE(objects.StructType):
@@ -18,6 +20,7 @@ class PARTITION_TABLE(objects.StructType):
 class PARTITION_ENTRY(objects.StructType):
 
     def set_index(self, index:int):
+        """Set Partition Entry Index."""
         self.index = index
     
     def get_bootable_flag(self) -> int:
@@ -26,7 +29,7 @@ class PARTITION_ENTRY(objects.StructType):
     
     def is_bootable(self) -> bool:
         """Check Bootable Partition."""
-        return False if not (self.BootableFlag == 0x80) else True
+        return False if not (self.get_bootable_flag() == 0x80) else True
 
     def get_partition_type(self) -> str:
         """Get Partition Type."""
@@ -68,7 +71,7 @@ class PARTITION_ENTRY(objects.StructType):
         """Get overall of Partition Entry Info"""
         processed_entry = "\n===== Partition Table #{0} =====\n".format(self.index+1)
         processed_entry += "Boot Flag: {0:#x} {1}\n".format(
-                                self.is_bootable(),
+                                self.get_bootable_flag(),
                                 "(Bootable)" if self.is_bootable() else ''
                             )
         processed_entry += "Partition Type: {0:#x} ({1})\n".format(
