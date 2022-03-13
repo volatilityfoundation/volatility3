@@ -225,6 +225,7 @@ class CSVRenderer(CLIRenderer):
             header_list.append(f"{column.name}")
 
         writer = csv.DictWriter(outfd, header_list)
+        writer.writeheader()
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
