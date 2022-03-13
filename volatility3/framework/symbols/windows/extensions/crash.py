@@ -12,7 +12,7 @@ class SUMMARY_DUMP(objects.StructType):
 
     def get_buffer_long(self) -> list:
         unsigned_long_array = array.array("I")
-        unsigned_long_array.from_bytes(self.get_buffer_char())
+        unsigned_long_array.frombytes(self.get_buffer_char())
         
         return list(unsigned_long_array)
 
