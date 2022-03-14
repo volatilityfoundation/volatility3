@@ -66,6 +66,8 @@ class MBRScan(interfaces.plugins.PluginInterface):
                 full_mbr = layer.read(mbr_start_offset, mbr_length, pad = True)
                 bootcode = full_mbr[:bootcode_length]
                 
+                all_zeros = None
+
                 if bootcode:
                     all_zeros = bootcode.count(b"\x00") == len(bootcode)
 
@@ -101,8 +103,8 @@ class MBRScan(interfaces.plugins.PluginInterface):
         return renderers.TreeGrid([
             ("Potential MBR at Physical Offset", format_hints.Hex),
             ("Disk Signature", str),
-            ("Bootcode md5", str),
-            ("Bootcode (FULL) md5", str),
+            ("Bootcode MD5", str),
+            ("Full MBR MD5", str),
             ("Partition Entries Info", str),
             ("Disasm", interfaces.renderers.Disassembly),
             ("Hexdump", format_hints.HexBytes)
