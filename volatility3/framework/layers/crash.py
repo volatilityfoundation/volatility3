@@ -29,7 +29,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     VALIDDUMP = 0x504d5544
 
     crashdump_json = 'crash'
-    supported_dumptypes = [0x01, 0x05, 0x06]  # we need 0x5 for 32-bit bitmaps
+    supported_dumptypes = [0x01, 0x02, 0x05, 0x06]  # we need 0x5 for 32-bit bitmaps
     dump_header_name = '_DUMP_HEADER'
 
     _magic_struct = struct.Struct('<II')
@@ -43,17 +43,17 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         self._page_size = 0x1000
         # no try/except needed. as seen in vmware.py
         self._base_layer = self.config["base_layer"]
-
         # Create a custom SymbolSpace
         self._crash_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows',
-                                                                         self.crashdump_json)
+                                                                         self.crashdump_json,
+                                                                         class_types = crash.class_types_unshared)
 
         # the _SUMMARY_DUMP is shared between 32- and 64-bit
         self._crash_common_table_name = intermed.IntermediateSymbolTable.create(context,
                                                                                 self._config_path,
                                                                                 'windows',
                                                                                 'crash_common',
-                                                                                class_types = crash.class_types)
+                                                                                class_types = crash.class_types_shared)
 
         # Check Header
         hdr_layer = self._context.layers[self._base_layer]
@@ -76,13 +76,29 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         # Then call the super, which will call load_segments (which needs the base_layer before it'll work)
         super().__init__(context, config_path, name)
 
+        self._metadata["page_map_offset"] = self.dtb
+        self._metadata["os"] = "Windows"
+        if "PaeEnabled" in header.vol.members:
+            self._metadata["pae"] = header.PaeEnabled != 0
+
+        if self.dump_header_name == "_DUMP_HEADER64":
+            self._metadata["architecture"] = "Intel64"
+        else:
+            self._metadata["architecture"] = "Intel32"
+
     def get_header(self) -> interfaces.objects.ObjectInterface:
         return self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
                                    offset = 0,
                                    layer_name = self._base_layer)
 
     def get_summary_header(self) -> interfaces.objects.ObjectInterface:
-        return self.context.object(self._crash_common_table_name + constants.BANG + "_SUMMARY_DUMP",
+        struct_name = "_SUMMARY_DUMP"
+        table_name = self._crash_common_table_name
+        if self.dump_type in [0x02]:
+            struct_name = "_SUMMARY_DUMP_OLD"
+            table_name = self._crash_table_name
+
+        return self.context.object(table_name + constants.BANG + struct_name,
                                    offset = 0x1000 * self.headerpages,
                                    layer_name = self._base_layer)
 
@@ -101,7 +117,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
         return segments
 
-    def handle_bitmap_dump(self) -> List[Tuple[int, int, int, int]]:
+    def handle_summary_dump(self) -> List[Tuple[int, int, int, int]]:
         segments = []
         summary_header = self.get_summary_header()
         first_bit = None  # First bit in a run
@@ -146,17 +162,17 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
     def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer."""
-
         type_to_handler_dict = {
             0x01: self.handle_run_based_dump,
-            0x05: self.handle_bitmap_dump,
-            0x06: self.handle_bitmap_dump,
+            0x02: self.handle_summary_dump,
+            0x05: self.handle_summary_dump,
+            0x06: self.handle_summary_dump,
         }
         
         if self.dump_type not in type_to_handler_dict:
             vollog.log(constants.LOGLEVEL_VVVV, f"unsupported dump format 0x{self.dump_type:x}")
             raise WindowsCrashDumpFormatException(self.name, f"unsupported dump format 0x{self.dump_type:x}")
-
+            
         segments = []
         type_handler = type_to_handler_dict[self.dump_type]
         segments = type_handler()            
@@ -204,7 +220,7 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
     VALIDDUMP = 0x34365544
     crashdump_json = 'crash64'
     dump_header_name = '_DUMP_HEADER64'
-    supported_dumptypes = [0x1, 0x05, 0x06]
+    supported_dumptypes = [0x1, 0x02, 0x05, 0x06]
     headerpages = 2
 
 
@@ -215,7 +231,7 @@ class WindowsCrashDumpStacker(interfaces.automagic.StackerLayerInterface):
     def stack(cls,
               context: interfaces.context.ContextInterface,
               layer_name: str,
-              progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
+              progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:        
         for layer in [WindowsCrashDump32Layer, WindowsCrashDump64Layer]:
             try:
                 layer.check_header(context.layers[layer_name])

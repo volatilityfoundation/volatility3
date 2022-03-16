@@ -359,6 +359,70 @@
       },
       "kind": "struct",
       "size": 8
+    },
+    "_SUMMARY_DUMP_OLD": {
+      "fields": {
+        "Signature": {
+          "offset": 0,
+          "type": {
+            "count": 4,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "ValidDump": {
+          "offset": 4,
+          "type": {
+            "count": 4,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "HeaderSize": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "BitmapSize": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "BufferLong": {
+          "offset": 32,
+          "type": {
+            "kind": "array",
+            "count": 1,
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "BufferChar": {
+          "offset": 32,
+          "type": {
+            "kind": "array",
+            "count": 1,
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 56
     }
   },
   "enums": {

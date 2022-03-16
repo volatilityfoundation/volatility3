@@ -17,4 +17,5 @@ class SUMMARY_DUMP(objects.StructType):
         return list(unsigned_long_array)
 
 
-class_types = {'_SUMMARY_DUMP': SUMMARY_DUMP}
+class_types_shared = {'_SUMMARY_DUMP': SUMMARY_DUMP}
+class_types_unshared = {'_SUMMARY_DUMP_OLD': SUMMARY_DUMP}
