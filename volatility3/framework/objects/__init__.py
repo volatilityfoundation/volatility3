@@ -136,12 +136,15 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
             if k not in ["context", "data_format", "object_info", "type_name"]:
                 kwargs[k] = v
         kwargs['new_value'] = self.__new_value
-        return (self._context, self._vol.maps[-2]['type_name'], self._vol.maps[-3], self._data_format), kwargs
+        return (self._context, self._vol.maps[-3]['type_name'], self._vol.maps[-2], self._data_format), kwargs
 
     @classmethod
     def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
                     object_info: interfaces.objects.ObjectInformation) -> TUnion[int, float, bool, bytes, str]:
-        data = context.layers.read(object_info.layer_name, object_info.offset, data_format.length)
+        # Don't try to lookup a 0 length data format, incase it's at an invalid offset.  Length 0 means b''
+        data = b''
+        if data_format.length > 0:
+            data = context.layers.read(object_info.layer_name, object_info.offset, data_format.length)
         return convert_data_to_value(data, cls._struct_type, data_format)
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
@@ -203,7 +206,7 @@ class Bytes(PrimitiveObject, bytes):
                 length: int = 1,
                 **kwargs) -> 'Bytes':
         """Creates the appropriate class and returns it so that the native type
-        is inherritted.
+        is inherited.
 
         The only reason the kwargs is added, is so that the
         inheriting types can override __init__ without needing to
@@ -701,7 +704,7 @@ class AggregateType(interfaces.objects.ObjectInterface):
                     tmp_list[member] = (relative_offset, new_child)
                     # If there's trouble with mutability, consider making update_vol return a clone with the changes
                     # (there will be a few other places that will be necessary) and/or making these part of the
-                    # permanent dictionaries rather than the non-clonable ones
+                    # permanent dictionaries rather than the non-cloneable ones
                     template.update_vol(members = tmp_list)
 
         @classmethod
