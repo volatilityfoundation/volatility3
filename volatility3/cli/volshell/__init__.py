@@ -85,6 +85,10 @@ class VolShell(cli.CommandLine):
                             help = "Write configuration JSON file out to config.json",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--save-config",
+                            help = "Save configuration JSON file to a file",
+                            default = None,
+                            type = str)
         parser.add_argument("--clear-cache",
                             help = "Clears out all short-term cached items",
                             default = False,
@@ -234,8 +238,15 @@ class VolShell(cli.CommandLine):
                                                    self.file_handler_class_factory())
 
             if args.write_config:
-                vollog.debug("Writing out configuration data to config.json")
-                with open("config.json", "w") as f:
+                args.save_config = 'config.json'
+            if args.save_config:
+                vollog.debug("Writing out configuration data to {args.save_config}")
+                if os.path.exists(os.path.abspath(args.save_config)):
+                    # Backup existing file
+                    backup_filename = self.find_backup_filename(args.save_config)
+                    vollog.debug(f"Backing up existing file to {backup_filename}")
+                    os.rename(args.save_config, backup_filename)
+                with open(args.save_config, "w") as f:
                     json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
         except exceptions.UnsatisfiedException as excp:
             self.process_unsatisfied_exceptions(excp)

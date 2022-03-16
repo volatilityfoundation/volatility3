@@ -19,6 +19,7 @@ import os
 import sys
 import tempfile
 import traceback
+from datetime import datetime
 from typing import Any, Dict, Type, Union
 from urllib import parse, request
 
@@ -157,6 +158,10 @@ class CommandLine:
                             help = "Write configuration JSON file out to config.json",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--save-config",
+                            help = "Save configuration JSON file to a file",
+                            default = None,
+                            type = str)
         parser.add_argument("--clear-cache",
                             help = "Clears out all short-term cached items",
                             default = False,
@@ -320,8 +325,15 @@ class CommandLine:
                                                    self.file_handler_class_factory())
 
             if args.write_config:
-                vollog.debug("Writing out configuration data to config.json")
-                with open("config.json", "w") as f:
+                args.save_config = 'config.json'
+            if args.save_config:
+                vollog.debug("Writing out configuration data to {args.save_config}")
+                if os.path.exists(os.path.abspath(args.save_config)):
+                    # Backup existing file
+                    backup_filename = self.find_backup_filename(args.save_config)
+                    vollog.debug(f"Backing up existing file to {backup_filename}")
+                    os.rename(args.save_config, backup_filename)
+                with open(args.save_config, "w") as f:
                     json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
         except exceptions.UnsatisfiedException as excp:
             self.process_unsatisfied_exceptions(excp)
@@ -333,6 +345,15 @@ class CommandLine:
                 renderers[args.renderer]().render(constructed.run())
         except (exceptions.VolatilityException) as excp:
             self.process_exceptions(excp)
+
+    def find_backup_filename(self, original: str):
+        suffix = ""
+        new_name = f"{original}.{datetime.strftime(datetime.today(), '%y%m%d')}.bak"
+        while os.path.exists(f"{new_name}{suffix}"):
+            if not suffix:
+                suffix = 1
+            suffix += 1
+        return f"{new_name}{suffix}"
 
     @classmethod
     def location_from_file(cls, filename: str) -> str:
