@@ -324,11 +324,14 @@ class CommandLine:
             constructed = plugins.construct_plugin(ctx, automagics, plugin, base_config_path, progress_callback,
                                                    self.file_handler_class_factory())
 
+            backup_filename = True
             if args.write_config:
+                vollog.warning('Use of --write-config has been deprecated, replaced by --save-config <filename>')
                 args.save_config = 'config.json'
+                backup_filename = False
             if args.save_config:
                 vollog.debug("Writing out configuration data to {args.save_config}")
-                if os.path.exists(os.path.abspath(args.save_config)):
+                if os.path.exists(os.path.abspath(args.save_config)) and backup_filename:
                     # Backup existing file
                     backup_filename = self.find_backup_filename(args.save_config)
                     vollog.debug(f"Backing up existing file to {backup_filename}")
