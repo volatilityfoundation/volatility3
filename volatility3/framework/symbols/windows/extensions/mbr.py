@@ -18,10 +18,6 @@ class PARTITION_TABLE(objects.StructType):
         )
 
 class PARTITION_ENTRY(objects.StructType):
-
-    def set_index(self, index:int):
-        """Set Partition Entry Index."""
-        self.index = index
     
     def get_bootable_flag(self) -> int:
         """Get Bootable Flag."""
@@ -66,28 +62,3 @@ class PARTITION_ENTRY(objects.StructType):
     def get_size_in_sectors(self):
         """Get Size in Sectors."""
         return self.SizeInSectors
-    
-    def __str__(self):
-        """Get overall of Partition Entry Info"""
-        processed_entry = "\n===== Partition Table #{0} =====\n".format(self.index+1)
-        processed_entry += "Boot Flag: {0:#x} {1}\n".format(
-                                self.get_bootable_flag(),
-                                "(Bootable)" if self.is_bootable() else ''
-                            )
-        processed_entry += "Partition Type: {0:#x} ({1})\n".format(
-                                self.PartitionType,
-                                self.get_partition_type()
-                            )
-        processed_entry += "Starting Sector (LBA): {0:#x} ({0})\n".format(self.get_starting_lba())
-        processed_entry += "Starting CHS: Cylinder: {0} Head: {1} Sector: {2}\n".format(
-                                self.get_starting_cylinder(),
-                                self.get_starting_chs(),
-                                self.get_starting_sector()
-                            )
-        processed_entry += "Ending CHS: Cylinder: {0} Head: {1} Sector: {2}\n".format(
-                                self.get_ending_cylinder(),
-                                self.get_ending_chs(),
-                                self.get_ending_sector()
-                            )
-        processed_entry += "Size in Sectors: {0:#x} ({0})\n".format(self.get_size_in_sectors())
-        return processed_entry
