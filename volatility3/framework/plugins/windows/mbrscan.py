@@ -90,8 +90,7 @@ class MBRScan(interfaces.plugins.PluginInterface):
                             self.get_hash(bootcode),
                             self.get_hash(full_mbr),
                             partition_info,
-                            interfaces.renderers.Disassembly(bootcode, 0, architecture),
-                            format_hints.HexBytes(bootcode)
+                            interfaces.renderers.Disassembly(bootcode, 0, architecture)
                     )
                 else:
                     vollog.log(constants.LOGLEVEL_VV, f"Not a valid MBR: Data all zeroed out : {format_hints.Hex(offset)}")
@@ -106,6 +105,5 @@ class MBRScan(interfaces.plugins.PluginInterface):
             ("Bootcode MD5", str),
             ("Full MBR MD5", str),
             ("Partition Entries Info", str),
-            ("Disasm", interfaces.renderers.Disassembly),
-            ("Hexdump", format_hints.HexBytes)
+            ("Disasm", interfaces.renderers.Disassembly)
         ], self._generator())
