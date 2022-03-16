@@ -9,7 +9,7 @@ volatility This includes default scanning block sizes, etc.
 import enum
 import os.path
 import sys
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 import volatility3.framework.constants.linux
 import volatility3.framework.constants.windows
@@ -80,6 +80,7 @@ ProgressCallback = Optional[Callable[[float, str], None]]
 
 OS_CATEGORIES = ['windows', 'mac', 'linux']
 
+
 class Parallelism(enum.IntEnum):
     """An enumeration listing the different types of parallelism applied to
     volatility."""
@@ -100,3 +101,6 @@ OFFLINE = False
 
 REMOTE_ISF_URL = None  # 'http://localhost:8000/banners.json'
 """Remote URL to query for a list of ISF addresses"""
+
+BACKUP_EXISTING_CONFIG_OUTPUT = True
+"""Whether existing files are backed up or overwritten when writing configuration output"""

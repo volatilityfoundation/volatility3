@@ -237,7 +237,7 @@ class VolShell(cli.CommandLine):
             constructed = plugins.construct_plugin(ctx, automagics, plugin, base_config_path, progress_callback,
                                                    self.file_handler_class_factory())
 
-            backup_filename = True
+            backup_filename = constants.BACKUP_EXISTING_CONFIG_OUTPUT
             if args.write_config:
                 vollog.warning('Use of --write-config has been deprecated, replaced by --save-config <filename>')
                 args.save_config = 'config.json'
