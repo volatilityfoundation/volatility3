@@ -4,10 +4,10 @@
 import binascii
 import hashlib
 import logging
-from struct import unpack, pack
-from typing import List, Tuple, Optional
+from struct import pack, unpack
+from typing import List, Optional, Tuple
 
-from Crypto.Cipher import ARC4, DES, AES
+from Crypto.Cipher import AES, ARC4, DES
 from Crypto.Hash import MD5
 
 from volatility3.framework import interfaces, renderers
@@ -28,7 +28,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
     def get_requirements(cls):
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
         ]
 
@@ -63,7 +63,8 @@ class Hashdump(interfaces.plugins.PluginInterface):
     def get_hive_key(cls, hive: registry.RegistryHive, key: str):
         result = None
         try:
-            result = hive.get_key(key)
+            if hive:
+                result = hive.get_key(key)
         except KeyError:
             vollog.info(
                 f"Unable to load the required registry key {hive.get_name()}\\{key} from this memory image")
@@ -132,7 +133,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
             rc4_key = md5.digest()
 
             rc4 = ARC4.new(rc4_key)
-            hbootkey = rc4.encrypt(sam_data[0x80:0xA0]) # lgtm [py/weak-cryptographic-algorithm]
+            hbootkey = rc4.encrypt(sam_data[0x80:0xA0])  # lgtm [py/weak-cryptographic-algorithm]
             return hbootkey
         elif revision == 3:
             # AES encrypted
@@ -151,7 +152,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
         des2 = DES.new(des_k2, DES.MODE_ECB)
         cipher = AES.new(hbootkey[:16], AES.MODE_CBC, salt)
         obfkey = cipher.decrypt(enc_hash)
-        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:16]) # lgtm [py/weak-cryptographic-algorithm]
+        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:16])  # lgtm [py/weak-cryptographic-algorithm]
 
     @classmethod
     def get_user_hashes(cls, user: registry.CM_KEY_NODE, samhive: registry.RegistryHive,
@@ -229,9 +230,9 @@ class Hashdump(interfaces.plugins.PluginInterface):
         md5.update(hbootkey[:0x10] + pack("<L", rid) + lmntstr)
         rc4_key = md5.digest()
         rc4 = ARC4.new(rc4_key)
-        obfkey = rc4.encrypt(enc_hash) # lgtm [py/weak-cryptographic-algorithm]
+        obfkey = rc4.encrypt(enc_hash)  # lgtm [py/weak-cryptographic-algorithm]
 
-        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:]) # lgtm [py/weak-cryptographic-algorithm]
+        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:])  # lgtm [py/weak-cryptographic-algorithm]
 
     @classmethod
     def get_user_name(cls, user: registry.CM_KEY_NODE, samhive: registry.RegistryHive) -> Optional[bytes]:
@@ -253,13 +254,9 @@ class Hashdump(interfaces.plugins.PluginInterface):
     # replaces the dump_hashes method in vol2
     def _generator(self, syshive: registry.RegistryHive, samhive: registry.RegistryHive):
         if syshive is None:
-            vollog.debug("SYSTEM address is None: Did you use the correct profile?")
-            yield (0, (renderers.NotAvailableValue(), renderers.NotAvailableValue(), renderers.NotAvailableValue(),
-                       renderers.NotAvailableValue()))
+            vollog.debug("SYSTEM address is None: No system hive found")
         if samhive is None:
-            vollog.debug("SAM address is None: Did you use the correct profile?")
-            yield (0, (renderers.NotAvailableValue(), renderers.NotAvailableValue(), renderers.NotAvailableValue(),
-                       renderers.NotAvailableValue()))
+            vollog.debug("SAM address is None: No SAM hive found")
         bootkey = self.get_bootkey(syshive)
         hbootkey = self.get_hbootkey(samhive, bootkey)
         if hbootkey:
