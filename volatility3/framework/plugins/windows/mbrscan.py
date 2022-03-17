@@ -28,7 +28,7 @@ class MBRScan(interfaces.plugins.PluginInterface):
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.BooleanRequirement(name = 'full',
-                                            description ="It analyzes and provides all the information in the partition entry. (It returns a lot of information, so we recommend you render it in CSV.)",
+                                            description ="It analyzes and provides all the information in the partition entry and bootcode hexdump. (It returns a lot of information, so we recommend you render it in CSV.)",
                                             default = False,
                                             optional = True)            
         ]
@@ -152,7 +152,8 @@ class MBRScan(interfaces.plugins.PluginInterface):
                             partition_table.FourthEntry.get_ending_chs(),
                             partition_table.FourthEntry.get_ending_sector(),
                             format_hints.Hex(partition_table.FourthEntry.get_size_in_sectors()),
-                            interfaces.renderers.Disassembly(bootcode, 0, architecture)
+                            interfaces.renderers.Disassembly(bootcode, 0, architecture),
+                            format_hints.HexBytes(bootcode)
                         ))
                 else:
                     vollog.log(constants.LOGLEVEL_VV, f"Not a valid MBR: Data all zeroed out : {format_hints.Hex(offset)}")
@@ -235,5 +236,6 @@ class MBRScan(interfaces.plugins.PluginInterface):
                 ("PartDEndingCHS", int),
                 ("PartDEndingSector", int),
                 ("PartDSectorInSize", format_hints.Hex),
-                ("Disasm", interfaces.renderers.Disassembly)
+                ("Disasm", interfaces.renderers.Disassembly),
+                ("Bootcode", format_hints.HexBytes)
             ], self._generator())
