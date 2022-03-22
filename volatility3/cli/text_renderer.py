@@ -101,7 +101,7 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
         disasm: Input disassembly objects
 
     Returns:
-        A string as rendererd by capstone where available, otherwise output as if it were just bytes
+        A string as rendered by capstone where available, otherwise output as if it were just bytes
     """
 
     if CAPSTONE_PRESENT:
