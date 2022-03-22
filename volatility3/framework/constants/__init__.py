@@ -11,6 +11,7 @@ import os.path
 import sys
 from typing import Optional, Callable
 
+import volatility3.framework.constants.linux
 import volatility3.framework.constants.windows
 
 PLUGINS_PATH = [
