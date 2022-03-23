@@ -156,10 +156,10 @@ class MBRScan(interfaces.plugins.PluginInterface):
                             format_hints.HexBytes(bootcode)
                         ))
                 else:
-                    vollog.log(constants.LOGLEVEL_VV, f"Not a valid MBR: Data all zeroed out : {format_hints.Hex(offset)}")
+                    vollog.log(constants.LOGLEVEL_VVVV, f"Not a valid MBR: Data all zeroed out : {format_hints.Hex(offset)}")
             
             except exceptions.PagedInvalidAddressException:
-                pass
+                continue
 
     def run(self)-> renderers.TreeGrid:
         if not self.config.get("full", True):
