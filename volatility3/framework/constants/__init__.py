@@ -101,6 +101,3 @@ OFFLINE = False
 
 REMOTE_ISF_URL = None  # 'http://localhost:8000/banners.json'
 """Remote URL to query for a list of ISF addresses"""
-
-BACKUP_EXISTING_CONFIG_OUTPUT = True
-"""Whether existing files are backed up or overwritten when writing configuration output"""

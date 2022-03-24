@@ -344,15 +344,6 @@ class CommandLine:
         except (exceptions.VolatilityException) as excp:
             self.process_exceptions(excp)
 
-    def find_backup_filename(self, original: str):
-        suffix = ""
-        new_name = f"{original}.{datetime.strftime(datetime.today(), '%y%m%d')}.bak"
-        while os.path.exists(f"{new_name}{suffix}"):
-            if not suffix:
-                suffix = 1
-            suffix += 1
-        return f"{new_name}{suffix}"
-
     @classmethod
     def location_from_file(cls, filename: str) -> str:
         """Returns the URL location from a file parameter (which may be a URL)
