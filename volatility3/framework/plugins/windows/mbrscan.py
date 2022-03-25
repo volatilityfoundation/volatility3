@@ -84,14 +84,45 @@ class MBRScan(interfaces.plugins.PluginInterface):
                         partition_table.ThirdEntry, partition_table.FourthEntry
                     ]
 
+                    if not self.config.get("full", True):
+                        yield (0, (
+                            format_hints.Hex(offset),
+                            partition_table.get_disk_signature(),
+                            self.get_hash(bootcode),
+                            self.get_hash(full_mbr),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            interfaces.renderers.Disassembly(bootcode, 0, architecture)
+                        ))
+                    else:
+                        yield (0, (
+                            format_hints.Hex(offset),
+                            partition_table.get_disk_signature(),
+                            self.get_hash(bootcode),
+                            self.get_hash(full_mbr),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            renderers.NotApplicableValue(),
+                            interfaces.renderers.Disassembly(bootcode, 0, architecture),
+                            format_hints.HexBytes(bootcode)
+                        ))
+
                     for partition_index, partition_entry_object in enumerate(partition_entries, start=1):
-                        # Output disassembly information and bootcode for each partition entry is inefficient,
-                        # so it can only be processed in the last index.
-                        last_partition_index = len(partition_entries)
-                        bootcode_buf = bootcode if(partition_index == last_partition_index) else b""
                         
                         if not self.config.get("full", True):
-                            yield (0, (
+                            yield (1, (
                                 format_hints.Hex(offset),
                                 partition_table.get_disk_signature(),
                                 self.get_hash(bootcode),
@@ -100,10 +131,10 @@ class MBRScan(interfaces.plugins.PluginInterface):
                                 partition_entry_object.is_bootable(),
                                 partition_entry_object.get_partition_type(),
                                 format_hints.Hex(partition_entry_object.get_size_in_sectors()),
-                                interfaces.renderers.Disassembly(bootcode_buf, 0, architecture)
+                                renderers.NotApplicableValue()
                             ))
                         else:
-                            yield (0, (
+                            yield (1, (
                                 format_hints.Hex(offset),
                                 partition_table.get_disk_signature(),
                                 self.get_hash(bootcode),
@@ -121,8 +152,8 @@ class MBRScan(interfaces.plugins.PluginInterface):
                                 partition_entry_object.get_ending_chs(),
                                 partition_entry_object.get_ending_sector(),
                                 format_hints.Hex(partition_entry_object.get_size_in_sectors()),
-                                interfaces.renderers.Disassembly(bootcode_buf, 0, architecture),
-                                format_hints.HexBytes(bootcode_buf)
+                                renderers.NotApplicableValue(),
+                                renderers.NotApplicableValue()
                             ))
                 else:
                     vollog.log(constants.LOGLEVEL_VVVV, f"Not a valid MBR: Data all zeroed out : {format_hints.Hex(offset)}")
