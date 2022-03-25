@@ -9,7 +9,7 @@ volatility This includes default scanning block sizes, etc.
 import enum
 import os.path
 import sys
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 import volatility3.framework.constants.linux
 import volatility3.framework.constants.windows
@@ -79,6 +79,7 @@ ProgressCallback = Optional[Callable[[float, str], None]]
 """Type information for ProgressCallback objects"""
 
 OS_CATEGORIES = ['windows', 'mac', 'linux']
+
 
 class Parallelism(enum.IntEnum):
     """An enumeration listing the different types of parallelism applied to

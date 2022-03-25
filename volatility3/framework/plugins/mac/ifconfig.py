@@ -9,7 +9,7 @@ from volatility3.framework.symbols import mac
 
 
 class Ifconfig(plugins.PluginInterface):
-    """Lists loaded kernel modules"""
+    """Lists network interface information for all devices"""
 
     _required_framework_version = (2, 0, 0)
 
