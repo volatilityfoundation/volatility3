@@ -29,34 +29,34 @@ class PARTITION_ENTRY(objects.StructType):
         """Get Partition Type."""
         return self.PartitionType.lookup() if self.PartitionType.is_valid_choice else "Not Defined PartitionType"
 
-    def get_starting_chs(self):
+    def get_starting_chs(self) -> int:
         """Get Starting CHS (Cylinder Header Sector) Address."""
         return self.StartingCHS[0]
 
-    def get_ending_chs(self):
+    def get_ending_chs(self) -> int:
         """Get Ending CHS (Cylinder Header Sector) Address."""
         return self.EndingCHS[0]
 
-    def get_starting_sector(self):
+    def get_starting_sector(self) -> int:
         """Get Starting Sector."""
         return self.StartingCHS[1] % 64
 
-    def get_ending_sector(self):
+    def get_ending_sector(self) -> int:
         """Get Ending Sector."""
         return self.EndingCHS[1] % 64
 
-    def get_starting_cylinder(self):
+    def get_starting_cylinder(self) -> int:
         """Get Starting Cylinder."""
         return (self.StartingCHS[1] - self.get_starting_sector()) * 4 + self.StartingCHS[2]
 
-    def get_ending_cylinder(self):
+    def get_ending_cylinder(self) -> int:
         """Get Ending Cylinder."""
         return (self.EndingCHS[1] - self.get_ending_sector()) * 4 + self.EndingCHS[2]
     
-    def get_starting_lba(self):
+    def get_starting_lba(self) -> int:
         """Get Starting LBA (Logical Block Addressing)."""
         return self.StartingLBA
     
-    def get_size_in_sectors(self):
+    def get_size_in_sectors(self) -> int:
         """Get Size in Sectors."""
         return self.SizeInSectors
