@@ -19,6 +19,7 @@ import os
 import sys
 import tempfile
 import traceback
+from datetime import datetime
 from typing import Any, Dict, Type, Union
 from urllib import parse, request
 
@@ -157,6 +158,10 @@ class CommandLine:
                             help = "Write configuration JSON file out to config.json",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--save-config",
+                            help = "Save configuration JSON file to a file",
+                            default = None,
+                            type = str)
         parser.add_argument("--clear-cache",
                             help = "Clears out all short-term cached items",
                             default = False,
@@ -320,8 +325,13 @@ class CommandLine:
                                                    self.file_handler_class_factory())
 
             if args.write_config:
-                vollog.debug("Writing out configuration data to config.json")
-                with open("config.json", "w") as f:
+                vollog.warning('Use of --write-config has been deprecated, replaced by --save-config <filename>')
+                args.save_config = 'config.json'
+            if args.save_config:
+                vollog.debug("Writing out configuration data to {args.save_config}")
+                if os.path.exists(os.path.abspath(args.save_config)):
+                    parser.error(f"Cannot write configuration: file {args.save_config} already exists")
+                with open(args.save_config, "w") as f:
                     json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
         except exceptions.UnsatisfiedException as excp:
             self.process_unsatisfied_exceptions(excp)
