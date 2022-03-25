@@ -2,8 +2,6 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import struct
-
 from volatility3.framework import objects
 
 class PARTITION_TABLE(objects.StructType):
