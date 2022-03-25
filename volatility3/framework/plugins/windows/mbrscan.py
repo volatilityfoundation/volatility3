@@ -125,11 +125,11 @@ class MBRScan(interfaces.plugins.PluginInterface):
                                 format_hints.HexBytes(bootcode_buf)
                             ))
                 else:
-                    vollog.log(constants.LOGLEVEL_VVV, f"Not a valid MBR: Data all zeroed out : {format_hints.Hex(offset)}")
+                    vollog.log(constants.LOGLEVEL_VVVV, f"Not a valid MBR: Data all zeroed out : {format_hints.Hex(offset)}")
                     continue
             
             except exceptions.PagedInvalidAddressException as excp:
-                vollog.log(constants.LOGLEVEL_VVV, f"Invalid address identified in guessed MBR: {hex(excp.invalid_address)}")
+                vollog.log(constants.LOGLEVEL_VVVV, f"Invalid address identified in guessed MBR: {hex(excp.invalid_address)}")
                 continue
                 
     def run(self)-> renderers.TreeGrid:
