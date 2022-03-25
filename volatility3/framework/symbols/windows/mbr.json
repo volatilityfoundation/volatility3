@@ -170,7 +170,7 @@
                     "offset": 12,
                     "type": {
                         "kind": "base",
-                        "name": "int"
+                        "name": "unsigned int"
                     }
                 }
             },
