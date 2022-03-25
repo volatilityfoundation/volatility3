@@ -87,7 +87,7 @@ class MBRScan(interfaces.plugins.PluginInterface):
                     for partition_index, partition_entry_object in enumerate(partition_entries, start=1):
                         # Output disassembly information and bootcode for each partition entry is inefficient,
                         # so it can only be processed in the last index.
-                        last_partition_index = 4
+                        last_partition_index = len(partition_entries)
                         bootcode_buf = bootcode if(partition_index == last_partition_index) else b""
                         
                         if not self.config.get("full", True):
