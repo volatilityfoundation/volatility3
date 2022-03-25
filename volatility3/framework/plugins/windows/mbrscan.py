@@ -17,7 +17,7 @@ from volatility3.framework.symbols.windows.extensions import mbr
 vollog = logging.getLogger(__name__)
 
 class MBRScan(interfaces.plugins.PluginInterface):
-    """ Scans for and parses potential Master Boot Records (MBRs) """
+    """Scans for and parses potential Master Boot Records (MBRs)"""
 
     _required_framework_version = (2, 0, 1)
     _version = (1, 0, 0)
