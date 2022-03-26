@@ -1,7 +1,7 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-import volatility3.framework.symbols.windows.extensions.pool
+
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import extensions
 from volatility3.framework.symbols.windows.extensions import registry, pool
