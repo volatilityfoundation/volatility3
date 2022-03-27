@@ -77,7 +77,7 @@ vollog = logging.getLogger(__name__)
 class DeviceTree(interfaces.plugins.PluginInterface):
     """Listing tree based on drivers and attached devices in a particular windows memory image."""
 
-    _required_framework_version = (2, 0, 1)
+    _required_framework_version = (2, 0, 3)
     _version = (1, 0, 0)
 
     @classmethod
@@ -121,8 +121,7 @@ class DeviceTree(interfaces.plugins.PluginInterface):
                     for level, attached_device in enumerate(device.get_attached_devices(), start=2):
                         device_name = attached_device.get_device_name()
                         
-                        attached_device_name = "Unparsable Value" if isinstance(device_name, renderers.UnparsableValue) else device_name
-                        name = "{} - {}".format(attached_device_name, attached_device.DriverObject.DriverName.get_string())
+                        name = "{} - {}".format(device_name, attached_device.DriverObject.DriverName.get_string())
                         
                         attached_device_type = DEVICE_CODES.get(attached_device.DeviceType, "UNKNOWN")
 

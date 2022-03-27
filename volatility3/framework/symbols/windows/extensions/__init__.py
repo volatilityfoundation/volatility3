@@ -352,13 +352,10 @@ class EX_FAST_REF(objects.StructType):
 class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel device objects."""
 
-    def get_device_name(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
+    def get_device_name(self) -> str:
         """Get device's name from the object header."""
-        try:
-            header = self.get_object_header()
-            return header.NameInfo.Name.String  # type: ignore
-        except(ValueError):
-            return renderers.UnparsableValue()
+        header = self.get_object_header()
+        return header.NameInfo.Name.String  # type: ignore
 
     def get_attached_devices(self) -> Generator[ObjectInterface, None, None]:
         """Enumerate the device's attaches"""
@@ -370,13 +367,10 @@ class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
 class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel driver objects."""
 
-    def get_driver_name(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
+    def get_driver_name(self) -> str:
         """Get driver's name from the object header."""
-        try:
-            header = self.get_object_header()
-            return header.NameInfo.Name.String  # type: ignore
-        except(ValueError):
-            return renderers.UnparsableValue()
+        header = self.get_object_header()
+        return header.NameInfo.Name.String  # type: ignore
 
     def get_devices(self) -> Generator[ObjectInterface, None, None]:
         """Enumerate the driver's device objects"""
