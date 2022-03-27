@@ -358,7 +358,7 @@ class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
         return header.NameInfo.Name.String  # type: ignore
 
     def get_attached_devices(self) -> Generator[ObjectInterface, None, None]:
-        """Enumerate the device's attaches"""
+        """Enumerate the attached device's objects"""
         device = self.AttachedDevice.dereference()
         while device:
             yield device
