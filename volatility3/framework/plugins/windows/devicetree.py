@@ -140,5 +140,9 @@ class DeviceTree(interfaces.plugins.PluginInterface):
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([
-            ("Offset", format_hints.Hex), ("Type", str), ("DriverName", str), ("DeviceName", str), ("DeviceType", str),
+            ("Offset", format_hints.Hex),
+            ("Type", str),
+            ("DriverName", str),
+            ("DeviceName", str),
+            ("DeviceType", str),
         ], self._generator())
