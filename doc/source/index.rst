@@ -25,6 +25,15 @@ Here are some guidelines for using Volatility 3 effectively:
 
     volatility3
 
+
+.. toctree::
+    :caption: Getting Started
+
+    FAQ
+    Installation
+    Linux
+    Windows
+
 Indices and tables
 ==================
 
