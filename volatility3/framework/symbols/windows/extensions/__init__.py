@@ -351,17 +351,38 @@ class EX_FAST_REF(objects.StructType):
 class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel device objects."""
 
-    def get_device_name(self) -> str:
-        header = self.get_object_header()
-        return header.NameInfo.Name.String  # type: ignore
+    def get_device_name(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
+        """Get device's name from the object header."""
+        try:
+            header = self.get_object_header()
+            return header.NameInfo.Name.String  # type: ignore
+        except(ValueError):
+            return renderers.UnparsableValue()
 
+    def get_attached_devices(self) -> interfaces.objects.ObjectInterface:
+        """Enumerate the device's attaches"""
+        device = self.AttachedDevice.dereference()
+        while device:
+            yield device
+            device = device.AttachedDevice.dereference()
 
 class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel driver objects."""
 
-    def get_driver_name(self) -> str:
-        header = self.get_object_header()
-        return header.NameInfo.Name.String  # type: ignore
+    def get_driver_name(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
+        """Get driver's name from the object header."""
+        try:
+            header = self.get_object_header()
+            return header.NameInfo.Name.String  # type: ignore
+        except(ValueError):
+            return renderers.UnparsableValue()
+
+    def get_devices(self) -> interfaces.objects.ObjectInterface:
+        """Enumerate the driver's device objects"""
+        device =  self.DeviceObject.dereference()
+        while device:
+            yield device
+            device = device.NextDevice.dereference()
 
     def is_valid(self) -> bool:
         """Determine if the object is valid."""
