@@ -7,9 +7,10 @@ import datetime
 import functools
 import logging
 import math
-from typing import Iterable, Iterator, List, Optional, Tuple, Union
+from typing import Generator, Iterable, Iterator, List, Optional, Tuple, Union
 
 from volatility3.framework import constants, exceptions, interfaces, objects, renderers, symbols
+from volatility3.framework.interfaces.objects import ObjectInterface
 from volatility3.framework.layers import intel
 from volatility3.framework.renderers import conversion
 from volatility3.framework.symbols import generic
@@ -359,7 +360,7 @@ class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
         except(ValueError):
             return renderers.UnparsableValue()
 
-    def get_attached_devices(self) -> interfaces.objects.ObjectInterface:
+    def get_attached_devices(self) -> Generator[ObjectInterface, None, None]:
         """Enumerate the device's attaches"""
         device = self.AttachedDevice.dereference()
         while device:
@@ -377,7 +378,7 @@ class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
         except(ValueError):
             return renderers.UnparsableValue()
 
-    def get_devices(self) -> interfaces.objects.ObjectInterface:
+    def get_devices(self) -> Generator[ObjectInterface, None, None]:
         """Enumerate the driver's device objects"""
         device =  self.DeviceObject.dereference()
         while device:
