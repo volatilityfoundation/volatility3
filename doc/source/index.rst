@@ -10,6 +10,7 @@ Volatility 3 is Open Source.
 Here are some guidelines for using Volatility 3 effectively:
 
 .. toctree::
+    :caption: Documentation
 
     basics
     development
@@ -18,10 +19,10 @@ Here are some guidelines for using Volatility 3 effectively:
     volshell
     glossary
 
-Python Packages
-===============
 
 .. toctree::
+    :caption: Python Packages
+
     volatility3
 
 Indices and tables
