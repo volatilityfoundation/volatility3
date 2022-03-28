@@ -12,7 +12,7 @@ from volatility3.framework.symbols import mac
 
 class Mount(plugins.PluginInterface):
     """A module containing a collection of plugins that produce data typically
-    foundin Mac's mount command"""
+    found in Mac's mount command"""
 
     _required_framework_version = (2, 0, 0)
 
