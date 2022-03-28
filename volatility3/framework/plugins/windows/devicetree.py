@@ -94,19 +94,31 @@ class DeviceTree(interfaces.plugins.PluginInterface):
         # Scan the Layer for drivers
         for driver in driverscan.DriverScan.scan_drivers(self.context, kernel.layer_name, kernel.symbol_table_name):
             try:
-                driver_name = driver.get_driver_name()
+                try:
+                    driver_name = driver.get_driver_name()
+                except (ValueError, exceptions.PagedInvalidAddressException):
+                    vollog.log(constants.LOGLEVEL_VVVV,
+                        f"Failed to get Driver name : {driver.vol.offset:x}")
+                    driver_name = renderers.UnparsableValue()
 
                 yield (0, (
                     format_hints.Hex(driver.vol.offset),
                     "DRV",
                     driver_name,
                     renderers.NotApplicableValue(),
+                    renderers.NotApplicableValue(),
                     renderers.NotApplicableValue()
                 ))
 
                 # Scan to get the device information of driver.
                 for device in driver.get_devices():
-                    device_name = device.get_device_name()
+                    try:
+                        device_name = device.get_device_name()
+                    except (ValueError, exceptions.PagedInvalidAddressException):
+                        vollog.log(constants.LOGLEVEL_VVVV,
+                            f"Failed to get Device name : {device.vol.offset:x}")
+                        device_name = renderers.UnparsableValue()
+                    
                     device_type = DEVICE_CODES.get(device.DeviceType, "UNKNOWN")
 
                     yield (1, (
@@ -114,29 +126,35 @@ class DeviceTree(interfaces.plugins.PluginInterface):
                         "DEV",
                         driver_name,
                         device_name,
+                        renderers.NotApplicableValue(),
                         device_type
                     ))
                     
                     # Scan to get the attached devices information of device.
                     for level, attached_device in enumerate(device.get_attached_devices(), start=2):
-                        device_name = attached_device.get_device_name()
+                        try:
+                            device_name = attached_device.get_device_name()
+                        except (ValueError, exceptions.PagedInvalidAddressException):
+                            vollog.log(constants.LOGLEVEL_VVVV,
+                                f"Failed to get Attached Device Name: {attached_device.vol.offset:x}")
+                            device_name = renderers.UnparsableValue()
                         
-                        name = "{} - {}".format(device_name, attached_device.DriverObject.DriverName.get_string())
-                        
+                        attached_device_driver_name = attached_device.DriverObject.DriverName.get_string()
                         attached_device_type = DEVICE_CODES.get(attached_device.DeviceType, "UNKNOWN")
 
                         yield (level, (
                             format_hints.Hex(driver.vol.offset),
                             "ATT",
                             driver_name,
-                            name,
+                            device_name,
+                            attached_device_driver_name,
                             attached_device_type
                         ))
                     
             except(exceptions.PagedInvalidAddressException):
-                vollog.log(constants.LOGLEVEL_VVVV, f"Invalid address identified in drivers and devices: {format_hints.Hex(driver.vol.offset)}")
+                vollog.log(constants.LOGLEVEL_VVVV,
+                    f"Invalid address identified in drivers and devices: {driver.vol.offset:x}")
                 continue
-
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([
@@ -144,5 +162,6 @@ class DeviceTree(interfaces.plugins.PluginInterface):
             ("Type", str),
             ("DriverName", str),
             ("DeviceName", str),
+            ("DriverNameOfAttDevice", str),
             ("DeviceType", str),
         ], self._generator())
