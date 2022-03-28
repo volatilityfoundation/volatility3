@@ -111,10 +111,16 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
 
         if architecture:
             if architecture[0] == 'i440fx':
-                if architecture[1] and architecture[1] < '2.0':
-                    start = 0xe0000000
+                if ram_size >= 0xe0000000:
+                    if architecture[1] and architecture[1] < '2.0':
+                        start = 0xe0000000
+                    else:
+                        start = 0xc0000000
                 else:
-                    start = 0xc0000000
+                    vollog.log(constants.LOGLEVEL_VV, f"No PCI-hole present in this memory layout "
+                                                      f"(PC i440FX + RAM size < 0xe0000000)")
+                    return None
+
             elif architecture[0] == 'q35':
                 if ram_size >= 0xb0000000:
                     start = 0x80000000
