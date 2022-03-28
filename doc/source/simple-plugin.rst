@@ -196,7 +196,7 @@ The plugin then defaults the ``BaseDllName`` and ``FullDllName`` variables to an
 which is a way of indicating to the user interface that the value couldn't be read for some reason (but that it isn't fatal).
 There are currently four different reasons a value may be unreadable:
 
-* **Unredble**: values which are empty because the data cannot be read
+* **Unreadable**: values which are empty because the data cannot be read
 * **Unparsable**: values which are empty because the data cannot be interpreted correctly
 * **NotApplicable**: values which are empty because they don't make sense for this particular entry
 * **NotAvailable**: values which cannot be provided now (but might in a future run, via new symbols or an updated plugin)
