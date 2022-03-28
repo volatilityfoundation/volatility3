@@ -5,6 +5,7 @@ import functools
 import json
 import logging
 import re
+import struct
 from typing import Optional, Dict, Any, Tuple, List, Set
 
 from volatility3.framework import interfaces, exceptions, constants
@@ -192,9 +193,8 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         base_layer = self.context.layers[self._base_layer]
 
         while not done:
-            addr = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
-                                       offset = index,
-                                       layer_name = self._base_layer)
+            # Use struct.unpack here for performance improvements
+            addr = struct.unpack('>Q', base_layer.read(index, 8))[0]
             # Flags are stored in the n least significant bits, where n equals the bit-length of pagesize
             flags = addr & (page_size - 1)
             # addr equals the highest multiple of pagesize <= offset
