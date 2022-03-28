@@ -7,9 +7,10 @@ import datetime
 import functools
 import logging
 import math
-from typing import Iterable, Iterator, List, Optional, Tuple, Union
+from typing import Generator, Iterable, Iterator, List, Optional, Tuple, Union
 
 from volatility3.framework import constants, exceptions, interfaces, objects, renderers, symbols
+from volatility3.framework.interfaces.objects import ObjectInterface
 from volatility3.framework.layers import intel
 from volatility3.framework.renderers import conversion
 from volatility3.framework.symbols import generic
@@ -352,16 +353,31 @@ class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel device objects."""
 
     def get_device_name(self) -> str:
+        """Get device's name from the object header."""
         header = self.get_object_header()
         return header.NameInfo.Name.String  # type: ignore
 
+    def get_attached_devices(self) -> Generator[ObjectInterface, None, None]:
+        """Enumerate the attached device's objects"""
+        device = self.AttachedDevice.dereference()
+        while device:
+            yield device
+            device = device.AttachedDevice.dereference()
 
 class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel driver objects."""
 
     def get_driver_name(self) -> str:
+        """Get driver's name from the object header."""
         header = self.get_object_header()
         return header.NameInfo.Name.String  # type: ignore
+
+    def get_devices(self) -> Generator[ObjectInterface, None, None]:
+        """Enumerate the driver's device objects"""
+        device =  self.DeviceObject.dereference()
+        while device:
+            yield device
+            device = device.NextDevice.dereference()
 
     def is_valid(self) -> bool:
         """Determine if the object is valid."""
