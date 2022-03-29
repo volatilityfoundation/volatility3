@@ -21,7 +21,7 @@ class BigPools(interfaces.plugins.PluginInterface):
     """List big page pools."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -32,7 +32,11 @@ class BigPools(interfaces.plugins.PluginInterface):
             requirements.StringRequirement(name = 'tags',
                                            description = "Comma separated list of pool tags to filter pools returned",
                                            optional = True,
-                                           default = None)
+                                           default = None),
+            requirements.BooleanRequirement(name = 'show_free',
+                                            description = 'Show freed regions (otherwise only show allocations in use)',
+                                            default = False,
+                                            optional = True)
         ]
 
     @classmethod
@@ -40,7 +44,8 @@ class BigPools(interfaces.plugins.PluginInterface):
                        context: interfaces.context.ContextInterface,
                        layer_name: str,
                        symbol_table: str,
-                       tags: Optional[list] = None):
+                       tags: Optional[list] = None,
+                       show_free: bool = False):
         """Returns the big page pool objects from the kernel PoolBigPageTable array.
 
         Args:
@@ -97,7 +102,7 @@ class BigPools(interfaces.plugins.PluginInterface):
 
         for big_pool in big_pools:
             if big_pool.is_valid():
-                if tags is None or big_pool.get_key() in tags:
+                if (tags is None or big_pool.get_key() in tags) and (show_free or not big_pool.is_free()):
                     yield big_pool
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:  # , str, int]]]:
@@ -110,13 +115,19 @@ class BigPools(interfaces.plugins.PluginInterface):
         for big_pool in self.list_big_pools(context = self.context,
                                             layer_name = kernel.layer_name,
                                             symbol_table = kernel.symbol_table_name,
-                                            tags = tags):
+                                            tags = tags,
+                                            show_free = self.config.get("show_free")):
 
             num_bytes = big_pool.get_number_of_bytes()
             if not isinstance(num_bytes, interfaces.renderers.BaseAbsentValue):
                 num_bytes = format_hints.Hex(num_bytes)
 
-            yield (0, (format_hints.Hex(big_pool.Va), big_pool.get_key(), big_pool.get_pool_type(), num_bytes))
+            if big_pool.is_free():
+                status = "Free"
+            else:
+                status = "Allocated"
+
+            yield (0, (format_hints.Hex(big_pool.Va), big_pool.get_key(), big_pool.get_pool_type(), num_bytes, status))
 
     def run(self):
         return renderers.TreeGrid([
@@ -124,4 +135,5 @@ class BigPools(interfaces.plugins.PluginInterface):
             ('Tag', str),
             ('PoolType', str),
             ('NumberOfBytes', format_hints.Hex),
+            ('Status', str),
         ], self._generator())

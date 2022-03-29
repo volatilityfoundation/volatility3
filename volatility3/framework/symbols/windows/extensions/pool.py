@@ -233,7 +233,10 @@ class POOL_TRACKER_BIG_PAGES(objects.StructType):
 
     def is_valid(self) -> bool:
         return self.Key > 0
-        # return self.Va > 0x1
+
+    def is_free(self) -> bool:
+        """Returns if the allocation is freed (True) or in-use (False)"""
+        return self.Va & 1 == 1
 
     def get_key(self) -> str:
         """Returns the Key value as a 4 character string"""
