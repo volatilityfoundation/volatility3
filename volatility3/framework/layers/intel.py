@@ -129,7 +129,7 @@ class Intel(linear.LinearlyMappedLayer):
             for name, size, large_page in self._structure:
                 self._structure_position_table[counter] = name, size, large_page
                 counter -= size
-            print(self._structure_position_table)
+            # print(self._structure_position_table)
         return self._structure_position_table[position]
 
     def _handle_page_fault(self, name, offset, invalid_bits, entry, description):
