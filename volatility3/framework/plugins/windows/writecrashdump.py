@@ -8,12 +8,11 @@ from volatility3.framework.layers import physical, intel
 from volatility3.framework.symbols import intermed
 from volatility3.plugins.windows import info
 
-
 class WriteCrashDump(plugins.PluginInterface):
     """Runs the automagics and writes the output to a crashdump format file"""
     default_block_size = 0x500000
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (2, 0, 0)
 
     @classmethod
@@ -32,6 +31,8 @@ class WriteCrashDump(plugins.PluginInterface):
     @classmethod
     def write_crashdump(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
                         open_method: Type[interfaces.plugins.FileHandlerInterface]):
+        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
+        kernel = context.module(symbol_table, layer_name = layer_name, offset = kvo)
         primary = context.layers[layer_name]
         is_pae = isinstance(primary, intel.IntelPAE)
         is_64_bit = isinstance(primary, intel.Intel32e)
@@ -60,17 +61,25 @@ class WriteCrashDump(plugins.PluginInterface):
         context.layers.add_layer(header_layer)
         dump_header = context.object(dump_header_type, header_layer.name, 0)
 
-        kdbg = info.Info.get_kdbg_structure(context, configuration.path_join(config_path, 'info'), layer_name,
-                                            symbol_table)
-        kuser = info.Info.get_kuser_structure(context, layer_name,
-                                              symbol_table)
+        info_config_path = configuration.path_join(config_path, 'info')
+        kdbg = info.Info.get_kdbg_structure(context, info_config_path, layer_name, symbol_table)
+
+        kuser = info.Info.get_kuser_structure(context, layer_name, symbol_table)
+        version_structure = info.Info.get_version_structure(context, layer_name, symbol_table)
 
         dump_header.ValidDump.write([ord('D'), ord('U')] + valid_dump_suffix)
         dump_header.KdDebuggerDataBlock.write(kdbg.vol.offset | (0 if not is_64_bit else 0xFFFF000000000000))
-        dump_header.MajorVersion.write(0)
-        dump_header.MinorVersion.write(0)
+        dump_header.MajorVersion.write(version_structure.MajorVersion)
+        dump_header.MinorVersion.write(version_structure.MinorVersion)
+        dump_header.MachineImageType.write(version_structure.MachineType)
+
+        number_processors = kernel.object("unsigned int", offset=kernel.get_symbol("KeNumberProcessors").address)
+        dump_header.NumberProcessors.write(number_processors)
+
         dump_header.DirectoryTableBase.write(primary.config['page_map_offset'])
-        dump_header.PaeEnabled.write(int(is_pae))
+        if dump_header.has_member("PaeEnabled"):
+            dump_header.PaeEnabled.write(int(is_pae))
+
         dump_header.PfnDataBase.write(kdbg.MmPfnDatabase)
         dump_header.PsLoadedModuleList.write(kdbg.PsLoadedModuleList)
         dump_header.PsActiveProcessHead.write(kdbg.PsActiveProcessHead)
@@ -90,19 +99,16 @@ class WriteCrashDump(plugins.PluginInterface):
 
         # Write the actual data
         virtual_layer = context.layers[layer_name]
-        physical_layer_names = set([layer for _, _, _, _, layer in virtual_layer.mapping(virtual_layer.minimum_address,
-                                                                                         virtual_layer.maximum_address - virtual_layer.minimum_address,
-                                                                                         ignore_errors = True)])
-        if len(physical_layer_names) != 1:
-            raise exceptions.LayerException("Unable to write virtual layer with multiple physical sources")
-        physical_layer = context.layers[physical_layer_names.pop()]
+        physical_layer = context.layers[virtual_layer._base_layer]
 
-        page_count = math.ceil((physical_layer.maximum_address - physical_layer.minimum_address) / 1024)
+        page_count = (physical_layer.maximum_address - physical_layer.minimum_address) // 0x1000
         dump_header.PhysicalMemoryBlockBuffer.NumberOfRuns.write(1)
         dump_header.PhysicalMemoryBlockBuffer.NumberOfPages.write(page_count)
         run0 = dump_header.PhysicalMemoryBlockBuffer.Run[0]
         run0.BasePage.write(physical_layer.minimum_address)
         run0.PageCount.write(page_count)
+
+        dump_header.RequiredDumpSpace.write((page_count + 2) * 0x1000)
 
         # We don't try any form of compression, but just write the data as one large run
         with open_method('crash.dmp') as f:
@@ -110,8 +116,14 @@ class WriteCrashDump(plugins.PluginInterface):
             header_data = header_layer.read(0, header_layer.maximum_address + 1)
             f.write(header_data)
             for offset in range(physical_layer.minimum_address, physical_layer.maximum_address, 0x1000):
-
                 f.write(physical_layer.read(offset, 0x1000, pad = True))
+
+            # Fix KDBG in the dump if it was encoded
+            decoded_data = context.layers[kdbg.vol.layer_name].read(kdbg.vol.offset, kdbg.vol.size)
+            kdbg_physical_address = primary.translate(kdbg.vol.offset)[0]
+            kdbg_file_location = (header_layer.maximum_address + 1) + kdbg_physical_address
+            f.seek(kdbg_file_location)
+            f.write(decoded_data)
 
     def _generator(self):
         self.write_crashdump(self.context, self.config['primary'], self.config['nt_symbols'], self._file_handler)

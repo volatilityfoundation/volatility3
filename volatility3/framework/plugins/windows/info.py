@@ -7,11 +7,28 @@ from typing import List, Tuple, Iterable
 
 from volatility3.framework import constants, interfaces, layers, symbols
 from volatility3.framework.configuration import requirements
-from volatility3.framework.interfaces import plugins
+from volatility3.framework.interfaces import plugins, configuration
 from volatility3.framework.renderers import TreeGrid
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import extensions
+from volatility3.framework.layers import physical
+import struct
 
+def rol(value: int, count: int) -> int: 
+    """A rotate-left instruction in Python"""
+    
+    for y in range(count):
+        value *= 2
+        if (value > 0xFFFFFFFFFFFFFFFF):
+            value -= 0x10000000000000000
+            value += 1
+    return value
+
+def bswap(value: int) -> int:
+    """A byte-swap instruction in Python"""
+
+    hi, lo = struct.unpack(">II", struct.pack("<Q", value))
+    return (hi << 32) | lo 
 
 class Info(plugins.PluginInterface):
     """Show OS & kernel details of the memory sample being analyzed."""
@@ -64,18 +81,17 @@ class Info(plugins.PluginInterface):
         return ntkrnlmp
 
     @classmethod
-    def get_kdbg_structure(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
-                           symbol_table: str) -> interfaces.objects.ObjectInterface:
+    def get_raw_kdbg_structure(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
+                               symbol_table: str) -> interfaces.objects.ObjectInterface:
         """Returns the KDDEBUGGER_DATA64 structure for a kernel"""
         ntkrnlmp = cls.get_kernel_module(context, layer_name, symbol_table)
-
         native_types = context.symbol_space[symbol_table].natives
 
         kdbg_offset = ntkrnlmp.get_symbol("KdDebuggerDataBlock").address
 
         kdbg_table_name = intermed.IntermediateSymbolTable.create(context,
                                                                   interfaces.configuration.path_join(
-                                                                      config_path, 'kdbg'),
+                                                                  config_path, 'kdbg'),
                                                                   "windows",
                                                                   "kdbg",
                                                                   native_types = native_types,
@@ -86,6 +102,52 @@ class Info(plugins.PluginInterface):
                               layer_name = layer_name)
 
         return kdbg
+
+    @classmethod
+    def is_kdbg_encoded(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str) -> bool:
+        ntkrnlmp = cls.get_kernel_module(context, layer_name, symbol_table)
+        if not ntkrnlmp.has_symbol("KdpDataBlockEncoded"):
+            return False
+
+        KdpDataBlockEncoded_value = ntkrnlmp.object("char", offset=ntkrnlmp.get_symbol("KdpDataBlockEncoded").address)
+
+        return KdpDataBlockEncoded_value != 0
+
+    @classmethod
+    def get_kdbg_structure(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
+                           symbol_table: str) -> interfaces.objects.ObjectInterface:
+        kernel = cls.get_kernel_module(context, layer_name, symbol_table)
+        kdbg = cls.get_raw_kdbg_structure(context, config_path, layer_name, symbol_table)
+        primary = context.layers[kernel.layer_name]
+        tag_value = kdbg.Header.OwnerTag
+        is_kdbg_encoded = cls.is_kdbg_encoded(context, layer_name, symbol_table)
+
+        if not (is_kdbg_encoded and tag_value != b"KDBG"):
+            return kdbg
+
+        wait_never = kernel.object("unsigned long long", offset=kernel.get_symbol("KiWaitNever").address)
+        wait_always = kernel.object("unsigned long long", offset=kernel.get_symbol("KiWaitAlways").address)
+        datablockencoded = kernel.object("char", offset=kernel.get_symbol("KdpDataBlockEncoded").address)
+
+        kdbg_size = kdbg.vol.size
+        decoded_buffer = b""
+        kdbg_as_array = kernel.object(object_type="array", subtype=kernel.get_type("unsigned long long"), offset=kdbg.vol.offset, layer_name=kernel.layer_name, count=(kdbg_size // 8), absolute=True)
+        for entry in kdbg_as_array:
+            low_byte = (wait_never) & 0xFF
+            entry = rol(entry ^ wait_never, low_byte)
+            swap_xor = datablockencoded.vol.offset | 0xFFFF000000000000
+            entry = bswap(entry ^ swap_xor)
+            decoded_buffer += struct.pack("Q", entry ^ wait_always) 
+
+        kdbg_decoded_layer = physical.BufferDataLayer(context,
+                                                configuration.path_join("kdbg", 'layer'),
+                                                name = "kdbg_decoded",
+                                                buffer = decoded_buffer, offset=kdbg.vol.offset)
+        context.layers.add_layer(kdbg_decoded_layer)
+
+        return context.object(kdbg.vol.type_name, layer_name=kdbg_decoded_layer.name, 
+                              offset=kdbg.vol.offset, native_layer_name=primary.name)
+
 
     @classmethod
     def get_kuser_structure(cls, context: interfaces.context.ContextInterface, layer_name: str,
