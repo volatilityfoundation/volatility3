@@ -114,6 +114,42 @@ class Info(plugins.PluginInterface):
         return KdpDataBlockEncoded_value != 0
 
     @classmethod
+    def _decode_encoded_bytes(cls, context: interfaces.context.ContextInterface , offset: int,
+                              size: int, layer_name: str, symbol_table: str) -> bytes:
+
+        kernel = cls.get_kernel_module(context, layer_name, symbol_table)
+        wait_never = kernel.object("unsigned long long", offset=kernel.get_symbol("KiWaitNever").address)
+        wait_always = kernel.object("unsigned long long", offset=kernel.get_symbol("KiWaitAlways").address)
+        datablockencoded = kernel.object("char", offset=kernel.get_symbol("KdpDataBlockEncoded").address)
+
+        decoded_buffer = b""
+        encoded_array = kernel.object(object_type="array", subtype=kernel.get_type("unsigned long long"), offset=offset, layer_name=layer_name, count=(size // 8), absolute=True)
+        for entry in encoded_array:
+            low_byte = (wait_never) & 0xFF
+            entry = rol(entry ^ wait_never, low_byte)
+            swap_xor = datablockencoded.vol.offset | 0xFFFF000000000000
+            entry = bswap(entry ^ swap_xor)
+            decoded_buffer += struct.pack("Q", entry ^ wait_always)
+
+        return decoded_buffer
+
+    @classmethod
+    def _create_structure_from_bytes(cls, context: interfaces.context.ContextInterface, 
+                                     structure_bytes: bytes, structure_symbol_table: str, structure_name: str, 
+                                     offset: int, native_layer_name: str):
+
+        new_layer_name = f"{offset}_{structure_name}"
+        new_layer = physical.BufferDataLayer(context,
+                                        configuration.path_join(new_layer_name, 'layer'),
+                                        name = new_layer_name,
+                                        buffer = structure_bytes, offset=offset)
+        context.layers.add_layer(new_layer)
+
+        return context.object(f"{structure_symbol_table}{constants.BANG}{structure_name}", layer_name=new_layer.name, 
+                              offset=offset, native_layer_name=native_layer_name)
+
+
+    @classmethod
     def get_kdbg_structure(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
                            symbol_table: str) -> interfaces.objects.ObjectInterface:
         kernel = cls.get_kernel_module(context, layer_name, symbol_table)
@@ -125,28 +161,17 @@ class Info(plugins.PluginInterface):
         if not (is_kdbg_encoded and tag_value != b"KDBG"):
             return kdbg
 
-        wait_never = kernel.object("unsigned long long", offset=kernel.get_symbol("KiWaitNever").address)
-        wait_always = kernel.object("unsigned long long", offset=kernel.get_symbol("KiWaitAlways").address)
-        datablockencoded = kernel.object("char", offset=kernel.get_symbol("KdpDataBlockEncoded").address)
+        kdbg_symbol_table_name = kdbg.get_symbol_table_name()
+        kdbg_symbol_table = context.symbol_space[kdbg_symbol_table_name]
+        header_size = kdbg_symbol_table.get_type("_DBGKD_DEBUG_DATA_HEADER64").size
+        decoded_header_bytes = cls._decode_encoded_bytes(context, kdbg.vol.offset, header_size, layer_name, symbol_table)
+        decoded_header = cls._create_structure_from_bytes(context, decoded_header_bytes, kdbg_symbol_table_name, "_DBGKD_DEBUG_DATA_HEADER64", kdbg.vol.offset, layer_name)
 
-        kdbg_size = kdbg.vol.size
-        decoded_buffer = b""
-        kdbg_as_array = kernel.object(object_type="array", subtype=kernel.get_type("unsigned long long"), offset=kdbg.vol.offset, layer_name=kernel.layer_name, count=(kdbg_size // 8), absolute=True)
-        for entry in kdbg_as_array:
-            low_byte = (wait_never) & 0xFF
-            entry = rol(entry ^ wait_never, low_byte)
-            swap_xor = datablockencoded.vol.offset | 0xFFFF000000000000
-            entry = bswap(entry ^ swap_xor)
-            decoded_buffer += struct.pack("Q", entry ^ wait_always) 
+        kdbg_size = decoded_header.Size
+        decoded_kdbg_bytes = cls._decode_encoded_bytes(context, kdbg.vol.offset, kdbg_size, layer_name, symbol_table)
 
-        kdbg_decoded_layer = physical.BufferDataLayer(context,
-                                                configuration.path_join("kdbg", 'layer'),
-                                                name = "kdbg_decoded",
-                                                buffer = decoded_buffer, offset=kdbg.vol.offset)
-        context.layers.add_layer(kdbg_decoded_layer)
-
-        return context.object(kdbg.vol.type_name, layer_name=kdbg_decoded_layer.name, 
-                              offset=kdbg.vol.offset, native_layer_name=primary.name)
+        decoded_kdbg = cls._create_structure_from_bytes(context, decoded_kdbg_bytes, kdbg_symbol_table_name, "_KDDEBUGGER_DATA64", kdbg.vol.offset, layer_name)
+        return decoded_kdbg
 
 
     @classmethod

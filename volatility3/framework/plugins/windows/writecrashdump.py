@@ -119,7 +119,7 @@ class WriteCrashDump(plugins.PluginInterface):
                 f.write(physical_layer.read(offset, 0x1000, pad = True))
 
             # Fix KDBG in the dump if it was encoded
-            decoded_data = context.layers[kdbg.vol.layer_name].read(kdbg.vol.offset, kdbg.vol.size)
+            decoded_data = context.layers[kdbg.vol.layer_name].read(kdbg.vol.offset, kdbg.size())
             kdbg_physical_address = primary.translate(kdbg.vol.offset)[0]
             kdbg_file_location = (header_layer.maximum_address + 1) + kdbg_physical_address
             f.seek(kdbg_file_location)
