@@ -33,7 +33,10 @@ class Timers(interfaces.plugins.PluginInterface):
         # TODO KiProcessorBlock → _KPCR
         # TODO task.get_kdbg
         kernel = self.context.modules[self.config['kernel']]
-        kdbg = info.Info.get_kdbg_structure(self.context, self.config_path, kernel.layer_name, kernel.symbol_table_name,)
+        kdbg = info.Info.get_kdbg_structure(self.context,
+                                            self.config_path,
+                                            kernel.layer_name,
+                                            kernel.symbol_table_name,)
         
         print(dir(kdbg))
         yield(0, [0, "TEST", 0, "TEST", 0, "TEST"])
