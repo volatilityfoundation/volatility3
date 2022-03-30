@@ -3,6 +3,7 @@
 #
 
 import time
+import struct
 from typing import List, Tuple, Iterable
 
 from volatility3.framework import constants, interfaces, layers, symbols
@@ -12,7 +13,6 @@ from volatility3.framework.renderers import TreeGrid
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import extensions
 from volatility3.framework.layers import physical
-import struct
 
 def rol(value: int, count: int) -> int: 
     """A rotate-left instruction in Python"""
