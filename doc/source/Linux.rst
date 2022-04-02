@@ -28,6 +28,7 @@ Procedure to create symbol tables for linux
 
 To create a symbol table please refer this :ref:`symbol-tables:Mac or Linux symbol tables`.
 We can also find some ISF files from `Linux ISF Server <https://isf-server.techanarchy.net/>`_ ,  which is built and maintained by `kevthehermit <https://twitter.com/kevthehermit>`_.
+After creating the file or downloading the file from the ISF server, please place the file under the directory ``volatility3/symbols/linux``. Make a directory linux under symbols.
 
 
 Listing plugins
