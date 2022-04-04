@@ -646,7 +646,7 @@ class PdbReader:
                     if size != self.bases['pointer']['size']:
                         raise ValueError("Native pointers with different sizes!")
                 result = {"kind": "pointer", "subtype": self.get_type_from_index(value.subtype_index)}
-            elif leaf_type in [leaf_type.LF_PROCEDURE]:
+            elif leaf_type in [leaf_type.LF_PROCEDURE, leaf_type.LF_MFUNCTION]:
                 return {"kind": "function"}
             elif leaf_type in [leaf_type.LF_UNION]:
                 result = {"kind": "union", "name": name}
