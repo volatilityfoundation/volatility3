@@ -7,12 +7,11 @@ import json
 import logging
 import os
 import sys
-import glob
 
 import volatility3.plugins
 import volatility3.symbols
 from volatility3 import cli, framework
-from volatility3.cli.volshell import generic, windows, linux, mac
+from volatility3.cli.volshell import generic, linux, mac, windows
 from volatility3.framework import automagic, constants, contexts, exceptions, interfaces, plugins
 
 # Make sure we log everything

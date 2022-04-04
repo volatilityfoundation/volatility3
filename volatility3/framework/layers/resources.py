@@ -10,10 +10,11 @@ import logging
 import lzma
 import os
 import ssl
+import sys
 import urllib.parse
 import urllib.request
 import zipfile
-from typing import Optional, Any, IO, List
+from typing import Any, IO, List, Optional
 from urllib import error
 
 from volatility3 import framework
@@ -99,6 +100,21 @@ class ResourceAccessor(object):
         If the file is remote, it will be downloaded and locally cached
         """
         urllib.request.install_opener(urllib.request.build_opener(*self._handlers))
+
+        # Python bug 46654
+        if sys.platform == 'win32':
+            # We only need to worry about UNC paths on windows, on linux they'd be smb:// and need pysmb or similar
+            parsed_url = urllib.parse.urlparse(url, scheme = 'file')
+            # Only worry about file scheme URLs, make sure that there's either a host or
+            # the unparsing left an extra slash at the start (which will get lost with urlunparse)
+            if parsed_url.scheme == 'file' and (parsed_url.netloc or parsed_url.path.startswith('//')):
+                # Change the netloc to '/' and then prepend the netloc to the path
+                # Urlunparse will remove extra initial slashes from path, hence setting netloc
+                new_url = urllib.parse.urlunparse((parsed_url.scheme, '/',
+                                                   '/' + parsed_url.netloc + parsed_url.path, parsed_url.params,
+                                                   parsed_url.query, parsed_url.fragment))
+                vollog.log(constants.LOGLEVEL_VVVV, f'UNC path detected, converted path {url} to {new_url}')
+                url = new_url
 
         try:
             fp = urllib.request.urlopen(url, context = self._context)

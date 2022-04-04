@@ -8,3 +8,5 @@ Windows-specific values that aren't found in debug symbols
 
 KERNEL_MODULE_NAMES = ["ntkrnlmp", "ntkrnlpa", "ntkrpamp", "ntoskrnl"]
 """The list of names that kernel modules can have within the windows OS"""
+
+PE_MAX_EXTRACTION_SIZE = 1024 * 1024 * 256
