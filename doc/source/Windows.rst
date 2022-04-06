@@ -12,8 +12,8 @@ Listing Plugins
 ---------------
 
 .. code-block:: shell-session
-    
-    $ vol3 --help | grep windows | head -n 5
+
+    $ python3 vol.py --help | grep windows | head -n 5
         windows.bigpools.BigPools
         windows.cmdline.CmdLine
         windows.crashinfo.Crashinfo
@@ -43,7 +43,7 @@ In windows memory forensics using volatility3, most of the times we do not requi
 
 .. code-block:: shell-session
 
-    $ vol3 -f MemDump.DMP windows.pslist | head -n 10
+    $ python3 vol.py -f MemDump.DMP windows.pslist | head -n 10
         
         Volatility 3 Framework 2.0.2	PDB scanning finished                                
 
@@ -60,7 +60,7 @@ In windows memory forensics using volatility3, most of the times we do not requi
 
 .. code-block:: shell-session
 
-    $ vol3 -f MemDump.DMP windows.pstree | head -n 20
+    $ python3 vol.py -f MemDump.DMP windows.pstree | head -n 20
         Volatility 3 Framework 2.0.2	PDB scanning finished                                
         
         PID	PPID	ImageFileName	Offset(V)	Threads	Handles	SessionId	Wow64	CreateTime	ExitTime
