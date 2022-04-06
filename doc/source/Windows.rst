@@ -11,6 +11,8 @@ Volatility does not provide the ability to acquire memory. In this tutorial we w
 Listing Plugins
 ---------------
 
+.. code-block:: shell-session
+    
     $ vol3 --help | grep windows | head -n 5
         windows.bigpools.BigPools
         windows.cmdline.CmdLine
