@@ -3,11 +3,16 @@
 #
 import functools
 import json
+import logging
+import re
+import struct
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.layers import segmented
 from volatility3.framework.symbols import intermed
+
+vollog = logging.getLogger(__name__)
 
 
 class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
@@ -32,6 +37,13 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
     SEGMENT_FLAG_XBZRLE = 0x40
     SEGMENT_FLAG_HOOK = 0x80
 
+    pci_hole_table = {re.compile(r"^pc-i440fx-\d\.\d$"): (0xc0000000, 0x100000000),
+                      re.compile(r"^pc-1440fx-eoan$"): (0xe0000000, 0x100000000),
+                      re.compile(r"^pc-q35$"): (0x80000000, 0x100000000),
+                      re.compile(r"^microvm$"): (0xc0000000, 0x100000000),
+                      re.compile(r"^xen$"): (0xf0000000, 0x100000000)
+                      }
+
     def __init__(self,
                  context: interfaces.context.ContextInterface,
                  config_path: str,
@@ -42,6 +54,8 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         self._architecture = None
         self._compressed: Set[int] = set()
         self._current_segment_name = b''
+        self._pci_hole_start = 0
+        self._pci_hole_end = 0
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
     @classmethod
@@ -77,15 +91,18 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         base_layer = self.context.layers[self._base_layer]
 
         while not done:
-            addr = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
-                                       offset = index,
-                                       layer_name = self._base_layer)
+            # Use struct.unpack here for performance improvements
+            addr = struct.unpack('>Q', base_layer.read(index, 8))[0]
+
             # Flags are stored in the n least significant bits, where n equals the bit-length of pagesize
             flags = addr & (page_size - 1)
             # addr equals the highest multiple of pagesize <= offset
             # (We assume that page_size is a power of 2)
             addr = addr ^ (addr & (page_size - 1))
             index += 8
+
+            if addr > self._pci_hole_start:
+                addr += self._pci_hole_end - self._pci_hole_start
 
             if flags & self.SEGMENT_FLAG_MEM_SIZE:
                 namelen = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
@@ -143,6 +160,13 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 self._architecture = self.context.object(self._qemu_table_name + constants.BANG + 'string',
                                                          offset = index + 4, layer_name = self._base_layer,
                                                          max_length = section_len)
+                for regex in self.pci_hole_table:
+                    if regex.match(self._architecture):
+                        self._pci_hole_start, self._pci_hole_end = self.pci_hole_table[regex]
+                        vollog.log(constants.LOGLEVEL_VVVV, f"QEVM archicture detected as: {self._architecture}")
+                        break
+                else:
+                    vollog.debug(constants.LOGLEVEL_VVVV, f"QEVM unknown architecture found: {self._architecture}")
                 index += 4 + section_len
             elif section_byte == self.QEVM_SECTION_START or section_byte == self.QEVM_SECTION_FULL:
                 section_id = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long',
