@@ -3,9 +3,9 @@
 #
 import functools
 import json
-from typing import Optional, Dict, Any, Tuple, List, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
-from volatility3.framework import interfaces, exceptions, constants
+from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.layers import segmented
 from volatility3.framework.symbols import intermed
 
@@ -39,6 +39,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         self._qemu_table_name = intermed.IntermediateSymbolTable.create(context, config_path, 'generic', 'qemu')
         self._configuration = None
+        self._architecture = None
         self._compressed: Set[int] = set()
         self._current_segment_name = b''
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
@@ -139,6 +140,9 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 section_len = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long',
                                                   offset = index,
                                                   layer_name = self._base_layer)
+                self._architecture = self.context.object(self._qemu_table_name + constants.BANG + 'string',
+                                                         offset = index + 4, layer_name = self._base_layer,
+                                                         max_length = section_len)
                 index += 4 + section_len
             elif section_byte == self.QEVM_SECTION_START or section_byte == self.QEVM_SECTION_FULL:
                 section_id = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long',
