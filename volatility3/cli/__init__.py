@@ -19,7 +19,6 @@ import os
 import sys
 import tempfile
 import traceback
-from datetime import datetime
 from typing import Any, Dict, Type, Union
 from urllib import parse, request
 
@@ -453,16 +452,17 @@ class CommandLine:
 
             print(f"Unsatisfied requirement {config_path}: {excp.unsatisfied[config_path].description}")
 
-        if symbols_failed:
-            print("\nA symbol table requirement was not fulfilled.  Please verify that:\n"
-                  "\tYou have the correct symbol file for the requirement\n"
-                  "\tThe symbol file is under the correct directory or zip file\n"
-                  "\tThe symbol file is named appropriately or contains the correct banner\n")
         if translation_failed:
             print("\nA translation layer requirement was not fulfilled.  Please verify that:\n"
                   "\tA file was provided to create this layer (by -f, --single-location or by config)\n"
                   "\tThe file exists and is readable\n"
-                  "\tThe necessary symbols are present and identified by volatility3")
+                  "\tThe file is a valid memory image and was acquired cleanly")
+        if symbols_failed:
+            print("\nA symbol table requirement was not fulfilled.  Please verify that:\n"
+                  "\tThe associated translation layer requirement was fulfilled\n"
+                  "\tYou have the correct symbol file for the requirement\n"
+                  "\tThe symbol file is under the correct directory or zip file\n"
+                  "\tThe symbol file is named appropriately or contains the correct banner\n")
 
     def populate_config(self, context: interfaces.context.ContextInterface,
                         configurables_list: Dict[str, Type[interfaces.configuration.ConfigurableInterface]],
