@@ -79,3 +79,4 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
     def get_canonical_address(cls, address: int) -> int:
         """Make the address canonical"""
         return address
+        
