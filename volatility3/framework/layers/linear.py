@@ -69,3 +69,13 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
                        sections: Iterable[Tuple[int, int]],
                        linear: bool = True) -> Iterable[interfaces.layers.IteratorValue]:
         return super()._scan_iterator(scanner, sections, linear)
+
+    @classmethod
+    def is_address_canonical(cls, address: int) -> bool:
+        """Returns whether the address is canonical or not."""
+        return True
+
+    @classmethod
+    def get_canonical_address(cls, address: int) -> int:
+        """Make the address canonical"""
+        return address

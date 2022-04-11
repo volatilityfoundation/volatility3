@@ -57,10 +57,11 @@ class Handles(interfaces.plugins.PluginInterface):
 
         value = value & 0xFFFFFFFFFFFFFFF8
         value = value >> magic
-        # if (value & (1 << 47)):
-        #    value = value | 0xFFFF000000000000
+        
+        kernel = self.context.modules[self.config['kernel']]
+        virtual = kernel.layer_name
 
-        return value
+        return self.context.layers[virtual].get_canonical_address(value)
 
     def _get_item(self, handle_table_entry, handle_value):
         """Given  a handle table entry (_HANDLE_TABLE_ENTRY) structure from a
