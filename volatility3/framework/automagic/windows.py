@@ -236,7 +236,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                     pointer = struct.unpack(test.ptr_struct, page_table[index:index + ptr_size])[0]
                     # Make sure the pointer is valid, ignore large pages which would require more calculation
                     if pointer & 0x1 and not pointer & 0x80:
-                        max_ptr = max(max_ptr, (pointer ^ (pointer & 0xfff)) % test.layer_type.maximum_address)
+                        max_ptr = max(max_ptr, (pointer & test.mask) % test.layer_type.maximum_address)
                 return max_ptr
 
             hits = sorted(list(hits), key = sort_by_tests)

@@ -75,7 +75,7 @@ class Intel(linear.LinearlyMappedLayer):
     @classproperty
     @functools.lru_cache()
     def maximum_address(cls) -> int:
-        return (1 << cls._maxvirtaddr) - 1
+        return (1 << cls._bits_per_register) - 1
 
     @classproperty
     def structure(cls) -> List[Tuple[str, int, bool]]:
@@ -102,6 +102,10 @@ class Intel(linear.LinearlyMappedLayer):
         translated address lives in and the layer_name that the address
         lives in
         """
+        if not self.is_address_canonical(offset):
+            # TODO: raise an exception if the address is not canonical
+            vollog.warning(f"Address {hex(offset)} is not canonical!")
+
         entry, position = self._translate_entry(offset)
 
         # Now we're done
@@ -231,6 +235,7 @@ class Intel(linear.LinearlyMappedLayer):
         This allows translation layers to provide maps of contiguous
         regions in one layer
         """
+        offset = self.get_canonical_address(offset)
         if length == 0:
             try:
                 mapped_offset, _, layer_name = self._translate(offset)
@@ -264,11 +269,31 @@ class Intel(linear.LinearlyMappedLayer):
                 length -= chunk_size
                 offset += chunk_size
 
+            if offset > self.maximum_address:
+                break
+            
+            offset = self.get_canonical_address(offset)
+
     @property
     def dependencies(self) -> List[str]:
         """Returns a list of the lower layer names that this layer is dependent
         upon."""
         return [self._base_layer] + self._swap_layers
+
+    @classmethod
+    def is_address_canonical(cls, address: int) -> bool:
+        """Returns whether the address is canonical or not."""
+        return ((address >> (cls._maxvirtaddr - 1)) & 1) == ((address >> (cls._bits_per_register - 1)) & 1)
+
+    @classmethod
+    def _sign_extend(cls, value: int, bits: int) -> int:
+        sign_bit = 1 << (bits - 1)
+        return (value & (sign_bit - 1)) - (value & sign_bit)
+
+    @classmethod
+    def get_canonical_address(cls, address: int) -> int:
+        """Make the address canonical"""
+        return cls._sign_extend(address, cls._maxvirtaddr) & cls.maximum_address
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
