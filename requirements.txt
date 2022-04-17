@@ -1,6 +1,6 @@
 # The following packages are required for core functionality.
 pefile>=2017.8.1
-rich>=11.2.0
+rich>=12.2.0
 
 # The following packages are optional.
 # If certain packages are not necessary, place a comment (#) at the start of the line.

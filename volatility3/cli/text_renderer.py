@@ -11,9 +11,8 @@ from functools import wraps
 from pathlib import Path
 from typing import Callable, Any, List, Tuple, Dict
 
+from rich import box
 from rich.console import Console
-from rich.highlighter import ReprHighlighter
-from rich.live import Live
 from rich.table import Table
 from rich.theme import Theme
 from volatility3.framework import interfaces, renderers
@@ -348,7 +347,7 @@ class RichRenderer(CLIRenderer):
         pass
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
-        """Renders each column immediately to stdout using Rich Live and Table output.
+        """Renders each column using Rich Table output.
 
             Args:
                 grid: The TreeGrid object to render
@@ -361,28 +360,32 @@ class RichRenderer(CLIRenderer):
             theme = None
 
         console = Console(theme = theme)
-        table = Table(*[c.name for c in grid.columns],
+        table = Table(expand = False,
+                      box = box.SIMPLE_HEAVY,
                       highlight = True,
                       border_style = theme.styles.get("table.border", None) if theme else None)
+        [table.add_column(c.name, overflow = "fold") for c in grid.columns]
 
-        with Live(table, console = console, auto_refresh=False, vertical_overflow="overflow") as live:
-            console.print()
-
-            # This function doesn't need to return anything at all and just updates existing Table object
-            def visitor(node: interfaces.renderers.TreeNode, accumulator: None) -> None:
-                row = []
-                for column_index in range(len(grid.columns)):
-                    column = grid.columns[column_index]
-                    renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
-                    column_rich_text = renderer(node.values[column_index])
+        # This function doesn't need to return anything at all and just updates existing Table object
+        def visitor(node: interfaces.renderers.TreeNode, accumulator: None) -> None:
+            row = []
+            for column_index in range(len(grid.columns)):
+                column = grid.columns[column_index]
+                renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
+                column_rich_text = renderer(node.values[column_index])
+                if column_index == 0:
+                    column_str = "|" if node.path_depth - 1 else ""
+                    row.append(column_str + "-" * (node.path_depth - 1) + str(column_rich_text))
+                else:
                     row.append(str(column_rich_text))
-                table.add_row(*row)
-                live.refresh()
+            table.add_row(*row)
 
-            if not grid.populated:
-                grid.populate(visitor, None)
-            else:
-                grid.visit(node = None, function = visitor, initial_accumulator = None)
+        if not grid.populated:
+            grid.populate(visitor, None)
+        else:
+            grid.visit(node = None, function = visitor, initial_accumulator = None)
+
+        console.print("\n", table)
 
 
 class JsonRenderer(CLIRenderer):
