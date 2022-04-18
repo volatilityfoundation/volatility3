@@ -9,7 +9,7 @@ import string
 import sys
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, List, Tuple, Dict
+from typing import Any, Callable, Dict, List, Tuple
 
 from rich import box
 from rich.console import Console
