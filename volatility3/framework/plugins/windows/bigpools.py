@@ -33,7 +33,7 @@ class BigPools(interfaces.plugins.PluginInterface):
                                            description = "Comma separated list of pool tags to filter pools returned",
                                            optional = True,
                                            default = None),
-            requirements.BooleanRequirement(name = 'show_free',
+            requirements.BooleanRequirement(name = 'show-free',
                                             description = 'Show freed regions (otherwise only show allocations in use)',
                                             default = False,
                                             optional = True)
@@ -116,7 +116,7 @@ class BigPools(interfaces.plugins.PluginInterface):
                                             layer_name = kernel.layer_name,
                                             symbol_table = kernel.symbol_table_name,
                                             tags = tags,
-                                            show_free = self.config.get("show_free")):
+                                            show_free = self.config.get("show-free")):
 
             num_bytes = big_pool.get_number_of_bytes()
             if not isinstance(num_bytes, interfaces.renderers.BaseAbsentValue):
