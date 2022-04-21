@@ -61,7 +61,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                       re.compile(r"^pc-q35-\d\.\d$"): (0xb0000000, 0x80000000, 0x100000000),
                       re.compile(r"^microvm$"): (0xc0000000, 0xc0000000, 0x100000000),
                       re.compile(r"^xen$"): (0xf0000000, 0xf0000000, 0x100000000),
-                      re.compile(r"^pc-i440fx-" + distro_re + r"$"): (0xe0000000, 0xe0000000, 0x100000000),
+                      re.compile(r"^pc-i440fx-" + distro_re + r"$"): (0xe0000000, 0xc0000000, 0x100000000),
                       re.compile(r"^pc-q35-" + distro_re + r"$"): (0xb0000000, 0x80000000, 0x100000000),
                       }
 
@@ -251,7 +251,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
             vollog.log(constants.LOGLEVEL_VVVV, f"QEVM unknown architecture found: {self._architecture}")
 
     def _fallback_determine_architecture(self) -> str:
-        architecture_pattern = rb'pc-(i440fx|q35)-([0-9]{1,2}.[0-9]{1,2}(?:.[0-9]{1,2})?)'
+        architecture_pattern = rb'pc-(i440fx|q35)-(\d{1,2}\.\d{1,2}|[\w\d\.]+)'
         old_suffix = "-2.0"
         base_layer = self.context.layers[self._base_layer]
 
