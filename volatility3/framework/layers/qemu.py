@@ -123,7 +123,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
             addr = addr ^ (addr & (page_size - 1))
             index += 8
 
-            if addr > self._pci_hole_start:
+            if addr >= self._pci_hole_start:
                 addr += self._pci_hole_end - self._pci_hole_start
 
             if flags & self.SEGMENT_FLAG_MEM_SIZE:
@@ -252,7 +252,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
 
     def _fallback_determine_architecture(self) -> str:
         architecture_pattern = rb'pc-(i440fx|q35)-([0-9]{1,2}.[0-9]{1,2}(?:.[0-9]{1,2})?)'
-        old_suffix = "-1.0"
+        old_suffix = "-2.0"
         base_layer = self.context.layers[self._base_layer]
 
         vollog.log(constants.LOGLEVEL_VVVV, "QEVM fallback architecture detection used")
@@ -261,7 +261,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         for offset in base_layer.scan(context = self.context, scanner = res):
             line = base_layer.read(offset, 64)
             regex_results = re.search(architecture_pattern, line)
-            architecture = "pc-" + regex_results.groups()[0].decode() + old_suffix
+            architecture = regex_results.group().decode()
             return architecture
 
         # If that does not work, look in configuration JSON for devices specific to a certain architecture
