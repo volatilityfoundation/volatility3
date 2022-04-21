@@ -170,7 +170,28 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         index = 8
         section_info = dict()
         current_section_id = -1
+        version_id = -1
+        name = None
+        arch_detected = False
         while section_byte != self.QEVM_EOF and index <= base_layer.maximum_address:
+            if index > 20 and not arch_detected:
+                # We're past where the QEVM_CONFIGURATION might be, so set the values
+                # If no architecture has been set, try to determine it using fallback mechanisms
+                if not self._architecture:
+                    self._architecture = self._fallback_determine_architecture()
+                    if self._architecture is None:
+                        vollog.log(constants.LOGLEVEL_VV, f"QEVM architecture could not be determined")
+
+                # Once all segments have been read, determine the PCI hole if any
+                for regex in self.pci_hole_table:
+                    if regex.match(self._architecture):
+                        _, self._pci_hole_start, self._pci_hole_end = self.pci_hole_table[regex]
+                        vollog.log(constants.LOGLEVEL_VVVV, f"QEVM architecture detected as: {self._architecture}")
+                        break
+                else:
+                    vollog.log(constants.LOGLEVEL_VVVV, f"QEVM unknown architecture found: {self._architecture}")
+                arch_detected = True
+
             section_byte = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
                                                offset = index,
                                                layer_name = self._base_layer)
@@ -231,24 +252,6 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 pass
             else:
                 raise exceptions.LayerException(self._name, f'QEMU unknown section encountered: {section_byte}')
-
-        # If no architecture has been set, try to determine it using fallback mechanisms
-        if not self._architecture:
-            self._architecture = self._fallback_determine_architecture()
-            if self._architecture is None:
-                vollog.log(constants.LOGLEVEL_VV, f"QEVM architecture could not be determined")
-
-        # Once all segments have been read, determine the PCI hole if any
-        for regex in self.pci_hole_table:
-            if regex.match(self._architecture):
-                self._pci_hole_minimum, self._pci_hole_start, self._pci_hole_end = self.pci_hole_table[regex]
-                if self.maximum_address < self._pci_hole_minimum:
-                    # The PCI hole isn't present because we're below the minimum value
-                    self._pci_hole_start, self._pci_hole_end = 0, 0
-                vollog.log(constants.LOGLEVEL_VVVV, f"QEVM architecture detected as: {self._architecture}")
-                break
-        else:
-            vollog.log(constants.LOGLEVEL_VVVV, f"QEVM unknown architecture found: {self._architecture}")
 
     def _fallback_determine_architecture(self) -> str:
         architecture_pattern = rb'pc-(i440fx|q35)-(\d{1,2}\.\d{1,2}|[\w\d\.]+)'
