@@ -21,7 +21,7 @@ if __name__ == '__main__':
     logger.addHandler(console)
 
 
-class PDBRetreiver:
+class PDBRetriever:
 
     def retreive_pdb(self, guid: str, file_name: str) -> Optional[str]:
         logger.info("Download PDB file...")
@@ -339,7 +339,7 @@ if __name__ == '__main__':
     delfile = False
     filename = None
     if args.guid is not None and args.pattern is not None:
-        filename = PDBRetreiver().retreive_pdb(guid = args.guid, file_name = args.pattern)
+        filename = PDBRetriever().retreive_pdb(guid = args.guid, file_name = args.pattern)
         delfile = True
     elif args.file:
         filename = args.file
