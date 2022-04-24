@@ -282,7 +282,12 @@ class Intel(linear.LinearlyMappedLayer):
 
     @classmethod
     def is_address_canonical(cls, address: int) -> bool:
-        """Returns whether the address is canonical or not."""
+        """Returns whether the address is canonical or not.
+        When a 64-bit linear address is generated to access memory, the processor first
+        confirms that the address is canonical. If the address is not canonical, the memory
+        access causes a fault, and the processor makes no attempt to translate the address.
+        To support LAM48 and LAM57 we only check the most upper bit and the max virtual address bit.
+        """
         return ((address >> (cls._maxvirtaddr - 1)) & 1) == ((address >> (cls._bits_per_register - 1)) & 1)
 
     @classmethod
@@ -292,7 +297,11 @@ class Intel(linear.LinearlyMappedLayer):
 
     @classmethod
     def get_canonical_address(cls, address: int) -> int:
-        """Make the address canonical"""
+        """Make the address canonical.
+        A linear address is canonical only if bits the bits above max virtual address are a sign-extension of
+        the max virtual address bit, which is the uppermost bit used in linear-address translation.
+        To do this we sign extend the address based on the max virtual address bit.
+        """
         return cls._sign_extend(address, cls._maxvirtaddr) & cls.maximum_address
 
     @classmethod
