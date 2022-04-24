@@ -77,6 +77,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         self._current_segment_name = b''
         self._pci_hole_start = 0
         self._pci_hole_end = 0
+        self._pci_hole_minimum = 0
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
     @classmethod
@@ -110,6 +111,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         done = None
         segments = []
 
+        size_array = {}
         base_layer = self.context.layers[self._base_layer]
 
         while not done:
@@ -131,14 +133,21 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                                                offset = index,
                                                layer_name = self._base_layer)
                 while namelen != 0:
-                    # if base_layer.read(index + 1, namelen) == b'pc.ram':
-                    #     total_size = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
-                    #                                       offset = index + 1 + namelen,
-                    #                                       layer_name = self._base_layer)
+                    total_size = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
+                                                      offset = index + 1 + namelen,
+                                                      layer_name = self._base_layer)
+                    size_array[base_layer.read(index + 1, namelen)] = total_size
                     index += 1 + namelen + 8
                     namelen = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
                                                    offset = index,
                                                    layer_name = self._base_layer)
+                if size_array.get(b'pc.ram',
+                                  max([x[0] for x in self.pci_hole_table.values()]) + 1) <= self._pci_hole_minimum:
+                    # Turns off the pci_hole if it's not supposed to be there
+                    vollog.debug(
+                        f"QEVM tunrning off PCI hole due to small image size: {size_array.get(b'pc.ram'):x} < {self._pci_hole_minimum:x}")
+                    self._pci_hole_start, self._pci_hole_end = 0, 0
+
             if flags & (self.SEGMENT_FLAG_COMPRESS | self.SEGMENT_FLAG_PAGE):
                 if not (flags & self.SEGMENT_FLAG_CONTINUE):
                     namelen = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
@@ -185,7 +194,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 # Once all segments have been read, determine the PCI hole if any
                 for regex in self.pci_hole_table:
                     if regex.match(self._architecture):
-                        _, self._pci_hole_start, self._pci_hole_end = self.pci_hole_table[regex]
+                        self._pci_hole_minimum, self._pci_hole_start, self._pci_hole_end = self.pci_hole_table[regex]
                         vollog.log(constants.LOGLEVEL_VVVV, f"QEVM architecture detected as: {self._architecture}")
                         break
                 else:
