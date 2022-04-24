@@ -184,7 +184,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
 
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
-        full_type_name = callback_table_name + constants.BANG + "_EX_CALLBACK_ROUTINE_BLOCK"
 
         if ntkrnlmp.has_symbol("CmpCallBackVector") and ntkrnlmp.has_symbol("CmpCallBackCount"):
             yield from cls._list_registry_callbacks_legacy(context, layer_name, symbol_table, callback_table_name)
