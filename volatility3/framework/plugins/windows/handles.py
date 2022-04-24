@@ -54,12 +54,12 @@ class Handles(interfaces.plugins.PluginInterface):
         This function mimics the decoding routine so we can generate the
         proper pointer values as well.
         """
-
-        value = value & 0xFFFFFFFFFFFFFFF8
-        value = value >> magic
-        
         kernel = self.context.modules[self.config['kernel']]
         virtual = kernel.layer_name
+
+        # TODO: Make this logic consistent with how the windows kernel does this.
+        value = value & 0xFFFFFFFFFFFFFFF8
+        value = value >> magic        
 
         return self.context.layers[virtual].get_canonical_address(value)
 
