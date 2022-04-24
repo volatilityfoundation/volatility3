@@ -29,6 +29,10 @@ class WriteCrashDump(plugins.PluginInterface):
         ]
 
     @classmethod
+    def get_physical_layer_name(cls, context: interfaces.context.ContextInterface, vlayer: interfaces.layers.DataLayerInterface) -> str:
+        return context.config.get(interfaces.configuration.path_join(vlayer.config_path, 'memory_layer'), None)
+
+    @classmethod
     def write_crashdump(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
                         open_method: Type[interfaces.plugins.FileHandlerInterface]):
         kvo = context.layers[layer_name].config["kernel_virtual_offset"]
@@ -99,7 +103,8 @@ class WriteCrashDump(plugins.PluginInterface):
 
         # Write the actual data
         virtual_layer = context.layers[layer_name]
-        physical_layer = context.layers[virtual_layer._base_layer]
+        physical_layer_name = cls.get_physical_layer_name(context, virtual_layer)
+        physical_layer = context.layers[physical_layer_name]
 
         page_count = (physical_layer.maximum_address - physical_layer.minimum_address) // 0x1000
         dump_header.PhysicalMemoryBlockBuffer.NumberOfRuns.write(1)
