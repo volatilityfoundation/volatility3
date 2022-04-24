@@ -1,8 +1,9 @@
-import functools
+import functools, logging
 from typing import List, Optional, Tuple, Iterable
 
 from volatility3.framework import exceptions, interfaces
 
+vollog = logging.getLogger(__name__)
 
 class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
     """Class to differentiate Linearly Mapped layers (where a => b implies that
@@ -32,6 +33,10 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of
         length size."""
+        if not self.is_address_canonical(offset):
+            vollog.debug(f"Got non-canonical address as the input: {hex(offset)}. Should be {hex(self.get_canonical_address(offset))}")
+
+        offset = self.get_canonical_address(offset)
         current_offset = offset
         output: List[bytes] = []
         for (offset, _, mapped_offset, mapped_length, layer) in self.mapping(offset, length, ignore_errors = pad):
