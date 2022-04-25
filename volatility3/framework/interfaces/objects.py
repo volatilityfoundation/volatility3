@@ -115,7 +115,15 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         mask = context.layers[object_info.layer_name].address_mask
         normalized_offset = object_info.offset & mask
 
-        self._vol = collections.ChainMap({}, {'type_name': type_name, 'offset': normalized_offset}, object_info, kwargs)
+        vol_info_dict = {'type_name': type_name, 'offset': normalized_offset}
+        if constants.BANG in type_name:
+            table_name, struct_name = type_name.split(constants.BANG)
+            vol_info_dict["table_name"] = table_name
+            vol_info_dict["short_name"] = struct_name
+        else:
+            vol_info_dict["short_name"] = type_name
+        
+        self._vol = collections.ChainMap({}, vol_info_dict, object_info, kwargs)
         self._context = context
 
     def __getattr__(self, attr: str) -> Any:
@@ -142,7 +150,7 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         """
         if constants.BANG not in self.vol.type_name:
             raise ValueError(f"Unable to determine table for symbol: {self.vol.type_name}")
-        table_name = self.vol.type_name[:self.vol.type_name.index(constants.BANG)]
+        table_name = self.vol.table_name
         if table_name not in self._context.symbol_space:
             raise KeyError(f"Symbol table not found in context's symbol_space for symbol: {self.vol.type_name}")
         return table_name
@@ -156,7 +164,7 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         """
         # TODO: Carefully consider the implications of casting and how it should work
         if constants.BANG not in new_type_name:
-            symbol_table = self.vol['type_name'].split(constants.BANG)[0]
+            symbol_table = self.get_symbol_table_name()
             new_type_name = symbol_table + constants.BANG + new_type_name
         object_template = self._context.symbol_space.get_type(new_type_name)
         object_template = object_template.clone()
@@ -168,6 +176,11 @@ class ObjectInterface(metaclass = abc.ABCMeta):
                                         native_layer_name = self.vol.native_layer_name,
                                         size = object_template.size)
         return object_template(context = self._context, object_info = object_info)
+
+    def at_layer(self, new_layer_name) -> 'ObjectInterface':
+        """Returns the same object casted at a different layer.
+        """
+        return self._context.object(self.vol.type_name, offset=self.vol.offset, layer_name=new_layer_name)
 
     def has_member(self, member_name: str) -> bool:
         """Returns whether the object would contain a member called
