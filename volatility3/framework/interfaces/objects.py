@@ -121,6 +121,7 @@ class ObjectInterface(metaclass = abc.ABCMeta):
             vol_info_dict["table_name"] = table_name
             vol_info_dict["short_name"] = struct_name
         else:
+            vol_info_dict["table_name"] = ""
             vol_info_dict["short_name"] = type_name
         
         self._vol = collections.ChainMap({}, vol_info_dict, object_info, kwargs)
