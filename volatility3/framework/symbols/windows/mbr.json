@@ -1,0 +1,240 @@
+{
+    "metadata": {
+        "producer": {
+          "version": "0.0.1",
+          "name": "Donghyun Kim (@digitalisx99)",
+          "comment": "Using structures defined in File System Forensic Analysis pg 88+",
+          "datetime": "2022-03-05T10:53:00"
+        },
+        "format": "6.1.0"
+    },
+    "base_types": {
+        "unsigned long": {
+            "kind": "int", 
+            "size": 4, 
+            "signed": false, 
+            "endian": "little"
+        }, 
+        "unsigned long long": {
+            "kind": "int", 
+            "size": 8, 
+            "signed": false, 
+            "endian": "little"
+        }, 
+        "long": {
+            "kind": "int", 
+            "size": 4, 
+            "signed": true, 
+            "endian": "little"
+        },
+        "unsigned int": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "int": {
+            "kind": "int",
+            "size": 4,
+            "signed": true,
+            "endian": "little"
+        }, 
+        "unsigned short": {
+            "kind": "int", 
+            "size": 2, 
+            "signed": false, 
+            "endian": "little"
+        },
+        "unsigned char": {
+            "kind": "int", 
+            "size": 1, 
+            "signed": false, 
+            "endian": "little"
+        },
+        "wchar": {
+            "kind": "int", 
+            "size": 2, 
+            "signed": true, 
+            "endian": "little"
+        }
+    },
+    "symbols": {},
+    "enums": {
+        "PartitionTypes": {
+            "base": "unsigned char",
+            "constants": {
+                "Empty": 0,
+                "FAT12,CHS": 1,
+                "FAT16 16-32MB,CHS": 4,
+                "Microsoft Extended": 5,
+                "FAT16 32MB,CHS": 6,
+                "NTFS": 7,
+                "FAT32,CHS": 11,
+                "FAT32,LBA": 12,
+                "FAT16, 32MB-2GB,LBA": 14,
+                "Microsoft Extended, LBA": 15,
+                "Hidden FAT12,CHS": 17,
+                "Hidden FAT16,16-32MB,CHS": 20,
+                "Hidden FAT16,32MB-2GB,CHS": 22,
+                "AST SmartSleep Partition": 24,
+                "Hidden FAT32,CHS": 27,
+                "Hidden FAT32,LBA": 28,
+                "Hidden FAT16,32MB-2GB,LBA": 30,
+                "PQservice": 39,
+                "Plan 9 partition": 57,
+                "PartitionMagic recovery partition": 60,
+                "Microsoft MBR,Dynamic Disk": 66,
+                "GoBack partition": 68,
+                "Novell": 81,
+                "CP/M": 82,
+                "Unix System V": 99,
+                "PC-ARMOUR protected partition": 100,
+                "Solaris x86 or Linux Swap": 130,
+                "Linux": 131,
+                "Hibernation": 132,
+                "Linux Extended": 133,
+                "NTFS Volume Set": 134,
+                "NTFS Volume Set": 135,
+                "BSD/OS": 159,
+                "Hibernation": 160,
+                "Hibernation": 161,
+                "FreeBSD": 165,
+                "OpenBSD": 166,
+                "Mac OSX": 168,
+                "NetBSD": 169,
+                "Mac OSX Boot": 171,
+                "MacOS X HFS": 175,
+                "BSDI": 183,
+                "BSDI Swap": 184,
+                "Boot Wizard hidden": 187,
+                "Solaris 8 boot partition": 190,
+                "CP/M-86": 216,
+                "Dell PowerEdge Server utilities (FAT fs)": 222,
+                "DG/UX virtual disk manager partition": 223,
+                "BeOS BFS": 235,
+                "EFI GPT Disk": 238,
+                "EFI System Partition": 239,
+                "VMWare File System": 251,
+                "VMWare Swap": 252
+            },
+            "size": 1
+        }
+    },
+    "user_types": {
+        "PARTITION_ENTRY":{
+            "fields": {
+                "BootableFlag": {
+                    "offset": 0,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned char"
+                    }
+                },
+                "StartingCHS": {
+                    "offset": 1,
+                    "type": {
+                        "count": 3,
+                        "kind": "array",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned char"
+                        }
+                    }
+                },
+                "PartitionType": {
+                    "offset": 4,
+                    "type": {
+                        "kind": "enum",
+                        "name": "PartitionTypes"
+                    }
+                },
+                "EndingCHS": {
+                    "offset": 5,
+                    "type": {
+                        "count": 3,
+                        "kind": "array",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned char"
+                        }
+                    }
+                },
+                "StartingLBA": {
+                    "offset": 8,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    }
+                },
+                "SizeInSectors": {
+                    "offset": 12,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    }
+                }
+            },
+            "kind": "struct",
+            "size": 16
+        },
+        "PARTITION_TABLE":{
+            "fields":{
+                "DiskSignature": {
+                    "offset": 440,
+                    "type": {
+                        "count": 4,
+                        "kind": "array",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned char"
+                        }
+                    }
+                },
+                "Unused": {
+                    "offset": 444,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                    }
+                },
+                "FirstEntry":{
+                    "offset": 446,
+                    "type": {
+                        "kind": "struct",
+                        "name": "PARTITION_ENTRY"
+                    }
+                },
+                "SecondEntry":{
+                    "offset": 462,
+                    "type": {
+                        "kind": "struct",
+                        "name": "PARTITION_ENTRY"
+                    }
+                },
+                "ThirdEntry":{
+                    "offset": 478,
+                    "type": {
+                        "kind": "struct",
+                        "name": "PARTITION_ENTRY"
+                    }
+                },
+                "FourthEntry":{
+                    "offset": 494,
+                    "type": {
+                        "kind": "struct",
+                        "name": "PARTITION_ENTRY"
+                    }
+                },
+                "Signature":{
+                    "offset": 510,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                    }
+                }
+            },
+            "kind": "struct",
+            "size": 512
+        }
+    }
+}

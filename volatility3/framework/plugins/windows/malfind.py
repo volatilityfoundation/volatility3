@@ -53,7 +53,7 @@ class Malfind(interfaces.plugins.PluginInterface):
         """
 
         CHUNK_SIZE = 0x1000
-        all_zero_page = "\x00" * CHUNK_SIZE
+        all_zero_page = b"\x00" * CHUNK_SIZE
 
         offset = 0
         vad_length = vad.get_end() - vad.get_start()
