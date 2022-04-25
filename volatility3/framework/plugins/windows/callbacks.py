@@ -190,7 +190,14 @@ class Callbacks(interfaces.plugins.PluginInterface):
         elif ntkrnlmp.has_symbol("CallbackListHead") and ntkrnlmp.has_symbol("CmpCallBackCount"):
             yield from cls._list_registry_callbacks_new(context, layer_name, symbol_table, callback_table_name)
         else:
-            vollog.debug("Cannot find CmpCallBackVector or CmpCallBackCount or CallbackListHead")
+            symbols_to_check = ["CmpCallBackVector", "CmpCallBackCount", "CallbackListHead"]
+            vollog.debug("Failed to get registry callbacks!")
+            for symbol_name in symbols_to_check:
+                symbol_status = "does not exist"
+                if ntkrnlmp.has_symbol(symbol_name):
+                    symbol_status = "exists"
+                vollog.debug(f"symbol {symbol_name} {symbol_status}.")
+
             return
 
     @classmethod
