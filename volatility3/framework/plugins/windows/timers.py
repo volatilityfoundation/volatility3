@@ -6,10 +6,8 @@ import logging
 
 from typing import Iterator, List, Tuple
 
-from volatility3.framework import renderers, interfaces
+from volatility3.framework import constants, renderers, symbols, interfaces
 from volatility3.framework.configuration import requirements
-from volatility3.framework.renderers import format_hints
-from volatility3.plugins.windows import info, modules, pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -23,23 +21,32 @@ class Timers(interfaces.plugins.PluginInterface):
     def get_requirements(cls)-> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'info', plugin = info.Info, version = (1, 0, 0)), 
-            requirements.PluginRequirement(name = 'modules', plugin = modules.Modules, version = (1, 1, 0)),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)) 
+                                           architectures = ["Intel32", "Intel64"])
         ]
 
     def _generator(self) -> Iterator[Tuple]:
-        # TODO KiProcessorBlock → _KPCR
-        # TODO task.get_kdbg
         kernel = self.context.modules[self.config['kernel']]
-        kdbg = info.Info.get_kdbg_structure(self.context,
-                                            self.config_path,
-                                            kernel.layer_name,
-                                            kernel.symbol_table_name,)
+        layer_name = kernel.layer_name
+
+        kvo = self.context.layers[layer_name].config['kernel_virtual_offset']
+        kernel_module = self.context.module(kernel.symbol_table_name, layer_name = layer_name, offset = kvo)
         
-        print(dir(kdbg))
-        yield(0, [0, "TEST", 0, "TEST", 0, "TEST"])
+        kpb_offset = kernel_module.get_symbol("KiProcessorBlock").address
+        
+        # x86
+        if not symbols.symbol_table_is_64bit(self.context, kernel.symbol_table_name):
+            yield(0, [0, "TEST", 0, "TEST", 0, "TEST"])
+        # x64
+        else:
+            kpcr_size = kernel_module.get_type("_KPCR").size
+            pointer_size = self.context.modules[self.config['kernel']].get_type("pointer").size
+            cal_offset = kpb_offset - (kpcr_size + pointer_size)
+            print(kpb_offset, kpcr_size, cal_offset)
+
+            kpcr = kernel_module.object(object_type = "_KPCR", offset = cal_offset)
+            print(kpcr.MajorVersion)
+            print(kpcr.MinorVersion)
+            yield(0, [0, "TEST", 0, "TEST", 0, "TEST"])
     
     def run(self)-> renderers.TreeGrid:
         return renderers.TreeGrid([
