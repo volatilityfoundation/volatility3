@@ -170,7 +170,7 @@
                     },
                     "offset": 28
                 },
-                "Alltitude": {
+                "Altitude": {
                     "type": {
                         "kind": "struct",
                         "name": "nt_symbols!_UNICODE_STRING"

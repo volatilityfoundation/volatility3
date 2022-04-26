@@ -165,7 +165,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
 
         callback_list = ntkrnlmp.object(object_type = "_LIST_ENTRY", offset = symbol_offset)
         for callback in callback_list.to_list(full_type_name, "Link"):
-            yield "CmRegisterCallbackEx", callback.Function, f"Alltitude: {callback.Alltitude.String}"
+            yield "CmRegisterCallbackEx", callback.Function, f"Altitude: {callback.Altitude.String}"
 
     @classmethod
     def list_registry_callbacks(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
