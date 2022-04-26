@@ -32,4 +32,5 @@ class KDDEBUGGER_DATA64(objects.StructType):
 
         return (csdresult >> 8) & 0xffffffff
 
+
 class_types = {'_KDDEBUGGER_DATA64': KDDEBUGGER_DATA64}
