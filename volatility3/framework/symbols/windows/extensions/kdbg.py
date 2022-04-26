@@ -31,11 +31,5 @@ class KDDEBUGGER_DATA64(objects.StructType):
                                          offset = self.CmNtCSDVersion)
 
         return (csdresult >> 8) & 0xffffffff
-    
-    def get_kpcrs(self):
-        """Generator for KPCRs referenced by this KDBG."""
-
-        return
-
 
 class_types = {'_KDDEBUGGER_DATA64': KDDEBUGGER_DATA64}
