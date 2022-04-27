@@ -9,7 +9,7 @@ volatility This includes default scanning block sizes, etc.
 import enum
 import os.path
 import sys
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 import volatility3.framework.constants.linux
 import volatility3.framework.constants.windows
@@ -63,7 +63,7 @@ LOGLEVEL_VVVV = 6
 CACHE_PATH = os.path.join(os.path.expanduser("~"), ".cache", "volatility3")
 """Default path to store cached data"""
 
-if sys.platform == 'windows':
+if sys.platform == 'win32':
     CACHE_PATH = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "volatility3")
 os.makedirs(CACHE_PATH, exist_ok = True)
 
@@ -77,6 +77,8 @@ BUG_URL = "https://github.com/volatilityfoundation/volatility3/issues"
 
 ProgressCallback = Optional[Callable[[float, str], None]]
 """Type information for ProgressCallback objects"""
+
+OS_CATEGORIES = ['windows', 'mac', 'linux']
 
 
 class Parallelism(enum.IntEnum):

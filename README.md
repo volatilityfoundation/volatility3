@@ -14,7 +14,9 @@ technical and performance challenges associated with the original
 code base that became apparent over the previous 10 years. Another benefit
 of the rewrite is that Volatility 3 could be released under a custom
 license that was more aligned with the goals of the Volatility community,
-the Volatility Software License (VSL). See the [LICENSE](LICENSE.txt) file for more details.
+the Volatility Software License (VSL). See the 
+[LICENSE](https://www.volatilityfoundation.org/license/vsl-v1.0) file for 
+more details.
 
 ## Requirements
 
@@ -39,7 +41,7 @@ pip3 install -r requirements.txt
 
 ## Downloading Volatility
 
-The latest stable version of Volatility will always be the master branch of the GitHub repository. You can get the latest version of the code using the following command:
+The latest stable version of Volatility will always be the stable branch of the GitHub repository. You can get the latest version of the code using the following command:
 
 ```shell
 git clone https://github.com/volatilityfoundation/volatility3.git
@@ -102,7 +104,7 @@ The latest generated copy of the documentation can be found at: <https://volatil
 
 ## Licensing and Copyright
 
-Copyright (C) 2007-2021 Volatility Foundation
+Copyright (C) 2007-2022 Volatility Foundation
 
 All Rights Reserved
 

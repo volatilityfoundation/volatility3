@@ -22,15 +22,17 @@ be run.
 When volshell starts, it will show the version of volshell, a brief message indicating how to get more help, the current
 operating system mode for volshell, and the current layer available for use.
 
-.. code-block:: python
+::
 
-    Volshell (Volatility 3 Framework) 1.0.1
+    Volshell (Volatility 3 Framework) 2.0.2
     Readline imported successfully	PDB scanning finished
 
         Call help() to see available functions
 
-        Volshell mode: Generic
-        Current Layer: primary
+        Volshell mode        : Generic
+        Current Layer        : primary
+        Current Symbol Table : None
+        Current Kernel Name  : None
 
     (primary) >>>
 
@@ -53,11 +55,11 @@ run our examples against.
 We'll start by creating a process variable, and putting the first result from `ps()` in it.  Since the shell is a
 python environment, we can do the following:
 
-.. code-block:: python
+::
 
-    (primary) >>> proc = ps()[0]
-    (primary) >>> proc
-    <EPROCESS nt_symbols1!_EPROCESS: primary @ 0x8c0bcac87040 #2624>
+    (layer_name) >>> proc = ps()[0]
+    (layer_name) >>> proc
+    <EPROCESS symbol_table_name1!_EPROCESS: layer_name @ 0xe08ff2459040 #1968>
 
 When printing a volatility structure, various information is output, in this case the `type_name`, the `layer` and
 `offset` that it's been constructed on, and the size of the structure.
@@ -68,41 +70,41 @@ built-in mechanism for providing more information about a structure, called `dis
 either a type name (which if not prefixed with symbol table name, will use the kernel symbol table identified by the
 automagic).
 
-.. code-block:: python
+::
 
-    (primary) >>> dt('_EPROCESS')
-    nt_symbols1!_EPROCESS (2624 bytes)
-       0x0 :   Pcb                                    nt_symbols1!_KPROCESS
-     0x438 :   ProcessLock                            nt_symbols1!_EX_PUSH_LOCK
-     0x440 :   UniqueProcessId                        nt_symbols1!pointer
-     0x448 :   ActiveProcessLinks                     nt_symbols1!_LIST_ENTRY
+    (layer_name) >>> dt('_EPROCESS')
+    symbol_table_name1!_EPROCESS (1968 bytes)
+       0x0 :   Pcb                                         symbol_table_name1!_KPROCESS
+     0x2d8 :   ProcessLock                                 symbol_table_name1!_EX_PUSH_LOCK
+     0x2e0 :   RundownProtect                              symbol_table_name1!_EX_RUNDOWN_REF
+     0x2e8 :   UniqueProcessId                             symbol_table_name1!pointer
     ...
 
 It can also be provided with an object and will interpret the data for each in the process:
 
-.. code-block:: python
+::
 
-    (primary) >>> dt(proc)
-    nt_symbols1!_EPROCESS (2624 bytes)
-       0x0 :   Pcb                                    nt_symbols1!_KPROCESS                               0x8c0bccf8d040
-     0x438 :   ProcessLock                            nt_symbols1!_EX_PUSH_LOCK                           0x8c0bccf8d478
-     0x440 :   UniqueProcessId                        nt_symbols1!pointer                                 356
-     0x448 :   ActiveProcessLinks                     nt_symbols1!_LIST_ENTRY                             0x8c0bccf8d488
+    (layer_name) >>> dt(proc)
+    symbol_table_name1!_EPROCESS (1968 bytes)
+       0x0 :   Pcb                                         symbol_table_name1!_KPROCESS                           0xe08ff2459040
+     0x2d8 :   ProcessLock                                 symbol_table_name1!_EX_PUSH_LOCK                       0xe08ff2459318
+     0x2e0 :   RundownProtect                              symbol_table_name1!_EX_RUNDOWN_REF                     0xe08ff2459320
+     0x2e8 :   UniqueProcessId                             symbol_table_name1!pointer                             4
     ...
 
 These values can be accessed directory as attributes
 
-.. code-block:: python
+::
 
-    (primary) >>> proc.UniqueProcessId
+    (layer_name) >>> proc.UniqueProcessId
     356
 
 Pointer structures contain the value they point to, but attributes accessed are forwarded to the object they point to.
 This means that pointers do not need to be explicitly dereferenced to access underling objects.
 
-.. code-block:: python
+::
 
-    (primary) >>> proc.Pcb.DirectoryTableBase
+    (layer_name) >>> proc.Pcb.DirectoryTableBase
     4355817472
 
 Running plugins
@@ -112,28 +114,28 @@ It's possible to run any plugin by importing it appropriately and passing it to 
 method.  In the following example we'll provide no additional parameters.  Volatility will show us which parameters
 were required:
 
-.. code-block:: python
+::
 
-    (primary) >>> from volatility3.plugins.windows import pslist
-    (primary) >>> display_plugin_output(pslist.PsList)
-    Unable to validate the plugin requirements: ['plugins.Volshell.9QZLXJKFWESI0BAP3M1U7Y5VCT468GRN.PsList.primary', 'plugins.Volshell.9QZLXJKFWESI0BAP3M1U7Y5VCT468GRN.PsList.nt_symbols']
+    (layer_name) >>> from volatility3.plugins.windows import pslist
+    (layer_name) >>> display_plugin_output(pslist.PsList)
+    Unable to validate the plugin requirements: ['plugins.Volshell.VH3FSA1JBG0QP9E62Z8OT5UCIMLNYKW4.PsList.kernel']
 
-We can see that it's made a temporary configuration path for the plugin, and that neither `primary` nor `nt_symbols`
-was fulfilled.
+We can see that it's made a temporary configuration path for the plugin, and that the `kernel` requirement
+was not fulfilled.
 
 We can see all the options that the plugin can accept by access the `get_requirements()` method of the plugin.
 This is a classmethod, so can be called on an uninstantiated copy of the plugin.
 
-.. code-block:: python
+::
 
-    (primary) >>> pslist.PsList.get_requirements()
-    [<TranslationLayerRequirement: primary>, <SymbolTableRequirement: nt_symbols>, <BooleanRequirement: physical>, <ListRequirement: pid>, <BooleanRequirement: dump>]
+    (layer_name) >>> pslist.PsList.get_requirements()
+    [<ModuleRequirement: kernel>, <BooleanRequirement: physical>, <ListRequirement: pid>, <BooleanRequirement: dump>]
 
 We can provide arguments via the `dpo` method call:
 
-.. code-block:: python
+::
 
-    (primary) >>> display_plugin_output(pslist.PsList, primary = self.current_layer, nt_symbols = self.config['nt_symbols'])
+    (layer_name) >>> display_plugin_output(pslist.PsList, kernel = self.config['kernel'])
 
     PID	PPID	ImageFileName	Offset(V)	Threads	Handles	SessionId	Wow64	CreateTime	ExitTime	File output
 
@@ -142,17 +144,18 @@ We can provide arguments via the `dpo` method call:
     356	4	smss.exe	0x8c0bccf8d040	3	-	N/A	False	2021-03-13 17:25:33.000000 	N/A	Disabled
     ...
 
-Here's we've provided the current layer as the TranslationLayerRequirement, and used the symbol tables requirement
-requested by the volshell plugin itself.  A different table could be loaded and provided instead.  The context used
+Here's we've provided the kernel name that was requested by the volshell plugin itself (the generic volshell does not
+load a kernel module, and instead only has a TranslationLayerRequirement).
+A different module could be created and provided instead.  The context used
 by the `dpo` method is always `context`.
 
 Instead of print the results directly to screen, they can be gathered into a TreeGrid objects for direct access by
 using the `generate_treegrid` or `gt` command.
 
-.. code-block:: python
+::
 
-    (primary) >>> treegrid = gt(pslist.PsList, primary = self.current_layer, nt_symbols = self.config['nt_symbols'])
-    (primary) >>> treegrid.populate()
+    (layer_name) >>> treegrid = gt(pslist.PsList, kernel = self.config['kernel'])
+    (layer_name) >>> treegrid.populate()
 
 Treegrids must be populated before the data in them can be accessed.  This is where the plugin actually runs and
 produces data.

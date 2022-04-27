@@ -76,3 +76,21 @@ The banners available for volatility to use can be found using the `isfinfo` plu
 long time to run depending on the number of JSON files available.  This will list all the JSON (ISF) files that
 volatility3 is aware of, and for linux/mac systems what banner string they search for.  For volatility to use the JSON
 file, the banners must match exactly (down to the compilation date).
+
+.. note::
+
+  Steps for constructing a new kernel ISF JSON file:
+
+  * Run the `banners` plugin on the image to determine the necessary kernel
+  * Locate a copy of the debug kernel that matches the identified banner
+
+    * Clone or update the dwarf2json repo: :code:`git clone https://github.com/volatilityfoundation/dwarf2json`
+    * Run :code:`go build` in the directory if the source has changed
+
+  * Run :code:`dwarf2json linux --elf [path to debug kernel] > [kernel name].json`
+
+    * For Mac change `linux` to `mac`
+
+  * Copy the `.json` file to the symbols directory into `[symbols directory]/linux`
+
+    * For Mac change `linux` to `mac`

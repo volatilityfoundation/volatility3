@@ -14,7 +14,7 @@ from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import versions
 from volatility3.framework.symbols.windows.extensions import network
 from volatility3.plugins import timeliner
-from volatility3.plugins.windows import info, poolscanner
+from volatility3.plugins.windows import info, poolscanner, verinfo
 
 vollog = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                             component = poolscanner.PoolScanner,
                                             version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'info', component = info.Info, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'verinfo', component = verinfo.VerInfo, version = (1, 0, 0)),
             requirements.BooleanRequirement(
                 name = 'include-corrupt',
                 description =
@@ -141,49 +142,55 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         # furthermore, it is easy to append new versions.
         if arch == "x86":
             version_dict = {
-                (6, 0, 6000): "netscan-vista-x86",
-                (6, 0, 6001): "netscan-vista-x86",
-                (6, 0, 6002): "netscan-vista-x86",
-                (6, 0, 6003): "netscan-vista-x86",
-                (6, 1, 7600): "netscan-win7-x86",
-                (6, 1, 7601): "netscan-win7-x86",
-                (6, 1, 8400): "netscan-win7-x86",
-                (6, 2, 9200): "netscan-win8-x86",
-                (6, 3, 9600): "netscan-win81-x86",
-                (10, 0, 10240): "netscan-win10-10240-x86",
-                (10, 0, 10586): "netscan-win10-10586-x86",
-                (10, 0, 14393): "netscan-win10-14393-x86",
-                (10, 0, 15063): "netscan-win10-15063-x86",
-                (10, 0, 16299): "netscan-win10-15063-x86",
-                (10, 0, 17134): "netscan-win10-17134-x86",
-                (10, 0, 17763): "netscan-win10-17134-x86",
-                (10, 0, 18362): "netscan-win10-17134-x86",
-                (10, 0, 18363): "netscan-win10-17134-x86"
+                (6, 0, 6000, 0): "netscan-vista-x86",
+                (6, 0, 6001, 0): "netscan-vista-x86",
+                (6, 0, 6002, 0): "netscan-vista-x86",
+                (6, 0, 6003, 0): "netscan-vista-x86",
+                (6, 1, 7600, 0): "netscan-win7-x86",
+                (6, 1, 7601, 0): "netscan-win7-x86",
+                (6, 1, 8400, 0): "netscan-win7-x86",
+                (6, 2, 9200, 0): "netscan-win8-x86",
+                (6, 3, 9600, 0): "netscan-win81-x86",
+                (10, 0, 10240, 0): "netscan-win10-10240-x86",
+                (10, 0, 10586, 0): "netscan-win10-10586-x86",
+                (10, 0, 14393, 0): "netscan-win10-14393-x86",
+                (10, 0, 15063, 0): "netscan-win10-15063-x86",
+                (10, 0, 16299, 0): "netscan-win10-15063-x86",
+                (10, 0, 17134, 0): "netscan-win10-17134-x86",
+                (10, 0, 17763, 0): "netscan-win10-17134-x86",
+                (10, 0, 18362, 0): "netscan-win10-17134-x86",
+                (10, 0, 18363, 0): "netscan-win10-17134-x86"
             }
         else:
             version_dict = {
-                (6, 0, 6000): "netscan-vista-x64",
-                (6, 0, 6001): "netscan-vista-sp12-x64",
-                (6, 0, 6002): "netscan-vista-sp12-x64",
-                (6, 0, 6003): "netscan-vista-sp12-x64",
-                (6, 1, 7600): "netscan-win7-x64",
-                (6, 1, 7601): "netscan-win7-x64",
-                (6, 1, 8400): "netscan-win7-x64",
-                (6, 2, 9200): "netscan-win8-x64",
-                (6, 3, 9600): "netscan-win81-x64",
-                (10, 0, 10240): "netscan-win10-x64",
-                (10, 0, 10586): "netscan-win10-x64",
-                (10, 0, 14393): "netscan-win10-x64",
-                (10, 0, 15063): "netscan-win10-15063-x64",
-                (10, 0, 16299): "netscan-win10-16299-x64",
-                (10, 0, 17134): "netscan-win10-17134-x64",
-                (10, 0, 17763): "netscan-win10-17763-x64",
-                (10, 0, 18362): "netscan-win10-18362-x64",
-                (10, 0, 18363): "netscan-win10-18363-x64",
-                (10, 0, 19041): "netscan-win10-19041-x64"
+                (6, 0, 6000, 0): "netscan-vista-x64",
+                (6, 0, 6001, 0): "netscan-vista-sp12-x64",
+                (6, 0, 6002, 0): "netscan-vista-sp12-x64",
+                (6, 0, 6003, 0): "netscan-vista-sp12-x64",
+                (6, 1, 7600, 0): "netscan-win7-x64",
+                (6, 1, 7601, 0): "netscan-win7-x64",
+                (6, 1, 8400, 0): "netscan-win7-x64",
+                (6, 2, 9200, 0): "netscan-win8-x64",
+                (6, 3, 9600, 0): "netscan-win81-x64",
+                (6, 3, 9600, 19935): "netscan-win81-19935-x64",
+                (10, 0, 10240, 0): "netscan-win10-x64",
+                (10, 0, 10586, 0): "netscan-win10-x64",
+                (10, 0, 14393, 0): "netscan-win10-x64",
+                (10, 0, 15063, 0): "netscan-win10-15063-x64",
+                (10, 0, 16299, 0): "netscan-win10-16299-x64",
+                (10, 0, 17134, 0): "netscan-win10-17134-x64",
+                (10, 0, 17763, 0): "netscan-win10-17763-x64",
+                (10, 0, 18362, 0): "netscan-win10-18362-x64",
+                (10, 0, 18363, 0): "netscan-win10-18363-x64",
+                (10, 0, 19041, 0): "netscan-win10-19041-x64"
             }
 
-        # special use case: Win10_18363 is not recognized by windows.info as 18363
+        # we do not need to check for tcpip's specific FileVersion in every case
+        tcpip_mod_version = 0 # keep it 0 as a default
+
+        # special use cases
+
+        # Win10_18363 is not recognized by windows.info as 18363
         # because all kernel file headers and debug structures report 18363 as
         # "10.0.18362.1198" with the last part being incremented. However, we can use
         # os_distinguisher to differentiate between 18362 and 18363
@@ -191,18 +198,36 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             vollog.debug("Detected 18363 data structures: working with 18363 symbol table.")
             vers_minor_version = 18363
 
+        # we need to define additional version numbers (which are then found via tcpip.sys's FileVersion header) in case there is
+        # ambiguity _within_ an OS version. If such a version number (last number of the tuple) is defined for the current OS
+        # we need to inspect tcpip.sys's headers to see if we can grab the precise version
+        if [ (a,b,c,d) for a, b, c, d in version_dict if (a,b,c) == (nt_major_version, nt_minor_version, vers_minor_version) and d != 0]:
+            vollog.debug("Requiring further version inspection due to OS version by checking tcpip.sys's FileVersion header")
+            # the following is IntelLayer specific and might need to be adapted to other architectures.
+            physical_layer_name = context.layers[layer_name].config.get('memory_layer', None)
+            if physical_layer_name:
+                ver = verinfo.VerInfo.find_version_info(context, physical_layer_name, "tcpip.sys")
+                if ver:
+                    tcpip_mod_version = ver[3]
+                    vollog.debug("Determined tcpip.sys's FileVersion: {}".format(tcpip_mod_version))
+                else:
+                    vollog.debug("Could not determine tcpip.sys's FileVersion.")
+            else:
+                vollog.debug("Unable to retrieve physical memory layer, skipping FileVersion check.")
+
         # when determining the symbol file we have to consider the following cases:
         # the determined version's symbol file is found by intermed.create -> proceed
         # the determined version's symbol file is not found by intermed -> intermed will throw an exc and abort
         # the determined version has no mapped symbol file -> if win10 use latest, otherwise throw exc
         # windows version cannot be determined -> throw exc
-        filename = version_dict.get((nt_major_version, nt_minor_version, vers_minor_version))
+
+        filename = version_dict.get((nt_major_version, nt_minor_version, vers_minor_version, tcpip_mod_version))
         if not filename:
             # no match on filename means that we possibly have a version newer than those listed here.
             # try to grab the latest supported version of the current image NT version. If that symbol
             # version does not work, support has to be added manually.
             current_versions = [
-                key for key in list(version_dict.keys()) if key[0] == nt_major_version and key[1] == nt_minor_version
+                (nt_maj, nt_min, vers_min, tcpip_ver) for nt_maj, nt_min, vers_min, tcpip_ver in version_dict if nt_maj == nt_major_version and nt_min == nt_minor_version and tcpip_ver <= tcpip_mod_version
             ]
             current_versions.sort()
 
@@ -210,7 +235,9 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 latest_version = current_versions[-1]
 
                 filename = version_dict.get(latest_version)
+
                 vollog.debug(f"Unable to find exact matching symbol file, going with latest: {filename}")
+
             else:
                 raise NotImplementedError("This version of Windows is not supported: {}.{} {}.{}!".format(
                     nt_major_version, nt_minor_version, vers.MajorVersion, vers_minor_version))

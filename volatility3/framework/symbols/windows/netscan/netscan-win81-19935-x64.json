@@ -232,14 +232,14 @@
                 }
             },
             "Port": {
-                "offset": 128,
+                "offset": 120,
                 "type": {
                     "kind": "base",
                     "name": "unsigned be short"
                 }
             },
             "Next": {
-                "offset": 136,
+                "offset": 112,
                 "type":{
                     "kind": "pointer",
                     "subtype": {
@@ -318,7 +318,7 @@
     "_TCP_ENDPOINT": {
         "fields": {
             "Owner": {
-                "offset": 592,
+                "offset": 608,
                 "type": {
                     "kind": "pointer",
                     "subtype": {
@@ -329,7 +329,7 @@
                 }
             },
             "CreateTime": {
-                "offset": 0,
+                "offset": 624,
                 "type": {
                     "kind": "union",
                     "name": "_LARGE_INTEGER"
@@ -386,7 +386,7 @@
             }
         },
         "kind": "struct",
-        "size": 600
+        "size": 608
     },
     "_LOCAL_ADDRESS": {
         "fields": {
@@ -586,7 +586,7 @@
             }
         },
         "kind": "struct",
-        "size": 16
+        "size": 24
     },
     "_PORT_ASSIGNMENT_LIST": {
         "fields": {
@@ -603,12 +603,12 @@
             }
         },
         "kind": "struct",
-        "size": 4096
+        "size": 6144
     },
     "_PORT_ASSIGNMENT": {
         "fields": {
             "InPaBigPoolBase": {
-                "offset": 32,
+                "offset": 24,
                 "type": {
                     "kind": "pointer",
                     "subtype": {
@@ -619,12 +619,12 @@
             }
         },
         "kind": "struct",
-        "size": 40
+        "size": 32
     },
     "_INET_PORT_POOL": {
         "fields": {
             "PortAssignments": {
-                "offset": 176,
+                "offset": 216,
                 "type": {
                     "count": 256,
                     "kind": "array",
@@ -638,7 +638,7 @@
                 }
             },
             "PortBitMap": {
-                "offset": 160,
+                "offset": 200,
                 "type": {
                     "kind": "struct",
                     "name": "nt_symbols!_RTL_BITMAP"

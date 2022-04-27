@@ -1,4 +1,4 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2022 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 #
@@ -84,6 +84,15 @@ def setup(app):
                     for line in submodule_lines:
                         contents.write(line.replace(b'volatility3.framework.plugins', b'volatility3.plugins'))
 
+    # Clear up the framework.plugins page
+    with open(os.path.join(os.path.dirname(__file__), 'volatility3.framework.plugins.rst'), "rb") as contents:
+        real_lines = contents.readlines()
+
+    with open(os.path.join(os.path.dirname(__file__), 'volatility3.framework.plugins.rst'), "wb") as contents:
+        for line in real_lines:
+            if b'volatility3.framework.plugins.' not in line:
+                contents.write(line)
+
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -126,7 +135,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Volatility 3'
-copyright = '2012-2019, Volatility Foundation'
+copyright = '2012-2022, Volatility Foundation'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

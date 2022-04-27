@@ -196,7 +196,7 @@ The plugin then defaults the ``BaseDllName`` and ``FullDllName`` variables to an
 which is a way of indicating to the user interface that the value couldn't be read for some reason (but that it isn't fatal).
 There are currently four different reasons a value may be unreadable:
 
-* **Unreadble**: values which are empty because the data cannot be read
+* **Unreadable**: values which are empty because the data cannot be read
 * **Unparsable**: values which are empty because the data cannot be interpreted correctly
 * **NotApplicable**: values which are empty because they don't make sense for this particular entry
 * **NotAvailable**: values which cannot be provided now (but might in a future run, via new symbols or an updated plugin)
@@ -206,9 +206,9 @@ information may not be provided.
 
 The plugin then takes the process's ``BaseDllName`` value, and calls :py:meth:`~volatility3.framework.symbols.windows.extensions.UNICODE_STRING.get_string` on it.  All structure attributes,
 as defined by the symbols, are directly accessible and use the case-style of the symbol library it came from (in Windows,
-attributes are CamelCase), such as ``entry.BaseDllName`` in this instance.  Any attribtues not defined by the symbol but added
+attributes are CamelCase), such as ``entry.BaseDllName`` in this instance.  Any attributes not defined by the symbol but added
 by Volatility extensions cannot be properties (in case they overlap with the attributes defined in the symbol libraries)
-and are therefore always methods and prepended with ``get_``, in this example ``BaseDllName.get_string()``.
+and are therefore always methods and pretended with ``get_``, in this example ``BaseDllName.get_string()``.
 
 Finally, ``FullDllName`` is populated.  These operations read from memory, and as such, the memory image may be unable to
 read the data at a particular offset.  This will cause an exception to be thrown.  In Volatility 3, exceptions are thrown

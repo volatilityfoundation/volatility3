@@ -202,6 +202,7 @@ class MacBannerCache(symbol_cache.SymbolBannerCache):
     os = "mac"
     symbol_name = "version"
     banner_path = constants.MAC_BANNERS_PATH
+    exclusion_list = ['windows', 'linux']
 
 
 class MacSymbolFinder(symbol_finder.SymbolFinder):
@@ -211,3 +212,4 @@ class MacSymbolFinder(symbol_finder.SymbolFinder):
     banner_cache = MacBannerCache
     find_aslr = MacIntelStacker.find_aslr
     symbol_class = "volatility3.framework.symbols.mac.MacKernelIntermedSymbols"
+    exclusion_list = ['windows', 'linux']

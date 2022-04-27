@@ -45,6 +45,12 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
 
             symbol_files = linux_banners.get(banner, None)
             if symbol_files:
+                if len(symbol_files) > 1:
+                    using = "*"
+                    vollog.warning(f"Multiple symbol files identified (using {using}):")
+                    for symbol_file in symbol_files:
+                        vollog.warning(f" {using} {symbol_file}")
+                        using = " "
                 isf_path = symbol_files[0]
                 table_name = context.symbol_space.free_table_name('LintelStacker')
                 table = linux.LinuxKernelIntermedSymbols(context,
@@ -147,6 +153,7 @@ class LinuxBannerCache(symbol_cache.SymbolBannerCache):
     os = "linux"
     symbol_name = "linux_banner"
     banner_path = constants.LINUX_BANNERS_PATH
+    exclusion_list = ['mac', 'windows']
 
 
 class LinuxSymbolFinder(symbol_finder.SymbolFinder):
@@ -156,3 +163,4 @@ class LinuxSymbolFinder(symbol_finder.SymbolFinder):
     banner_cache = LinuxBannerCache
     symbol_class = "volatility3.framework.symbols.linux.LinuxKernelIntermedSymbols"
     find_aslr = lambda cls, *args: LinuxIntelStacker.find_aslr(*args)[1]
+    exclusion_list = ['mac', 'windows']

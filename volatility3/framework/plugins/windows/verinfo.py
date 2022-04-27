@@ -202,3 +202,4 @@ class VerInfo(interfaces.plugins.PluginInterface):
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Base", format_hints.Hex), ("Name", str),
                                    ("Major", int), ("Minor", int), ("Product", int), ("Build", int)],
                                   self._generator(procs, mods, session_layers))
+
