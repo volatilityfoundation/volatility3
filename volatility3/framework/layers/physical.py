@@ -21,19 +21,21 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
                  config_path: str,
                  name: str,
                  buffer: bytes,
-                 metadata: Optional[Dict[str, Any]] = None) -> None:
+                 metadata: Optional[Dict[str, Any]] = None,
+                 offset: int = 0) -> None:
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
         self._buffer = buffer
+        self._offset = offset
 
     @property
     def maximum_address(self) -> int:
         """Returns the largest available address in the space."""
-        return len(self._buffer) - 1
+        return self.minimum_address + len(self._buffer) - 1
 
     @property
     def minimum_address(self) -> int:
         """Returns the smallest available address in the space."""
-        return 0
+        return self._offset
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns whether the offset is valid or not."""
@@ -48,11 +50,13 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
                 invalid_address = self.maximum_address + 1
             raise exceptions.InvalidAddressException(self.name, invalid_address,
                                                      "Offset outside of the buffer boundaries")
-        return self._buffer[address:address + length]
+        real_address = address - self.minimum_address
+        return self._buffer[real_address:real_address + length]
 
     def write(self, address: int, data: bytes):
         """Writes the data from to the buffer."""
-        self._buffer = self._buffer[:address] + data + self._buffer[address + len(data):]
+        real_address = address - self.minimum_address
+        self._buffer = self._buffer[:real_address] + data + self._buffer[real_address + len(data):]
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
