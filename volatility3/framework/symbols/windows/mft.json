@@ -1,0 +1,469 @@
+{
+    "metadata": {
+        "producer": {
+          "version": "0.0.1",
+          "name": "kevthehermit-by-hand",
+          "comment": "Using structures defined in File System Forensic Analysis pg 353+",
+          "datetime": "2022-01-03T13:37:00"
+        },
+        "format": "6.1.0"
+      },
+    "base_types": {
+      "unsigned long": {
+          "kind": "int", 
+          "size": 4, 
+          "signed": false, 
+          "endian": "little"
+      }, 
+      "unsigned long long": {
+          "kind": "int", 
+          "size": 8, 
+          "signed": false, 
+          "endian": "little"
+      }, 
+      "long": {
+          "kind": "int", 
+          "size": 4, 
+          "signed": true, 
+          "endian": "little"
+      },
+      "unsigned int": {
+          "kind": "int",
+          "size": 4,
+          "signed": false,
+          "endian": "little"
+      }, 
+      "unsigned short": {
+          "kind": "int", 
+          "size": 2, 
+          "signed": false, 
+          "endian": "little"
+      },
+      "unsigned char": {
+          "kind": "int", 
+          "size": 1, 
+          "signed": false, 
+          "endian": "little"
+      },
+      "wchar": {
+          "kind": "int", 
+          "size": 2, 
+          "signed": true, 
+          "endian": "little"
+      }
+    },
+    "symbols": {},
+    "enums": {
+        "AttrTypeEnum": {
+            "base": "unsigned char",
+            "constants": {
+              "STANDARD_INFORMATION": 16,
+              "ATTRIBUTE_LIST": 32,
+              "FILE_NAME": 48,
+              "OBJECT_ID": 64,
+              "SECURITY_DESCRIPTOR": 80,
+              "VOLUME_NAME": 96,
+              "VOLUME_INFORMATION": 112,
+              "DATA": 128,
+              "INDEX_ROOT": 114,
+              "INDEX_ALLOCATION": 160,
+              "BITMAP": 176,
+              "REPARSE_POINT": 192,
+              "EA_INFORMATION": 208,
+              "EA": 224,
+              "PROPERTY_SET": 240,
+              "LOGGED_UTILITY_STREAM": 256
+            },
+            "size": 1
+          },
+        "NameSpaceEnum": {
+            "base":"unsigned char",
+            "constants": {
+                "POSIX": 0,
+                "Win32": 1,
+                "DOS": 2,
+                "Win32 DOS": 3
+            },
+            "size": 1
+        },
+        "MFTFlagsEnum": {
+            "base":"unsigned char",
+            "constants": {
+                "Removed": 0,
+                "File": 1,
+                "Directory": 2,
+                "DirInUse": 3
+            },
+            "size": 1
+        },
+        "PermissionFlagEnum": {
+            "base":"unsigned char",
+            "constants": {
+                "ReadOnly": 1,
+                "Hidden": 2,
+                "System": 4,
+                "Archive": 32,
+                "ArchiveHidden": 34,
+                "ArchiveSystem": 36,
+                "ArchiveHiddenSystem": 38,
+                "Device": 60,
+                "Normal": 128,
+                "Temporary": 256,
+                "TempArchive": 288,
+                "SparseFile": 512,
+                "ReparsePoint": 1024,
+                "Compressed": 2048,
+                "Offline": 4096,
+                "NotIndexed": 8192,
+                "Encrypted": 16384,
+                "Directory": 268435456,
+                "IndexView": 536870912
+            },
+            "size": 1
+        }
+    },
+    "user_types": {
+        "MFT_ENTRY": {
+            "fields": {
+                "Signature": {
+                    "offset": 0,
+                    "type": {
+                        "count": 1,
+                        "kind": "array",
+                        "subtype": {
+                          "kind": "base",
+                          "name": "unsigned char"
+                        }
+                    }
+                },
+                "UpdateSequenceOffset": {
+                    "offset": 4,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                    }
+                },
+                "NumFixupEntries": {
+                    "offset": 6,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                    }
+                },
+                "LSN": {
+                    "offset": 8,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                    }
+                },
+                "SequenceValue": {
+                    "offset": 16,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                    }
+                },
+                "LinkCount": {
+                    "offset": 18,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                    }
+                },
+                "FirstAttrOffset": {
+                    "offset": 20,
+                    "type":{
+                        "kind": "base",
+                        "name": "unsigned short"
+                    }
+                },
+                "Flags": {
+                    "offset": 22,
+                    "type":{
+                        "kind": "enum",
+                        "name": "MFTFlagsEnum"
+                    }
+                },
+                "RealSize": {
+                    "offset": 24,
+                    "type":{
+                        "kind": "base",
+                        "name": "unsigned int"
+                    }
+                },
+                "AllocatedSize": {
+                    "offset": 28,
+                    "type":{
+                        "kind": "base",
+                        "name": "unsigned int"
+                    }
+                },
+                "BaseReference": {
+                    "offset": 32,
+                    "type":{
+                        "kind": "base",
+                        "name": "unsigned long long"
+                    }
+                },
+                "NextAttrID": {
+                    "offset": 40,
+                    "type":{
+                        "kind": "base",
+                        "name": "unsigned short"
+                    }
+                },
+                "RecordNumber": {
+                    "offset": 44,
+                    "type":{
+                        "kind": "base",
+                        "name": "unsigned long"
+                    }
+                }
+            },
+            "kind": "struct",
+            "size": 1024
+        },
+        "ATTRIBUTE": {
+            "fields":{
+                "Attr_Header": {
+                    "offset": 0,
+                    "type": {
+                        "kind": "struct",
+                        "name": "mft!ATTR_HEADER"
+                    }
+                },
+                "Resident_Header": {
+                    "offset": 16,
+                    "type": {
+                        "kind": "struct",
+                        "name": "mft!RESIDENT_HEADER"
+                    }
+                },
+                "Attr_Data": {
+                    "offset": 24,
+                    "type": {
+                        "kind": "struct",
+                        "name": "mft!ATTR_HEADER"
+                    }
+                }
+            },
+            "kind": "struct",
+            "size": 96
+        },
+        "ATTR_HEADER": {
+            "fields": {
+                "AttrType": {
+                    "offset": 0,
+                    "type": {
+                        "kind": "enum",
+                        "name": "AttrTypeEnum"
+                      }
+                },"Length": {
+                    "offset": 4,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                      }
+                },
+                "NonResidentFlag": {
+                    "offset": 8,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned char"                      
+                    }
+                },
+                "NameLength": {
+                    "offset": 9,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned char"  
+                      }
+                },
+                "NameOffset": {
+                    "offset": 10,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                      }
+                },
+                "Flags": {
+                    "offset": 12,
+                    "type": {
+                        "kind": "enum",
+                        "name": "MFTFlagsEnum"
+                    }
+                },
+                "AttributeID": {
+                    "offset": 14,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                      }
+                }
+            },
+            "kind": "struct",
+            "size": 16
+        },"RESIDENT_HEADER": {
+            "fields": {
+                "AttrSize": {
+                    "offset": 0,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                      }
+                },"AttrOffset": {
+                    "offset": 4,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                      }
+                },
+                "IndexFlag": {
+                    "offset": 8,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"                      
+                    }
+                }
+            },
+            "kind": "struct",
+            "size": 8
+        },
+        "STANDARD_INFORMATION_ENTRY": {
+            "fields": {
+                "CreationTime": {
+                    "offset": 0,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                      }
+                },
+                "ModifiedTime": {
+                    "offset": 8,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                      }
+                },
+                "UpdatedTime": {
+                    "offset": 16,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                      }
+                },
+                "AccessedTime": {
+                    "offset": 24,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                      }
+                },
+                "flags": {
+                    "offset": 32,
+                    "type": {
+                        "kind": "enum",
+                        "name": "PermissionFlagEnum"
+                      }
+                }
+            },
+            "kind": "struct",
+            "size": 1024
+        },
+        "FILE_NAME_ENTRY": {
+            "fields": {
+                "ParentDirectory": {
+                    "offset": 0,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                      }
+                },
+                "CreationTime": {
+                    "offset": 8,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                      }
+                },
+                "ModifiedTime": {
+                    "offset": 16,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                      }
+                },
+                "UpdatedTime": {
+                    "offset": 24,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                      }
+                },
+                "AccessedTime": {
+                    "offset": 32,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                      }
+                },
+                "AllocatedFileSize": {
+                    "offset": 40,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                      }
+                },
+                "RealFileSize": {
+                    "offset": 48,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                      }
+                },
+                "Flags": {
+                    "offset": 56,
+                    "type": {
+                        "kind": "enum",
+                        "name": "PermissionFlagEnum"
+                      }
+                },
+                "ReparseValue": {
+                    "offset": 60,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                      }
+                },
+                "NameLength": {
+                    "offset": 64,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned char"
+                      }
+                },
+                "NameSpace": {
+                    "offset": 65,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned char"
+                      }
+                },
+                "Name": {
+                    "offset": 66,
+                    "type": {
+                      "count": 10,
+                      "kind": "array",
+                      "subtype": {
+                        "kind": "base",
+                        "name": "wchar"
+                      }
+                    }
+                  }
+            },
+            "kind": "struct",
+            "size": 1024
+        }
+    }
+}

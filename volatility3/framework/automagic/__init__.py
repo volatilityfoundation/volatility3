@@ -21,14 +21,6 @@ from volatility3.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
-windows_automagic = [
-    'ConstructionMagic', 'LayerStacker', 'KernelPDBScanner', 'WinSwapLayers', 'KernelModule'
-]
-
-linux_automagic = ['ConstructionMagic', 'LayerStacker', 'LinuxBannerCache', 'LinuxSymbolFinder', 'KernelModule']
-
-mac_automagic = ['ConstructionMagic', 'LayerStacker', 'MacBannerCache', 'MacSymbolFinder', 'KernelModule']
-
 
 def available(context: interfaces.context.ContextInterface) -> List[interfaces.automagic.AutomagicInterface]:
     """Returns an ordered list of all subclasses of
@@ -58,10 +50,7 @@ def choose_automagic(
     plugin_category = "None"
     plugin_categories = plugin.__module__.split('.')
     lowest_index = len(plugin_categories)
-
-    automagic_categories = {'windows': windows_automagic, 'linux': linux_automagic, 'mac': mac_automagic}
-
-    for os in automagic_categories:
+    for os in constants.OS_CATEGORIES:
         try:
             if plugin_categories.index(os) < lowest_index:
                 lowest_index = plugin_categories.index(os)
@@ -70,14 +59,16 @@ def choose_automagic(
             # The value wasn't found, try the next one
             pass
 
-    if plugin_category not in automagic_categories:
+    if plugin_category not in constants.OS_CATEGORIES:
         vollog.info("No plugin category detected")
         return automagics
-
     vollog.info(f"Detected a {plugin_category} category plugin")
+
     output = []
     for amagic in automagics:
-        if amagic.__class__.__name__ in automagic_categories[plugin_category]:
+        if plugin_category not in amagic.exclusion_list:
+            # Only include uncategorized automagic, or platform specific automagic
+            # (This allows user defined/uncategorized automagic to be included)
             output += [amagic]
     return output
 

@@ -7,12 +7,11 @@ import json
 import logging
 import os
 import sys
-import glob
 
 import volatility3.plugins
 import volatility3.symbols
 from volatility3 import cli, framework
-from volatility3.cli.volshell import generic, windows, linux, mac
+from volatility3.cli.volshell import generic, linux, mac, windows
 from volatility3.framework import automagic, constants, contexts, exceptions, interfaces, plugins
 
 # Make sure we log everything
@@ -86,6 +85,10 @@ class VolShell(cli.CommandLine):
                             help = "Write configuration JSON file out to config.json",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--save-config",
+                            help = "Save configuration JSON file to a file",
+                            default = None,
+                            type = str)
         parser.add_argument("--clear-cache",
                             help = "Clears out all short-term cached items",
                             default = False,
@@ -138,8 +141,7 @@ class VolShell(cli.CommandLine):
             console.setLevel(10 - (partial_args.verbosity - 2))
 
         if partial_args.clear_cache:
-            for cache_filename in glob.glob(os.path.join(constants.CACHE_PATH, '*.cache')):
-                os.unlink(cache_filename)
+            framework.clear_cache()
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
@@ -236,12 +238,22 @@ class VolShell(cli.CommandLine):
                                                    self.file_handler_class_factory())
 
             if args.write_config:
-                vollog.debug("Writing out configuration data to config.json")
-                with open("config.json", "w") as f:
+                vollog.warning('Use of --write-config has been deprecated, replaced by --save-config <filename>')
+                args.save_config = 'config.json'
+            if args.save_config:
+                vollog.debug("Writing out configuration data to {args.save_config}")
+                if os.path.exists(os.path.abspath(args.save_config)):
+                    parser.error(f"Cannot write configuration: file {args.save_config} already exists")
+                with open(args.save_config, "w") as f:
                     json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
+        except exceptions.UnsatisfiedException as excp:
+            self.process_unsatisfied_exceptions(excp)
+            parser.exit(1, f"Unable to validate the plugin requirements: {[x for x in excp.unsatisfied]}\n")
 
+        try:
             # Construct and run the plugin
-            constructed.run()
+            if constructed:
+                constructed.run()
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
             parser.exit(1, f"Unable to validate the plugin requirements: {[x for x in excp.unsatisfied]}\n")

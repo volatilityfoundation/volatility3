@@ -73,7 +73,7 @@ class HierarchicalDict(collections.abc.Mapping):
                  separator: str = CONFIG_SEPARATOR) -> None:
         """
         Args:
-            initial_dict: A dictionary to populate the HierachicalDict with initially
+            initial_dict: A dictionary to populate the HierarchicalDict with initially
             separator: A custom hierarchy separator (defaults to CONFIG_SEPARATOR)
         """
         if not (isinstance(separator, str) and len(separator) == 1):
