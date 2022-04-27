@@ -17,7 +17,7 @@ from volatility3.framework.layers import physical
 def rol(value: int, count: int) -> int: 
     """A rotate-left instruction in Python"""
     
-    for y in range(count):
+    for _ in range(count):
         value *= 2
         if (value > 0xFFFFFFFFFFFFFFFF):
             value -= 0x10000000000000000
@@ -28,7 +28,7 @@ def bswap(value: int) -> int:
     """A byte-swap instruction in Python"""
 
     hi, lo = struct.unpack(">II", struct.pack("<Q", value))
-    return (hi << 32) | lo 
+    return (hi << 32) | lo
 
 class Info(plugins.PluginInterface):
     """Show OS & kernel details of the memory sample being analyzed."""

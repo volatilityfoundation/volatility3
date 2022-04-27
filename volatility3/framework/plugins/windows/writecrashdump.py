@@ -1,16 +1,14 @@
-import math
 from typing import List, Type
 
 from volatility3.framework import interfaces, renderers, constants, exceptions
 from volatility3.framework.configuration import requirements
-from volatility3.framework.interfaces import plugins, configuration
+from volatility3.framework.interfaces import configuration, plugins
 from volatility3.framework.layers import physical, intel
 from volatility3.framework.symbols import intermed
 from volatility3.plugins.windows import info
 
 class WriteCrashDump(plugins.PluginInterface):
     """Runs the automagics and writes the output to a crashdump format file"""
-    default_block_size = 0x500000
 
     _required_framework_version = (2, 0, 0)
     _version = (2, 0, 0)
@@ -21,10 +19,6 @@ class WriteCrashDump(plugins.PluginInterface):
             requirements.TranslationLayerRequirement(name = 'primary', description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.IntRequirement(name = 'block_size',
-                                        description = "Size of blocks to copy over",
-                                        default = cls.default_block_size,
-                                        optional = True),
             requirements.VersionRequirement("info", component = info.Info, version = (1, 0, 0))
         ]
 
@@ -72,7 +66,7 @@ class WriteCrashDump(plugins.PluginInterface):
         version_structure = info.Info.get_version_structure(context, layer_name, symbol_table)
 
         dump_header.ValidDump.write([ord('D'), ord('U')] + valid_dump_suffix)
-        
+
         # TODO: remove the OR after #702 gets merged in.
         dump_header.KdDebuggerDataBlock.write(kdbg.vol.offset | (0 if not is_64_bit else 0xFFFF000000000000))
         dump_header.MajorVersion.write(version_structure.MajorVersion)
