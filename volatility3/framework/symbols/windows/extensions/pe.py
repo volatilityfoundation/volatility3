@@ -2,14 +2,14 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from typing import Generator, Tuple
 import logging
+from typing import Generator, Tuple
 
-from volatility3.framework import constants
-from volatility3.framework import objects, interfaces
+from volatility3.framework import constants, interfaces, objects
 from volatility3.framework.renderers import conversion
 
 vollog = logging.getLogger(__name__)
+
 
 class IMAGE_DOS_HEADER(objects.StructType):
 
@@ -77,12 +77,13 @@ class IMAGE_DOS_HEADER(objects.StructType):
         image_base_type = nt_header.OptionalHeader.ImageBase.vol.type_name
         member_size = self._context.symbol_space.get_type(image_base_type).size
         try:
-            newval = objects.convert_value_to_data(self.vol.offset, int, nt_header.OptionalHeader.ImageBase.vol.data_format)
+            newval = objects.convert_value_to_data(self.vol.offset, int,
+                                                   nt_header.OptionalHeader.ImageBase.vol.data_format)
             new_pe = raw_data[:image_base_offset] + newval + raw_data[image_base_offset + member_size:]
         except OverflowError:
             vollog.warning("Volatility was unable to fix the image base for the PE file at base address {:#x}. " \
-                        "This will cause issues with many static analysis tools if you do not inform the " \
-                        "tool of the in-memory load address.".format(self.vol.offset))
+                           "This will cause issues with many static analysis tools if you do not inform the " \
+                           "tool of the in-memory load address.".format(self.vol.offset))
             new_pe = raw_data
 
         return new_pe
@@ -109,7 +110,7 @@ class IMAGE_DOS_HEADER(objects.StructType):
         size_of_image = nt_header.OptionalHeader.SizeOfImage
 
         # no legitimate PE is going to be larger than this
-        if size_of_image > (1024 * 1024 * 100):
+        if size_of_image > constants.windows.PE_MAX_EXTRACTION_SIZE:
             raise ValueError(f"The claimed SizeOfImage is too large: {size_of_image}")
 
         read_layer = self._context.layers[layer_name]

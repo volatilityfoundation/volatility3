@@ -7,15 +7,17 @@ import datetime
 import functools
 import logging
 import math
-from typing import Iterable, Iterator, Optional, Union, Tuple, List
+from typing import Generator, Iterable, Iterator, List, Optional, Tuple, Union
 
 from volatility3.framework import constants, exceptions, interfaces, objects, renderers, symbols
+from volatility3.framework.interfaces.objects import ObjectInterface
 from volatility3.framework.layers import intel
 from volatility3.framework.renderers import conversion
 from volatility3.framework.symbols import generic
-from volatility3.framework.symbols.windows.extensions import pool, pe, kdbg
+from volatility3.framework.symbols.windows.extensions import kdbg, pe, pool
 
 vollog = logging.getLogger(__name__)
+
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
@@ -84,7 +86,7 @@ class MMVAD_SHORT(objects.StructType):
 
         if tag in ["VadS", "VadF"]:
             target = "_MMVAD_SHORT"
-        elif tag != None and tag.startswith("Vad"):
+        elif tag is not None and tag.startswith("Vad"):
             target = "_MMVAD"
         elif depth == 0:
             # the root node at depth 0 is allowed to not have a tag
@@ -306,12 +308,15 @@ class MMVAD(MMVAD_SHORT):
         try:
             # this is for xp and 2003
             if self.has_member("ControlArea"):
-                file_name = self.ControlArea.FilePointer.FileName.get_string()
+                filename_obj = self.ControlArea.FilePointer.FileName
 
             # this is for vista through windows 7
             else:
-                file_name = self.Subsection.ControlArea.FilePointer.dereference().cast(
-                    "_FILE_OBJECT").FileName.get_string()
+                filename_obj = self.Subsection.ControlArea.FilePointer.dereference().cast(
+                    "_FILE_OBJECT").FileName
+
+            if filename_obj.Length > 0:
+                file_name = filename_obj.get_string()
 
         except exceptions.InvalidAddressException:
             pass
@@ -348,16 +353,31 @@ class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel device objects."""
 
     def get_device_name(self) -> str:
+        """Get device's name from the object header."""
         header = self.get_object_header()
         return header.NameInfo.Name.String  # type: ignore
 
+    def get_attached_devices(self) -> Generator[ObjectInterface, None, None]:
+        """Enumerate the attached device's objects"""
+        device = self.AttachedDevice.dereference()
+        while device:
+            yield device
+            device = device.AttachedDevice.dereference()
 
 class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel driver objects."""
 
     def get_driver_name(self) -> str:
+        """Get driver's name from the object header."""
         header = self.get_object_header()
         return header.NameInfo.Name.String  # type: ignore
+
+    def get_devices(self) -> Generator[ObjectInterface, None, None]:
+        """Enumerate the driver's device objects"""
+        device =  self.DeviceObject.dereference()
+        while device:
+            yield device
+            device = device.NextDevice.dereference()
 
     def is_valid(self) -> bool:
         """Determine if the object is valid."""
@@ -461,10 +481,13 @@ class UNICODE_STRING(objects.StructType):
         # We explicitly do *not* catch errors here, we allow an exception to be thrown
         # (otherwise there's no way to determine anything went wrong)
         # It's up to the user of this method to catch exceptions
-        return self.Buffer.dereference().cast("string",
-                                              max_length = self.Length,
-                                              errors = "replace",
-                                              encoding = "utf16")
+
+        # We manually construct an object rather than casting a dereferenced pointer in case
+        # the buffer length is 0 and the pointer is a NULL pointer
+        return self._context.object(self.vol.type_name.split(constants.BANG)[0] + constants.BANG + 'string',
+                                    layer_name = self.Buffer.vol.layer_name,
+                                    offset = self.Buffer,
+                                    max_length = self.Length, errors = 'replace', encoding = 'utf16')
 
     String = property(get_string)
 
@@ -651,7 +674,10 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         except AttributeError:
             return False
 
-        return value != 0 and value != None
+        if value:
+            return True
+
+        return False
 
     def get_vad_root(self):
 
@@ -895,8 +921,8 @@ class CONTROL_AREA(objects.StructType):
                 return False
 
             # The first SubsectionBase should not be page aligned
-            #subsection = self.get_subsection()
-            #if subsection.SubsectionBase & self.PAGE_MASK == 0:
+            # subsection = self.get_subsection()
+            # if subsection.SubsectionBase & self.PAGE_MASK == 0:
             #    return False
         except exceptions.InvalidAddressException:
             return False
@@ -945,7 +971,7 @@ class CONTROL_AREA(objects.StructType):
             subsection_offset = starting_sector * 0x200
 
             # Similar to the check in is_valid(), make sure the SubsectionBase is not page aligned.
-            #if subsection.SubsectionBase & self.PAGE_MASK == 0:
+            # if subsection.SubsectionBase & self.PAGE_MASK == 0:
             #    break
 
             ptecount = 0
@@ -976,8 +1002,8 @@ class CONTROL_AREA(objects.StructType):
                     # Currently just a temporary workaround to deal with custom bit flag
                     # in the PFN field for pages in transition state.
                     # See https://github.com/volatilityfoundation/volatility3/pull/475
-                    physoffset = (mmpte.u.Trans.PageFrameNumber & (( 1 << 33 ) - 1 ) ) << 12
-                    
+                    physoffset = (mmpte.u.Trans.PageFrameNumber & ((1 << 33) - 1)) << 12
+
                     yield physoffset, file_offset, self.PAGE_SIZE
 
                 # Go to the next PTE entry
