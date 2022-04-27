@@ -6,7 +6,7 @@ When an API feature or function is removed or changed, the major version is bump
 
 2.1.0
 =====
-Add in the linux `task.get_threads` method added to rhe API.
+Add in the linux `task.get_threads` method added to the API.
 
 2.0.3
 =====
