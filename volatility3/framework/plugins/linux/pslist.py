@@ -1,12 +1,16 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import datetime
+
 from typing import Callable, Iterable, List, Any
 
 from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
-
+from volatility3.framework.symbols import intermed
+from volatility3.framework.symbols.linux.extensions import elf
+from volatility3.plugins.linux import elfs
 
 class PsList(interfaces.plugins.PluginInterface):
     """Lists the processes present in a particular linux memory image."""
@@ -20,10 +24,15 @@ class PsList(interfaces.plugins.PluginInterface):
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
                                            architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'elfs', plugin = elfs.Elfs, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
-                                         optional = True)
+                                         optional = True),
+            requirements.BooleanRequirement(name = 'dump',
+                                            description = "Extract listed processes",
+                                            default = False,
+                                            optional = True)
         ]
 
     @classmethod
@@ -49,6 +58,18 @@ class PsList(interfaces.plugins.PluginInterface):
             return lambda _: False
 
     def _generator(self):
+        elf_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                 self.config_path,
+                                                                 "linux",
+                                                                 "elf",
+                                                                 class_types = elf.class_types)
+
+
+        vmlinux = self.context.modules[self.config['kernel']]
+        # These timekeeper variables are introduced in kernel 3.19
+        timekeeper = vmlinux.object_from_symbol(symbol_name = "tk_core").timekeeper
+        boot_time_nano = timekeeper.offs_real - timekeeper.offs_boot
+
         for task in self.list_tasks(self.context,
                                     self.config['kernel'],
                                     filter_func = self.create_pid_filter(self.config.get('pid', None))):
@@ -57,7 +78,37 @@ class PsList(interfaces.plugins.PluginInterface):
             if task.parent:
                 ppid = task.parent.pid
             name = utility.array_to_string(task.comm)
-            yield (0, (pid, ppid, name))
+            uid = task.real_cred.uid.val
+            gid = task.real_cred.gid.val
+
+            # task.(real_)start_time contains amount of nanoseconds since boottime
+            create_timespec = task.real_start_time if hasattr(task, "real_start_time") else task.start_time
+            create_timespec_sec = int(create_timespec / 1e9)
+            create_timespec_nsec = create_timespec % 1e9
+            create_time = datetime.datetime.fromtimestamp(boot_time_nano / 1e9) + datetime.timedelta(
+                seconds = create_timespec_sec, microseconds = int(create_timespec_nsec / 1e3))
+
+            file_output = "Disabled"
+            if self.config['dump']:
+                proc_layer_name = task.add_process_layer()
+                if not proc_layer_name:
+                    continue
+
+                # Find the vma that belongs to the main ELF of the process
+                vma = None
+                for v in task.mm.get_mmap_iter():
+                    if v.vm_start == task.mm.start_code:
+                        vma = v
+                        break
+                if vma is not None:
+                    file_handle = elfs.Elfs.elf_dump(self.context, proc_layer_name, elf_table_name, vma, task,
+                                                     self.open)
+                file_output = "Error outputting file"
+                if file_handle:
+                    file_handle.close()
+                    file_output = str(file_handle.preferred_filename)
+
+            yield (0, (pid, ppid, uid, gid, name, create_time, file_output))
 
     @classmethod
     def list_tasks(
@@ -84,4 +135,5 @@ class PsList(interfaces.plugins.PluginInterface):
                 yield task
 
     def run(self):
-        return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str)], self._generator())
+        return renderers.TreeGrid([("PID", int), ("PPID", int), ("UID", int), ("GID", int), ("COMM", str),
+                                   ("CreateTime", datetime.datetime),  ("File output", str)], self._generator())
