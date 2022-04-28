@@ -6,7 +6,6 @@ from typing import Callable, Iterable, List, Any, Tuple
 from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
-from volatility3.framework.symbols import linux
 
 
 class PsList(interfaces.plugins.PluginInterface):
