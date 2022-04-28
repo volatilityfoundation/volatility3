@@ -6,6 +6,7 @@ from typing import Callable, Iterable, List, Any
 from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
+from volatility3.framework.renderers import format_hints
 
 
 class PsList(interfaces.plugins.PluginInterface):
@@ -57,7 +58,7 @@ class PsList(interfaces.plugins.PluginInterface):
             if task.parent:
                 ppid = task.parent.pid
             name = utility.array_to_string(task.comm)
-            yield (0, (pid, ppid, name))
+            yield (0, (format_hints.Hex(task.vol.offset), name, pid, ppid))
 
     @classmethod
     def list_tasks(
@@ -84,4 +85,4 @@ class PsList(interfaces.plugins.PluginInterface):
                 yield task
 
     def run(self):
-        return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str)], self._generator())
+        return renderers.TreeGrid([("OFFSET", format_hints.Hex), ("COMM", str), ("PID", int), ("PPID", int)], self._generator())
