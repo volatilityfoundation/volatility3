@@ -267,12 +267,3 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             list_struct = vmlinux.object(object_type = struct_name, offset = list_start.vol.offset)
             yield list_struct
             list_start = getattr(list_struct, list_member)
-
-    @classmethod
-    def container_of(cls, addr, type_name, member_name, vmlinux):
-        if not addr:
-            return
-        type_dec = vmlinux.get_type(type_name)
-        member_offset = type_dec.relative_child_offset(member_name)
-        container_addr = addr - member_offset
-        return vmlinux.object(object_type=type_name, offset=container_addr, absolute=True)
