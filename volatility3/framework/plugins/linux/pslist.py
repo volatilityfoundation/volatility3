@@ -85,4 +85,4 @@ class PsList(interfaces.plugins.PluginInterface):
                 yield task
 
     def run(self):
-        return renderers.TreeGrid([("OFFSET", format_hints.Hex), ("COMM", str), ("PID", int), ("PPID", int)], self._generator())
+        return renderers.TreeGrid([("OFFSET (V)", format_hints.Hex), ("COMM", str), ("PID", int), ("PPID", int)], self._generator())
