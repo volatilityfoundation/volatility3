@@ -126,7 +126,7 @@ class WriteCrashDump(plugins.PluginInterface):
             f.seek(kdbg_file_location)
             f.write(decoded_data)
 
-    def _generator(self):
+    def _generator(self) -> Iterator[Tuple]:
         self.write_crashdump(self.context, self.config['primary'], self.config['nt_symbols'], self._file_handler)
         yield 0, ('Done',)
 
