@@ -1,4 +1,4 @@
-from typing import List, Type
+from typing import List, Type, Iterator, Tuple
 
 from volatility3.framework import interfaces, renderers, constants, exceptions
 from volatility3.framework.configuration import requirements
