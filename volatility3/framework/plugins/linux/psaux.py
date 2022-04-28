@@ -8,9 +8,12 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework import symbols, exceptions, renderers, interfaces
 from volatility3.framework.objects import utility
 from volatility3.plugins.linux import pslist
+from volatility3.framework.interfaces import plugins
 
-class PsAux(pslist.PsList):
+class PsAux(plugins.PluginInterface):
     """ Lists processes with their command line arguments """
+
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
