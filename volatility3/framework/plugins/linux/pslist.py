@@ -6,6 +6,7 @@ from typing import Callable, Iterable, List, Any, Tuple
 from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
+from volatility3.framework.renderers import format_hints
 
 
 class PsList(interfaces.plugins.PluginInterface):
@@ -81,7 +82,7 @@ class PsList(interfaces.plugins.PluginInterface):
             elif task.is_user_thread:
                 name = f"{{{name}}}"
 
-        task_fields = (pid, tid, ppid, name)
+        task_fields = (format_hints.Hex(task.vol.offset), pid, tid, ppid, name)
         return task_fields
 
     def _generator(
@@ -147,5 +148,5 @@ class PsList(interfaces.plugins.PluginInterface):
         decorate_comm = self.config.get('decorate_comm')
         filter_func = self.create_pid_filter(pids)
 
-        columns = [("PID", int), ("TID", int), ("PPID", int), ("COMM", str)]
+        columns = [("OFFSET (V)", format_hints.Hex), ("PID", int), ("TID", int), ("PPID", int), ("COMM", str)]
         return renderers.TreeGrid(columns, self._generator(filter_func, include_threads, decorate_comm))
