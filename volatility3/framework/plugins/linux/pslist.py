@@ -137,20 +137,10 @@ class PsList(interfaces.plugins.PluginInterface):
             if filter_func(task):
                 continue
 
-            task_threads = []
-            current_task = None
-            next_task = task.thread_group.next
-            while current_task is None or current_task.vol.offset != task.vol.offset:
-                current_task = linux.LinuxUtilities.container_of(next_task, "task_struct", "thread_group", vmlinux)
-                if current_task.is_thread_group_leader:
-                    # Making sure the first task yielded is the Task Group Leader
-                    yield current_task
-                elif include_threads:
-                    task_threads.append(current_task)
-                next_task = current_task.thread_group.next
+            yield task
 
-            # yield the other task threads
-            yield from task_threads
+            if include_threads:
+                yield from task.get_threads()
 
     def run(self):
         pids = self.config.get('pid')
