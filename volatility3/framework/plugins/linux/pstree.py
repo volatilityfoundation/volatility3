@@ -25,7 +25,7 @@ class PsTree(pslist.PsList):
         level = 0
         proc = self._tasks.get(pid)
         while proc and proc.parent and proc.parent.pid not in seen:
-            if self.task_is_thread_group_leader(proc):
+            if proc.is_thread_group_leader:
                 parent_pid = proc.parent.pid
             else:
                 parent_pid = proc.tgid
