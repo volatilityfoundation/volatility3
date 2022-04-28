@@ -130,5 +130,5 @@ class WriteCrashDump(plugins.PluginInterface):
         self.write_crashdump(self.context, self.config['primary'], self.config['nt_symbols'], self._file_handler)
         yield 0, ('Done',)
 
-    def run(self):
+    def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Status", str)], self._generator())
