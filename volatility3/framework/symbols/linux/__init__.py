@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-from typing import List, Tuple, Iterator
+from typing import List, Tuple, Iterator, Optional
 
 from volatility3 import framework
 from volatility3.framework import exceptions, constants, interfaces, objects
@@ -283,9 +283,25 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             list_start = getattr(list_struct, list_member)
 
     @classmethod
-    def container_of(cls, addr, type_name, member_name, vmlinux):
+    def container_of(
+        cls, addr: int, type_name: str, member_name: str, vmlinux: interfaces.context.ModuleInterface
+    ) -> Optional[interfaces.objects.ObjectInterface]:
+        """Cast a member of a structure out to the containing structure.
+        It mimicks the Linux kernel macro container_of() see include/linux.kernel.h
+
+        Args:
+            addr: The pointer to the member.
+            type_name: The type of the container struct this is embedded in.
+            member_name: The name of the member within the struct.
+            vmlinux: The kernel symbols object
+
+        Returns:
+            The constructed object or None
+        """
+
         if not addr:
             return
+
         type_dec = vmlinux.get_type(type_name)
         member_offset = type_dec.relative_child_offset(member_name)
         container_addr = addr - member_offset
