@@ -207,6 +207,48 @@ class task_struct(generic.GenericIntelProcess):
 
             yield (start, end - start)
 
+    @property
+    def is_kernel_thread(self) -> bool:
+        """Checks if this task is a kernel thread.
+
+        Returns:
+            bool: True, if this task is a kernel thread. Otherwise, False.
+        """
+        return (self.flags & constants.linux.PF_KTHREAD) != 0
+
+    @property
+    def is_thread_group_leader(self) -> bool:
+        """Checks if this task is a thread group leader.
+
+        Returns:
+            bool: True, if this task is a thread group leader. Otherwise, False.
+        """
+        return self.tgid == self.pid
+
+    @property
+    def is_user_thread(self) -> bool:
+        """Checks if this task is a user thread.
+
+        Returns:
+            bool: True, if this task is a user thread. Otherwise, False.
+        """
+        return not self.is_kernel_thread and self.tgid != self.pid
+
+    def get_threads(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns a list of the task_struct based on the list_head
+        thread_node structure."""
+
+        task_symbol_table_name = self.get_symbol_table_name()
+
+        # iterating through the thread_list from thread_group
+        # this allows iterating through pointers to grab the
+        # threads and using the thread_group offset to get the
+        # corresponding task_struct
+        for task in self.thread_group.to_list(
+            f"{task_symbol_table_name}{constants.BANG}task_struct",
+            "thread_group"
+        ):
+            yield task
 
 class fs_struct(objects.StructType):
 

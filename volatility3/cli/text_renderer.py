@@ -1,6 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import csv
 import datetime
 import json
 import logging
@@ -8,7 +9,7 @@ import random
 import string
 import sys
 from functools import wraps
-from typing import Callable, Any, List, Tuple, Dict
+from typing import Any, Callable, Dict, List, Tuple
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.renderers import format_hints
@@ -66,7 +67,6 @@ def multitypedata_as_text(value: format_hints.MultiTypeData) -> str:
 
 
 def optional(func: Callable) -> Callable:
-
     @wraps(func)
     def wrapped(x: Any) -> str:
         if isinstance(x, interfaces.renderers.BaseAbsentValue):
@@ -80,7 +80,6 @@ def optional(func: Callable) -> Callable:
 
 
 def quoted_optional(func: Callable) -> Callable:
-
     @wraps(func)
     def wrapped(x: Any) -> str:
         result = optional(func)(x)
@@ -102,7 +101,7 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
         disasm: Input disassembly objects
 
     Returns:
-        A string as rendererd by capstone where available, otherwise output as if it were just bytes
+        A string as rendered by capstone where available, otherwise output as if it were just bytes
     """
 
     if CAPSTONE_PRESENT:
@@ -193,16 +192,17 @@ class NoneRenderer(CLIRenderer):
         if not grid.populated:
             grid.populate(lambda x, y: True, True)
 
+
 class CSVRenderer(CLIRenderer):
     _type_renderers = {
-        format_hints.Bin: quoted_optional(lambda x: f"0b{x:b}"),
-        format_hints.Hex: quoted_optional(lambda x: f"0x{x:x}"),
-        format_hints.HexBytes: quoted_optional(hex_bytes_as_text),
-        format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
-        interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
-        bytes: quoted_optional(lambda x: " ".join([f"{b:02x}" for b in x])),
-        datetime.datetime: quoted_optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
-        'default': quoted_optional(lambda x: f"{x}")
+        format_hints.Bin: optional(lambda x: f"0b{x:b}"),
+        format_hints.Hex: optional(lambda x: f"0x{x:x}"),
+        format_hints.HexBytes: optional(hex_bytes_as_text),
+        format_hints.MultiTypeData: optional(multitypedata_as_text),
+        interfaces.renderers.Disassembly: optional(display_disassembly),
+        bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
+        datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
+        'default': optional(lambda x: f"{x}")
     }
 
     name = "csv"
@@ -219,28 +219,28 @@ class CSVRenderer(CLIRenderer):
         """
         outfd = sys.stdout
 
-        line = ['"TreeDepth"']
+        header_list = ['TreeDepth']
         for column in grid.columns:
             # Ignore the type because namedtuples don't realize they have accessible attributes
-            line.append("{}".format('"' + column.name + '"'))
-        outfd.write(f"{','.join(line)}")
+            header_list.append(f"{column.name}")
+
+        writer = csv.DictWriter(outfd, header_list)
+        writer.writeheader()
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
-            accumulator.write("\n")
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
-            accumulator.write(str(max(0, node.path_depth - 1)) + ",")
-            line = []
+            row = {'TreeDepth': str(max(0, node.path_depth - 1))}
             for column_index in range(len(grid.columns)):
                 column = grid.columns[column_index]
                 renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
-                line.append(renderer(node.values[column_index]))
-            accumulator.write(f"{','.join(line)}")
+                row[f'{column.name}'] = renderer(node.values[column_index])
+            accumulator.writerow(row)
             return accumulator
 
         if not grid.populated:
-            grid.populate(visitor, outfd)
+            grid.populate(visitor, writer)
         else:
-            grid.visit(node = None, function = visitor, initial_accumulator = outfd)
+            grid.visit(node = None, function = visitor, initial_accumulator = writer)
 
         outfd.write("\n")
 
@@ -274,7 +274,8 @@ class PrettyTextRenderer(CLIRenderer):
         max_column_widths = dict([(column.name, len(column.name)) for column in grid.columns])
 
         def visitor(
-            node: interfaces.renderers.TreeNode, accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
+                node: interfaces.renderers.TreeNode,
+                accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
         ) -> List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             max_column_widths[tree_indent_column] = max(max_column_widths.get(tree_indent_column, 0), node.path_depth)

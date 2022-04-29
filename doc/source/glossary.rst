@@ -145,7 +145,7 @@ Struct, Structure
 
 Symbol
     This is used in many different contexts, as a short term for many things.  Within Volatility, a symbol is a
-    construct that usually encompasses a specific type :ref:`type<Type>` at a specfific :ref:`offset<Offset>`,
+    construct that usually encompasses a specific type :ref:`type<Type>` at a specific :ref:`offset<Offset>`,
     representing a particular instance of that type within the memory of a compiled and running program.  An example
     would be the location in memory of a list of active tcp endpoints maintained by the networking stack
     within an operating system.

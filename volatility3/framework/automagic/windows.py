@@ -28,9 +28,9 @@ The self-referential indices for older versions of windows are listed below:
 """
 import logging
 import struct
-from typing import Generator, List, Optional, Tuple, Type, Iterable
+from typing import Generator, Iterable, List, Optional, Tuple, Type
 
-from volatility3.framework import interfaces, layers, constants
+from volatility3.framework import constants, interfaces, layers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel
 
@@ -116,10 +116,27 @@ class DtbSelfRefPae(DtbSelfReferential):
                          mask = 0x3FFFFFFFFFF000,
                          reserved_bits = 0x0)
 
-    def __call__(self, *args, **kwargs):
-        dtb = super().__call__(*args, **kwargs)
+    @staticmethod
+    def _and_bytes(abytes, bbytes):
+        return bytes([a & b for a, b in zip(abytes[::-1], bbytes[::-1])][::-1])
+
+    def __call__(self, data: bytes, data_offset: int, page_offset: int) -> Optional[Tuple[int, int]]:
+        dtb = super().__call__(data, data_offset, page_offset)
         if dtb:
-            return dtb[0] - 0x4000, dtb[1]
+            # Find the top page
+            top_pae_page = dtb[0] - 0x4000
+            # The top page should map to the next four pages after it
+            # Build what we expect the page table to be
+            expected_table = b''.join([struct.pack(self.ptr_struct, top_pae_page + (i * 0x1000)) for i in range(1, 5)])
+            # Mask off the page bits of top level page map
+            page_table_mask = b"\x00\xf0\xff\xff\xff\xff\xff\xff" * 4
+            page_table = data[top_pae_page - data_offset: top_pae_page - data_offset + (4 * self.ptr_size)]
+            # Compare them
+            anded_bytes = self._and_bytes(page_table, page_table_mask)
+            if (anded_bytes == expected_table):
+                return top_pae_page, dtb[1]
+            # Return None since the dtb value *isn't* None
+            return None
         return dtb
 
 
@@ -202,30 +219,50 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
         for description, tests, sections in cls.test_sets:
             vollog.debug(description)
             # There is a very high chance that the DTB will live in these very narrow segments, assuming we couldn't find them previously
-            hits = context.layers[layer_name].scan(context,
-                                                   PageMapScanner(tests = tests),
-                                                   sections = sections,
-                                                   progress_callback = progress_callback)
+            hits = base_layer.scan(context,
+                                   PageMapScanner(tests = tests),
+                                   sections = sections,
+                                   progress_callback = progress_callback)
 
             # Flatten the generator
             def sort_by_tests(x):
+                """Key used to sort by tests"""
                 return tests.index(x[0]), x[1]
+
+            def get_max_pointer(page_table, test, ptr_size: int):
+                """Determines a pointer from a page_table"""
+                max_ptr = 0
+                for index in range(0, len(page_table), ptr_size):
+                    pointer = struct.unpack(test.ptr_struct, page_table[index:index + ptr_size])[0]
+                    # Make sure the pointer is valid, ignore large pages which would require more calculation
+                    if pointer & 0x1 and not pointer & 0x80:
+                        max_ptr = max(max_ptr, (pointer ^ (pointer & 0xfff)) % test.layer_type.maximum_address)
+                return max_ptr
 
             hits = sorted(list(hits), key = sort_by_tests)
 
-            if hits:
-                # TODO: Decide which to use if there are multiple options
-                test, page_map_offset = hits[0]
-                vollog.debug(f"{test.__class__.__name__} test succeeded at {hex(page_map_offset)}")
-                new_layer_name = context.layers.free_layer_name("IntelLayer")
-                config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
-                context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
-                context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = page_map_offset
-                # TODO: Need to determine the layer type (chances are high it's x64, hence this default)
-                layer = test.layer_type(context,
-                                        config_path = config_path,
-                                        name = new_layer_name,
-                                        metadata = {'os': 'Windows'})
+            for test, page_map_offset in hits:
+                # Turn the page tables into integers and find the largest one
+                page_table = base_layer.read(page_map_offset, 0x1000)
+                ptr_size = struct.calcsize(test.ptr_struct)
+                max_pointer = get_max_pointer(page_table, test, ptr_size)
+
+                if max_pointer <= base_layer.maximum_address:
+                    vollog.debug(f"{test.__class__.__name__} test succeeded at {hex(page_map_offset)}")
+                    new_layer_name = context.layers.free_layer_name("IntelLayer")
+                    config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
+                    context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
+                    context.config[
+                        interfaces.configuration.path_join(config_path, "page_map_offset")] = page_map_offset
+                    layer = test.layer_type(context,
+                                            config_path = config_path,
+                                            name = new_layer_name,
+                                            metadata = {'os': 'Windows'})
+                    break
+                else:
+                    vollog.debug(
+                        f"Max pointer for hit with test {test.__class__.__name__} not met: {hex(max_pointer)} > {hex(base_layer.maximum_address)}")
+            if layer is not None and config_path:
                 break
 
         if layer is not None and config_path:

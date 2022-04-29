@@ -227,3 +227,6 @@ BLUETOOTH_PROTOCOLS = (
     "HIDP",
     "AVDTP",
 )
+
+# include/linux/sched.h
+PF_KTHREAD = 0x00200000	 # I'm a kernel thread
