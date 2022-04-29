@@ -634,7 +634,11 @@ class sock(objects.StructType):
         if not self.sk_socket:
             return 0
 
-        kernel_module_name = self._get_vol_kernel_module_name()
+        try:
+            kernel_module_name = self._get_vol_kernel_module_name()
+        except ValueError:
+            return 0
+
         kernel = self._context.modules[kernel_module_name]
         socket_alloc = linux.LinuxUtilities.container_of(self.sk_socket, "socket_alloc", "socket", kernel)
         vfs_inode = socket_alloc.vfs_inode
