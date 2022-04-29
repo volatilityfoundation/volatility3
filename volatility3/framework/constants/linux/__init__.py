@@ -12,6 +12,9 @@ KERNEL_NAME = "__kernel__"
 PAGE_SHIFT = 12
 """The value hard coded from the Linux Kernel (hence not extracted from the layer itself)"""
 
+# include/linux/sched.h
+PF_KTHREAD = 0x00200000	 # I'm a kernel thread
+
 # Standard well-defined IP protocols.
 # ref: include/uapi/linux/in.h
 IP_PROTOCOLS = {
@@ -227,6 +230,3 @@ BLUETOOTH_PROTOCOLS = (
     "HIDP",
     "AVDTP",
 )
-
-# include/linux/sched.h
-PF_KTHREAD = 0x00200000	 # I'm a kernel thread
