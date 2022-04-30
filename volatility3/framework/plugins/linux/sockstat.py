@@ -74,7 +74,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             sock_stat: A tuple with the source, destination and state strings.
             extended: A dictionary with key/value extended information.
         """
-        family = sock.family
+        family = sock.get_family()
         extended = {}
         sock_handler = self._sock_family_handlers.get(family)
         if sock_handler:
@@ -144,13 +144,13 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             sock_stat: A tuple with the source, destination and state strings.
         """
         unix_sock = sock.cast("unix_sock")
-        state = unix_sock.state
-        saddr = unix_sock.name
-        sinode = unix_sock.inode
+        state = unix_sock.get_state()
+        saddr = unix_sock.get_name()
+        sinode = unix_sock.get_inode()
         if unix_sock.peer != 0:
             peer = unix_sock.peer.dereference().cast("unix_sock")
-            daddr = peer.name
-            dinode = peer.inode
+            daddr = peer.get_name()
+            dinode = peer.get_inode()
         else:
             daddr = dinode = ""
 
@@ -170,13 +170,13 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             sock_stat: A tuple with the source, destination and state strings.
         """
         inet_sock = sock.cast("inet_sock")
-        saddr = inet_sock.src_addr
-        sport = inet_sock.src_port
-        daddr = inet_sock.dst_addr
-        dport = inet_sock.dst_port
-        state = inet_sock.state
+        saddr = inet_sock.get_src_addr()
+        sport = inet_sock.get_src_port()
+        daddr = inet_sock.get_dst_addr()
+        dport = inet_sock.get_dst_port()
+        state = inet_sock.get_state()
 
-        if inet_sock.family == "AF_INET6":
+        if inet_sock.get_family() == "AF_INET6":
             saddr = f"[{saddr}]"
 
         saddr_tag = f"{saddr}:{sport}"
@@ -217,7 +217,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         saddr_tag = ",".join(saddr_list)
         daddr_tag = ",".join(daddr_list)
-        state = netlink_sock.state
+        state = netlink_sock.get_state()
 
         sock_stat = saddr_tag, daddr_tag, state
         return netlink_sock, sock_stat
@@ -260,7 +260,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         saddr_tag = f"{dev_name}"
         daddr_tag = ""
-        state = packet_sock.state
+        state = packet_sock.get_state()
         sock_stat = saddr_tag, daddr_tag, state
         return packet_sock, sock_stat
 
@@ -318,15 +318,16 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             return ":".join(reversed(["%02x" % x for x in addr.b]))
 
         saddr_tag = daddr_tag = ""
-        if bt_sock.protocol == "HCI":
+        bt_protocol = bt_sock.get_protocol()
+        if bt_protocol == "HCI":
             pinfo = bt_sock.cast("hci_pinfo")
-        elif bt_sock.protocol == "L2CAP":
+        elif bt_protocol == "L2CAP":
             pinfo = bt_sock.cast("l2cap_pinfo")
             src_addr = bt_addr(pinfo.chan.src)
             dst_addr = bt_addr(pinfo.chan.dst)
             saddr_tag = f"{src_addr}"
             daddr_tag = f"{dst_addr}"
-        elif bt_sock.protocol == "RFCOMM":
+        elif bt_protocol == "RFCOMM":
             pinfo = bt_sock.cast("rfcomm_pinfo")
             src_addr = bt_addr(pinfo.src)
             dst_addr = bt_addr(pinfo.dst)
@@ -334,7 +335,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             saddr_tag = f"[{src_addr}]:{channel}"
             daddr_tag = f"{dst_addr}"
         else:
-            vollog.log(constants.LOGLEVEL_V, "Unsupported bluetooth protocol '%s'", bt_sock.protocol)
+            vollog.log(constants.LOGLEVEL_V, "Unsupported bluetooth protocol '%s'", bt_protocol)
 
         state = bt_sock.state
         sock_stat = saddr_tag, daddr_tag, state
@@ -420,8 +421,8 @@ class Sockstat(plugins.PluginInterface):
 
             sock = socket.sk.dereference()
 
-            sock_type = sock.type
-            family = sock.family
+            sock_type = sock.get_type()
+            family = sock.get_family()
 
             sock_handler = SockHandlers(vmlinux, task)
             sock_fields = sock_handler.process_sock(sock)
@@ -429,7 +430,7 @@ class Sockstat(plugins.PluginInterface):
                 continue
 
             child_sock = sock_fields[0]
-            protocol = child_sock.protocol if hasattr(child_sock, "protocol") else ""
+            protocol = child_sock.get_protocol()
 
             net = task.nsproxy.net_ns
             netns_id = net.get_inode()

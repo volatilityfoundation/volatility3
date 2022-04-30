@@ -617,20 +617,17 @@ class sock(objects.StructType):
 
         return module_names[0]
 
-    @property
-    def family(self):
+    def get_family(self):
         family_idx = self.__sk_common.skc_family
         if 0 <= family_idx < len(SOCK_FAMILY):
             return SOCK_FAMILY[family_idx]
         else:
             return "UNKNOWN"
 
-    @property
-    def type(self):
+    def get_type(self):
         return SOCK_TYPES.get(self.sk_type, "")
 
-    @property
-    def inode(self):
+    def get_inode(self):
         if not self.sk_socket:
             return 0
 
@@ -646,8 +643,7 @@ class sock(objects.StructType):
         return vfs_inode.i_ino
 
 class unix_sock(objects.StructType):
-    @property
-    def name(self):
+    def get_name(self):
         if self.addr:
             sockaddr_un = self.addr.name.cast("sockaddr_un")
             saddr = str(utility.array_to_string(sockaddr_un.sun_path))
@@ -655,16 +651,14 @@ class unix_sock(objects.StructType):
             saddr = ""
         return saddr
 
-    @property
-    def protocol(self):
+    def get_protocol(self):
         return ""
 
-    @property
-    def state(self):
+    def get_state(self):
         """Return a string representing the sock state."""
 
         # Unix socket states reuse (a subset) of the inet_sock states contants
-        if self.sk.type == "STREAM":
+        if self.sk.get_type() == "STREAM":
             state_idx = self.sk.__sk_common.skc_state
             if 0 <= state_idx < len(TCP_STATES):
                 state = TCP_STATES[state_idx]
@@ -675,33 +669,29 @@ class unix_sock(objects.StructType):
 
         return state
 
-    @property
-    def inode(self):
-        return self.sk.inode
+    def get_inode(self):
+        return self.sk.get_inode()
 
 class inet_sock(objects.StructType):
-    @property
-    def family(self):
+    def get_family(self):
         family_idx = self.sk.__sk_common.skc_family
         if 0 <= family_idx < len(SOCK_FAMILY):
             return SOCK_FAMILY[family_idx]
         else:
             return "UNKNOWN"
 
-    @property
-    def protocol(self):
+    def get_protocol(self):
         # If INET6 family and a proto is defined, we use that specific IPv6 protocol.
         # Otherwise, we use the standard IP protocol.
         protocol = IP_PROTOCOLS.get(self.sk.sk_protocol, "UNKNOWN")
-        if self.family == "AF_INET6":
+        if self.get_family() == "AF_INET6":
             protocol = IPV6_PROTOCOLS.get(self.sk.sk_protocol, protocol)
         return protocol
 
-    @property
-    def state(self):
+    def get_state(self):
         """Return a string representing the sock state."""
 
-        if self.sk.type == "STREAM":
+        if self.sk.get_type() == "STREAM":
             state_idx = self.sk.__sk_common.skc_state
             if 0 <= state_idx < len(TCP_STATES):
                 state = TCP_STATES[state_idx]
@@ -712,14 +702,12 @@ class inet_sock(objects.StructType):
 
         return state
 
-    @property
-    def src_port(self):
+    def get_src_port(self):
         sport_le = getattr(self, "sport", getattr(self, "inet_sport", None))
         if sport_le is not None:
             return socket.htons(sport_le)
 
-    @property
-    def dst_port(self):
+    def get_dst_port(self):
         sk_common = self.sk.__sk_common
         if hasattr(sk_common, "skc_portpair"):
             dport_le = sk_common.skc_portpair & 0xffff
@@ -734,8 +722,7 @@ class inet_sock(objects.StructType):
 
         return socket.htons(dport_le)
 
-    @property
-    def src_addr(self):
+    def get_src_addr(self):
         sk_common = self.sk.__sk_common
         family = sk_common.skc_family
         if family == socket.AF_INET:
@@ -756,8 +743,7 @@ class inet_sock(objects.StructType):
         addr_bytes = parent_layer.read(saddr.vol.offset, addr_size)
         return socket.inet_ntop(family, addr_bytes)
 
-    @property
-    def dst_addr(self):
+    def get_dst_addr(self):
         sk_common = self.sk.__sk_common
         family = sk_common.skc_family
         if family == socket.AF_INET:
@@ -782,16 +768,14 @@ class inet_sock(objects.StructType):
         return socket.inet_ntop(family, addr_bytes)
 
 class netlink_sock(objects.StructType):
-    @property
-    def protocol(self):
+    def get_protocol(self):
         protocol_idx = self.sk.sk_protocol
         if 0 <= protocol_idx < len(NETLINK_PROTOCOLS):
             return NETLINK_PROTOCOLS[protocol_idx]
         else:
             return "UNKNOWN"
 
-    @property
-    def state(self):
+    def get_state(self):
         # Netlink is a datagram-oriented service. We can only have
         # SOCK_RAW or SOCK_DGRAM socket types.
         # NOTE: We are overriding the netlink_sock.state member here
@@ -800,8 +784,7 @@ class netlink_sock(objects.StructType):
 
 
 class packet_sock(objects.StructType):
-    @property
-    def protocol(self):
+    def get_protocol(self):
         eth_proto = socket.htons(self.num)
         if eth_proto == 0:
             return ""
@@ -810,15 +793,13 @@ class packet_sock(objects.StructType):
         else:
             return f"0x{eth_proto:x}"
 
-    @property
-    def state(self):
+    def get_state(self):
         # Packet socket types are either SOCK_RAW or SOCK_DGRAM.
         return "UNCONNECTED"
 
 
 class bt_sock(objects.StructType):
-    @property
-    def protocol(self):
+    def get_protocol(self):
         type_idx = self.sk.sk_protocol
         if 0 <= type_idx < len(BLUETOOTH_PROTOCOLS):
             state = BLUETOOTH_PROTOCOLS[type_idx]
@@ -827,8 +808,7 @@ class bt_sock(objects.StructType):
 
         return state
 
-    @property
-    def state(self):
+    def get_state(self):
         state_idx = self.sk.__sk_common.skc_state
         if 0 <= state_idx < len(BLUETOOTH_STATES):
             state = BLUETOOTH_STATES[state_idx]
