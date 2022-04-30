@@ -754,7 +754,12 @@ class inet_sock(objects.StructType):
             return
 
         parent_layer = self._context.layers[self.vol.layer_name]
-        addr_bytes = parent_layer.read(saddr.vol.offset, addr_size)
+        try:
+            addr_bytes = parent_layer.read(saddr.vol.offset, addr_size)
+        except exceptions.InvalidAddressException:
+            vollog.debug(f"Unable to read socket src address from {saddr.vol.offset:#x}")
+            return "?"
+
         return socket_module.inet_ntop(family, addr_bytes)
 
     def get_dst_addr(self):
@@ -778,7 +783,12 @@ class inet_sock(objects.StructType):
             return
 
         parent_layer = self._context.layers[self.vol.layer_name]
-        addr_bytes = parent_layer.read(daddr.vol.offset, addr_size)
+        try:
+            addr_bytes = parent_layer.read(daddr.vol.offset, addr_size)
+        except exceptions.InvalidAddressException:
+            vollog.debug(f"Unable to read socket dst address from {daddr.vol.offset:#x}")
+            return "?"
+
         return socket_module.inet_ntop(family, addr_bytes)
 
 class netlink_sock(objects.StructType):
