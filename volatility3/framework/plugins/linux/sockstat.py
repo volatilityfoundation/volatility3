@@ -92,7 +92,8 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         # Even if the sock family is not supported, or the required types
         # are not present in the symbols, we can still show some general
         # information about the socket that may be helpful.
-        saddr_tag = daddr_tag = state = "?"
+        saddr_tag = daddr_tag = "?"
+        state = sock.get_state()
 
         sock_stat = saddr_tag, daddr_tag, state
 
@@ -237,7 +238,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sport = vsock_sock.local_addr.svm_port
         daddr = vsock_sock.remote_addr.svm_cid
         dport = vsock_sock.remote_addr.svm_port
-        state = ""  # Protocol is always 0
+        state = vsock_sock.get_state()
 
         saddr_tag = f"{saddr}:{sport}"
         daddr_tag = f"{daddr}:{dport}"
@@ -337,7 +338,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         else:
             vollog.log(constants.LOGLEVEL_V, "Unsupported bluetooth protocol '%s'", bt_protocol)
 
-        state = bt_sock.state
+        state = bt_sock.get_state()
         sock_stat = saddr_tag, daddr_tag, state
         return bt_sock, sock_stat
 

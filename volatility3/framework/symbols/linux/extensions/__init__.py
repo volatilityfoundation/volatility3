@@ -4,7 +4,7 @@
 
 import collections.abc
 import logging
-import socket
+import socket as socket_module
 from typing import Generator, Iterable, Iterator, Optional, Tuple
 
 from volatility3.framework import constants
@@ -12,7 +12,7 @@ from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
 from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
 from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
-from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS
+from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
 from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
@@ -606,8 +606,8 @@ class net(objects.StructType):
         else:
             raise AttributeError("Unable to find net_namespace inode")
 
-class sock(objects.StructType):
-    def _get_vol_kernel_module_name(self):
+class socket(objects.StructType):
+    def _get_vol_kernel(self):
         symbol_table_arr = self.vol.type_name.split("!", 1)
         symbol_table = symbol_table_arr[0] if len(symbol_table_arr) == 2 else None
 
@@ -615,8 +615,29 @@ class sock(objects.StructType):
         if not module_names:
             raise ValueError(f"No module using the symbol table {symbol_table}")
 
-        return module_names[0]
+        kernel_module_name = module_names[0]
+        kernel = self._context.modules[kernel_module_name]
+        return kernel
 
+    def get_inode(self):
+        try:
+            kernel = self._get_vol_kernel()
+        except ValueError:
+            return 0
+
+        socket_alloc = linux.LinuxUtilities.container_of(self.vol.offset, "socket_alloc", "socket", kernel)
+        vfs_inode = socket_alloc.vfs_inode
+
+        return vfs_inode.i_ino
+
+    def get_state(self):
+        socket_state_idx = self.state
+        if 0 <= socket_state_idx < len(SOCKET_STATES):
+            return SOCKET_STATES[socket_state_idx]
+        else:
+            return "UNKNOWN"
+
+class sock(objects.StructType):
     def get_family(self):
         family_idx = self.__sk_common.skc_family
         if 0 <= family_idx < len(SOCK_FAMILY):
@@ -631,16 +652,11 @@ class sock(objects.StructType):
         if not self.sk_socket:
             return 0
 
-        try:
-            kernel_module_name = self._get_vol_kernel_module_name()
-        except ValueError:
-            return 0
+        return self.sk_socket.get_inode()
 
-        kernel = self._context.modules[kernel_module_name]
-        socket_alloc = linux.LinuxUtilities.container_of(self.sk_socket, "socket_alloc", "socket", kernel)
-        vfs_inode = socket_alloc.vfs_inode
-
-        return vfs_inode.i_ino
+    def get_state(self):
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()
 
 class unix_sock(objects.StructType):
     def get_name(self):
@@ -661,13 +677,12 @@ class unix_sock(objects.StructType):
         if self.sk.get_type() == "STREAM":
             state_idx = self.sk.__sk_common.skc_state
             if 0 <= state_idx < len(TCP_STATES):
-                state = TCP_STATES[state_idx]
+                return TCP_STATES[state_idx]
             else:
-                state = "UNKNOWN"
+                return "UNKNOWN"
         else:
-            state = "UNCONNECTED"
-
-        return state
+            # Return the generic socket state
+            return self.sk.sk_socket.get_state()
 
     def get_inode(self):
         return self.sk.get_inode()
@@ -694,18 +709,17 @@ class inet_sock(objects.StructType):
         if self.sk.get_type() == "STREAM":
             state_idx = self.sk.__sk_common.skc_state
             if 0 <= state_idx < len(TCP_STATES):
-                state = TCP_STATES[state_idx]
+                return TCP_STATES[state_idx]
             else:
-                state = "UNKNOWN"
+                return "UNKNOWN"
         else:
-            state = "UNCONNECTED"
-
-        return state
+            # Return the generic socket state
+            return self.sk.sk_socket.get_state()
 
     def get_src_port(self):
         sport_le = getattr(self, "sport", getattr(self, "inet_sport", None))
         if sport_le is not None:
-            return socket.htons(sport_le)
+            return socket_module.htons(sport_le)
 
     def get_dst_port(self):
         sk_common = self.sk.__sk_common
@@ -720,12 +734,12 @@ class inet_sock(objects.StructType):
         else:
             return
 
-        return socket.htons(dport_le)
+        return socket_module.htons(dport_le)
 
     def get_src_addr(self):
         sk_common = self.sk.__sk_common
         family = sk_common.skc_family
-        if family == socket.AF_INET:
+        if family == socket_module.AF_INET:
             addr_size = 4
             if hasattr(self, "rcv_saddr"):
                 saddr = self.rcv_saddr
@@ -733,7 +747,7 @@ class inet_sock(objects.StructType):
                 saddr = self.inet_rcv_saddr
             else:
                 saddr = sk_common.skc_rcv_saddr
-        elif family == socket.AF_INET6:
+        elif family == socket_module.AF_INET6:
             addr_size = 16
             saddr = self.pinet6.saddr
         else:
@@ -741,12 +755,12 @@ class inet_sock(objects.StructType):
 
         parent_layer = self._context.layers[self.vol.layer_name]
         addr_bytes = parent_layer.read(saddr.vol.offset, addr_size)
-        return socket.inet_ntop(family, addr_bytes)
+        return socket_module.inet_ntop(family, addr_bytes)
 
     def get_dst_addr(self):
         sk_common = self.sk.__sk_common
         family = sk_common.skc_family
-        if family == socket.AF_INET:
+        if family == socket_module.AF_INET:
             if hasattr(self, "daddr") and self.daddr:
                 daddr = self.daddr
             elif hasattr(self, "inet_daddr") and self.inet_daddr:
@@ -754,7 +768,7 @@ class inet_sock(objects.StructType):
             else:
                 daddr = sk_common.skc_daddr
             addr_size = 4
-        elif family == socket.AF_INET6:
+        elif family == socket_module.AF_INET6:
             if hasattr(self.pinet6, "daddr"):
                 daddr = self.pinet6.daddr
             else:
@@ -765,7 +779,7 @@ class inet_sock(objects.StructType):
 
         parent_layer = self._context.layers[self.vol.layer_name]
         addr_bytes = parent_layer.read(daddr.vol.offset, addr_size)
-        return socket.inet_ntop(family, addr_bytes)
+        return socket_module.inet_ntop(family, addr_bytes)
 
 class netlink_sock(objects.StructType):
     def get_protocol(self):
@@ -776,16 +790,26 @@ class netlink_sock(objects.StructType):
             return "UNKNOWN"
 
     def get_state(self):
-        # Netlink is a datagram-oriented service. We can only have
-        # SOCK_RAW or SOCK_DGRAM socket types.
-        # NOTE: We are overriding the netlink_sock.state member here
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()
 
-        return "UNCONNECTED"
+
+class vsock_sock(objects.StructType):
+    def get_protocol(self):
+        # The protocol should always be 0 for vsocks
+        if self.sk.sk_protocol == 0:
+            return ""
+        else:
+            return "UNKNOWN"
+
+    def get_state(self):
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()
 
 
 class packet_sock(objects.StructType):
     def get_protocol(self):
-        eth_proto = socket.htons(self.num)
+        eth_proto = socket_module.htons(self.num)
         if eth_proto == 0:
             return ""
         elif eth_proto in ETH_PROTOCOLS:
@@ -794,25 +818,21 @@ class packet_sock(objects.StructType):
             return f"0x{eth_proto:x}"
 
     def get_state(self):
-        # Packet socket types are either SOCK_RAW or SOCK_DGRAM.
-        return "UNCONNECTED"
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()
 
 
 class bt_sock(objects.StructType):
     def get_protocol(self):
         type_idx = self.sk.sk_protocol
         if 0 <= type_idx < len(BLUETOOTH_PROTOCOLS):
-            state = BLUETOOTH_PROTOCOLS[type_idx]
+            return BLUETOOTH_PROTOCOLS[type_idx]
         else:
-            state = "UNKNOWN"
-
-        return state
+            return "UNKNOWN"
 
     def get_state(self):
         state_idx = self.sk.__sk_common.skc_state
         if 0 <= state_idx < len(BLUETOOTH_STATES):
-            state = BLUETOOTH_STATES[state_idx]
+            return BLUETOOTH_STATES[state_idx]
         else:
-            state = "UNKNOWN"
-
-        return state
+            return "UNKNOWN"

@@ -32,10 +32,12 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 
         # Network
         self.set_type_class('net', extensions.net)
+        self.set_type_class('socket', extensions.socket)
         self.set_type_class('sock', extensions.sock)
         self.set_type_class('inet_sock', extensions.inet_sock)
         self.set_type_class('unix_sock', extensions.unix_sock)
         self.set_type_class('netlink_sock', extensions.netlink_sock)
+        self.set_type_class('vsock_sock', extensions.vsock_sock)
         self.set_type_class('packet_sock', extensions.packet_sock)
         if 'bt_sock' in self.types:
             self.set_type_class('bt_sock', extensions.bt_sock)

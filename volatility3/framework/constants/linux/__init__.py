@@ -137,6 +137,16 @@ SOCK_FAMILY = (
     "AF_XDP",
 )
 
+# Socket states
+# ref: include/uapi/linux/net.h
+SOCKET_STATES = (
+    "FREE",
+    "UNCONNECTED",
+    "CONNECTING",
+    "CONNECTED",
+    "DISCONNECTING"
+)
+
 # Netlink protocols
 # ref: include/uapi/linux/netlink.h
 NETLINK_PROTOCOLS = (
