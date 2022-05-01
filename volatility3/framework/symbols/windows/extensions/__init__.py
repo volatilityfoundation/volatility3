@@ -448,9 +448,9 @@ class KMUTANT(objects.StructType, pool.ExecutiveObject):
 class ETHREAD(objects.StructType):
     """A class for executive thread objects."""
 
-    def owning_process(self, kernel_layer: str = None) -> interfaces.objects.ObjectInterface:
+    def owning_process(self) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""
-        return self.ThreadsProcess.dereference(kernel_layer)
+        return self.Tcb.Process.dereference().cast("_EPROCESS")
 
     def get_cross_thread_flags(self) -> str:
         dictCrossThreadFlags = {
