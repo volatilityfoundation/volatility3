@@ -167,7 +167,7 @@ class BaseSymbolTableInterface:
         """
         raise NotImplementedError("Abstract method set_type_class not implemented yet.")
 
-    def try_set_type_class(self, name: str, clazz: Type[objects.ObjectInterface]) -> bool:
+    def optional_set_type_class(self, name: str, clazz: Type[objects.ObjectInterface]) -> bool:
         """Calls the set_type_class function but does not throw an exception.
         Returns whether setting the type class was successfull.
         Args:

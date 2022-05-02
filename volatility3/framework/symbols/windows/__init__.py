@@ -42,7 +42,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_IMAGE_NT_HEADERS', pe.IMAGE_NT_HEADERS)
         
         # Might not exist in 32-bit operating systems.
-        self.try_set_type_class('_IMAGE_NT_HEADERS64', pe.IMAGE_NT_HEADERS)
+        self.optional_set_type_class('_IMAGE_NT_HEADERS64', pe.IMAGE_NT_HEADERS)
 
         # This doesn't exist in very specific versions of windows
         try:
@@ -54,11 +54,11 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
             pass
 
         # these don't exist in windows XP
-        self.try_set_type_class('_MMADDRESS_NODE', extensions.MMVAD_SHORT)
+        self.optional_set_type_class('_MMADDRESS_NODE', extensions.MMVAD_SHORT)
         
         # these were introduced starting in windows 8
-        self.try_set_type_class('_MM_AVL_NODE', extensions.MMVAD_SHORT)
+        self.optional_set_type_class('_MM_AVL_NODE', extensions.MMVAD_SHORT)
         
         # these were introduced starting in windows 7
-        self.try_set_type_class('_RTL_BALANCED_NODE', extensions.MMVAD_SHORT)
+        self.optional_set_type_class('_RTL_BALANCED_NODE', extensions.MMVAD_SHORT)
         

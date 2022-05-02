@@ -116,14 +116,6 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         normalized_offset = object_info.offset & mask
 
         vol_info_dict = {'type_name': type_name, 'offset': normalized_offset}
-        if constants.BANG in type_name:
-            table_name, struct_name = type_name.split(constants.BANG)
-            vol_info_dict["table_name"] = table_name
-            vol_info_dict["short_name"] = struct_name
-        else:
-            vol_info_dict["table_name"] = ""
-            vol_info_dict["short_name"] = type_name
-        
         self._vol = collections.ChainMap({}, vol_info_dict, object_info, kwargs)
         self._context = context
 
@@ -151,7 +143,7 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         """
         if constants.BANG not in self.vol.type_name:
             raise ValueError(f"Unable to determine table for symbol: {self.vol.type_name}")
-        table_name = self.vol.table_name
+        table_name = self.vol.type_name[:self.vol.type_name.index(constants.BANG)]
         if table_name not in self._context.symbol_space:
             raise KeyError(f"Symbol table not found in context's symbol_space for symbol: {self.vol.type_name}")
         return table_name

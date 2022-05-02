@@ -576,7 +576,11 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             raise exceptions.InvalidAddressException(proc_layer_name, self.Peb,
                                                      f"Invalid Peb address at {self.Peb:0x}")
 
-        return self.at_layer(proc_layer_name).Peb
+        sym_table = self.get_symbol_table_name()
+        peb = self._context.object(f"{sym_table}{constants.BANG}_PEB",
+                                   layer_name = proc_layer_name,
+                                   offset = self.Peb)
+        return peb
 
     def load_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Generator for DLLs in the order that they were loaded."""
