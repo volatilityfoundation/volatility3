@@ -170,11 +170,6 @@ class ObjectInterface(metaclass = abc.ABCMeta):
                                         size = object_template.size)
         return object_template(context = self._context, object_info = object_info)
 
-    def at_layer(self, new_layer_name) -> 'ObjectInterface':
-        """Returns the same object casted at a different layer.
-        """
-        return self._context.object(self.vol.type_name, offset=self.vol.offset, layer_name=new_layer_name)
-
     def has_member(self, member_name: str) -> bool:
         """Returns whether the object would contain a member called
         member_name.
