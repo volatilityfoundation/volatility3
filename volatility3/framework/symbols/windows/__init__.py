@@ -39,9 +39,9 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_VACB', extensions.VACB)
         self.set_type_class('_POOL_TRACKER_BIG_PAGES', pool.POOL_TRACKER_BIG_PAGES)
         self.set_type_class('_IMAGE_DOS_HEADER', pe.IMAGE_DOS_HEADER)
-        self.set_type_class('_IMAGE_NT_HEADERS', pe.IMAGE_NT_HEADERS)
         
-        # Might not exist in 32-bit operating systems.
+        # Might not necessarily defined in every version of windows
+        self.optional_set_type_class('_IMAGE_NT_HEADERS', pe.IMAGE_NT_HEADERS)
         self.optional_set_type_class('_IMAGE_NT_HEADERS64', pe.IMAGE_NT_HEADERS)
 
         # This doesn't exist in very specific versions of windows
