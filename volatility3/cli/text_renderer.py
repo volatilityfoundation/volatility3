@@ -322,10 +322,7 @@ class PrettyTextRenderer(CLIRenderer):
         tab_width = 8
         while line.find('\t') >= 0:
             i = line.find('\t')
-            if (tab_width > 0):
-                pad = " " * (tab_width - (i % tab_width))
-            else:
-                pad = ""
+            pad = " " * (tab_width - (i % tab_width))
             line = line.replace("\t", pad, 1)
         return line
 
