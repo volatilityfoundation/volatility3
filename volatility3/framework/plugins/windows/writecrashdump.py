@@ -28,7 +28,7 @@ class WriteCrashDump(plugins.PluginInterface):
 
     @classmethod
     def write_crashdump(cls, kernel: interfaces.context.ModuleInterface, open_method: Type[interfaces.plugins.FileHandlerInterface], 
-                        progress_callback: constants.ProgressCallback = None):
+                        progress_callback: constants.ProgressCallback = None) -> str:
         layer_name = kernel.layer_name
         context = kernel.context
         symbol_table = kernel.symbol_table_name
@@ -113,8 +113,10 @@ class WriteCrashDump(plugins.PluginInterface):
 
         dump_header.RequiredDumpSpace.write((page_count + 2) * 0x1000)
 
+        filename = "crash.dmp"
         # We don't try any form of compression, but just write the data as one large run
-        with open_method('crash.dmp') as f:
+        with open_method(filename) as f:
+            filename = f.preferred_filename
             # We want to include the maxmium address
             header_data = header_layer.read(0, header_layer.maximum_address + 1)
             f.write(header_data)
@@ -131,9 +133,11 @@ class WriteCrashDump(plugins.PluginInterface):
             f.seek(kdbg_file_location)
             f.write(decoded_data)
 
+        return filename
+
     def _generator(self) -> Iterator[Tuple]:
-        self.write_crashdump(self.context.modules[self.config['kernel']], self._file_handler, self._progress_callback)
-        yield 0, ('Done',)
+        filename = self.write_crashdump(self.context.modules[self.config['kernel']], self._file_handler, self._progress_callback)
+        yield 0, ('Done', filename)
 
     def run(self) -> renderers.TreeGrid:
-        return renderers.TreeGrid([("Status", str)], self._generator())
+        return renderers.TreeGrid([("Status", str), ("Output File name", str)], self._generator())
