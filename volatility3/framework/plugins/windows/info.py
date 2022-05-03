@@ -21,13 +21,11 @@ def rol(value: int, count: int, max_bits: int = 64) -> int:
            ((value & max_bits_mask) >> (max_bits - (count % max_bits)))
 
 def bswap_32(value: int) -> int:
-    value &= 0xffffffff
     value = ((value << 8) & 0xFF00FF00) | ((value >> 8) & 0x00FF00FF)
 
     return ((value << 16) | (value >> 16)) & 0xffffffff
 
 def bswap_64(value: int) -> int:
-    value &= 0xffffffffffffffff
     low = bswap_32((value >> 32))
     high = bswap_32((value & 0xFFFFFFFF))
 
@@ -159,10 +157,10 @@ class Info(plugins.PluginInterface):
         kernel = cls.get_kernel_module(context, layer_name, symbol_table)
         kdbg = cls.get_raw_kdbg_structure(context, config_path, layer_name, symbol_table)
         primary = context.layers[kernel.layer_name]
-        tag_value = kdbg.Header.OwnerTag
+        tag_value = struct.pack("I", kdbg.Header.OwnerTag)
         is_kdbg_encoded = cls.is_kdbg_encoded(context, layer_name, symbol_table)
 
-        if not (is_kdbg_encoded and tag_value != b"KDBG"):
+        if not is_kdbg_encoded and tag_value == b"KDBG":
             return kdbg
 
         kdbg_symbol_table_name = kdbg.get_symbol_table_name()
