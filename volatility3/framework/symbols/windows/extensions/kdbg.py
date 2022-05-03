@@ -35,8 +35,4 @@ class KDDEBUGGER_DATA64(objects.StructType):
 
         return (csdresult >> 8) & 0xffffffff
 
-    def size(self):
-        return self.Header.Size
-
-
 class_types = {'_KDDEBUGGER_DATA64': KDDEBUGGER_DATA64}

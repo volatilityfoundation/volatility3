@@ -14,21 +14,24 @@ from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import extensions
 from volatility3.framework.layers import physical
 
-def rol(value: int, count: int) -> int: 
+def rol(value: int, count: int, max_bits: int = 64) -> int: 
     """A rotate-left instruction in Python"""
-    
-    for _ in range(count):
-        value *= 2
-        if (value > 0xFFFFFFFFFFFFFFFF):
-            value -= 0x10000000000000000
-            value += 1
-    return value
+    max_bits_mask = (1 << max_bits) - 1
+    return (value << count % max_bits) & max_bits_mask |  \
+           ((value & max_bits_mask) >> (max_bits - (count % max_bits)))
 
-def bswap(value: int) -> int:
-    """A byte-swap instruction in Python"""
+def bswap_32(value: int):
+    value &= 0xffffffff
+    value = ((value << 8) & 0xFF00FF00) | ((value >> 8) & 0x00FF00FF)
 
-    hi, lo = struct.unpack(">II", struct.pack("<Q", value))
-    return (hi << 32) | lo
+    return ((value << 16) | (value >> 16)) & 0xffffffff
+
+def bswap_64(value: int) -> int:
+    value &= 0xffffffffffffffff
+    low = bswap_32((value >> 32))
+    high = bswap_32((value & 0xFFFFFFFF))
+
+    return ((high << 32) | low) & 0xffffffffffffffff
 
 class Info(plugins.PluginInterface):
     """Show OS & kernel details of the memory sample being analyzed."""
@@ -114,8 +117,8 @@ class Info(plugins.PluginInterface):
         return KdpDataBlockEncoded_value != 0
 
     @classmethod
-    def _decode_encoded_bytes(cls, context: interfaces.context.ContextInterface , offset: int,
-                              size: int, layer_name: str, symbol_table: str) -> bytes:
+    def _decode_encoded_kdbg_bytes(cls, context: interfaces.context.ContextInterface , offset: int,
+                                   size: int, layer_name: str, symbol_table: str) -> bytes:
 
         kernel = cls.get_kernel_module(context, layer_name, symbol_table)
         wait_never = kernel.object("unsigned long long", offset=kernel.get_symbol("KiWaitNever").address)
@@ -129,7 +132,7 @@ class Info(plugins.PluginInterface):
             entry = rol(entry ^ wait_never, low_byte)
             # TODO: remove the OR after #702 gets merged in.
             swap_xor = datablockencoded.vol.offset | 0xFFFF000000000000
-            entry = bswap(entry ^ swap_xor)
+            entry = bswap_64(entry ^ swap_xor)
             decoded_buffer += struct.pack("Q", entry ^ wait_always)
 
         return decoded_buffer
@@ -139,7 +142,7 @@ class Info(plugins.PluginInterface):
                                      structure_bytes: bytes, structure_symbol_table: str, structure_name: str, 
                                      offset: int, native_layer_name: str):
 
-        new_layer_name = f"{offset}_{structure_name}"
+        new_layer_name = f"{structure_name}_{offset}"
         new_layer = physical.BufferDataLayer(context,
                                         configuration.path_join(new_layer_name, 'layer'),
                                         name = new_layer_name,
@@ -165,11 +168,11 @@ class Info(plugins.PluginInterface):
         kdbg_symbol_table_name = kdbg.get_symbol_table_name()
         kdbg_symbol_table = context.symbol_space[kdbg_symbol_table_name]
         header_size = kdbg_symbol_table.get_type("_DBGKD_DEBUG_DATA_HEADER64").size
-        decoded_header_bytes = cls._decode_encoded_bytes(context, kdbg.vol.offset, header_size, layer_name, symbol_table)
+        decoded_header_bytes = cls._decode_encoded_kdbg_bytes(context, kdbg.vol.offset, header_size, layer_name, symbol_table)
         decoded_header = cls._create_structure_from_bytes(context, decoded_header_bytes, kdbg_symbol_table_name, "_DBGKD_DEBUG_DATA_HEADER64", kdbg.vol.offset, layer_name)
 
         kdbg_size = decoded_header.Size
-        decoded_kdbg_bytes = cls._decode_encoded_bytes(context, kdbg.vol.offset, kdbg_size, layer_name, symbol_table)
+        decoded_kdbg_bytes = cls._decode_encoded_kdbg_bytes(context, kdbg.vol.offset, kdbg_size, layer_name, symbol_table)
 
         decoded_kdbg = cls._create_structure_from_bytes(context, decoded_kdbg_bytes, kdbg_symbol_table_name, "_KDDEBUGGER_DATA64", kdbg.vol.offset, layer_name)
         return decoded_kdbg
@@ -254,6 +257,7 @@ class Info(plugins.PluginInterface):
         for i, layer in self.get_depends(self.context, layer_name):
             yield (0, (layer.name, f"{i} {layer.__class__.__name__}"))
 
+        yield (0, ("Is KDBG encoded: ", str(bool(self.is_kdbg_encoded(self.context, layer_name, symbol_table)))))
         if kdbg.Header.OwnerTag == 0x4742444B:
 
             yield (0, ("KdDebuggerDataBlock", hex(kdbg.vol.offset)))

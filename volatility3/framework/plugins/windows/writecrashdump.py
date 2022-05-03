@@ -1,4 +1,5 @@
 from typing import List, Type, Iterator, Tuple
+import random, string
 
 from volatility3.framework import interfaces, renderers, constants, exceptions
 from volatility3.framework.configuration import requirements
@@ -16,9 +17,8 @@ class WriteCrashDump(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary', description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.VersionRequirement("info", component = info.Info, version = (1, 0, 0))
         ]
 
@@ -27,10 +27,11 @@ class WriteCrashDump(plugins.PluginInterface):
         return context.config.get(interfaces.configuration.path_join(vlayer.config_path, 'memory_layer'), None)
 
     @classmethod
-    def write_crashdump(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
-                        open_method: Type[interfaces.plugins.FileHandlerInterface]):
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
-        kernel = context.module(symbol_table, layer_name = layer_name, offset = kvo)
+    def write_crashdump(cls, kernel: interfaces.context.ModuleInterface, open_method: Type[interfaces.plugins.FileHandlerInterface], 
+                        progress_callback: constants.ProgressCallback = None):
+        layer_name = kernel.layer_name
+        context = kernel.context
+        symbol_table = kernel.symbol_table_name
         primary = context.layers[layer_name]
         is_pae = isinstance(primary, intel.IntelPAE)
         is_64_bit = isinstance(primary, intel.Intel32e)
@@ -44,7 +45,8 @@ class WriteCrashDump(plugins.PluginInterface):
             dump_header_name = '_DUMP_HEADER'
             valid_dump_suffix = [ord('M'), ord('P')]
 
-        config_path = 'whatever'
+        config_path = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
+        
         crash_table_name = intermed.IntermediateSymbolTable.create(context,
                                                                    configuration.path_join(config_path, 'symbols'),
                                                                    '',
@@ -83,7 +85,7 @@ class WriteCrashDump(plugins.PluginInterface):
         dump_header.PfnDataBase.write(kdbg.MmPfnDatabase)
         dump_header.PsLoadedModuleList.write(kdbg.PsLoadedModuleList)
         dump_header.PsActiveProcessHead.write(kdbg.PsActiveProcessHead)
-        dump_header.DumpType.write(1)
+        dump_header.DumpType.write(1) # DUMP_TYPE_FULL - Run-based dump.
 
         dump_header.SystemTime.write(kuser.SystemTime.cast('unsigned long long'))
 
@@ -117,17 +119,20 @@ class WriteCrashDump(plugins.PluginInterface):
             header_data = header_layer.read(0, header_layer.maximum_address + 1)
             f.write(header_data)
             for offset in range(physical_layer.minimum_address, physical_layer.maximum_address + 1, 0x1000):
+                if offset & 0xffffff == 0:
+                    if progress_callback:
+                        progress_callback((offset * 100) / (physical_layer.maximum_address + 1), "Reading memory")
                 f.write(physical_layer.read(offset, 0x1000, pad = True))
 
             # Fix KDBG in the dump if it was encoded
-            decoded_data = context.layers[kdbg.vol.layer_name].read(kdbg.vol.offset, kdbg.size())
+            decoded_data = context.layers[kdbg.vol.layer_name].read(kdbg.vol.offset, kdbg.Header.Size)
             kdbg_physical_address = primary.translate(kdbg.vol.offset)[0]
             kdbg_file_location = (header_layer.maximum_address + 1) + kdbg_physical_address - physical_layer.minimum_address
             f.seek(kdbg_file_location)
             f.write(decoded_data)
 
     def _generator(self) -> Iterator[Tuple]:
-        self.write_crashdump(self.context, self.config['primary'], self.config['nt_symbols'], self._file_handler)
+        self.write_crashdump(self.context.modules[self.config['kernel']], self._file_handler, self._progress_callback)
         yield 0, ('Done',)
 
     def run(self) -> renderers.TreeGrid:
