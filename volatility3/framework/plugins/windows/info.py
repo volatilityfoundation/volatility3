@@ -20,7 +20,7 @@ def rol(value: int, count: int, max_bits: int = 64) -> int:
     return (value << count % max_bits) & max_bits_mask |  \
            ((value & max_bits_mask) >> (max_bits - (count % max_bits)))
 
-def bswap_32(value: int):
+def bswap_32(value: int) -> int:
     value &= 0xffffffff
     value = ((value << 8) & 0xFF00FF00) | ((value >> 8) & 0x00FF00FF)
 
@@ -257,7 +257,7 @@ class Info(plugins.PluginInterface):
         for i, layer in self.get_depends(self.context, layer_name):
             yield (0, (layer.name, f"{i} {layer.__class__.__name__}"))
 
-        yield (0, ("Is KDBG encoded: ", str(bool(self.is_kdbg_encoded(self.context, layer_name, symbol_table)))))
+        yield (0, ("IsKDBGEncoded", str(bool(self.is_kdbg_encoded(self.context, layer_name, symbol_table)))))
         if kdbg.Header.OwnerTag == 0x4742444B:
 
             yield (0, ("KdDebuggerDataBlock", hex(kdbg.vol.offset)))
