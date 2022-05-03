@@ -470,14 +470,14 @@ class ModuleRequirement(interfaces.configuration.ConstructableRequirementInterfa
             if req_unsatisfied:
                 result.update(req_unsatisfied)
         if not result:
+            vollog.log(constants.LOGLEVEL_V, f"IndexError - No configuration provided: {config_path}")
             result = {config_path: self}
-        return result
 
         ### NOTE: This validate method has side effects (the dependencies can change)!!!
 
         self._validate_class(context, interfaces.configuration.parent_path(config_path))
-        vollog.log(constants.LOGLEVEL_V, f"IndexError - No configuration provided: {config_path}")
-        return {config_path: self}
+
+        return result
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Constructs the appropriate layer and adds it based on the class parameter."""
