@@ -167,6 +167,20 @@ class BaseSymbolTableInterface:
         """
         raise NotImplementedError("Abstract method set_type_class not implemented yet.")
 
+    def optional_set_type_class(self, name: str, clazz: Type[objects.ObjectInterface]) -> bool:
+        """Calls the set_type_class function but does not throw an exception.
+        Returns whether setting the type class was successfull.
+        Args:
+            name: The name of the type to override the class for
+            clazz: The actual class to override for the provided type name
+        """
+        try:
+            self.set_type_class(name, clazz)
+            
+            return True
+        except ValueError:
+            return False
+
     def get_type_class(self, name: str) -> Type[objects.ObjectInterface]:
         """Returns the class associated with a Symbol type."""
         raise NotImplementedError("Abstract method get_type_class not implemented yet.")

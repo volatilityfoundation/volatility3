@@ -574,9 +574,9 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         proc_layer = self._context.layers[proc_layer_name]
         if not proc_layer.is_valid(self.Peb):
             raise exceptions.InvalidAddressException(proc_layer_name, self.Peb,
-                                                     f"Invalid address at {self.Peb:0x}")
+                                                     f"Invalid Peb address at {self.Peb:0x}")
 
-        sym_table = self.vol.type_name.split(constants.BANG)[0]
+        sym_table = self.get_symbol_table_name()
         peb = self._context.object(f"{sym_table}{constants.BANG}_PEB",
                                    layer_name = proc_layer_name,
                                    offset = self.Peb)
