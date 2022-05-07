@@ -15,7 +15,7 @@ vollog = logging.getLogger(__name__)
 
 
 class VadWalk(interfaces.plugins.PluginInterface):
-    """Walk the VAD tree"""
+    """Walk the VAD tree."""
 
     _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
@@ -41,8 +41,8 @@ class VadWalk(interfaces.plugins.PluginInterface):
                                 utility.array_to_string(proc.ImageFileName),
                                 format_hints.Hex(vad.vol.offset),
                                 format_hints.Hex(vad.get_parent()),
-                                format_hints.Hex(vad.get_right_child()),
                                 format_hints.Hex(vad.get_left_child()),
+                                format_hints.Hex(vad.get_right_child()),
                                 format_hints.Hex(vad.get_start()),
                                 format_hints.Hex(vad.get_end()),
                                 vad.get_tag()))
@@ -55,8 +55,8 @@ class VadWalk(interfaces.plugins.PluginInterface):
                                     ('Process', str),
                                     ('Offset', format_hints.Hex),
                                     ('Parent', format_hints.Hex),
-                                    ('Right', format_hints.Hex),
                                     ('Left', format_hints.Hex),
+                                    ('Right', format_hints.Hex),
                                     ('Start', format_hints.Hex),
                                     ('End', format_hints.Hex),
                                     ('Tag', str)],
