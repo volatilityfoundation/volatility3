@@ -34,8 +34,6 @@ dist
 env/
 venv/
 ENV/
-env.bak/
-venv.bak/
 
 # Memory dump files
 *.dmp
