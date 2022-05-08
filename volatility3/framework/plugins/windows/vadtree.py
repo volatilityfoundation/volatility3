@@ -57,10 +57,32 @@ class VadTree(interfaces.plugins.PluginInterface):
         return modules
 
     @classmethod
-    def get_stacks(cls, proc) -> List[int]:
-        """
-        """
+    def get_stacks():
+        return
+
+    @classmethod
+    def get_threads(cls, context: interfaces.context.ContextInterface,
+                    layer_name: str, symbol_table: str,
+                    proc: interfaces.objects.ObjectInterface):
+
         stacks = []
+
+        kvo = context.layers[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
+        tleoffset = ntkrnlmp.get_type("_ETHREAD").relative_child_offset("ThreadListEntry")
+
+        tcb_list = []
+        ethread = ntkrnlmp.object(object_type="_ETHREAD",
+                                    offset=proc.ThreadListHead.Flink - tleoffset,
+                                    absolute=True)
+        while(True):
+            state = ethread.Tcb.get_state()
+            ethread = ntkrnlmp.object(object_type="_ETHREAD",
+                                    offset=ethread.ThreadListEntry.Flink - tleoffset,
+                                    absolute=True)
+            if(ethread.ThreadListEntry.Flink == proc.ThreadListHead.Blink):
+                break
+
         return stacks
 
     def _generator(self, procs) -> Iterator[Tuple]: 
