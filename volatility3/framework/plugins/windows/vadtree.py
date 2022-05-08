@@ -7,6 +7,7 @@ from typing import Iterator, List, Tuple
 
 from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
+from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins.windows import modules, pslist, vadinfo
 
@@ -34,11 +35,11 @@ class VadTree(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def get_heaps(cls, proc) -> int:
+    def get_heaps(cls, proc) -> List[int]:
         """
         """
         try:
-            return proc.get_peb().ProcessHeaps.dereference()
+            return [proc.get_peb().ProcessHeaps.dereference()]
         except exceptions.InvalidAddressException:
             #vollog.log()
             return renderers.UnreadableValue()
@@ -56,56 +57,72 @@ class VadTree(interfaces.plugins.PluginInterface):
                 continue
         return modules
 
-    @classmethod
-    def get_stacks():
-        return
-
-    @classmethod
-    def get_threads(cls, context: interfaces.context.ContextInterface,
-                    layer_name: str, symbol_table: str,
-                    proc: interfaces.objects.ObjectInterface):
-
+    def get_stacks(self, proc: interfaces.objects.ObjectInterface) -> List[int]:
+        #TODO Exception Processing
         stacks = []
 
-        kvo = context.layers[layer_name].config['kernel_virtual_offset']
-        ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
+        kernel = self.context.modules[self.config['kernel']]
+        layer_name = kernel.layer_name
+
+        kvo = self.context.layers[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = self.context.module(kernel.symbol_table_name, layer_name=kernel.layer_name, offset=kvo)
         tleoffset = ntkrnlmp.get_type("_ETHREAD").relative_child_offset("ThreadListEntry")
 
-        tcb_list = []
         ethread = ntkrnlmp.object(object_type="_ETHREAD",
                                     offset=proc.ThreadListHead.Flink - tleoffset,
                                     absolute=True)
+
         while(True):
-            state = ethread.Tcb.get_state()
+            stacks.append(ethread.Tcb.StackBase)
             ethread = ntkrnlmp.object(object_type="_ETHREAD",
-                                    offset=ethread.ThreadListEntry.Flink - tleoffset,
-                                    absolute=True)
+                                        offset=ethread.ThreadListEntry.Flink - tleoffset,
+                                        absolute=True)
+            
             if(ethread.ThreadListEntry.Flink == proc.ThreadListHead.Blink):
                 break
 
         return stacks
+    
+    def get_type(self, proc, vad) -> str:
+        heaps = self.get_heaps(proc)
+        modules = self.get_modules(proc)
+        stacks = self.get_stacks(proc)
+        
+        type = renderers.NotApplicableValue()
+        
+        if(vad):
+            if vad.get_start() in heaps:
+                type = "Heap"
+            elif vad.get_start() in modules:
+                type = "Module"
+            elif vad.get_start() in stacks:
+                type = "Stack"
+            else:
+                try:
+                    if vad.FileObject.FileName:
+                        type = "File"
+                except AttributeError:
+                    pass
+        
+        return type
 
     def _generator(self, procs) -> Iterator[Tuple]: 
-        for proc in procs:
-            print(self.get_modules(proc))
+        for proc in procs:            
             levels = {}
-            """
+
             for vad in vadinfo.VadInfo.list_vads(proc):
-                if(vad):
-                    level = levels.get(vad.get_parent(), -1) + 1
-                    levels[vad.vol.offset] = level
-                    
-                    yield(level, (proc.UniqueProcessId,
-                                utility.array_to_string(proc.ImageFileName),
-                                format_hints.Hex(vad.vol.offset),
-                                True,
-                                True,
-                                True,
-                                "HELLO",
-                                format_hints.Hex(vad.get_start()),
-                                format_hints.Hex(vad.get_end()),
-                                vad.get_tag()))
-            """
+                level = levels.get(vad.get_parent(), -1) + 1
+                levels[vad.vol.offset] = level
+
+                type = self.get_type(proc, vad)
+
+                yield(level, (proc.UniqueProcessId,
+                            utility.array_to_string(proc.ImageFileName),
+                            format_hints.Hex(vad.vol.offset),
+                            type,
+                            format_hints.Hex(vad.get_start()),
+                            format_hints.Hex(vad.get_end()),
+                            vad.get_tag()))
 
     def run(self) -> renderers.TreeGrid:
         kernel = self.context.modules[self.config['kernel']]
@@ -114,10 +131,7 @@ class VadTree(interfaces.plugins.PluginInterface):
         return renderers.TreeGrid([('PID', int),
                                     ('Process', str),
                                     ('Offset', format_hints.Hex),
-                                    ('Heaps', bool),
-                                    ('Modules', bool),
-                                    ('Stacks', bool),
-                                    ('FileName', str),
+                                    ("Type", str),
                                     ('Start', format_hints.Hex),
                                     ('End', format_hints.Hex),
                                     ('Tag', str)],
