@@ -63,7 +63,7 @@ To determine the string for a particular memory image, use the `banners` plugin.
 try to locate that exact kernel debugging package for the operating system.  Unfortunately each distribution provides
 its debugging packages under different package names and there are so many that the distribution may not keep all old
 versions of the debugging symbols, and therefore **it may not be possible to find the right symbols to analyze a linux
-memory image with volatlity**.  With Macs there are far fewer kernels and only one distribution, making it easier to
+memory image with volatility**.  With Macs there are far fewer kernels and only one distribution, making it easier to
 ensure that the right symbols can be found.
 
 Once a kernel with debugging symbols/appropriate DWARF file has been located, `dwarf2json <https://github.com/volatilityfoundation/dwarf2json>`_ will convert it into an
