@@ -5,9 +5,8 @@
 import logging
 from typing import Iterator, List, Tuple
 
-from volatility3.framework import interfaces, renderers
+from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins.windows import modules, pslist, vadinfo
 
@@ -34,16 +33,46 @@ class VadTree(interfaces.plugins.PluginInterface):
                                          optional = True)
         ]
 
+    @classmethod
+    def get_heaps(cls, proc) -> int:
+        """
+        """
+        try:
+            return proc.get_peb().ProcessHeaps.dereference()
+        except exceptions.InvalidAddressException:
+            #vollog.log()
+            return renderers.UnreadableValue()
+
+    @classmethod
+    def get_modules(cls, proc) -> List[int]:
+        """
+        """
+        modules = []
+        for mod in proc.load_order_modules():
+            try:
+                modules.append(mod.DllBase)
+            except exceptions.InvalidAddressException:
+                #vollog.log()
+                continue
+        return modules
+
+    @classmethod
+    def get_stacks(cls, proc) -> List[int]:
+        """
+        """
+        stacks = []
+        return stacks
+
     def _generator(self, procs) -> Iterator[Tuple]: 
         for proc in procs:
-
-            # HEAP, MODULES, STACK, FILE
-
+            print(self.get_modules(proc))
             levels = {}
+            """
             for vad in vadinfo.VadInfo.list_vads(proc):
                 if(vad):
                     level = levels.get(vad.get_parent(), -1) + 1
                     levels[vad.vol.offset] = level
+                    
                     yield(level, (proc.UniqueProcessId,
                                 utility.array_to_string(proc.ImageFileName),
                                 format_hints.Hex(vad.vol.offset),
@@ -54,6 +83,7 @@ class VadTree(interfaces.plugins.PluginInterface):
                                 format_hints.Hex(vad.get_start()),
                                 format_hints.Hex(vad.get_end()),
                                 vad.get_tag()))
+            """
 
     def run(self) -> renderers.TreeGrid:
         kernel = self.context.modules[self.config['kernel']]
