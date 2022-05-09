@@ -180,19 +180,19 @@ class MMVAD_SHORT(objects.StructType):
         elif self.has_member("VadNode"):
 
             if self.VadNode.has_member("u1"):
-                return self.VadNode.u1.Parent.vol.offset & ~0x3
+                return self.VadNode.u1.Parent & ~0x3 - 0xffff000000000000
 
             elif self.VadNode.has_member("ParentValue"):
-                return self.VadNode.ParentValue.vol.offset & ~0x3
+                return self.VadNode.ParentValue & ~0x3 - 0xffff000000000000
 
         # also for windows 8 and 10
         elif self.has_member("Core"):
 
             if self.Core.VadNode.has_member("u1"):
-                return self.Core.VadNode.u1.Parent.vol.offset & ~0x3
+                return self.Core.VadNode.u1.Parent & ~0x3 - 0xffff000000000000
 
             elif self.Core.VadNode.has_member("ParentValue"):
-                return self.Core.VadNode.ParentValue.vol.offset & ~0x3
+                return self.Core.VadNode.ParentValue & ~0x3 - 0xffff000000000000
 
         raise AttributeError("Unable to find the parent member")
 
