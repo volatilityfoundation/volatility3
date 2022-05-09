@@ -423,7 +423,7 @@ class CommandLine:
             detail = f"{excp}"
             caused_by = ["A required python module is not installed (install the module and re-run)"]
         else:
-            general = "Volatilty encountered an unexpected situation."
+            general = "Volatility encountered an unexpected situation."
             detail = ""
             caused_by = [
                 "Please re-run using with -vvv and file a bug with the output", f"at {constants.BUG_URL}"
