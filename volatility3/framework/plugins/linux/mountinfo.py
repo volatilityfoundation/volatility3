@@ -89,6 +89,10 @@ class MountInfo(plugins.PluginInterface):
         if not mnt_root:
             return None
 
+        path_root = cls._do_get_path(mnt, task.fs.root)
+        if path_root is None:
+            return None
+
         mnt_root_path = mnt_root.path()
         superblock = mnt.get_mnt_sb()
 
@@ -96,10 +100,6 @@ class MountInfo(plugins.PluginInterface):
         parent_id: int = mnt.mnt_parent.mnt_id
 
         st_dev = f"{superblock.major}:{superblock.minor}"
-
-        path_root = cls._do_get_path(mnt, task.fs.root)
-        if path_root is None:
-            return None
 
         mnt_opts: List[str] = []
         mnt_opts.append(mnt.get_flags_access())
