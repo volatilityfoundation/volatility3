@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Iterator, List, Tuple
+from typing import Generator, Iterator, List, Tuple
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
@@ -33,7 +33,7 @@ class VadWalk(interfaces.plugins.PluginInterface):
                                          optional = True)
         ]
 
-    def _generator(self, procs) -> Iterator[Tuple]: 
+    def _generator(self, procs: Generator[interfaces.objects.ObjectInterface, None, None]) -> Iterator[Tuple]: 
         for proc in procs:
             for vad in vadinfo.VadInfo.list_vads(proc):
                 if(vad):
