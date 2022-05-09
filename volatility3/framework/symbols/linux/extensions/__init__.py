@@ -202,14 +202,14 @@ class task_struct(generic.GenericIntelProcess):
             yield (start, end - start)
 
     def get_threads(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Returns a list of the task_struct based on the list_head 
+        """Returns a list of the task_struct based on the list_head
         thread_node structure."""
 
         task_symbol_table_name = self.get_symbol_table_name()
 
         # iterating through the thread_list from thread_group
-        # this allows iterating through pointers to grab the 
-        # threads and using the thread_group offset to get the 
+        # this allows iterating through pointers to grab the
+        # threads and using the thread_group offset to get the
         # corresponding task_struct
         for task in self.thread_group.to_list(
             f"{task_symbol_table_name}{constants.BANG}task_struct",
@@ -425,12 +425,15 @@ class qstr(objects.StructType):
 class dentry(objects.StructType):
 
     def path(self) -> str:
-        """ Based on __dentry_path Linux kernel function"""
+        """Based on __dentry_path Linux kernel function"""
         reversed_path = []
+        dentry_seen = set()
         current_dentry = self
-        while not current_dentry.is_root():
+        while (not current_dentry.is_root() and
+               current_dentry.vol.offset not in dentry_seen):
             parent = current_dentry.d_parent
             reversed_path.append(current_dentry.d_name.name_as_str())
+            dentry_seen.add(current_dentry.vol.offset)
             current_dentry = parent
         return "/" + "/".join(reversed(reversed_path))
 
@@ -455,11 +458,14 @@ class dentry(objects.StructType):
         if "ancestor_dentry" is an ancestor of "child_dentry", else None.
         """
 
+        dentry_seen = set()
         current_dentry = self
-        while not current_dentry.is_root():
+        while (not current_dentry.is_root() and
+               current_dentry.vol.offset not in dentry_seen):
             if current_dentry.d_parent == ancestor_dentry.vol.offset:
                 return current_dentry
 
+            dentry_seen.add(current_dentry.vol.offset)
             current_dentry = current_dentry.d_parent
 
         return None
@@ -632,32 +638,48 @@ class mount(objects.StructType):
 
     def get_dominating_id(self, root) -> int:
         """Get ID of closest dominating peer group having a representative under the given root."""
+        mnt_seen = set()
         current_mnt = self.mnt_master
-        while current_mnt and current_mnt.vol.offset != 0:
+        while (current_mnt and
+               current_mnt.vol.offset != 0 and
+               current_mnt.vol.offset not in mnt_seen):
             peer = current_mnt.get_peer_under_root(self.mnt_ns, root)
             if peer and peer.vol.offset != 0:
                 return peer.mnt_group_id
 
+            mnt_seen.add(current_mnt.vol.offset)
             current_mnt = current_mnt.mnt_master
         return 0
 
     def get_peer_under_root(self, ns, root):
-        current = self
-        while True:
-            if current.mnt_ns == ns and current.is_path_reachable(current.mnt.mnt_root, root):
-                return current
-            current = current.next_peer()
-            if current.vol.offset == self.vol.offset:
+        """Return true if path is reachable from root.
+        It mimics the kernel function is_path_reachable(), ref: fs/namespace.c
+        """
+        mnt_seen = set()
+        current_mnt = self
+        while current_mnt.vol.offset not in mnt_seen:
+            if current_mnt.mnt_ns == ns and current_mnt.is_path_reachable(current_mnt.mnt.mnt_root, root):
+                return current_mnt
+
+            mnt_seen.add(current_mnt.vol.offset)
+            current_mnt = current_mnt.next_peer()
+            if current_mnt.vol.offset == self.vol.offset:
                 break
 
         return None
 
     def is_path_reachable(self, current_dentry, root):
-        """Return true if path is reachable
+        """Return true if path is reachable.
+        It mimics the kernel function with same name, ref fs/namespace.c:
         """
+        mnt_seen = set()
         current_mnt = self
-        while current_mnt.mnt.vol.offset != root.mnt and current_mnt.has_parent():
+        while (current_mnt.mnt.vol.offset != root.mnt and
+               current_mnt.has_parent() and
+               current_mnt.vol.offset not in mnt_seen):
+
             current_dentry = current_mnt.mnt_mountpoint
+            mnt_seen.add(current_mnt.vol.offset)
             current_mnt = current_mnt.mnt_parent
 
         return current_mnt.mnt.vol.offset == root.mnt and current_dentry.is_subdir(root.dentry)
