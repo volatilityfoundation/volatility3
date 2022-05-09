@@ -111,30 +111,19 @@ class Callbacks(interfaces.plugins.PluginInterface):
                     yield symbol_name, callback.Callback, None
 
     @classmethod
-    def list_registry_callbacks(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
-                                callback_table_name: str) -> Iterable[Tuple[str, int, None]]:
-        """Lists all registry callbacks.
-
-        Args:
-            context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
-            callback_table_name: The nae of the table containing the callback symbols
-
-        Yields:
-            A name, location and optional detail string
+    def _list_registry_callbacks_legacy(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
+                                        callback_table_name: str) -> Iterable[Tuple[str, int, None]]:
+        """
+        Lists all registry callbacks from the old format via the CmpCallBackVector.
         """
 
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
         full_type_name = callback_table_name + constants.BANG + "_EX_CALLBACK_ROUTINE_BLOCK"
 
-        try:
-            symbol_offset = ntkrnlmp.get_symbol("CmpCallBackVector").address
-            symbol_count_offset = ntkrnlmp.get_symbol("CmpCallBackCount").address
-        except exceptions.SymbolError:
-            vollog.debug("Cannot find CmpCallBackVector or CmpCallBackCount")
-            return
+        symbol_offset = ntkrnlmp.get_symbol("CmpCallBackVector").address
+        symbol_count_offset = ntkrnlmp.get_symbol("CmpCallBackCount").address
+
 
         callback_count = ntkrnlmp.object(object_type = "unsigned int", offset = symbol_count_offset)
 
@@ -154,6 +143,62 @@ class Callbacks(interfaces.plugins.PluginInterface):
 
             if callback.Function != 0:
                 yield "CmRegisterCallback", callback.Function, None
+
+    @classmethod
+    def _list_registry_callbacks_new(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
+                                     callback_table_name: str) -> Iterable[Tuple[str, int, None]]:
+        """
+        Lists all registry callbacks via the CallbackListHead.
+        """
+
+        kvo = context.layers[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
+        full_type_name = callback_table_name + constants.BANG + "_CM_CALLBACK_ENTRY"
+
+        symbol_offset = ntkrnlmp.get_symbol("CallbackListHead").address
+        symbol_count_offset = ntkrnlmp.get_symbol("CmpCallBackCount").address
+
+        callback_count = ntkrnlmp.object(object_type = "unsigned int", offset = symbol_count_offset)
+
+        if callback_count == 0:
+            return
+
+        callback_list = ntkrnlmp.object(object_type = "_LIST_ENTRY", offset = symbol_offset)
+        for callback in callback_list.to_list(full_type_name, "Link"):
+            yield "CmRegisterCallbackEx", callback.Function, f"Altitude: {callback.Altitude.String}"
+
+    @classmethod
+    def list_registry_callbacks(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
+                                callback_table_name: str) -> Iterable[Tuple[str, int, None]]:
+        """Lists all registry callbacks.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+            callback_table_name: The nae of the table containing the callback symbols
+
+        Yields:
+            A name, location and optional detail string
+        """
+
+        kvo = context.layers[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
+
+        if ntkrnlmp.has_symbol("CmpCallBackVector") and ntkrnlmp.has_symbol("CmpCallBackCount"):
+            yield from cls._list_registry_callbacks_legacy(context, layer_name, symbol_table, callback_table_name)
+        elif ntkrnlmp.has_symbol("CallbackListHead") and ntkrnlmp.has_symbol("CmpCallBackCount"):
+            yield from cls._list_registry_callbacks_new(context, layer_name, symbol_table, callback_table_name)
+        else:
+            symbols_to_check = ["CmpCallBackVector", "CmpCallBackCount", "CallbackListHead"]
+            vollog.debug("Failed to get registry callbacks!")
+            for symbol_name in symbols_to_check:
+                symbol_status = "does not exist"
+                if ntkrnlmp.has_symbol(symbol_name):
+                    symbol_status = "exists"
+                vollog.debug(f"symbol {symbol_name} {symbol_status}.")
+
+            return
 
     @classmethod
     def list_bugcheck_reason_callbacks(cls, context: interfaces.context.ContextInterface, layer_name: str,
