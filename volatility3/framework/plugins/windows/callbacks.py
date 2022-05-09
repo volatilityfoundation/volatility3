@@ -11,7 +11,6 @@ from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import versions
 from volatility3.plugins.windows import ssdt
-from volatility3.plugins.windows import svcscan
 
 vollog = logging.getLogger(__name__)
 
@@ -28,7 +27,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'ssdt', plugin = ssdt.SSDT, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'svcscan', plugin = svcscan.SvcScan, version = (1, 0, 0))
         ]
 
     @staticmethod
