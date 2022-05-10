@@ -82,9 +82,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
         """
         vad_root = task.get_vad_root()
         for vad in vad_root.traverse():
-            end = vad.get_end()
-            start = vad.get_start()
-            yield (start, end - start)
+            yield (vad.get_start(), vad.get_size())
 
     def run(self):
         return renderers.TreeGrid([('Offset', format_hints.Hex), ('PID', int), ('Rule', str), ('Component', str),

@@ -56,7 +56,7 @@ class Malfind(interfaces.plugins.PluginInterface):
         all_zero_page = b"\x00" * CHUNK_SIZE
 
         offset = 0
-        vad_length = vad.get_end() - vad.get_start()
+        vad_length = vad.get_size()
 
         while offset < vad_length:
             next_addr = vad.get_start() + offset

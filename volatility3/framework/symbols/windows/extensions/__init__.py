@@ -197,8 +197,8 @@ class MMVAD_SHORT(objects.StructType):
 
         raise AttributeError("Unable to find the parent member")
 
-    def get_start(self):
-        """Get the VAD's starting virtual address."""
+    def get_start(self) -> int:
+        """Get the VAD's starting virtual address. This is the first accessible byte in the range."""
 
         if self.has_member("StartingVpn"):
 
@@ -216,8 +216,8 @@ class MMVAD_SHORT(objects.StructType):
 
         raise AttributeError("Unable to find the starting VPN member")
 
-    def get_end(self):
-        """Get the VAD's ending virtual address."""
+    def get_end(self) -> int:
+        """Get the VAD's ending virtual address. This is the last accessible byte in the range."""
 
         if self.has_member("EndingVpn"):
 
@@ -233,6 +233,10 @@ class MMVAD_SHORT(objects.StructType):
                 return ((self.Core.EndingVpn + 1) << 12) - 1
 
         raise AttributeError("Unable to find the ending VPN member")
+
+    def get_size(self) -> int:
+        """Get the size of the VAD region. The OS ensures page granularity."""
+        return (self.get_end() - self.get_start()) + 1
 
     def get_commit_charge(self):
         """Get the VAD's commit charge (number of committed pages)"""

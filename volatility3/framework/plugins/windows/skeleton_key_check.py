@@ -262,7 +262,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
             if isinstance(filename, str) and filename.lower().endswith("cryptdll.dll"):
                 base = vad.get_start()
-                return base, vad.get_end() - base
+                return base, vad.get_size()
 
         return None, None
 
