@@ -450,6 +450,7 @@ class ETHREAD(objects.StructType):
 
     def owning_process(self) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""
+        
         if(self.has_member("ThreadsProcess")):
             return self.ThreadsProcess.dereference().cast("_EPROCESS")
         elif(self.has_member("Tcb") and self.Tcb.has_member("Process")):
