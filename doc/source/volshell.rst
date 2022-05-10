@@ -110,7 +110,7 @@ This means that pointers do not need to be explicitly dereferenced to access und
 Running plugins
 ---------------
 
-It's possible to run any plugin by importing it appropriately and passing it to the `display_plugin_ouptut` or `dpo`
+It's possible to run any plugin by importing it appropriately and passing it to the `display_plugin_output` or `dpo`
 method.  In the following example we'll provide no additional parameters.  Volatility will show us which parameters
 were required:
 
