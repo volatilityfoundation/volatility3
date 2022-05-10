@@ -22,6 +22,8 @@
 <img src="doc/source/_static/screenshot.png">
 </p>
 
+## About Project
+
 Volatility is the world's most widely used framework for extracting digital
 artifacts from volatile memory (RAM) samples. The extraction techniques are
 performed completely independent of the system being investigated but offer
