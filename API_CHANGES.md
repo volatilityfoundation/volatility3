@@ -10,11 +10,11 @@ Add in the linux `task.get_threads` method added to the API.
 
 2.0.3
 =====
-`DEVICE_OBJECT.get_attached_devices` and `DRIVER_OBJECT.get_devices` added to the API.
+Add in the windows `DEVICE_OBJECT.get_attached_devices` and `DRIVER_OBJECT.get_devices` method added to the API.
 
 2.0.2
 =====
-Fix the behaviour of the offsets returned by the PDB scanner.
+Fix the behavior of the offsets returned by the PDB scanner.
 
 2.0.0
 =====
