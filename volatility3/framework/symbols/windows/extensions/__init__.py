@@ -451,8 +451,10 @@ class ETHREAD(objects.StructType):
     def owning_process(self) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""
         
+        # For Windows XPs
         if(self.has_member("ThreadsProcess")):
             return self.ThreadsProcess.dereference().cast("_EPROCESS")
+        # For Windows Vista and later versions
         elif(self.has_member("Tcb") and self.Tcb.has_member("Process")):
             return self.Tcb.Process.dereference().cast("_EPROCESS")
         else:
