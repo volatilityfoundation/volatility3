@@ -29,6 +29,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('files_struct', extensions.files_struct)
         self.set_type_class('vfsmount', extensions.vfsmount)
         self.set_type_class('kobject', extensions.kobject)
+        self.set_type_class('mnt_namespace', extensions.mnt_namespace)
 
         if 'module' in self.types:
             self.set_type_class('module', extensions.module)
