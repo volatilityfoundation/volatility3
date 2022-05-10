@@ -6,15 +6,15 @@ When an API feature or function is removed or changed, the major version is bump
 
 2.1.0
 =====
-Add in the linux `task.get_threads` method added to the API.
+Add in the linux `task.get_threads` method to the API.
 
 2.0.3
 =====
-Add in the windows `DEVICE_OBJECT.get_attached_devices` and `DRIVER_OBJECT.get_devices` method added to the API.
+Add in the windows `DEVICE_OBJECT.get_attached_devices` and `DRIVER_OBJECT.get_devices` methods to the API.
 
 2.0.2
 =====
-Fix the behavior of the offsets returned by the PDB scanner.
+Fix the behaviour of the offsets returned by the PDB scanner.
 
 2.0.0
 =====
