@@ -719,7 +719,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             env = envar[:split_index]
             var = envar[split_index + 1:]
 
-            # Exlude parse problem with some types of env
+            # Exclude parse problem with some types of env
             if env and var:
                 yield env, var
 
