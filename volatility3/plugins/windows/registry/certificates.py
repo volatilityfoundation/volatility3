@@ -6,6 +6,7 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.symbols.windows.extensions.registry import RegValueTypes
 from volatility3.plugins.windows.registry import hivelist, printkey
 
+
 class Certificates(interfaces.plugins.PluginInterface):
     """Lists the certificates in the registry's Certificate Store."""
 
