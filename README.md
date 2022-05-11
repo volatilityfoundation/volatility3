@@ -159,7 +159,7 @@ For community support, please join us on Slack:
 
 We always welcome your contribution to the community. Community members are always ready to help if you want to contribute.
 
-Please check the [Contribute Guide](https://opensource.guide/how-to-contribute/) and the [Code of Conduct](./CODE_OF_CONDUCT.md) to be followed.
+Please check the [Contribute Guide](https://opensource.guide/how-to-contribute/) and the [Code of Conduct](./.github/CODE_OF_CONDUCT.md) to be followed.
 
 ## Licensing and Copyright
 
