@@ -42,7 +42,7 @@ class Certificates(interfaces.plugins.PluginInterface):
                 certificate_data = cvalue
         return (name, certificate_data)
     
-    def dump_data(self, certificate_data: bytes, hive_offset: int, reg_section: str, key_hash: str) -> str:
+    def dump_data(self, certificate_data: bytes, hive_offset: int, reg_section: str, key_hash: str):
         if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
             dump_name = "{} - {} - {}.crt".format(hive_offset, reg_section, key_hash)
             with self.open(dump_name) as file_data:
