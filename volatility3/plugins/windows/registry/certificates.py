@@ -41,6 +41,12 @@ class Certificates(interfaces.plugins.PluginInterface):
             elif ctype == 0x100000020:
                 certificate_data = cvalue
         return (name, certificate_data)
+    
+    def dump_data(self, certificate_data: bytes, hive_offset: int, reg_section: str, key_hash: str) -> str:
+        if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
+            dump_name = "{} - {} - {}.crt".format(hive_offset, reg_section, key_hash)
+            with self.open(dump_name) as file_data:
+                file_data.write(certificate_data)
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[str, str, str, str]]]:
         for hive in hivelist.HiveList.list_hives(self.context,
@@ -63,10 +69,11 @@ class Certificates(interfaces.plugins.PluginInterface):
                             key_hash = key_path[key_path.rindex("\\") + 1:]
 
                             if self.config['dump']:
-                                if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
-                                    with self.open("{} - {} - {}.crt".format(hex(hive.hive_offset), reg_section,
-                                                                            key_hash)) as file_data:
-                                        file_data.write(certificate_data)
+                                self.dump_data(certificate_data, hive.hive_offset, reg_section, key_hash)
+                            else:
+                                vollog.warning("Certificates plugin is no longer support automatically dumped, please use the dump option.")
+                                self.dump_data(certificate_data, hive.hive_offset, reg_section, key_hash)
+                            
                             yield (0, (top_key, reg_section, key_hash, name))
                 except KeyError:
                     # Key wasn't found in this hive, carry on
