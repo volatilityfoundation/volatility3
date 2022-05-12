@@ -391,3 +391,54 @@ class JsonLinesRenderer(JsonRenderer):
         for line in result:
             outfd.write(json.dumps(line, sort_keys = True))
             outfd.write("\n")
+
+class MermaidRenderer(CLIRenderer):
+    _type_renderers = {
+        format_hints.Bin: optional(lambda x: f"0b{x:b}"),
+        format_hints.Hex: optional(lambda x: f"0x{x:x}"),
+        format_hints.HexBytes: optional(hex_bytes_as_text),
+        format_hints.MultiTypeData: optional(multitypedata_as_text),
+        interfaces.renderers.Disassembly: optional(display_disassembly),
+        bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
+        datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
+        'default': optional(lambda x: f"{x}")
+    }
+
+    name = "csv"
+    structured_output = True
+
+    def get_render_options(self):
+        pass
+
+    def render(self, grid: interfaces.renderers.TreeGrid) -> None:
+        """Renders each row immediately to stdout.
+
+        Args:
+            grid: The TreeGrid object to render
+        """
+        outfd = sys.stdout
+
+        header_list = ['TreeDepth']
+        for column in grid.columns:
+            # Ignore the type because namedtuples don't realize they have accessible attributes
+            header_list.append(f"{column.name}")
+
+        writer = csv.DictWriter(outfd, header_list)
+        writer.writeheader()
+
+        def visitor(node: interfaces.renderers.TreeNode, accumulator):
+            # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
+            row = {'TreeDepth': str(max(0, node.path_depth - 1))}
+            for column_index in range(len(grid.columns)):
+                column = grid.columns[column_index]
+                renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
+                row[f'{column.name}'] = renderer(node.values[column_index])
+            accumulator.writerow(row)
+            return accumulator
+
+        if not grid.populated:
+            grid.populate(visitor, writer)
+        else:
+            grid.visit(node = None, function = visitor, initial_accumulator = writer)
+
+        outfd.write("\n")
