@@ -404,41 +404,86 @@ class MermaidRenderer(CLIRenderer):
         'default': optional(lambda x: f"{x}")
     }
 
-    name = "csv"
+    name = "mermaid"
     structured_output = True
+
+    # Parents or PID PPID 존재할 시에만 가능
 
     def get_render_options(self):
         pass
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
-        """Renders each row immediately to stdout.
+        """Renders each column immediately to stdout.
+
+        This does not format each line's width appropriately, it merely tab separates each field
 
         Args:
             grid: The TreeGrid object to render
         """
         outfd = sys.stdout
 
-        header_list = ['TreeDepth']
-        for column in grid.columns:
-            # Ignore the type because namedtuples don't realize they have accessible attributes
-            header_list.append(f"{column.name}")
+        sys.stderr.write("Formatting...\n")
 
-        writer = csv.DictWriter(outfd, header_list)
-        writer.writeheader()
+        display_alignment = ">"
+        column_separator = " | "
 
-        def visitor(node: interfaces.renderers.TreeNode, accumulator):
+        tree_indent_column = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20))
+        max_column_widths = dict([(column.name, len(column.name)) for column in grid.columns])
+
+        def visitor(
+                node: interfaces.renderers.TreeNode,
+                accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
+        ) -> List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
-            row = {'TreeDepth': str(max(0, node.path_depth - 1))}
+            max_column_widths[tree_indent_column] = max(max_column_widths.get(tree_indent_column, 0), node.path_depth)
+            line = {}
             for column_index in range(len(grid.columns)):
                 column = grid.columns[column_index]
                 renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
-                row[f'{column.name}'] = renderer(node.values[column_index])
-            accumulator.writerow(row)
+                data = renderer(node.values[column_index])
+                field_width = max([len(self.tab_stop(x)) for x in f"{data}".split("\n")])
+                max_column_widths[column.name] = max(max_column_widths.get(column.name, len(column.name)),
+                                                     field_width)
+                line[column] = data.split("\n")
+            accumulator.append((node.path_depth, line))
             return accumulator
 
+        final_output: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]] = []
         if not grid.populated:
-            grid.populate(visitor, writer)
+            grid.populate(visitor, final_output)
         else:
-            grid.visit(node = None, function = visitor, initial_accumulator = writer)
+            grid.visit(node = None, function = visitor, initial_accumulator = final_output)
 
-        outfd.write("\n")
+        # Always align the tree to the left
+        format_string_list = ["{0:<" + str(max_column_widths.get(tree_indent_column, 0)) + "s}"]
+        for column_index in range(len(grid.columns)):
+            column = grid.columns[column_index]
+            format_string_list.append("{" + str(column_index + 1) + ":" + display_alignment +
+                                      str(max_column_widths[column.name]) + "s}")
+
+        format_string = column_separator.join(format_string_list) + "\n"
+
+        column_titles = [""] + [column.name for column in grid.columns]
+        outfd.write(format_string.format(*column_titles))
+        
+        tree_header = "graph TD\n"
+        branch_data = f"{tree_header}"
+
+        own_column = ["PID"]
+        parent_column = ["PPID"]
+
+        for (_, line) in final_output:
+            nums_line = max([len(line[column]) for column in line])
+            for column in line:
+                line[column] = line[column] + ([""] * (nums_line - len(line[column])))
+            for index in range(nums_line):
+                node_data = ""
+                for column in grid.columns:
+                    node_data += f"{column.name}:{line[column][index]}<br>"
+                    if(column.name in own_column):
+                        own = line[column][index]
+                    if(column.name in parent_column):
+                        parent = line[column][index]
+            branch_data += f"\t{parent} --> {own}[{node_data}]\n".replace("(V)", "")
+        print(branch_data)
+            #outfd.write(format_string.format("*" * depth, *[self.tab_stop(line[column][index]) for column in grid.columns]))
