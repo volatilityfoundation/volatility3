@@ -464,13 +464,17 @@ class MermaidRenderer(CLIRenderer):
         format_string = column_separator.join(format_string_list) + "\n"
 
         column_titles = [""] + [column.name for column in grid.columns]
+
+        own_column = ["PID"]
+        parent_column = ["PPID"]
+
+        if not((own_column in column_titles) and (parent_column in column_titles)):
+            raise Exception("Plugin cannot be rendered as mermaid because there is no tree relationship.")
+
         outfd.write(format_string.format(*column_titles))
         
         tree_header = "graph TD\n"
         branch_data = f"{tree_header}"
-
-        own_column = ["PID"]
-        parent_column = ["PPID"]
 
         for (_, line) in final_output:
             nums_line = max([len(line[column]) for column in line])
@@ -487,3 +491,11 @@ class MermaidRenderer(CLIRenderer):
             branch_data += f"\t{parent} --> {own}[{node_data}]\n".replace("(V)", "")
         print(branch_data)
             #outfd.write(format_string.format("*" * depth, *[self.tab_stop(line[column][index]) for column in grid.columns]))
+
+    def tab_stop(self, line: str) -> str:
+        tab_width = 8
+        while line.find('\t') >= 0:
+            i = line.find('\t')
+            pad = " " * (tab_width - (i % tab_width))
+            line = line.replace("\t", pad, 1)
+        return line
