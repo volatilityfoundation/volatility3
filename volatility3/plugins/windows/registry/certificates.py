@@ -52,7 +52,7 @@ class Certificates(interfaces.plugins.PluginInterface):
                          node) in printkey.PrintKey.key_iterator(hive, node_path, recurse = True):
                         if not is_key and RegValueTypes(node.Type).name == "REG_BINARY":
                             name, certificate_data = self.parse_data(node.decode_data())
-                            unique_key_offset = key_path.index(top_key) + len(top_key) + 1
+                            unique_key_offset = key_path.casefold().index(top_key.casefold()) + len(top_key) + 1
                             reg_section = key_path[unique_key_offset:key_path.index("\\", unique_key_offset)]
                             key_hash = key_path[key_path.rindex("\\") + 1:]
 
