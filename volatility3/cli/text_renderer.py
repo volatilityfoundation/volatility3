@@ -407,8 +407,6 @@ class MermaidRenderer(CLIRenderer):
     name = "mermaid"
     structured_output = True
 
-    # Parents or PID PPID 존재할 시에만 가능
-
     def get_render_options(self):
         pass
 
@@ -425,7 +423,6 @@ class MermaidRenderer(CLIRenderer):
         sys.stderr.write("Formatting...\n")
 
         display_alignment = ">"
-        column_separator = " | "
 
         tree_indent_column = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20))
         max_column_widths = dict([(column.name, len(column.name)) for column in grid.columns])
@@ -461,17 +458,13 @@ class MermaidRenderer(CLIRenderer):
             format_string_list.append("{" + str(column_index + 1) + ":" + display_alignment +
                                       str(max_column_widths[column.name]) + "s}")
 
-        format_string = column_separator.join(format_string_list) + "\n"
-
         column_titles = [""] + [column.name for column in grid.columns]
 
         own_column = ["PID"]
         parent_column = ["PPID"]
 
-        if not((own_column in column_titles) and (parent_column in column_titles)):
+        if not((set(own_column).issubset(column_titles)) and (set(parent_column).issubset(column_titles))):
             raise Exception("Plugin cannot be rendered as mermaid because there is no tree relationship.")
-
-        outfd.write(format_string.format(*column_titles))
         
         tree_header = "graph TD\n"
         branch_data = f"{tree_header}"
@@ -488,9 +481,8 @@ class MermaidRenderer(CLIRenderer):
                         own = line[column][index]
                     if(column.name in parent_column):
                         parent = line[column][index]
-            branch_data += f"\t{parent} --> {own}[{node_data}]\n".replace("(V)", "")
-        print(branch_data)
-            #outfd.write(format_string.format("*" * depth, *[self.tab_stop(line[column][index]) for column in grid.columns]))
+            branch_data += f"\t{parent} --> {own}[{node_data}]\n".replace("(", "").replace(")", "")
+        outfd.write("{}\n".format(branch_data))
 
     def tab_stop(self, line: str) -> str:
         tab_width = 8
