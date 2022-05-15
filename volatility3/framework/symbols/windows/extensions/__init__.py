@@ -14,7 +14,7 @@ from volatility3.framework.interfaces.objects import ObjectInterface
 from volatility3.framework.layers import intel
 from volatility3.framework.renderers import conversion
 from volatility3.framework.symbols import generic
-from volatility3.framework.symbols.windows.extensions import kdbg, pe, pool
+from volatility3.framework.symbols.windows.extensions import pool
 
 vollog = logging.getLogger(__name__)
 
