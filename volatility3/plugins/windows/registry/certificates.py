@@ -1,6 +1,6 @@
 import logging
 import struct
-from typing import List, Iterator, Tuple, Type
+from typing import List, Iterator, Optional, Tuple, Type
 
 from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
@@ -45,7 +45,7 @@ class Certificates(interfaces.plugins.PluginInterface):
     def dump_certificate(cls, certificate_data: bytes, hive_offset: int,
                         reg_section: str, key_hash: str,
                         open_method: Type[interfaces.plugins.FileHandlerInterface]) -> \
-                        interfaces.plugins.FileHandlerInterface:
+                        Optional[interfaces.plugins.FileHandlerInterface]:
         try:
             if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
                 dump_name = "{} - {} - {}.crt".format(hive_offset, reg_section, key_hash)
