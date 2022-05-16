@@ -49,8 +49,9 @@ class Certificates(interfaces.plugins.PluginInterface):
         try:
             if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
                 dump_name = "{} - {} - {}.crt".format(hive_offset, reg_section, key_hash)
-                with open_method(dump_name) as file_data:
-                    file_data.write(certificate_data)
+                file_handle = open_method(dump_name)
+                file_handle.write(certificate_data)
+                return file_handle
         except exceptions.InvalidAddressException:
             vollog.debug(f"Unable to certificate file at {hive_offset:#x}")
             return None
