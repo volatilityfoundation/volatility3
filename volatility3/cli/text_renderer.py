@@ -422,41 +422,28 @@ class MermaidRenderer(CLIRenderer):
 
         sys.stderr.write("Formatting...\n")
 
-        display_alignment = ">"
-
-        tree_indent_column = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20))
-        max_column_widths = dict([(column.name, len(column.name)) for column in grid.columns])
-
+        tree_indent_column = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20)) # Tree Signature
+        
         def visitor(
                 node: interfaces.renderers.TreeNode,
                 accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
         ) -> List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
-            max_column_widths[tree_indent_column] = max(max_column_widths.get(tree_indent_column, 0), node.path_depth)
             line = {}
             for column_index in range(len(grid.columns)):
                 column = grid.columns[column_index]
                 renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
                 data = renderer(node.values[column_index])
-                field_width = max([len(self.tab_stop(x)) for x in f"{data}".split("\n")])
-                max_column_widths[column.name] = max(max_column_widths.get(column.name, len(column.name)),
-                                                     field_width)
                 line[column] = data.split("\n")
             accumulator.append((node.path_depth, line))
             return accumulator
 
         final_output: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]] = []
+
         if not grid.populated:
             grid.populate(visitor, final_output)
         else:
             grid.visit(node = None, function = visitor, initial_accumulator = final_output)
-
-        # Always align the tree to the left
-        format_string_list = ["{0:<" + str(max_column_widths.get(tree_indent_column, 0)) + "s}"]
-        for column_index in range(len(grid.columns)):
-            column = grid.columns[column_index]
-            format_string_list.append("{" + str(column_index + 1) + ":" + display_alignment +
-                                      str(max_column_widths[column.name]) + "s}")
 
         column_titles = [""] + [column.name for column in grid.columns]
 
@@ -469,7 +456,7 @@ class MermaidRenderer(CLIRenderer):
         tree_header = "graph TD\n"
         branch_data = f"{tree_header}"
 
-        for (_, line) in final_output:
+        for (_depth, line) in final_output:
             nums_line = max([len(line[column]) for column in line])
             for column in line:
                 line[column] = line[column] + ([""] * (nums_line - len(line[column])))
@@ -483,11 +470,3 @@ class MermaidRenderer(CLIRenderer):
                         parent = line[column][index]
             branch_data += f"\t{parent} --> {own}[{node_data}]\n".replace("(", "").replace(")", "")
         outfd.write("{}\n".format(branch_data))
-
-    def tab_stop(self, line: str) -> str:
-        tab_width = 8
-        while line.find('\t') >= 0:
-            i = line.find('\t')
-            pad = " " * (tab_width - (i % tab_width))
-            line = line.replace("\t", pad, 1)
-        return line
