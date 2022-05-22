@@ -345,7 +345,7 @@ class JsonRenderer(CLIRenderer):
 
     def output_result(self, outfd, result):
         """Outputs the JSON data to a file in a particular format"""
-        outfd.write(json.dumps(result, indent = 2, sort_keys = True))
+        outfd.write("{}\n".format(json.dumps(result, indent = 2, sort_keys = True)))
 
     def render(self, grid: interfaces.renderers.TreeGrid):
         outfd = sys.stdout
