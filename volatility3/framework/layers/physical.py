@@ -118,7 +118,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         with self._lock:
             orig = self._file.tell()
             self._file.seek(0, 2)
-            self._size = self._file.tell()
+            self._size = self._file.tell() - 1
             self._file.seek(orig)
         return self._size
 
