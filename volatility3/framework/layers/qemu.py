@@ -54,7 +54,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
     # and location of the memory gap. Deviating hole sizes could eventually be detected for Linux by e.g. scanning
     # for dmesg entries with a regex like rb'\[mem (0x[0-9a-f]{4,10})-0x[0-9a-f]{4,10}\] available for PCI devices'
 
-    distro_re = r"(\w+[\d\.]?)"
+    distro_re = r"(\w+[\d{1,2}\.]*)"
 
     pci_hole_table = {re.compile(r"^pc-i440fx-([23456789]|\d\d+)\.\d$"): (0xe0000000, 0xc0000000, 0x100000000),
                       re.compile(r"^pc-i440fx-[01]\.\d$"): (0xe0000000, 0xe0000000, 0x100000000),
@@ -145,7 +145,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 if size_array.get(b'pc.ram', highest_possible_maximum) < self._pci_hole_minimum:
                     # Turns off the pci_hole if it's not supposed to be there
                     vollog.debug(
-                        f"QEVM tunrning off PCI hole due to small image size: {size_array.get(b'pc.ram'):x} < {self._pci_hole_minimum:x}")
+                        f"QEVM tunrning off PCI hole due to small image size: 0x{size_array.get(b'pc.ram'):x} < 0x{self._pci_hole_minimum:x}")
                     self._pci_hole_start, self._pci_hole_end = 0, 0
 
             if flags & (self.SEGMENT_FLAG_COMPRESS | self.SEGMENT_FLAG_PAGE):
@@ -179,8 +179,6 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         index = 8
         section_info = dict()
         current_section_id = -1
-        version_id = -1
-        name = None
         arch_detected = False
         while section_byte != self.QEVM_EOF and index <= base_layer.maximum_address:
             if index > 20 and not arch_detected:
@@ -263,7 +261,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 raise exceptions.LayerException(self._name, f'QEMU unknown section encountered: {section_byte}')
 
     def _fallback_determine_architecture(self) -> str:
-        architecture_pattern = rb'pc-(i440fx|q35)-(\d{1,2}\.\d{1,2}|[\w\d\.]+)'
+        architecture_pattern = rb'pc-(i440fx|q35)-(\d{1,2}\.\d{1,2}|\w+[\d{1,2}\.]*)'
         default_suffix = "-2.0"
         base_layer = self.context.layers[self._base_layer]
 
@@ -287,6 +285,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 architecture = 'pc-q35' + default_suffix
                 break
         if architecture:
+            vollog.log(constants.LOGLEVEL_VVV, f'Architecture version unknown, default used: {default_suffix}')
             return architecture
 
         # Still haven't found architecture, switch to fallback-method
@@ -296,6 +295,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
             line = base_layer.read(offset, 64)
             regex_results = re.search(architecture_pattern, line)
             architecture = "pc-" + regex_results.groups()[0].decode().lower() + default_suffix
+            vollog.log(constants.LOGLEVEL_VVV, f'Architecture version unknown, default used: {default_suffix}')
             return architecture
 
         vollog.warning("Could not determine QEMU target architecture!")
