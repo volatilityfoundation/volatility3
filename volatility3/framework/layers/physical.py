@@ -113,7 +113,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     def maximum_address(self) -> int:
         """Returns the largest available address in the space."""
         # Zero based, so we return the size of the file minus 1
-        if self._maximum_address
+        if self._maximum_address:
             return self._maximum_address
         with self._lock:
             orig = self._file.tell()
