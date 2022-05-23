@@ -145,7 +145,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 if size_array.get(b'pc.ram', highest_possible_maximum) < self._pci_hole_minimum:
                     # Turns off the pci_hole if it's not supposed to be there
                     vollog.debug(
-                        f"QEVM tunrning off PCI hole due to small image size: 0x{size_array.get(b'pc.ram'):x} < 0x{self._pci_hole_minimum:x}")
+                        f"QEVM turning off PCI hole due to small image size: 0x{size_array.get(b'pc.ram'):x} < 0x{self._pci_hole_minimum:x}")
                     self._pci_hole_start, self._pci_hole_end = 0, 0
 
             if flags & (self.SEGMENT_FLAG_COMPRESS | self.SEGMENT_FLAG_PAGE):
