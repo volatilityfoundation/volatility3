@@ -88,6 +88,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         self._accessor = resources.ResourceAccessor()
         self._file_: Optional[IO[Any]] = None
         self._size: Optional[int] = None
+        self._maximum_address: Optional[int] = None
         # Construct the lock now (shared if made before threading) in case we ever need it
         self._lock: Union[DummyLock, threading.Lock] = DummyLock()
         if constants.PARALLELISM == constants.Parallelism.Threading:
