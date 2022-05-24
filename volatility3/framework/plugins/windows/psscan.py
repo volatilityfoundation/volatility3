@@ -85,7 +85,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
-            proc: the process object with phisical address
+            proc: the process object with physical address
 
         Returns:
             A process object on virtual address layer

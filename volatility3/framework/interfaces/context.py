@@ -129,7 +129,7 @@ class ContextInterface(metaclass = ABCMeta):
             layer_name: The layer the module is associated with (which layer the module lives within)
             offset: The initial/base offset of the module (used as the offset for relative symbols)
             native_layer_name: The default native_layer_name to use when the module constructs objects
-            size: The size, in bytes, that the module occupys from offset location within the layer named layer_name
+            size: The size, in bytes, that the module occupies from offset location within the layer named layer_name
 
         Returns:
             A module object

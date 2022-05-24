@@ -300,7 +300,7 @@ This will mean that when a specific structure is loaded from the symbol_space, i
 `StructType`, but instead is instantiated using the NewStructureClass, meaning new methods can be called directly on it.
 
 If the situation really calls for an entirely new object, that isn't covered by one of the existing
-:py:class:`~volatility3.framework.objects.PrimativeObject` objects (such as
+:py:class:`~volatility3.framework.objects.PrimitiveObject` objects (such as
 :py:class:`~volatility3.framework.objects.Integer`,
 :py:class:`~volatility3.framework.objects.Boolean`,
 :py:class:`~volatility3.framework.objects.Float`,

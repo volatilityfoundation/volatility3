@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-"""All plugins output a TreeGrid object which must then be rendered (eithe by a
+"""All plugins output a TreeGrid object which must then be rendered (either by a
 GUI, or as text output, html output or in some other form.
 
 This module defines both the output format (:class:`TreeGrid`) and the
