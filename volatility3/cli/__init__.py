@@ -104,10 +104,8 @@ class CommandLine:
                 parser.prog))
         parser.add_argument("-c",
                             "--config",
-                            nargs='?',
                             help = "Load the configuration from a json file",
                             default = None,
-                            const= "",
                             type = str)
         parser.add_argument("--parallelism",
                             help = "Enables parallelism (defaults to off if no argument given)",
@@ -280,7 +278,6 @@ class CommandLine:
         # It has to go here so it can be overridden by single-location if it's defined
         # NOTE: This will *BREAK* if LayerStacker, or the automagic configuration system, changes at all
         ###
-        single_location = None
         if args.file:
             try:
                 single_location = self.location_from_file(args.file)
@@ -289,17 +286,10 @@ class CommandLine:
                 parser.error(str(excp))
 
         # UI fills in the config, here we load it from the config file and do it before we process the CL parameters
-        if args.config is not None:
-            config_path = args.config
-            if config_path == "":
-                config_path = f"{os.path.basename(parse.urlparse(single_location).path)}.json"
-            if os.path.exists(config_path):
-                with open(config_path, "r") as f:
-                    vollog.debug(f"Read out configuration data from {config_path}")
-                    json_val = json.load(f)
-                    ctx.config.splice(plugin_config_path, interfaces.configuration.HierarchicalDict(json_val))
-            else:
-                vollog.warning(f"{config_path} does not exist. No configuration was read!")
+        if args.config:
+            with open(args.config, "r") as f:
+                json_val = json.load(f)
+                ctx.config.splice(plugin_config_path, interfaces.configuration.HierarchicalDict(json_val))
 
         # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
         automagics = automagic.choose_automagic(automagics, plugin)
