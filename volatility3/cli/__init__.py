@@ -159,6 +159,10 @@ class CommandLine:
                             help = "Write configuration JSON file out to config.json",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--save-config",
+                            help = "Save configuration JSON file to a file",
+                            default = None,
+                            type = str)
         parser.add_argument("--clear-cache",
                             help = "Clears out all short-term cached items",
                             default = False,
@@ -329,10 +333,14 @@ class CommandLine:
             constructed = plugins.construct_plugin(ctx, automagics, plugin, base_config_path, progress_callback,
                                                    self.file_handler_class_factory())
 
-            if single_location is not None and args.write_config:
-                config_filename = f"{os.path.basename(parse.urlparse(single_location).path)}.json"
-                vollog.debug(f"Writing out configuration data to {config_filename}")
-                with open(config_filename, "w") as f:
+            if args.write_config:
+                vollog.warning('Use of --write-config has been deprecated, replaced by --save-config <filename>')
+                args.save_config = 'config.json'
+            if args.save_config:
+                vollog.debug("Writing out configuration data to {args.save_config}")
+                if os.path.exists(os.path.abspath(args.save_config)):
+                    parser.error(f"Cannot write configuration: file {args.save_config} already exists")
+                with open(args.save_config, "w") as f:
                     json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
         except exceptions.UnsatisfiedException as excp:
             self.process_unsatisfied_exceptions(excp)
@@ -425,7 +433,7 @@ class CommandLine:
             detail = f"{excp}"
             caused_by = ["A required python module is not installed (install the module and re-run)"]
         else:
-            general = "Volatilty encountered an unexpected situation."
+            general = "Volatility encountered an unexpected situation."
             detail = ""
             caused_by = [
                 "Please re-run using with -vvv and file a bug with the output", f"at {constants.BUG_URL}"
@@ -454,16 +462,17 @@ class CommandLine:
 
             print(f"Unsatisfied requirement {config_path}: {excp.unsatisfied[config_path].description}")
 
-        if symbols_failed:
-            print("\nA symbol table requirement was not fulfilled.  Please verify that:\n"
-                  "\tYou have the correct symbol file for the requirement\n"
-                  "\tThe symbol file is under the correct directory or zip file\n"
-                  "\tThe symbol file is named appropriately or contains the correct banner\n")
         if translation_failed:
             print("\nA translation layer requirement was not fulfilled.  Please verify that:\n"
                   "\tA file was provided to create this layer (by -f, --single-location or by config)\n"
                   "\tThe file exists and is readable\n"
-                  "\tThe necessary symbols are present and identified by volatility3")
+                  "\tThe file is a valid memory image and was acquired cleanly")
+        if symbols_failed:
+            print("\nA symbol table requirement was not fulfilled.  Please verify that:\n"
+                  "\tThe associated translation layer requirement was fulfilled\n"
+                  "\tYou have the correct symbol file for the requirement\n"
+                  "\tThe symbol file is under the correct directory or zip file\n"
+                  "\tThe symbol file is named appropriately or contains the correct banner\n")
 
     def populate_config(self, context: interfaces.context.ContextInterface,
                         configurables_list: Dict[str, Type[interfaces.configuration.ConfigurableInterface]],

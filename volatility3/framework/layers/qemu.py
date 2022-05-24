@@ -3,12 +3,16 @@
 #
 import functools
 import json
-import math
-from typing import Optional, Dict, Any, Tuple, List, Set
+import logging
+import re
+import struct
+from typing import Any, Dict, List, Optional, Set, Tuple
 
-from volatility3.framework import interfaces, exceptions, constants
-from volatility3.framework.layers import segmented
+from volatility3.framework import constants, exceptions, interfaces
+from volatility3.framework.layers import scanners, segmented
 from volatility3.framework.symbols import intermed
+
+vollog = logging.getLogger(__name__)
 
 
 class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
@@ -33,6 +37,34 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
     SEGMENT_FLAG_XBZRLE = 0x40
     SEGMENT_FLAG_HOOK = 0x80
 
+    # See https://qemu.readthedocs.io/en/latest/devel/memory.html for more info
+    #
+    # At least the following values could occur for devices using > 3-4 GB RAM:
+    # +--------------------------------+--------------------------------+------------+-------------+
+    # | Architecture                   | Reference Code                 | Hole Start | Hole End    |
+    # +--------------------------------+--------------------------------+------------+-------------+
+    # | PC i440FX + PIIX "New Default" | qemu/hw/i386/pc_piix.c:98      | 0xc0000000 | 0x100000000 |
+    # | PC i440FX + PIIX "Old Default" | qemu/hw/i386/pc_piix.c:98      | 0xe0000000 | 0x100000000 |
+    # | PC Q35 + ICH9                  | qemu/hw/i386/pc_q35.c:141      | 0x80000000 | 0x100000000 |
+    # | MicroVM                        | qemu/hw/i386/microvm.c:291     | 0xc0000000 | 0x100000000 |
+    # | Xen                            | qemu/hw/i386/xen/xen-hvm.c:248 | 0xf0000000 | 0x100000000 |
+    # +--------------------------------+--------------------------------+------------+-------------+
+    #
+    # For now, we assume that the parameter max-ram-below-4g is not set, since this parameter influences the size
+    # and location of the memory gap. Deviating hole sizes could eventually be detected for Linux by e.g. scanning
+    # for dmesg entries with a regex like rb'\[mem (0x[0-9a-f]{4,10})-0x[0-9a-f]{4,10}\] available for PCI devices'
+
+    distro_re = r"(\w+[\d{1,2}\.]*)"
+
+    pci_hole_table = {re.compile(r"^pc-i440fx-([23456789]|\d\d+)\.\d$"): (0xe0000000, 0xc0000000, 0x100000000),
+                      re.compile(r"^pc-i440fx-[01]\.\d$"): (0xe0000000, 0xe0000000, 0x100000000),
+                      re.compile(r"^pc-q35-\d\.\d$"): (0xb0000000, 0x80000000, 0x100000000),
+                      re.compile(r"^microvm$"): (0xc0000000, 0xc0000000, 0x100000000),
+                      re.compile(r"^xen$"): (0xf0000000, 0xf0000000, 0x100000000),
+                      re.compile(r"^pc-i440fx-" + distro_re + r"$"): (0xe0000000, 0xc0000000, 0x100000000),
+                      re.compile(r"^pc-q35-" + distro_re + r"$"): (0xb0000000, 0x80000000, 0x100000000),
+                      }
+
     def __init__(self,
                  context: interfaces.context.ContextInterface,
                  config_path: str,
@@ -40,8 +72,12 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         self._qemu_table_name = intermed.IntermediateSymbolTable.create(context, config_path, 'generic', 'qemu')
         self._configuration = None
+        self._architecture = None
         self._compressed: Set[int] = set()
         self._current_segment_name = b''
+        self._pci_hole_start = 0
+        self._pci_hole_end = 0
+        self._pci_hole_minimum = 0
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
     @classmethod
@@ -51,6 +87,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
             raise exceptions.LayerException(name, 'No QEMU magic bytes')
         if header[4:] != b'\x00\x00\x00\x03':
             raise exceptions.LayerException(name, 'Unsupported QEMU version found')
+        vollog.debug("QEVM header found")
 
     def _read_configuration(self, base_layer: interfaces.layers.DataLayerInterface, name: str) -> Any:
         """Reads the JSON configuration from the end of the file"""
@@ -74,12 +111,13 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         done = None
         segments = []
 
+        size_array = {}
         base_layer = self.context.layers[self._base_layer]
 
         while not done:
-            addr = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
-                                       offset = index,
-                                       layer_name = self._base_layer)
+            # Use struct.unpack here for performance improvements
+            addr = struct.unpack('>Q', base_layer.read(index, 8))[0]
+
             # Flags are stored in the n least significant bits, where n equals the bit-length of pagesize
             flags = addr & (page_size - 1)
             # addr equals the highest multiple of pagesize <= offset
@@ -87,19 +125,29 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
             addr = addr ^ (addr & (page_size - 1))
             index += 8
 
+            if addr >= self._pci_hole_start:
+                addr += self._pci_hole_end - self._pci_hole_start
+
             if flags & self.SEGMENT_FLAG_MEM_SIZE:
                 namelen = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
                                                offset = index,
                                                layer_name = self._base_layer)
                 while namelen != 0:
-                    # if base_layer.read(index + 1, namelen) == b'pc.ram':
-                    #     total_size = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
-                    #                                       offset = index + 1 + namelen,
-                    #                                       layer_name = self._base_layer)
+                    total_size = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
+                                                      offset = index + 1 + namelen,
+                                                      layer_name = self._base_layer)
+                    size_array[base_layer.read(index + 1, namelen)] = total_size
                     index += 1 + namelen + 8
                     namelen = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
                                                    offset = index,
                                                    layer_name = self._base_layer)
+                highest_possible_maximum = max([x[0] for x in self.pci_hole_table.values()]) + 1
+                if size_array.get(b'pc.ram', highest_possible_maximum) < self._pci_hole_minimum:
+                    # Turns off the pci_hole if it's not supposed to be there
+                    vollog.debug(
+                        f"QEVM turning off PCI hole due to small image size: 0x{size_array.get(b'pc.ram'):x} < 0x{self._pci_hole_minimum:x}")
+                    self._pci_hole_start, self._pci_hole_end = 0, 0
+
             if flags & (self.SEGMENT_FLAG_COMPRESS | self.SEGMENT_FLAG_PAGE):
                 if not (flags & self.SEGMENT_FLAG_CONTINUE):
                     namelen = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
@@ -131,9 +179,26 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         index = 8
         section_info = dict()
         current_section_id = -1
-        version_id = -1
-        name = None
+        arch_detected = False
         while section_byte != self.QEVM_EOF and index <= base_layer.maximum_address:
+            if index > 20 and not arch_detected:
+                # We're past where the QEVM_CONFIGURATION might be, so set the values
+                # If no architecture has been set, try to determine it using fallback mechanisms
+                if not self._architecture:
+                    self._architecture = self._fallback_determine_architecture()
+                    if self._architecture is None:
+                        vollog.log(constants.LOGLEVEL_VV, f"QEVM architecture could not be determined")
+
+                # Once all segments have been read, determine the PCI hole if any
+                for regex in self.pci_hole_table:
+                    if regex.match(self._architecture):
+                        self._pci_hole_minimum, self._pci_hole_start, self._pci_hole_end = self.pci_hole_table[regex]
+                        vollog.log(constants.LOGLEVEL_VVVV, f"QEVM architecture detected as: {self._architecture}")
+                        break
+                else:
+                    vollog.log(constants.LOGLEVEL_VVVV, f"QEVM unknown architecture found: {self._architecture}")
+                arch_detected = True
+
             section_byte = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
                                                offset = index,
                                                layer_name = self._base_layer)
@@ -142,6 +207,9 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 section_len = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long',
                                                   offset = index,
                                                   layer_name = self._base_layer)
+                self._architecture = self.context.object(self._qemu_table_name + constants.BANG + 'string',
+                                                         offset = index + 4, layer_name = self._base_layer,
+                                                         max_length = section_len)
                 index += 4 + section_len
             elif section_byte == self.QEVM_SECTION_START or section_byte == self.QEVM_SECTION_FULL:
                 section_id = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long',
@@ -191,6 +259,47 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 pass
             else:
                 raise exceptions.LayerException(self._name, f'QEMU unknown section encountered: {section_byte}')
+
+    def _fallback_determine_architecture(self) -> str:
+        architecture_pattern = rb'pc-(i440fx|q35)-(\d{1,2}\.\d{1,2}|\w+[\d{1,2}\.]*)'
+        default_suffix = "-2.0"
+        base_layer = self.context.layers[self._base_layer]
+
+        vollog.log(constants.LOGLEVEL_VVVV, "QEVM fallback architecture detection used")
+
+        res = scanners.RegExScanner(architecture_pattern)
+        for offset in base_layer.scan(context = self.context, scanner = res):
+            line = base_layer.read(offset, 64)
+            regex_results = re.search(architecture_pattern, line)
+            architecture = regex_results.group().decode()
+            return architecture
+
+        # If that does not work, look in configuration JSON for devices specific to a certain architecture
+        architecture = None
+        for device in self._configuration.get('devices', []):
+            device_name = device.get('vmsd_name', '').lower()
+            if 'i440fx' in device_name or 'piix' in device_name:
+                architecture = 'pc-i440fx' + default_suffix
+                break
+            elif 'ich9' in device_name:
+                architecture = 'pc-q35' + default_suffix
+                break
+        if architecture:
+            vollog.log(constants.LOGLEVEL_VVV, f'Architecture version unknown, default used: {default_suffix}')
+            return architecture
+
+        # Still haven't found architecture, switch to fallback-method
+        architecture_pattern = rb'Standard PC \((i440FX|Q35)'
+        res = scanners.RegExScanner(architecture_pattern)
+        for offset in base_layer.scan(context = self.context, scanner = res):
+            line = base_layer.read(offset, 64)
+            regex_results = re.search(architecture_pattern, line)
+            architecture = "pc-" + regex_results.groups()[0].decode().lower() + default_suffix
+            vollog.log(constants.LOGLEVEL_VVV, f'Architecture version unknown, default used: {default_suffix}')
+            return architecture
+
+        vollog.warning("Could not determine QEMU target architecture!")
+        return None
 
     def extract_data(self, index, name, version_id):
         if name == 'ram':

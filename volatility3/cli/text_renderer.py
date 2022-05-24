@@ -101,7 +101,7 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
         disasm: Input disassembly objects
 
     Returns:
-        A string as rendererd by capstone where available, otherwise output as if it were just bytes
+        A string as rendered by capstone where available, otherwise output as if it were just bytes
     """
 
     if CAPSTONE_PRESENT:
@@ -322,10 +322,7 @@ class PrettyTextRenderer(CLIRenderer):
         tab_width = 8
         while line.find('\t') >= 0:
             i = line.find('\t')
-            if (tab_width > 0):
-                pad = " " * (tab_width - (i % tab_width))
-            else:
-                pad = ""
+            pad = " " * (tab_width - (i % tab_width))
             line = line.replace("\t", pad, 1)
         return line
 
@@ -348,7 +345,7 @@ class JsonRenderer(CLIRenderer):
 
     def output_result(self, outfd, result):
         """Outputs the JSON data to a file in a particular format"""
-        outfd.write(json.dumps(result, indent = 2, sort_keys = True))
+        outfd.write("{}\n".format(json.dumps(result, indent = 2, sort_keys = True)))
 
     def render(self, grid: interfaces.renderers.TreeGrid):
         outfd = sys.stdout
