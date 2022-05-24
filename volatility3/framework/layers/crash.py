@@ -175,7 +175,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             
         segments = []
         type_handler = type_to_handler_dict[self.dump_type]
-        segments = type_handler()            
+        segments = type_handler()
 
         if len(segments) == 0:
             raise WindowsCrashDumpFormatException(self.name, f"No Crash segments defined in {self._base_layer}")
@@ -231,7 +231,7 @@ class WindowsCrashDumpStacker(interfaces.automagic.StackerLayerInterface):
     def stack(cls,
               context: interfaces.context.ContextInterface,
               layer_name: str,
-              progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:        
+              progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         for layer in [WindowsCrashDump32Layer, WindowsCrashDump64Layer]:
             try:
                 layer.check_header(context.layers[layer_name])
