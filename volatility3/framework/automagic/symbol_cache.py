@@ -271,14 +271,12 @@ class SqliteCache(CacheManagerInterface):
 
         # New or not recently updated
 
-        counter = 0
         files_to_process = new_locations.union(cache_update)
         number_files_to_process = len(files_to_process)
         cursor = self._database.cursor()
         try:
             for counter, location in enumerate(files_to_process):
                 # Open location
-                counter += 1
                 progress_callback(counter * 100 / number_files_to_process,
                                   f"Updating caches for {number_files_to_process} files...")
                 try:
