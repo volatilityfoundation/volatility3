@@ -144,4 +144,4 @@ class IsfInfo(plugins.PluginInterface):
     def run(self):
         return renderers.TreeGrid([("URI", str), ("Valid", str),
                                    ("Number of base_types", int), ("Number of types", int), ("Number of symbols", int),
-                                   ("Number of enums", int), ("Identifying infomration", str)], self._generator())
+                                   ("Number of enums", int), ("Identifying information", str)], self._generator())
