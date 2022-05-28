@@ -276,7 +276,7 @@ class SqliteCache(CacheManagerInterface):
         number_files_to_process = len(files_to_process)
         cursor = self._database.cursor()
         try:
-            for location in files_to_process:
+            for counter, location in enumerate(files_to_process):
                 # Open location
                 counter += 1
                 progress_callback(counter * 100 / number_files_to_process,
