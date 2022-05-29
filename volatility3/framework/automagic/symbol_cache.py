@@ -426,7 +426,6 @@ class RemoteIdentifierFormat:
         if operating_system in self._data:
             for identifier in self._data[operating_system]:
                 binary_identifier = base64.b64decode(identifier)
-                file_list = identifiers.get(binary_identifier, [])
                 for value in self._data[operating_system][identifier]:
                     yield binary_identifier, value
         if 'additional' in self._data:
