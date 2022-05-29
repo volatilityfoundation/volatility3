@@ -414,7 +414,7 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
         return {}
 
     @classmethod
-    def matches_required(cls, required: Tuple[int, ...], version: Tuple[int, int, int]):
+    def matches_required(cls, required: Tuple[int, ...], version: Tuple[int, int, int]) -> bool:
         if len(required) > 0 and version[0] != required[0]:
             return False
         if len(required) > 1 and version[1] < required[1]:
