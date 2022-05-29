@@ -764,11 +764,7 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
         while link.vol.offset not in seen:
             obj_offset = link.vol.offset - relative_offset
 
-            try:
-                is_valid = trans_layer.is_valid(obj_offset)
-                if not is_valid:
-                    return
-            except exceptions.InvalidAddressException:
+            if not trans_layer.is_valid(obj_offset):
                 return
 
             obj = self._context.object(symbol_type,
