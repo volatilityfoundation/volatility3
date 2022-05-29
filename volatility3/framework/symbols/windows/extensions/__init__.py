@@ -746,7 +746,10 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
         trans_layer = self._context.layers[layer]
 
         try:
-            trans_layer.is_valid(self.vol.offset)
+            is_valid = trans_layer.is_valid(self.vol.offset)
+            if not is_valid:
+                return
+
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
             return
@@ -762,7 +765,9 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
             obj_offset = link.vol.offset - relative_offset
 
             try:
-                trans_layer.is_valid(obj_offset)
+                is_valid = trans_layer.is_valid(obj_offset)
+                if not is_valid:
+                    return
             except exceptions.InvalidAddressException:
                 return
 
