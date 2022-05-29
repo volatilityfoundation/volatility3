@@ -169,7 +169,7 @@ class SqliteCache(CacheManagerInterface):
             os.unlink(filename)
             self._database = self._connect_storage(filename)
 
-    def _connect_storage(self, path: str):
+    def _connect_storage(self, path: str) -> sqlite3.Connection:
         database = sqlite3.connect(path)
         database.row_factory = sqlite3.Row
         database.cursor().execute(
