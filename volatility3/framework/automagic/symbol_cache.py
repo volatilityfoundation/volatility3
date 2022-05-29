@@ -10,7 +10,7 @@ import urllib
 import urllib.parse
 import urllib.request
 from abc import abstractmethod
-from typing import Dict, Generator, List, Optional, Tuple
+from typing import Dict, Generator, Iterable, List, Optional, Tuple
 
 import volatility3.framework
 import volatility3.schemas
@@ -113,7 +113,7 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         """
         pass
 
-    def get_local_locations(self) -> List[str]:
+    def get_local_locations(self) -> Iterable[str]:
         """Returns a list of all the local locations"""
         pass
 
@@ -141,7 +141,7 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         """Returns an identifier based on a specific location or None"""
         pass
 
-    def get_identifiers(self, operating_system: Optional[str]):
+    def get_identifiers(self, operating_system: Optional[str]) -> List[bytes]:
         """Returns all identifiers for a particular operating system"""
         pass
 
@@ -369,7 +369,7 @@ class SqliteCache(CacheManagerInterface):
             output[row['identifier']] = row['location']
         return output
 
-    def get_identifiers(self, operating_system: Optional[str]):
+    def get_identifiers(self, operating_system: Optional[str]) -> List[bytes]:
         if operating_system:
             results = self._database.cursor().execute('SELECT identifier FROM cache WHERE operating_system = ?',
                                                       (operating_system,)).fetchall()
