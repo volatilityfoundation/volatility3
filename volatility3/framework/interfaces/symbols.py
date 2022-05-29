@@ -169,7 +169,7 @@ class BaseSymbolTableInterface:
 
     def optional_set_type_class(self, name: str, clazz: Type[objects.ObjectInterface]) -> bool:
         """Calls the set_type_class function but does not throw an exception.
-        Returns whether setting the type class was successfull.
+        Returns whether setting the type class was successful.
         Args:
             name: The name of the type to override the class for
             clazz: The actual class to override for the provided type name
