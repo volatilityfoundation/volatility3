@@ -40,7 +40,7 @@ class VadWalk(interfaces.plugins.PluginInterface):
                     yield(0, (proc.UniqueProcessId,
                                 utility.array_to_string(proc.ImageFileName),
                                 format_hints.Hex(vad.vol.offset),
-                                format_hints.Hex(vad.get_parent()),
+                                format_hints.Hex(vad.get_parent() & self.context.layers[vad.vol.layer_name].address_mask),
                                 format_hints.Hex(vad.get_left_child()),
                                 format_hints.Hex(vad.get_right_child()),
                                 format_hints.Hex(vad.get_start()),
