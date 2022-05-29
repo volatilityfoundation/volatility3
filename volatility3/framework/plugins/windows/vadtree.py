@@ -42,7 +42,7 @@ class VadTree(interfaces.plugins.PluginInterface):
             return [proc.get_peb().ProcessHeaps.dereference()]
         except exceptions.InvalidAddressException:
             #vollog.log()
-            return renderers.UnreadableValue()
+            return []
 
     @classmethod
     def get_modules(cls, proc) -> List[int]:
@@ -111,7 +111,7 @@ class VadTree(interfaces.plugins.PluginInterface):
             levels = {}
 
             for vad in vadinfo.VadInfo.list_vads(proc):
-                level = levels.get(vad.get_parent(), -1) + 1
+                level = levels.get(vad.get_parent() & self.context.layers[vad.vol.layer_name].address_mask, -1) + 1
                 levels[vad.vol.offset] = level
 
                 type = self.get_type(proc, vad)
