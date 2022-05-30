@@ -15,12 +15,14 @@ from volatility3.cli.volshell import generic, linux, mac, windows
 from volatility3.framework import automagic, constants, contexts, exceptions, interfaces, plugins
 
 # Make sure we log everything
+
+rootlog = logging.getLogger()
 vollog = logging.getLogger()
 vollog.setLevel(0)
-# Trim the console down by default
 console = logging.StreamHandler()
 console.setLevel(logging.WARNING)
 formatter = logging.Formatter('%(levelname)-8s %(name)-12s: %(message)s')
+# Trim the console down by default
 console.setFormatter(formatter)
 vollog.addHandler(console)
 
