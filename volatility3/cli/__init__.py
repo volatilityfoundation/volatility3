@@ -388,7 +388,8 @@ class CommandLine:
 
         # Process it if the files exist
         if os.path.exists(default_config_path):
-            result = json.load(open(default_config_path, 'rb'))
+            with open(default_config_path, 'rb') as config_json:
+                result = json.load(config_json)
             if not isinstance(result, dict):
                 delayed_logs.append((logging.INFO,
                                      f'Default configuration file {default_config_path} does not contain a dictionary'))
