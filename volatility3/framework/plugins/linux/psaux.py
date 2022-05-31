@@ -40,7 +40,7 @@ class PsAux(plugins.PluginInterface):
             name: string name of the process (from task.comm)
         """
 
-        # kernel theads never have an mm as they do not have userland mappings
+        # kernel threads never have an mm as they do not have userland mappings
         try:
             mm = task.mm
         except exceptions.InvalidAddressException:

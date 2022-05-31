@@ -63,7 +63,7 @@ class ObjectTemplate(interfaces.objects.Template):
                  object_info: interfaces.objects.ObjectInformation) -> interfaces.objects.ObjectInterface:
         """Constructs the object.
 
-        Returns: an object adhereing to the :class:`~volatility3.framework.interfaces.objects.ObjectInterface`
+        Returns: an object adhering to the :class:`~volatility3.framework.interfaces.objects.ObjectInterface`
         """
         arguments: Dict[str, Any] = {}
         for arg in self.vol:
