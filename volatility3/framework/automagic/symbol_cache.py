@@ -347,7 +347,7 @@ class SqliteCache(CacheManagerInterface):
 
         if missing_locations:
             self._database.cursor().execute(
-                f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})", *missing_locations)
+                f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})", [x for x in missing_locations])
             self._database.commit()
 
     def get_identifier_dictionary(self, operating_system: Optional[str] = None, local_only: bool = False) -> \
