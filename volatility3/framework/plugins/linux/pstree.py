@@ -19,7 +19,7 @@ class PsTree(pslist.PsList):
         """Finds how deep the PID is in the tasks hierarchy.
 
         Args:
-            pid: PID to find the level in the hierachy
+            pid: PID to find the level in the hierarchy
         """
         seen = set([pid])
         level = 0
