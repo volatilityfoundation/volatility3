@@ -4,6 +4,7 @@
 import binascii
 import code
 import io
+import logging
 import random
 import string
 import struct
@@ -11,10 +12,13 @@ import sys
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union
 from urllib import parse, request
 
+from volatility3 import framework
 from volatility3.cli import text_renderer, volshell
 from volatility3.framework import exceptions, interfaces, objects, plugins, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, physical, resources
+
+vollog = logging.getLogger(__name__)
 
 try:
     import capstone
@@ -24,19 +28,7 @@ except ImportError:
     has_capstone = False
 
 
-class Volshell(interfaces.plugins.PluginInterface):
-    """Shell environment to directly interact with a memory image."""
-    _required_framework_version = (2, 0, 0)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.__current_layer: Optional[str] = None
-        self.__current_symbol_table: Optional[str] = None
-        self.__current_kernel_name: Optional[str] = None
-        self.__console = None
-
-    def random_string(self, length: int = 32) -> str:
-        return ''.join(random.sample(string.ascii_uppercase + string.digits, length))
+class VolshellShellPlugin(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -52,12 +44,96 @@ class Volshell(interfaces.plugins.PluginInterface):
             requirements.TranslationLayerRequirement(name = 'primary', description = 'Memory layer for the kernel'),
         ]
 
+    def run(self) -> interfaces.renderers.TreeGrid:
+        pass
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._current_layer: Optional[str] = None
+        self._current_symbol_table: Optional[str] = None
+        self._current_kernel_name: Optional[str] = None
+        self._console = None
+        self._plugins = []
+
+    def random_string(self, length: int = 32) -> str:
+        return ''.join(random.sample(string.ascii_uppercase + string.digits, length))
+
+    @property
+    def current_layer(self):
+        if self._current_layer is None:
+            self._current_layer = self.config['primary']
+        return self._current_layer
+
+    @property
+    def current_symbol_table(self):
+        if self._current_symbol_table is None and self.kernel:
+            self._current_symbol_table = self.kernel.symbol_table_name
+        return self._current_symbol_table
+
+    @property
+    def current_kernel_name(self):
+        if self._current_kernel_name is None:
+            self._current_kernel_name = self.config.get('kernel', None)
+        return self._current_kernel_name
+
+    @property
+    def kernel(self):
+        """Returns the current kernel object"""
+        if self.current_kernel_name not in self.context.modules:
+            return None
+        return self.context.modules[self.current_kernel_name]
+
+    def change_layer(self, layer_name: str = None):
+        """Changes the current default layer"""
+        if not layer_name:
+            layer_name = self.current_layer
+        if layer_name not in self.context.layers:
+            print(f"Layer {layer_name} not present in context")
+        else:
+            self._current_layer = layer_name
+        sys.ps1 = f"({self.current_layer}) >>> "
+
+    def generate_treegrid(self, plugin: Type[interfaces.plugins.PluginInterface],
+                          **kwargs) -> Optional[interfaces.renderers.TreeGrid]:
+        """Generates a TreeGrid based on a specific plugin passing in kwarg configuration values"""
+        path_join = interfaces.configuration.path_join
+
+        # Generate a temporary configuration path
+        plugin_config_suffix = self.random_string()
+        plugin_path = path_join(self.config_path, plugin_config_suffix)
+
+        # Populate the configuration
+        for name, value in kwargs.items():
+            self.config[path_join(plugin_config_suffix, plugin.__name__, name)] = value
+
+        try:
+            constructed = plugins.construct_plugin(self.context, [], plugin, plugin_path, None, NullFileHandler)
+            return constructed.run()
+        except exceptions.UnsatisfiedException as excp:
+            print(f"Unable to validate the plugin requirements: {[x for x in excp.unsatisfied]}\n")
+        return None
+
+    def render_treegrid(self,
+                        treegrid: interfaces.renderers.TreeGrid,
+                        renderer: Optional[interfaces.renderers.Renderer] = None) -> None:
+        """Renders a treegrid as produced by generate_treegrid"""
+        if renderer is None:
+            renderer = text_renderer.QuickTextRenderer()
+        renderer.render(treegrid)
+
+
+class Volshell(VolshellShellPlugin):
+    """Shell environment to directly interact with a memory image."""
+    _required_framework_version = (2, 0, 0)
+
     def run(self, additional_locals: Dict[str, Any] = None) -> interfaces.renderers.TreeGrid:
         """Runs the interactive volshell plugin.
 
         Returns:
             Return a TreeGrid but this is always empty since the point of this plugin is to run interactively
         """
+
+        # Try to load plugins
 
         # Try to enable tab completion
         try:
@@ -73,6 +149,12 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         # TODO: provide help, consider generic functions (pslist?) and/or providing windows/linux functions
 
+        # Load generic Volshell addons
+        framework.import_files(volshell)
+        for plugin in framework.class_subclasses(volshell.VolshellPlugin):
+            plugin_instanve = plugin(self)
+            self._plugins.append(plugin_instanve)
+
         mode = self.__module__.split('.')[-1]
         mode = mode[0].upper() + mode[1:]
 
@@ -86,13 +168,13 @@ class Volshell(interfaces.plugins.PluginInterface):
 """
 
         sys.ps1 = f"({self.current_layer}) >>> "
-        self.__console = code.InteractiveConsole(locals = self._construct_locals_dict())
+        self._console = code.InteractiveConsole(locals = self._construct_locals_dict())
         # Since we have to do work to add the option only once for all different modes of volshell, we can't
         # rely on the default having been set
         if self.config.get('script', None) is not None:
             self.run_script(location = self.config['script'])
 
-        self.__console.interact(banner = banner)
+        self._console.interact(banner = banner)
 
         return renderers.TreeGrid([("Terminating", str)], None)
 
@@ -119,20 +201,35 @@ class Volshell(interfaces.plugins.PluginInterface):
     def construct_locals(self) -> List[Tuple[List[str], Any]]:
         """Returns a dictionary listing the functions to be added to the
         environment."""
-        return [(['dt', 'display_type'], self.display_type), (['db', 'display_bytes'], self.display_bytes),
-                (['dw', 'display_words'], self.display_words), (['dd',
-                                                                 'display_doublewords'], self.display_doublewords),
-                (['dq', 'display_quadwords'], self.display_quadwords), (['dis', 'disassemble'], self.disassemble),
-                (['cl', 'change_layer'], self.change_layer),
-                (['cs', 'change_symboltable'], self.change_symbol_table),
-                (['ck', 'change_kernel'], self.change_kernel),
-                (['context'], self.context), (['self'], self),
-                (['dpo', 'display_plugin_output'], self.display_plugin_output),
-                (['gt', 'generate_treegrid'], self.generate_treegrid), (['rt',
-                                                                         'render_treegrid'], self.render_treegrid),
-                (['ds', 'display_symbols'], self.display_symbols), (['hh', 'help'], self.help),
-                (['cc', 'create_configurable'], self.create_configurable), (['lf', 'load_file'], self.load_file),
-                (['rs', 'run_script'], self.run_script)]
+        locals_dict = [(['dt', 'display_type'], self.display_type), (['db', 'display_bytes'], self.display_bytes),
+                       (['dw', 'display_words'], self.display_words), (['dd',
+                                                                        'display_doublewords'],
+                                                                       self.display_doublewords),
+                       (['dq', 'display_quadwords'], self.display_quadwords),
+                       (['dis', 'disassemble'], self.disassemble),
+                       (['cl', 'change_layer'], self.change_layer),
+                       (['cs', 'change_symboltable'], self.change_symbol_table),
+                       (['ck', 'change_kernel'], self.change_kernel),
+                       (['context'], self.context), (['self'], self),
+                       (['dpo', 'display_plugin_output'], self.display_plugin_output),
+                       (['gt', 'generate_treegrid'], self.generate_treegrid), (['rt',
+                                                                                'render_treegrid'],
+                                                                               self.render_treegrid),
+                       (['ds', 'display_symbols'], self.display_symbols), (['hh', 'help'], self.help),
+                       (['cc', 'create_configurable'], self.create_configurable), (['lf', 'load_file'], self.load_file),
+                       (['rs', 'run_script'], self.run_script)]
+
+        used_aliases = set([item for sublist, _ in locals_dict for item in sublist])
+
+        # Load generic plugins
+        for plugin in self._plugins:
+            for plugin_aliases, plugin_command in plugin.construct_locals():
+                for plugin_alias in plugin_aliases:
+                    if plugin_alias in used_aliases:
+                        vollog.info(f"Overwriting alias {plugin_alias} with value from {plugin.__class__.__name__}")
+                locals_dict.append((plugin_aliases, plugin_command))
+
+        return locals_dict
 
     def _construct_locals_dict(self) -> Dict[str, Any]:
         """Returns a dictionary of the locals """
@@ -140,6 +237,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         for aliases, value in self.construct_locals():
             for alias in aliases:
                 result[alias] = value
+
         return result
 
     def _read_data(self, offset, count = 128, layer_name = None):
@@ -177,41 +275,6 @@ class Volshell(interfaces.plugins.PluginInterface):
         """Converts bytes into an ascii string"""
         return "".join([chr(x) if 32 < x < 127 else '.' for x in binascii.unhexlify(bytes)])
 
-    @property
-    def current_layer(self):
-        if self.__current_layer is None:
-            self.__current_layer = self.config['primary']
-        return self.__current_layer
-
-    @property
-    def current_symbol_table(self):
-        if self.__current_symbol_table is None and self.kernel:
-            self.__current_symbol_table = self.kernel.symbol_table_name
-        return self.__current_symbol_table
-
-    @property
-    def current_kernel_name(self):
-        if self.__current_kernel_name is None:
-            self.__current_kernel_name = self.config.get('kernel', None)
-        return self.__current_kernel_name
-
-    @property
-    def kernel(self):
-        """Returns the current kernel object"""
-        if self.current_kernel_name not in self.context.modules:
-            return None
-        return self.context.modules[self.current_kernel_name]
-
-    def change_layer(self, layer_name: str = None):
-        """Changes the current default layer"""
-        if not layer_name:
-            layer_name = self.current_layer
-        if layer_name not in self.context.layers:
-            print(f"Layer {layer_name} not present in context")
-        else:
-            self.__current_layer = layer_name
-        sys.ps1 = f"({self.current_layer}) >>> "
-
     def change_symbol_table(self, symbol_table_name: str = None):
         """Changes the current_symbol_table"""
         if not symbol_table_name:
@@ -219,16 +282,17 @@ class Volshell(interfaces.plugins.PluginInterface):
         if symbol_table_name not in self.context.symbol_space:
             print(f"Symbol table {symbol_table_name} not present in context symbol_space")
         else:
-            self.__current_symbol_table = symbol_table_name
+            self._current_symbol_table = symbol_table_name
         print(f"Current Symbol Table: {self.current_symbol_table}")
 
     def change_kernel(self, kernel_name: str = None):
+        """Alters the kernel module"""
         if not kernel_name:
             print("No kernel module name provided, not changing current kernel")
         if kernel_name not in self.context.modules:
             print(f"Kernel module {kernel_name} not found in the context module list")
         else:
-            self.__current_kernel_name = kernel_name
+            self._current_kernel_name = kernel_name
         print(f"Current kernel : {self.current_kernel_name}")
 
     def display_bytes(self, offset, count = 128, layer_name = None):
@@ -332,34 +396,6 @@ class Volshell(interfaces.plugins.PluginInterface):
         else:
             return hex(value.vol.offset)
 
-    def generate_treegrid(self, plugin: Type[interfaces.plugins.PluginInterface],
-                          **kwargs) -> Optional[interfaces.renderers.TreeGrid]:
-        """Generates a TreeGrid based on a specific plugin passing in kwarg configuration values"""
-        path_join = interfaces.configuration.path_join
-
-        # Generate a temporary configuration path
-        plugin_config_suffix = self.random_string()
-        plugin_path = path_join(self.config_path, plugin_config_suffix)
-
-        # Populate the configuration
-        for name, value in kwargs.items():
-            self.config[path_join(plugin_config_suffix, plugin.__name__, name)] = value
-
-        try:
-            constructed = plugins.construct_plugin(self.context, [], plugin, plugin_path, None, NullFileHandler)
-            return constructed.run()
-        except exceptions.UnsatisfiedException as excp:
-            print(f"Unable to validate the plugin requirements: {[x for x in excp.unsatisfied]}\n")
-        return None
-
-    def render_treegrid(self,
-                        treegrid: interfaces.renderers.TreeGrid,
-                        renderer: Optional[interfaces.renderers.Renderer] = None) -> None:
-        """Renders a treegrid as produced by generate_treegrid"""
-        if renderer is None:
-            renderer = text_renderer.QuickTextRenderer()
-        renderer.render(treegrid)
-
     def display_plugin_output(self, plugin: Type[interfaces.plugins.PluginInterface], **kwargs) -> None:
         """Displays the output for a particular plugin (with keyword arguments)"""
         treegrid = self.generate_treegrid(plugin, **kwargs)
@@ -391,7 +427,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         print(f"Running code from {location}\n")
         accessor = resources.ResourceAccessor()
         with io.TextIOWrapper(accessor.open(url = location), encoding = 'utf-8') as fp:
-            self.__console.runsource(fp.read(), symbol = 'exec')
+            self._console.runsource(fp.read(), symbol = 'exec')
         print("\nCode complete")
 
     def load_file(self, location: str):
@@ -441,6 +477,9 @@ class Volshell(interfaces.plugins.PluginInterface):
 
 class NullFileHandler(io.BytesIO, interfaces.plugins.FileHandlerInterface):
     """Null FileHandler that swallows files whole without consuming memory"""
+
+    def close(self):
+        pass
 
     def __init__(self, preferred_name: str):
         interfaces.plugins.FileHandlerInterface.__init__(self, preferred_name)
