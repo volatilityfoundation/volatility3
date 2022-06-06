@@ -102,10 +102,6 @@ class Intel(linear.LinearlyMappedLayer):
         translated address lives in and the layer_name that the address
         lives in
         """
-        if not self.is_address_canonical(offset):
-            # TODO: raise an exception if the address is not canonical
-            vollog.warning(f"Address {hex(offset)} is not canonical!")
-
         entry, position = self._translate_entry(offset)
 
         # Now we're done
