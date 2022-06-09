@@ -9,7 +9,7 @@
 # For a thorough walkthrough on how the R&D was performed to develop this plugin,
 # please see our blogpost here:
 #
-# <insert blog URL once published>
+# https://volatility-labs.blogspot.com/2021/10/memory-forensics-r-illustrated.html
 
 import io
 import logging
