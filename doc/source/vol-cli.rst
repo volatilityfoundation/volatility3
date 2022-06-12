@@ -129,6 +129,9 @@ Options
     upon by the automagic and, since most plugins require a single memory
     image, can be considered the input for the program.
 
+--stackers STACKERS
+    Creates the list of stackers to use based on the config option.
+
 --single-swap-locations SINGLE_SWAP_LOCATIONS
     A comma-separated list of swap files to be considered as part of the
     memory image specified by the single-location or file parameters.
