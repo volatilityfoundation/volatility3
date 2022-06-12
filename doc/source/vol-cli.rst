@@ -102,12 +102,8 @@ Options
     attempt to build upon, and can be considered the input for the program.
 
 --write-config
-    This flag specifies that volatility should write or overwrite a file
-    called config.json in the current directory.  The file will contain
-    the necessary JSON configuration to recreate the environment that the
-    plugin was previously run in.  This configuration *may* be accepted by
-    other plugins, but there's no guarantee that plugins use the same
-    configuration options.
+    *Deprecated*
+    Use of `--write-config` has been deprecated, replaced by `--save-config`
 
 --save-config
     This flag specifies that volatility should write or overwrite a file
@@ -121,18 +117,17 @@ Options
     Clears out all short-term cached items.
 
 --cache-path
-    Change the default path ({constants.CACHE_PATH}) used to store the cache.
+    Change the default path used to store the cache.
 
 --offline
     Do not search online for additional JSON files.
+    Run offline mode (defaults to false) and for
+    remote windows symbol tables, linux/mac banner repositories. 
 
 --single-location SINGLE_LOCATION
     This specifies a URL which will be downloaded if necessary, and built
     upon by the automagic and, since most plugins require a single memory
     image, can be considered the input for the program.
-
---stackers STACKERS
-
 
 --single-swap-locations SINGLE_SWAP_LOCATIONS
     A comma-separated list of swap files to be considered as part of the
