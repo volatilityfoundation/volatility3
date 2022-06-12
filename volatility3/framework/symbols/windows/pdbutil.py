@@ -10,10 +10,10 @@ import os
 import re
 import struct
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
-from urllib import request, parse
+from urllib import parse, request
 
 from volatility3 import symbols
-from volatility3.framework import constants, interfaces, exceptions
+from volatility3.framework import constants, contexts, exceptions, interfaces
 from volatility3.framework.configuration.requirements import SymbolTableRequirement
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import pdbconv
@@ -24,7 +24,7 @@ vollog = logging.getLogger(__name__)
 class PDBUtility(interfaces.configuration.VersionableInterface):
     """Class to handle and manage all getting symbols based on MZ header"""
 
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
     _required_framework_version = (2, 0, 0)
 
     @classmethod
@@ -131,14 +131,14 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         # Check it is actually the MZ header
         if mz_sig != b"MZ":
             return None
-        
+
         nt_header_start, = struct.unpack("<I", layer.read(offset + 0x3C, 4))
         pe_sig = layer.read(offset + nt_header_start, 2)
-        
+
         # Check it is actually the Nt Headers
         if pe_sig != b"PE":
             return None
-        
+
         optional_header_size, = struct.unpack('<H', layer.read(offset + nt_header_start + 0x14, 2))
         # Just enough to tell us the max size
         pe_header = layer.read(offset, nt_header_start + 0x16 + optional_header_size)
@@ -146,7 +146,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         max_size = pe_data.OPTIONAL_HEADER.SizeOfImage
 
         # Proper data
-        virtual_data = layer.read(offset, max_size, pad=True)
+        virtual_data = layer.read(offset, max_size, pad = True)
         pe_data = pefile.PE(data = virtual_data)
 
         # De-virtualize the memory
@@ -291,7 +291,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
 
     @classmethod
     def symbol_table_from_pdb(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
-                              pdb_name: str, module_offset: int, module_size: int) -> str:
+                              pdb_name: str, module_offset: int = None, module_size: int = None) -> str:
         """Creates symbol table for a module in the specified layer_name.
 
         Searches the memory section of the loaded module for its PDB GUID
@@ -307,6 +307,19 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         Returns:
             The name of the constructed and loaded symbol table
         """
+        _, symbol_table_name = cls._modtable_from_pdb(context, config_path, layer_name, pdb_name, module_offset,
+                                                      module_size)
+        return symbol_table_name
+
+    @classmethod
+    def _modtable_from_pdb(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
+                           pdb_name: str, module_offset: int = None, module_size: int = None,
+                           create_module: bool = False) -> Tuple[Optional[str], Optional[str]]:
+
+        if module_offset is None:
+            module_offset = context.layers[layer_name].minimum_address
+        if module_size is None:
+            module_size = context.layers[layer_name].maximum_address - module_offset
 
         guids = list(
             cls.pdbname_scan(context,
@@ -323,12 +336,46 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
 
         vollog.debug(f"Found {guid['pdb_name']}: {guid['GUID']}-{guid['age']}")
 
-        return cls.load_windows_symbol_table(context,
-                                             guid["GUID"],
-                                             guid["age"],
-                                             guid["pdb_name"],
-                                             "volatility3.framework.symbols.intermed.IntermediateSymbolTable",
-                                             config_path = config_path)
+        module_name = guid["pdb_name"].strip('.pdb')
+
+        symbol_table_name = cls.load_windows_symbol_table(context,
+                                                          guid["GUID"],
+                                                          guid["age"],
+                                                          guid["pdb_name"],
+                                                          "volatility3.framework.symbols.intermed.IntermediateSymbolTable",
+                                                          config_path = config_path)
+
+        new_module_name = None
+        if create_module:
+            new_module = contexts.Module.create(context, module_name, layer_name, offset = guid['mz_offset'],
+                                                symbol_table_name = symbol_table_name)
+            new_module_name = new_module.name
+
+        return new_module_name, symbol_table_name
+
+    @classmethod
+    def module_from_pdb(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
+                        pdb_name: str, module_offset: int = None, module_size: int = None) -> str:
+        """Creates a module in the specified layer_name based on a pdb name.
+
+        Searches the memory section of the loaded module for its PDB GUID
+        and loads the associated symbol table into the symbol space.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            config_path: The config path where to find symbol files
+            layer_name: The name of the layer on which to operate
+            module_offset: This memory dump's module image offset
+            module_size: The size of the module for this dump
+
+        Returns:
+            The name of the constructed and loaded symbol table
+        """
+
+        module_name, _ = cls._modtable_from_pdb(context, config_path, layer_name, pdb_name, module_offset,
+                                                module_size, create_module = True)
+
+        return module_name
 
 
 class PdbSignatureScanner(interfaces.layers.ScannerInterface):
