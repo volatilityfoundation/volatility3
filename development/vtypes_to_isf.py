@@ -156,7 +156,7 @@ class vtypes_translator:
             end_bit = bitfield_info["end_bit"]
             type_dict["bit_position"] = start_bit
             type_dict["bit_length"] = end_bit - start_bit
-            type_dict["type"] = self.translate_subtype_string(bitfield_info.get("native_type", "long"), base_types)
+            type_dict["type"] = self.translate_subtype_string(bitfield_info.get("native_type", "unsigned int"), base_types)
         elif type_string in ["pointer64", "pointer"]:
             pointer_info = type_stuff[1]
             type_dict["kind"] = "pointer"
