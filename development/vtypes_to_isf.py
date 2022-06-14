@@ -140,7 +140,7 @@ class vtypes_translator:
             
             return {"kind": "struct", "name": subtype}
 
-        raise RuntimeError("what is this?", subtype)
+        raise RuntimeError("Type of subtype is unknown. More works needs to be done", subtype)
 
     def translate_subtype(self, type_stuff, base_types):
         type_dict = {}
@@ -174,7 +174,7 @@ class vtypes_translator:
             type_dict["name"] = new_enum_name
         else:
             logging.error(f"{type_stuff}")
-            raise RuntimeError("How did we get here?", type_stuff)
+            raise RuntimeError("Unreachable code", type_string)
 
         return type_dict
 
