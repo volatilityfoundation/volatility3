@@ -218,7 +218,7 @@ class vtypes_translator:
         metadata = {}
         metadata["format"] = "6.1.0"
         metadata["producer"] = {}
-        metadata["producer"]["name"] = "vtypes to ISF"
+        metadata["producer"]["name"] = f"vtypes to ISF {cls.VERSION}"
         metadata["producer"]["datetime"] = time.ctime()
         metadata["producer"]["version"] = cls.VERSION
 
