@@ -199,7 +199,7 @@ class rekall_types_translator:
         return metadata
 
     def translate_rekall_enums(self, rekall_enums, base_types):
-        # assume self.enum_info is initilized; run after `translate_rekall_structs`
+        # assume self.enum_info is initialized; run after `translate_rekall_structs`
         isf_enums = {}
         for enum_name in rekall_enums:
             isf_enums[enum_name] = {}
