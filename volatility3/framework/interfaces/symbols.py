@@ -220,7 +220,7 @@ class BaseSymbolTableInterface:
         sort_symbols = self._sort_symbols
         result = bisect.bisect_left(sort_symbols, (offset, ""))
         while result < len(sort_symbols) and \
-                (sort_symbols[result][0] >= offset and sort_symbols[result][0] <= offset + size):
+                (offset <= sort_symbols[result][0] <= offset + size):
             yield sort_symbols[result][1]
             result += 1
 
