@@ -117,8 +117,8 @@ class Intel(linear.LinearlyMappedLayer):
 
         # Now we're done
         if not self._page_is_valid(entry):
-            raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
-                                                          f"Page Fault at entry {hex(entry)} in page entry")
+            return self._handle_page_fault(self.name, offset, position + 1, entry, f"Page Fault at entry {hex(entry)} in page entry")
+
         page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
 
         return page, 1 << (position + 1), self._base_layer
@@ -324,6 +324,41 @@ class Intel32e(Intel):
 class WindowsMixin(Intel):
     _swap_bit_offset = 32
 
+    def _get_kernel_module(self):
+        kvo = self.config.get('kernel_virtual_offset', None)
+        if kvo is None:
+            return None
+
+        for module_name in self.context.modules:
+            if self.context.modules[module_name].offset == kvo:
+                return self.context.modules[module_name]
+
+        return None
+
+    @functools.lru_cache()
+    def _get_invalid_pte_mask(self, kernel):
+        if kernel.has_symbol("MiInvalidPteMask"):
+            pte_size = kernel.get_type("_MMPTE_HARDWARE").vol.size
+            pte_type = "unsigned int"
+            if pte_size == 8:
+                pte_type = "unsigned long long"
+
+            return kernel.object(pte_type, offset=kernel.get_symbol("MiInvalidPteMask").address)
+
+        if kernel.has_symbol("MiState"):
+            system_information = kernel.object("_MI_SYSTEM_INFORMATION", offset=kernel.get_symbol("MiState").address)
+            return system_information.Hardware.InvalidPteMask
+
+        return 0
+
+    @functools.lru_cache()
+    def _get_PageFileLow_shift(self, kernel):
+        mmpte_software_type = kernel.get_type("_MMPTE_SOFTWARE")
+        if mmpte_software_type.vol.members.get("SwizzleBit", None) is None:
+            return 1 # The old shift
+
+        return 12 # The new shift
+
     @staticmethod
     def _page_is_valid(entry: int) -> bool:
         """Returns whether a particular page is valid based on its entry.
@@ -338,33 +373,19 @@ class WindowsMixin(Intel):
         return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
 
     def _handle_page_fault(self, layer_name, offset, invalid_bits, entry, description):
+        kernel = self._get_kernel_module()
+        if kernel is None:
+            raise exceptions.PagedInvalidAddressException(self.name, offset, invalid_bits, entry, "kernel module not found!")
+
         tbit = bool(entry & (1 << 11))
         pbit = bool(entry & (1 << 10))
-        unknown_bit = bool(entry & (1 << 7))
-        n = (entry >> 1) & 0xF
         vbit = bool(entry & 1)
-        # Handle transition page
-        if tbit and not pbit:
-            position = invalid_bits - 1
-            name, size, _ = self._find_structure_index(position)
-            index = self._mask(offset, position, position + size) >> (position + size)
-
-            # Grab the base address of the table we'll be getting the next entry from
-            base_address = self._mask(entry, self._maxphyaddr - 1, size + self._index_shift)
-
-            table = self._get_valid_table(base_address)
-            if table is None:
-                raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
-                                                              "Page Fault at entry " + hex(
-                                                                  entry) + " in table " + name)
-
-            # Read the data for the next entry
-            entry_data = table[(index << self._index_shift):(index << self._index_shift) + self._entry_size]
-            super()._translate_entry(offset, invalid_bits, entry)
+        entry &= ~self._get_invalid_pte_mask(kernel)
 
         # Handle Swap failure
-        if (not tbit and not pbit and not vbit and unknown_bit) and ((entry >> self._swap_bit_offset) != 0):
+        if (not tbit and not pbit and not vbit) and ((entry >> self._swap_bit_offset) != 0):
             swap_offset = entry >> self._swap_bit_offset << invalid_bits
+            n = (entry >> self._get_PageFileLow_shift(kernel)) & 0xF
 
             if self.config.get('swap_layers', False):
                 swap_layer_name = self.config.get(
