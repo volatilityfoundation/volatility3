@@ -307,7 +307,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
             while length > 0:
                 chunk_size = min(length, scanner.chunk_size + scanner.overlap)
                 yield [(layer_name, mapped_offset, chunk_size)], offset + chunk_size
-                # It we've got more than the scanner's chunk_size, only move up by the chunk_size
+                # If we've got more than the scanner's chunk_size, only move up by the chunk_size
                 if chunk_size > scanner.chunk_size:
                     chunk_size -= scanner.overlap
                 length -= chunk_size
@@ -517,7 +517,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                         yield output, chunk_position
                         output = []
                         chunk_position = chunk_start
-                    # Take from chunk_position as far as far as the block can go,
+                    # Take from chunk_position as far as the block can go,
                     # or as much left of a scanner chunk as we can
                     chunk_size = min(block_end - chunk_position,
                                      scanner.chunk_size + scanner.overlap - (chunk_position - chunk_start))

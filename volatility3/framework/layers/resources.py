@@ -171,6 +171,8 @@ class ResourceAccessor(object):
                         cache_file.write(block)
                         block = fp.read(block_size)
                     cache_file.close()
+                else:
+                    vollog.debug(f"Using already cached file at: {temp_filename}")
                 # Re-open the cache with a different mode
                 # Since we don't want people thinking they're able to save to the cache file,
                 # open it in read mode only and allow breakages to happen if they wanted to write
