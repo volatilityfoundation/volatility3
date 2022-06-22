@@ -25,6 +25,14 @@ based on the User Interface.
 Define the plugin requirements
 ------------------------------
 
+Need to specify the version of the framework required to run the plugin.
+If certain modules used by the plugin are affected by the framework version, they should be considered and written
+We recommend that you write it so that it can operate at a relatively high of ``2.0.0``.
+
+::
+
+        _required_framework_version = (2, 0, 0)
+
 These requirements are the names of variables that will need to be populated in the configuration tree for the plugin
 to be able to run properly.  Any that are defined as optional need not necessarily be provided.
 
@@ -39,7 +47,7 @@ to be able to run properly.  Any that are defined as optional need not necessari
                                                         description = "Windows kernel symbols"),
                     requirements.PluginRequirement(name = 'pslist',
                                                    plugin = pslist.PsList,
-                                                   version = (1, 0, 0)),
+                                                   version = (2, 0, 0)),
                     requirements.ListRequirement(name = 'pid',
                                                  element_type = int,
                                                  description = "Process IDs to include (all other processes are excluded)",
@@ -95,7 +103,7 @@ This requirement is also a Complex Requirement and therefore will not be request
 
     requirements.PluginRequirement(name = 'pslist',
                                    plugin = pslist.PsList,
-                                   version = (1, 0, 0)),
+                                   version = (2, 0, 0)),
 
 This requirement indicates that the plugin will make use of another plugin's code, and specifies the version requirements
 on that plugin.  The version is specified in terms of Semantic Versioning, meaning that to be compatible, the major
