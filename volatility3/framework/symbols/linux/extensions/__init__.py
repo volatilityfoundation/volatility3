@@ -409,7 +409,7 @@ class vm_area_struct(objects.StructType):
             fname = linux.LinuxUtilities.path_for_file(context, task, self.vm_file)
         elif self.vm_start <= task.mm.start_brk and self.vm_end >= task.mm.brk:
             fname = "[heap]"
-        elif self.vm_start <= task.mm.start_stack <= self.vm_end:
+        elif self.vm_start <= task.mm.start_stack and self.vm_end >= task.mm.start_stack:
             fname = "[stack]"
         elif self.vm_mm.context.has_member("vdso") and self.vm_start == self.vm_mm.context.vdso:
             fname = "[vdso]"
