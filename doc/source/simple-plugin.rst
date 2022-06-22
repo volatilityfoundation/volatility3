@@ -43,7 +43,7 @@ to be able to run properly.  Any that are defined as optional need not necessari
                                                  optional = True),
                     requirements.PluginRequirement(name = 'pslist',
                                                    plugin = pslist.PsList,
-                                                   version = (1, 0, 0))]
+                                                   version = (2, 0, 0))]
 
 
 This is a classmethod, because it is called before the specific plugin object has been instantiated (in order to know how
