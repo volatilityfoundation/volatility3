@@ -71,14 +71,14 @@ class LdrModules(interfaces.plugins.PluginInterface):
                 mem_mod = mem_order_mod.get(base, None)
 
                 yield (0, [int(proc.UniqueProcessId),
-                            str(proc.ImageFileName.cast("string",
+                           str(proc.ImageFileName.cast("string",
                                                 max_length = proc.ImageFileName.vol.count,
                                                 errors = 'replace')),
-                            format_hints.Hex(base),
-                            load_mod != None,
-                            init_mod != None,
-                            mem_mod != None,
-                            mapped_files[base]])
+                           format_hints.Hex(base),
+                           load_mod is not None,
+                           init_mod is not None,
+                           mem_mod is not None,
+                           mapped_files[base]])
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
