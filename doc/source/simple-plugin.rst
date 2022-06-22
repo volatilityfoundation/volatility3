@@ -30,6 +30,9 @@ to be able to run properly.  Any that are defined as optional need not necessari
 
 ::
 
+        _version = (1, 0, 0)
+        _required_framework_version = (2, 0, 0)
+
         @classmethod
         def get_requirements(cls):
             return [requirements.TranslationLayerRequirement(name = 'primary',
@@ -37,13 +40,13 @@ to be able to run properly.  Any that are defined as optional need not necessari
                                                              architectures = ["Intel32", "Intel64"]),
                     requirements.SymbolTableRequirement(name = "nt_symbols",
                                                         description = "Windows kernel symbols"),
-                    requirements.PluginRequirement(name = 'pslist',
-                                                   plugin = pslist.PsList,
-                                                   version = (1, 0, 0)),
                     requirements.ListRequirement(name = 'pid',
                                                  element_type = int,
                                                  description = "Process IDs to include (all other processes are excluded)",
-                                                 optional = True)]
+                                                 optional = True),
+                    requirements.PluginRequirement(name = 'pslist',
+                                                   plugin = pslist.PsList,
+                                                   version = (1, 0, 0))]
 
 
 This is a classmethod, because it is called before the specific plugin object has been instantiated (in order to know how
@@ -93,26 +96,41 @@ This requirement is also a Complex Requirement and therefore will not be request
 
 ::
 
-    requirements.PluginRequirement(name = 'pslist',
-                                   plugin = pslist.PsList,
-                                   version = (1, 0, 0)),
-
-This requirement indicates that the plugin will make use of another plugin's code, and specifies the version requirements
-on that plugin.  The version is specified in terms of Semantic Versioning, meaning that to be compatible, the major
-versions must be identical and the minor version must be equal to or higher than the one provided.  This requirement
-does not make use of any data from the configuration, even if it were provided, it is merely a functional check before
-running the plugin.
-
-::
-
     requirements.ListRequirement(name = 'pid',
                                  description = 'Filter on specific process IDs',
                                  element_type = int,
-                                 optional = True)
+                                 optional = True),
 
-The final requirement is a List Requirement, populated by integers.  The description will be presented to the user to
+The next requirement is a List Requirement, populated by integers.  The description will be presented to the user to
 describe what the value represents.  The optional flag indicates that the plugin can function without the ``pid`` value
 being defined within the configuration tree at all.
+
+::
+
+    requirements.PluginRequirement(name = 'pslist',
+                                   plugin = pslist.PsList,
+                                   version = (1, 0, 0))
+
+This requirement indicates that the plugin will make use of another plugin's code, and specifies the version requirements
+on that plugin.  The version is specified in terms of Semantic Versioning meaning that, to be compatible, the major
+versions must be identical and the minor version must be equal to or higher than the one provided.  This requirement
+does not make use of any data from the configuration, even if it were provided, it is merely a functional check before
+running the plugin.  To define the version of a plugin, populate the `_version` class variable as a tuple of version
+numbers `(major, minor, patch)`.  So for example:
+
+::
+
+    _version = (1, 0, 0)
+
+The plugin may also require a specific version of the framework, and this also uses Semantic Versioning, and can be
+set by defining the `_required_framework_version`.  The major version should match the version of volatility the plugin
+is to be used with, which at the time of writing would be 2.2.0, and so would be specified as below.  If only features, for example,
+from 2.0.0 are used, then the lowest applicable version number should be used to support the greatest number of
+installations:
+
+::
+
+    _required_framework_version = (2, 0, 0)
 
 Define the `run` method
 -----------------------
