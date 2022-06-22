@@ -134,7 +134,7 @@ being defined within the configuration tree at all.
 
     requirements.PluginRequirement(name = 'pslist',
                                    plugin = pslist.PsList,
-                                   version = (1, 0, 0))
+                                   version = (2, 0, 0))]
 
 This requirement indicates that the plugin will make use of another plugin's code, and specifies the version requirements
 on that plugin.  The version is specified in terms of Semantic Versioning meaning that, to be compatible, the major
