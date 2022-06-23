@@ -41,6 +41,7 @@ class Intel(linear.LinearlyMappedLayer):
         self._base_layer = self.config["memory_layer"]
         self._swap_layers: List[str] = []
         self._page_map_offset = self.config["page_map_offset"]
+        self._kernel: Optional[interfaces.context.ModuleInterface] = self._get_kernel_module()
 
         # Assign constants
         self._initial_position = min(self._maxvirtaddr, self._bits_per_register) - 1
@@ -51,6 +52,17 @@ class Intel(linear.LinearlyMappedLayer):
         # These can vary depending on the type of space
         self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
         self._structure_position_table: Dict[int, Tuple[str, int, bool]] = {}
+
+    def _get_kernel_module(self) -> Optional[interfaces.context.ModuleInterface]:
+        kvo = self.config.get('kernel_virtual_offset', None)
+        if kvo is None:
+            return None
+
+        for module_name in self.context.modules:
+            if self.context.modules[module_name].offset == kvo:
+                return self.context.modules[module_name]
+
+        return None
 
     @classproperty
     @functools.lru_cache()
@@ -324,17 +336,6 @@ class Intel32e(Intel):
 class WindowsMixin(Intel):
     _swap_bit_offset = 32
 
-    def _get_kernel_module(self):
-        kvo = self.config.get('kernel_virtual_offset', None)
-        if kvo is None:
-            return None
-
-        for module_name in self.context.modules:
-            if self.context.modules[module_name].offset == kvo:
-                return self.context.modules[module_name]
-
-        return None
-
     @functools.lru_cache()
     def _get_invalid_pte_mask(self, kernel):
         if kernel.has_symbol("MiInvalidPteMask"):
@@ -371,14 +372,14 @@ class WindowsMixin(Intel):
         return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
 
     def _handle_page_fault(self, layer_name, offset, invalid_bits, entry, description):
-        kernel = self._get_kernel_module()
+        kernel = self._kernel
         if kernel is None:
             raise exceptions.PagedInvalidAddressException(self.name, offset, invalid_bits, entry, "kernel module not found!")
 
         tbit = bool(entry & (1 << 11))
         pbit = bool(entry & (1 << 10))
         vbit = bool(entry & 1)
-        entry &= ~self._get_invalid_pte_mask(kernel)
+        entry ^= self._get_invalid_pte_mask(kernel)
 
         # Handle Swap failure
         if (not tbit and not pbit and not vbit) and ((entry >> self._swap_bit_offset) != 0):
