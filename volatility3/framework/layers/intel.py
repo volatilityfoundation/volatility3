@@ -354,10 +354,8 @@ class WindowsMixin(Intel):
     @functools.lru_cache()
     def _get_PageFileLow_shift(self, kernel):
         mmpte_software_type = kernel.get_type("_MMPTE_SOFTWARE")
-        if mmpte_software_type.vol.members.get("SwizzleBit", None) is None:
-            return 1 # The old shift
 
-        return 12 # The new shift
+        return mmpte_software_type.vol.members["PageFileLow"][1].start_bit
 
     @staticmethod
     def _page_is_valid(entry: int) -> bool:
