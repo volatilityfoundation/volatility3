@@ -41,7 +41,7 @@ class Intel(linear.LinearlyMappedLayer):
         self._base_layer = self.config["memory_layer"]
         self._swap_layers: List[str] = []
         self._page_map_offset = self.config["page_map_offset"]
-        self._kernel: Optional[interfaces.context.ModuleInterface] = self._get_kernel_module()
+        self._kernel: Optional[interfaces.context.ModuleInterface] = None
 
         # Assign constants
         self._initial_position = min(self._maxvirtaddr, self._bits_per_register) - 1
@@ -52,17 +52,6 @@ class Intel(linear.LinearlyMappedLayer):
         # These can vary depending on the type of space
         self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
         self._structure_position_table: Dict[int, Tuple[str, int, bool]] = {}
-
-    def _get_kernel_module(self) -> Optional[interfaces.context.ModuleInterface]:
-        kvo = self.config.get('kernel_virtual_offset', None)
-        if kvo is None:
-            return None
-
-        for module_name in self.context.modules:
-            if self.context.modules[module_name].offset == kvo:
-                return self.context.modules[module_name]
-
-        return None
 
     @classproperty
     @functools.lru_cache()
@@ -335,6 +324,24 @@ class Intel32e(Intel):
 
 class WindowsMixin(Intel):
     _swap_bit_offset = 32
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 name: str,
+                 metadata: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
+        self._kernel: Optional[interfaces.context.ModuleInterface] = self._get_kernel_module()
+
+    def _get_kernel_module(self) -> Optional[interfaces.context.ModuleInterface]:
+        kvo = self.config.get('kernel_virtual_offset', None)
+        if kvo is None:
+            return None
+
+        for module_name in self.context.modules:
+            if self.context.modules[module_name].offset == kvo:
+                return self.context.modules[module_name]
+
+        return None
 
     @functools.lru_cache()
     def _get_invalid_pte_mask(self, kernel):
