@@ -130,13 +130,12 @@ class Intel(linear.LinearlyMappedLayer):
             for name, size, large_page in self._structure:
                 self._structure_position_table[counter] = name, size, large_page
                 counter -= size
-            # print(self._structure_position_table)
         return self._structure_position_table[position]
 
     def _handle_page_fault(self, name, offset, invalid_bits, entry, description):
         """Handles page faults"""
         raise exceptions.PagedInvalidAddressException(self.name, offset, invalid_bits, entry,
-                                                      "Page Fault at entry " + hex(entry) + " in table " + name)
+                                                      "Page Fault at entry " + hex(entry) + " in table " + name + "; " + description)
 
     def _translate_entry(self, offset: int, position: int, entry: int) -> Tuple[int, int]:
         """Translates a specific offset based on paging tables.
@@ -164,7 +163,7 @@ class Intel(linear.LinearlyMappedLayer):
 
         table = self._get_valid_table(base_address)
         if table is None:
-            raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
+            raise self._handle_page_fault(self.name, offset, position + 1, entry,
                                                           "Page Fault at entry " + hex(entry) + " in table " + name)
 
         # Read the data for the next entry
