@@ -605,7 +605,7 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
         @classmethod
         def child_template(cls, template: interfaces.objects.Template, child: str) -> interfaces.objects.Template:
             """Returns the template of the child member."""
-            if 'subtype' in template.vol and child == 'subtype'@
+            if 'subtype' in template.vol and child == 'subtype':
                 return template.vol.subtype
             raise IndexError(f"Member not present in array template: {child}")
 
