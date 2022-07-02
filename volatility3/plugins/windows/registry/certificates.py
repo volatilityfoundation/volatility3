@@ -17,10 +17,8 @@ class Certificates(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'printkey', plugin = printkey.PrintKey, version = (1, 0, 0)),
             requirements.BooleanRequirement(name = 'dump',
@@ -58,10 +56,12 @@ class Certificates(interfaces.plugins.PluginInterface):
 
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[str, str, str, str]]]:
+        kernel = self.context.modules[self.config['kernel']]
+
         for hive in hivelist.HiveList.list_hives(self.context,
                                                  base_config_path = self.config_path,
-                                                 layer_name = self.config['primary'],
-                                                 symbol_table = self.config['nt_symbols']):
+                                                 layer_name = kernel.layer_name,
+                                                 symbol_table = kernel.symbol_table_name):
 
             for top_key in [
                     "Microsoft\\SystemCertificates",
@@ -86,6 +86,12 @@ class Certificates(interfaces.plugins.PluginInterface):
                 except KeyError:
                     # Key wasn't found in this hive, carry on
                     vollog.log(constants.LOGLEVEL_VVVV, "Key wasn't found in this hive")
+                    pass
+                except exceptions.SwappedInvalidAddressException as exp:
+                    vollog.log(constants.LOGLEVEL_VVVV, f"Required memory at {exp.invalid_address:#x} is inaccessible (swapped)")
+                    pass
+                except exceptions.PagedInvalidAddressException as exp:
+                    vollog.log(constants.LOGLEVEL_VVVV, f"Required memory at {exp.invalid_address:#x} is not valid (process exited?)")
                     pass
 
     def run(self) -> renderers.TreeGrid:
