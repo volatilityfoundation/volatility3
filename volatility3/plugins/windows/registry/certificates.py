@@ -90,9 +90,6 @@ class Certificates(interfaces.plugins.PluginInterface):
                 except exceptions.SwappedInvalidAddressException as exp:
                     vollog.log(constants.LOGLEVEL_VVVV, f"Required memory at {exp.invalid_address:#x} is inaccessible (swapped)")
                     pass
-                except exceptions.PagedInvalidAddressException as exp:
-                    vollog.log(constants.LOGLEVEL_VVVV, f"Required memory at {exp.invalid_address:#x} is not valid (process exited?)")
-                    pass
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Certificate path", str), ("Certificate section", str), ("Certificate ID", str),
