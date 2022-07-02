@@ -132,7 +132,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
             vollog.debug("Unable to find the starting/ending VPN member")
             return None
 
-        if maxsize > 0 and (vad_end - vad_start) > maxsize:
+        if 0 < maxsize < (vad_end - vad_start):
             vollog.debug(f"Skip VAD dump {vad_start:#x}-{vad_end:#x} due to maxsize limit")
             return None
 
