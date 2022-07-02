@@ -37,9 +37,9 @@ class WarningFindSpec(abc.MetaPathFinder):
         first."""
         if fullname.startswith("volatility3.framework.plugins."):
             warning = "Please do not use the volatility3.framework.plugins namespace directly, only use volatility3.plugins"
-            # Pyinstaller uses walk_packages to import, but needs to read the modules to figure out dependencies
-            # As such, we only print the warning when directly imported rather than from within walk_packages
-            if inspect.stack()[-2].function != 'walk_packages':
+            # Pyinstaller uses walk_packages/_collect_submodules to import, but needs to read the modules to figure out dependencies
+            # As such, we only print the warning when directly imported rather than from within walk_packages/_collect_submodules
+            if inspect.stack()[-2].function in ['walk_packages', '_collect_submodules']:
                 raise Warning(warning)
 
 
