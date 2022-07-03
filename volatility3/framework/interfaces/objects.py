@@ -243,6 +243,13 @@ class ObjectInterface(metaclass = abc.ABCMeta):
 
         @classmethod
         @abc.abstractmethod
+        def child_template(cls, template: 'Template', child: str) -> interfaces.objects.Template:
+            """Returns the template of the child member from the parent."""
+            raise KeyError(f"Template does not contain any children: {template.vol.type_name}")
+
+
+        @classmethod
+        @abc.abstractmethod
         def has_member(cls, template: 'Template', member_name: str) -> bool:
             """Returns whether the object would contain a member called
             member_name."""
@@ -304,6 +311,10 @@ class Template:
     def relative_child_offset(self, child: str) -> int:
         """Returns the relative offset of the `child` member from its parent
         offset."""
+
+    @abc.abstractmethod
+    def child_template(self, child: str) -> interfaces.objects.Template:
+        """Returns the `child` member template from its parent."""
 
     @abc.abstractmethod
     def replace_child(self, old_child: 'Template', new_child: 'Template') -> None:
