@@ -84,6 +84,22 @@ In windows memory forensics using volatility3, most of the times we do not requi
 
 ``windows.pstree`` helps us to display the parent child relation of processes.
 
+.. code-block:: shell-session
+
+    $ python3 vol.py -f MemDump.DMP windows.hashdump 
+    Volatility 3 Framework 2.0.3
+    Progress:  100.00		PDB scanning finished
+    User	rid	lmhash	nthash
+
+    Administrator	500	    aad3b435b51404eeaad3b435b51404ee	31d6cfe0d16ae931b73c59d7e0c089c0
+    Guest	        501	    aad3b435b51404eeaad3b435b51404ee	31d6cfe0d16ae931b73c59d7e0c089c0
+    Frank Reynolds	1000	aad3b435b51404eeaad3b435b51404ee	a88d1e18706d3aa676e01e5943d15911
+    HomeGroupUser$	1002	aad3b435b51404eeaad3b435b51404ee	af10ecac6ea817d2bb56e3e5c33ce1cd
+    Dennis	        1003	aad3b435b51404eeaad3b435b51404ee	cf96684bbc7877920adaa9663698bf54
+
+``windows.hashdump`` helps us to list the hashes of the users in the system.
+
+
     
 
 
