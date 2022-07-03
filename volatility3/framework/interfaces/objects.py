@@ -312,7 +312,7 @@ class Template:
         offset."""
 
     @abc.abstractmethod
-    def child_template(self, child: str) -> interfaces.objects.Template:
+    def child_template(self, child: str) -> 'interfaces.objects.Template':
         """Returns the `child` member template from its parent."""
 
     @abc.abstractmethod
