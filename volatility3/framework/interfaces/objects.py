@@ -243,10 +243,9 @@ class ObjectInterface(metaclass = abc.ABCMeta):
 
         @classmethod
         @abc.abstractmethod
-        def child_template(cls, template: 'Template', child: str) -> interfaces.objects.Template:
+        def child_template(cls, template: 'Template', child: str) -> 'interfaces.objects.Template':
             """Returns the template of the child member from the parent."""
             raise KeyError(f"Template does not contain any children: {template.vol.type_name}")
-
 
         @classmethod
         @abc.abstractmethod
