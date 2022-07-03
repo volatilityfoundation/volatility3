@@ -184,14 +184,12 @@ class ResourceAccessor(object):
             stop = False
             while not stop:
                 detected = None
-                try:
+                with contextlib.suppress(AttributeError, IOError):
                     # Detect the content
                     detected = magic.detect_from_fobj(curfile)
                     IMPORTED_MAGIC = True
                     # This is because python-magic and file provide a magic module
                     # Only file's python has magic.detect_from_fobj
-                except (AttributeError, IOError):
-                    pass
 
                 if detected:
                     if detected.mime_type == 'application/x-xz':

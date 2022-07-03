@@ -3,11 +3,11 @@
 #
 """A module containing a collection of plugins that produce data typically
 found in Linux's /proc file system."""
+import contextlib
 import logging
 from typing import List
 
-from volatility3.framework import exceptions, interfaces
-from volatility3.framework import renderers, constants
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.renderers import format_hints
@@ -40,11 +40,9 @@ class Check_syscall(plugins.PluginInterface):
 
         symbol_list = []
         for sn in vmlinux.symbols:
-            try:
+            with contextlib.suppress(exceptions.SymbolError):
                 # When requesting the symbol from the module, a full resolve is performed
                 symbol_list.append((vmlinux.get_symbol(sn).address, sn))
-            except exceptions.SymbolError:
-                pass
         sorted_symbols = sorted(symbol_list)
 
         sym_address = 0
