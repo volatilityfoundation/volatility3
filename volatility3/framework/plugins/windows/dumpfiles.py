@@ -82,8 +82,8 @@ class DumpFiles(interfaces.plugins.PluginInterface):
         if not bytes_written:
             vollog.debug(f"No data is cached for the file at {file_object.vol.offset:#x}")
             return None
-        vollog.debug(f"Stored {filedata.preferred_filename}")
 
+        vollog.debug(f"Stored {filedata.preferred_filename}")
         return filedata
 
     @classmethod
