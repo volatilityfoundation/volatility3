@@ -63,29 +63,28 @@ class DumpFiles(interfaces.plugins.PluginInterface):
         :return: result status
         """
         filedata = open_method(desired_file_name)
-        try:
-            # Description of these variables:
-            #   memoffset: offset in the specified layer where the page begins
-            #   fileoffset: write to this offset in the destination file
-            #   datasize: size of the page
+        # Description of these variables:
+        #   memoffset: offset in the specified layer where the page begins
+        #   fileoffset: write to this offset in the destination file
+        #   datasize: size of the page
 
-            # track number of bytes written so we don't write empty files to disk
-            bytes_written = 0
+        # track number of bytes written so we don't write empty files to disk
+        bytes_written = 0
+        try:
             for memoffset, fileoffset, datasize in memory_object.get_available_pages():
                 data = layer.read(memoffset, datasize, pad = True)
                 bytes_written += len(data)
                 filedata.seek(fileoffset)
                 filedata.write(data)
-
-            if not bytes_written:
-                vollog.debug(f"No data is cached for the file at {file_object.vol.offset:#x}")
-                return None
-            else:
-                vollog.debug(f"Stored {filedata.preferred_filename}")
-                return filedata
         except exceptions.InvalidAddressException:
             vollog.debug(f"Unable to dump file at {file_object.vol.offset:#x}")
             return None
+        if not bytes_written:
+            vollog.debug(f"No data is cached for the file at {file_object.vol.offset:#x}")
+            return None
+        vollog.debug(f"Stored {filedata.preferred_filename}")
+
+        return filedata
 
     @classmethod
     def process_file_object(cls, context: interfaces.context.ContextInterface, primary_layer_name: str,
