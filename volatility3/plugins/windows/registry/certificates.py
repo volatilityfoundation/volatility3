@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import struct
 from typing import List, Iterator, Optional, Tuple, Type
@@ -67,7 +68,7 @@ class Certificates(interfaces.plugins.PluginInterface):
                     "Microsoft\\SystemCertificates",
                     "Software\\Microsoft\\SystemCertificates",
             ]:
-                try:
+                with contextlib.suppress(KeyError, exceptions.SwappedInvalidAddressException):
                     # Walk it
                     node_path = hive.get_key(top_key, return_list = True)
                     for (_depth, is_key, _last_write_time, key_path, _volatility, node) in printkey.PrintKey.key_iterator(hive, node_path, recurse = True):
@@ -83,13 +84,6 @@ class Certificates(interfaces.plugins.PluginInterface):
                                     file_handle.close()
                             
                             yield (0, (top_key, reg_section, key_hash, name))
-                except KeyError:
-                    # Key wasn't found in this hive, carry on
-                    vollog.log(constants.LOGLEVEL_VVVV, "Key wasn't found in this hive")
-                    pass
-                except exceptions.SwappedInvalidAddressException as exp:
-                    vollog.log(constants.LOGLEVEL_VVVV, f"Required memory at {exp.invalid_address:#x} is inaccessible (swapped)")
-                    pass
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Certificate path", str), ("Certificate section", str), ("Certificate ID", str),
