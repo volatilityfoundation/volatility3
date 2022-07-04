@@ -148,7 +148,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
         vollog.debug("Kernel base determination - optimized scan virtual layer")
         valid_kernel = self._method_layer_pdb_scan(context, vlayer, test_virtual_kernel, True, False, progress_callback)
-        if valid_kernel != None:
+        if valid_kernel is not None:
             return valid_kernel
 
         vollog.debug("Kernel base determination - slow scan virtual layer")
