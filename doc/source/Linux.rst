@@ -40,7 +40,7 @@ For plugin requests, Please create an issue with description of the plugin.
 
 .. code-block:: shell-session
 
-    $ vol3 --help | grep -i linux. | head -n 5
+    $ python3 vol.py --help | grep -i linux. | head -n 5
         banners.Banners     Attempts to identify potential linux banners in an
         linux.bash.Bash     Recovers bash command history from memory.
         linux.check_afinfo.Check_afinfo
