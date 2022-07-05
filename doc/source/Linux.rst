@@ -74,7 +74,7 @@ I'd like to say thanks to `stuxnet <https://github.com/stuxnet999/>`_ for provid
 
     $ python3 vol.py -f memory.vmem banners
         
-        Volatility 3 Framework 2.0.3
+        Volatility 3 Framework 2.0.1
 
         Progress:  100.00               PDB scanning finished
         Offset  Banner
@@ -96,7 +96,7 @@ If you do not find the ISF file then, please follow the instructions on :ref:`Li
 
     $ python3 vol.py -f memory.vmem linux.pslist
 
-        Volatility 3 Framework 2.0.3    Stacking attempts finished
+        Volatility 3 Framework 2.0.1    Stacking attempts finished
 
         PID     PPID    COMM
 
@@ -123,7 +123,7 @@ If you do not find the ISF file then, please follow the instructions on :ref:`Li
 .. code-block:: shell-session
 
     $ python3 vol.py -f memory.vmem linux.pstree
-        Volatility 3 Framework 2.0.3
+        Volatility 3 Framework 2.0.1
         Progress:  100.00               Stacking attempts finished
         PID     PPID    COMM
 
@@ -167,7 +167,7 @@ Now to find the commands ran in bash shell. Lets use ``linux.bash``.
 
     $ python3 vol.py -f memory.vmem linux.bash 
 
-        Volatility 3 Framework 2.0.3
+        Volatility 3 Framework 2.0.1
         Progress:  100.00               Stacking attempts finished
         PID     Process CommandTime     Command
 

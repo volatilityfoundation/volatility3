@@ -45,7 +45,7 @@ In windows memory forensics using volatility3, most of the times we do not requi
 
     $ python3 vol.py -f MemDump.DMP windows.pslist | head -n 10
         
-        Volatility 3 Framework 2.0.2	PDB scanning finished                                
+        Volatility 3 Framework 2.0.1	PDB scanning finished                                
 
         PID	PPID	ImageFileName	Offset(V)       Threads	Handles	SessionId	Wow64	CreateTime	    ExitTime            File output
 
@@ -61,7 +61,7 @@ In windows memory forensics using volatility3, most of the times we do not requi
 .. code-block:: shell-session
 
     $ python3 vol.py -f MemDump.DMP windows.pstree | head -n 20
-        Volatility 3 Framework 2.0.2	PDB scanning finished                                
+        Volatility 3 Framework 2.0.1	PDB scanning finished                                
         
         PID	PPID	ImageFileName	Offset(V)	Threads	Handles	SessionId	Wow64	CreateTime	ExitTime
         
