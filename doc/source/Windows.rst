@@ -88,6 +88,9 @@ In windows memory forensics using volatility3, most of the times we do not requi
 
 ``windows.pstree`` helps us to display the parent child relation of processes.
 
+.. note:: Here the the command is piped to head in-order to give you smaller output of process here top 20.
+
+
 .. code-block:: shell-session
 
     $ python3 vol.py -f MemDump.DMP windows.hashdump 
