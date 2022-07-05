@@ -23,6 +23,8 @@ It also supports capture from Android devices. See below for example commands bu
     $ ls -alh /tmp/ubuntu.lime 
     -r--r--r-- 1 root root 2.0G Aug 17 19:37 /tmp/ubuntu.lime
 
+.. note:: The above command required sudo inorder to access the files which are root only. 
+
 Procedure to create symbol tables for linux
 --------------------------------------------
 
