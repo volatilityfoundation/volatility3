@@ -6,7 +6,7 @@ This guide gives you a brief introduction to how volatility3 works and some demo
 Acquiring memory
 ----------------
 
-Volatility does not provide the ability to acquire memory. In this tutorial we will see how we can use  `LiME <https://github.com/504ensicslabs/lime>`_ for this purpose. 
+Volatility3 does not provide the ability to acquire memory. In this tutorial we will see how we can use  `LiME <https://github.com/504ensicslabs/lime>`_ for this purpose. 
 It supports 32 and 64 bit captures from native Intel hardware as well as virtual machine guests. 
 It also supports capture from Android devices. See below for example commands building and running LiME:
 
