@@ -16,12 +16,12 @@ It also supports capture from Android devices. See below for example commands bu
     $ cd lime-forensics-1.1-r14/src
     $ make
     ....
-      CC [M]  /home/mhl/Downloads/src/tcp.o
-      CC [M]  /home/mhl/Downloads/src/disk.o
+      CC [M]  lime-forensics-1.1-r14/src/tcp.o
+      CC [M]  lime-forensics-1.1-r14/src/disk.o
     ....
-    $ sudo insmod lime-3.2.0-23-generic.ko "path=/home/mhl/ubuntu.lime format=lime"
-    $ ls -alh /home/mhl/ubuntu.lime 
-    -r--r--r-- 1 root root 2.0G Aug 17 19:37 /home/mhl/ubuntu.lime
+    $ sudo insmod lime-3.2.0-23-generic.ko "path=/tmp/ubuntu.lime format=lime"
+    $ ls -alh /tmp/ubuntu.lime 
+    -r--r--r-- 1 root root 2.0G Aug 17 19:37 /tmp/ubuntu.lime
 
 Procedure to create symbol tables for linux
 --------------------------------------------
