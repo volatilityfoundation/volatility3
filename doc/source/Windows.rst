@@ -6,7 +6,9 @@ This guide gives you a brief introduction to how volatility3 works and some demo
 Acquiring memory
 ----------------
 
-Volatility does not provide the ability to acquire memory. In this tutorial we will see how we can use  `WinPmem <https://github.com/Velocidex/WinPmem/releases/latest>`_ for this purpose.
+Volatility does not provide the ability to acquire memory. 
+
+.. tip:: You could use `WinPmem <https://github.com/Velocidex/WinPmem/releases/latest>`_ for collecting windows memory dump.
 
 Listing Plugins
 ---------------
@@ -19,6 +21,8 @@ Listing Plugins
         windows.crashinfo.Crashinfo
         windows.dlllist.DllList
                             Lists the loaded modules in a particular windows
+
+.. note:: Here the the command is piped to grep and head in-order to give you sample list of plugins.
 
 Using plugins
 -------------
