@@ -47,7 +47,7 @@ For plugin requests, Please create an issue with description of the plugin.
         linux.check_creds.Check_creds
         linux.check_idt.Check_idt
 
-.. note:: Here the the command is piped to grep and head in-order to give you sample list of plugins.
+.. note:: Here the the command is piped to grep and head in-order to give you sample list of linux plugins.
 
 
 Using plugins

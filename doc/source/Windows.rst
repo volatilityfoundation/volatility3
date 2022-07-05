@@ -22,7 +22,7 @@ Listing Plugins
         windows.dlllist.DllList
                             Lists the loaded modules in a particular windows
 
-.. note:: Here the the command is piped to grep and head in-order to give you sample list of plugins.
+.. note:: Here the the command is piped to grep and head in-order to give you sample list of windows plugins.
 
 Using plugins
 -------------
