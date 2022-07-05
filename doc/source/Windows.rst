@@ -40,7 +40,7 @@ Example
 Example 1
 ~~~~~~~~~
 
-In this example we will be using memory dump from PragyanCTF'22. The dump is available `here <https://drive.google.com/file/d/1VPIdqIDFkOi3zGET2g00s1y-OeWOUqyi/view?usp=sharing>`_.
+In this example we will be using memory dump from PragyanCTF'22. 
 We will limit the discussion to memory forensics with volatility3 and not extend to other parts of the challenges. 
 
 In windows memory forensics using volatility3, most of the times we do not require creating a ISF file. 
