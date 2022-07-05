@@ -35,7 +35,7 @@ To create a symbol table please refer this :ref:`symbol-tables:Mac or Linux symb
 Listing plugins
 ---------------
 
-Following are the list of linux plugins available for volatility3. More plugins will be available on future releases.
+Following are the sample of linux plugins available for volatility3. More plugins will be available on future releases.
 For plugin requests, Please create an issue with description of the plugin.
 
 .. code-block:: shell-session
@@ -46,6 +46,8 @@ For plugin requests, Please create an issue with description of the plugin.
         linux.check_afinfo.Check_afinfo
         linux.check_creds.Check_creds
         linux.check_idt.Check_idt
+
+.. note:: Here the the command is piped to grep and head in-order to give you sample list of plugins.
 
 
 Using plugins
