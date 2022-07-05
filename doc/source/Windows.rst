@@ -13,6 +13,9 @@ Volatility does not provide the ability to acquire memory.
 Listing Plugins
 ---------------
 
+Following are the sample of linux plugins available for volatility3. More plugins will be available on future releases.
+For plugin requests, Please create an issue with description of the plugin.
+
 .. code-block:: shell-session
 
     $ python3 vol.py --help | grep windows | head -n 5
