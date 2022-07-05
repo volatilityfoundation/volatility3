@@ -66,8 +66,7 @@ Example
 Example 1
 ~~~~~~~~~
 
-In this example we will be using memory dump from Insomni'hack teaser 2020 CTF. Challenge name Getdents, you can find the memory dump
-in the link `here <https://www.mediafire.com/file/5n0khasfir0wpsv/memory_challenge.zip/file>`_ . We will limit the discussion to memory forensics with volatility3 and not extend to other parts of the challenges.
+In this example we will be using memory dump from Insomni'hack teaser 2020 CTF. Challenge name Getdents.  We will limit the discussion to memory forensics with volatility3 and not extend to other parts of the challenges.
 I'd like to say thanks to `stuxnet <https://github.com/stuxnet999/>`_ for providing this memory dump and `writeup <https://stuxnet999.github.io/insomnihack/2020/09/17/Insomihack-getdents.html>`_.
 
 
