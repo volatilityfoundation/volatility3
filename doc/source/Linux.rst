@@ -57,7 +57,7 @@ The following is the syntax to run volatility tool.
 
 .. code-block:: shell-session
 
-    $ python3 vol.py -f <path to memory image> plugin_name plugin_option
+    $ python3 vol.py -f <path to memory image> <plugin_name> <plugin_option>
 
 
 Example
