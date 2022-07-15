@@ -127,10 +127,9 @@ def test_windows_dumpfiles(image, volatility, python):
             rc, out, err = runvol_plugin("windows.dumpfiles.DumpFiles", image, volatility, python, globalargs=["-o", path], pluginargs=["--virtaddr", addr])
 
             for file in os.listdir(path):
-                fp = open(os.path.join(path, file), "rb")
-                if hashlib.md5(fp.read()).hexdigest() not in known_files["windows_dumpfiles"][file_name][addr]:
-                    failed_chksms += 1
-                fp.close()
+                with open(os.path.join(path, file), "rb") as fp:
+                    if hashlib.md5(fp.read()).hexdigest() not in known_files["windows_dumpfiles"][file_name][addr]:
+                        failed_chksms += 1
 
             shutil.rmtree(path)
 
