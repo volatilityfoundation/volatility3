@@ -21,8 +21,8 @@ def pytest_generate_tests(metafunc):
     """Parameterize tests based on image names"""
 
     images = metafunc.config.getoption('image')
-    for d in metafunc.config.getoption('image_dir'):
-        images = images + [os.path.join(d, x) for x in os.listdir(d)]
+    for image_dir in metafunc.config.getoption('image_dir'):
+        images = images + [os.path.join(image_dir, dir) for dir in os.listdir(image_dir)]
 
     # tests with "image" parameter are run against images
     if 'image' in metafunc.fixturenames:
