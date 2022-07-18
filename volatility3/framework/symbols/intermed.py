@@ -21,7 +21,6 @@ from volatility3.framework.symbols import metadata, native
 
 vollog = logging.getLogger(__name__)
 
-
 # ## TODO
 #
 # All symbol tables should take a label to an object template
@@ -48,6 +47,7 @@ vollog = logging.getLogger(__name__)
 
 
 def _construct_delegate_function(name: str, is_property: bool = False) -> Any:
+
     def _delegate_function(self, *args, **kwargs):
         if is_property:
             return getattr(self._delegate, name)
@@ -153,8 +153,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         major, minor, patch = [int(x) for x in version.split(".")]
         supported_versions = [x for x in versions if x[0] == major and x[1] >= minor]
         if not supported_versions:
-            raise ValueError(
-                f"No Intermediate Format interface versions support file interface version: {version}")
+            raise ValueError(f"No Intermediate Format interface versions support file interface version: {version}")
         return versions[max(supported_versions)]
 
     symbols = _construct_delegate_function('symbols', True)
@@ -543,7 +542,8 @@ class Version3Format(Version2Format):
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
 
-        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name, address = address,
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name,
+                                                                      address = address,
                                                                       type = symbol_type)
         return self._symbol_cache[name]
 

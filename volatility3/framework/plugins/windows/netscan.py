@@ -28,8 +28,9 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'poolscanner',
                                             component = poolscanner.PoolScanner,
                                             version = (1, 0, 0)),
@@ -186,7 +187,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             }
 
         # we do not need to check for tcpip's specific FileVersion in every case
-        tcpip_mod_version = 0 # keep it 0 as a default
+        tcpip_mod_version = 0  # keep it 0 as a default
 
         # special use cases
 
@@ -201,8 +202,11 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         # we need to define additional version numbers (which are then found via tcpip.sys's FileVersion header) in case there is
         # ambiguity _within_ an OS version. If such a version number (last number of the tuple) is defined for the current OS
         # we need to inspect tcpip.sys's headers to see if we can grab the precise version
-        if [ (a,b,c,d) for a, b, c, d in version_dict if (a,b,c) == (nt_major_version, nt_minor_version, vers_minor_version) and d != 0]:
-            vollog.debug("Requiring further version inspection due to OS version by checking tcpip.sys's FileVersion header")
+        if [(a, b, c, d)
+                for a, b, c, d in version_dict
+                if (a, b, c) == (nt_major_version, nt_minor_version, vers_minor_version) and d != 0]:
+            vollog.debug(
+                "Requiring further version inspection due to OS version by checking tcpip.sys's FileVersion header")
             # the following is IntelLayer specific and might need to be adapted to other architectures.
             physical_layer_name = context.layers[layer_name].config.get('memory_layer', None)
             if physical_layer_name:
@@ -227,7 +231,9 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             # try to grab the latest supported version of the current image NT version. If that symbol
             # version does not work, support has to be added manually.
             current_versions = [
-                (nt_maj, nt_min, vers_min, tcpip_ver) for nt_maj, nt_min, vers_min, tcpip_ver in version_dict if nt_maj == nt_major_version and nt_min == nt_minor_version and tcpip_ver <= tcpip_mod_version
+                (nt_maj, nt_min, vers_min, tcpip_ver)
+                for nt_maj, nt_min, vers_min, tcpip_ver in version_dict
+                if nt_maj == nt_major_version and nt_min == nt_minor_version and tcpip_ver <= tcpip_mod_version
             ]
             current_versions.sort()
 
@@ -307,8 +313,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         kernel = self.context.modules[self.config['kernel']]
 
         netscan_symbol_table = self.create_netscan_symbol_table(self.context, kernel.layer_name,
-                                                                kernel.symbol_table_name,
-                                                                self.config_path)
+                                                                kernel.symbol_table_name, self.config_path)
 
         for netw_obj in self.scan(self.context, kernel.layer_name, kernel.symbol_table_name, netscan_symbol_table):
 

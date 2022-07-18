@@ -23,7 +23,8 @@ class PsList(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 1, 0)),
             requirements.ChoiceRequirement(name = 'pslist_method',
@@ -39,7 +40,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_list_tasks(
-            cls, method: str
+        cls, method: str
     ) -> Callable[[interfaces.context.ContextInterface, str, Callable[[int], bool]],
                   Iterable[interfaces.objects.ObjectInterface]]:
         """Returns the list_tasks method based on the selector

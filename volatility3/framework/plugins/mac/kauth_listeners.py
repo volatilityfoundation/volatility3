@@ -18,7 +18,8 @@ class Kauth_listeners(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 1, 0)),
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0)),

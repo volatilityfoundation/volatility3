@@ -38,11 +38,7 @@ class PsTree(pslist.PsList):
 
         self._levels[pid] = level
 
-    def _generator(
-            self,
-            pid_filter,
-            include_threads: bool = False,
-            decorate_com: bool = False):
+    def _generator(self, pid_filter, include_threads: bool = False, decorate_com: bool = False):
         """Generates the tasks hierarchy tree.
 
         Args:
@@ -60,8 +56,8 @@ class PsTree(pslist.PsList):
         vmlinux = self.context.modules[self.config['kernel']]
         for proc in self.list_tasks(self.context,
                                     vmlinux.name,
-                                    filter_func=pid_filter,
-                                    include_threads=include_threads):
+                                    filter_func = pid_filter,
+                                    include_threads = include_threads):
             self._tasks[proc.pid] = proc
 
         # Build the child/level maps

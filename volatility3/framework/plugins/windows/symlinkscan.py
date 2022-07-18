@@ -20,8 +20,9 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
         ]
 
     @classmethod

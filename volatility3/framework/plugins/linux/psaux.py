@@ -10,6 +10,7 @@ from volatility3.framework.objects import utility
 from volatility3.plugins.linux import pslist
 from volatility3.framework.interfaces import plugins
 
+
 class PsAux(plugins.PluginInterface):
     """ Lists processes with their command line arguments """
 
@@ -19,7 +20,8 @@ class PsAux(plugins.PluginInterface):
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Linux kernel',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -28,8 +30,7 @@ class PsAux(plugins.PluginInterface):
                                          optional = True)
         ]
 
-    def _get_command_line_args(self, task: interfaces.objects.ObjectInterface,
-                                    name: str) -> Optional[str]:
+    def _get_command_line_args(self, task: interfaces.objects.ObjectInterface, name: str) -> Optional[str]:
         """
         Reads the command line arguments of a process
         These are stored on the userland stack
@@ -104,8 +105,7 @@ class PsAux(plugins.PluginInterface):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str), ("ARGS", str)],
-                                    self._generator(
-                                        pslist.PsList.list_tasks(self.context,
-                                                                self.config['kernel'],
-                                                                filter_func = filter_func)))
-
+                                  self._generator(
+                                      pslist.PsList.list_tasks(self.context,
+                                                               self.config['kernel'],
+                                                               filter_func = filter_func)))

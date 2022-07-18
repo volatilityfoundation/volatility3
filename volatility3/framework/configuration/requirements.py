@@ -303,8 +303,7 @@ class TranslationLayerRequirement(interfaces.configuration.ConstructableRequirem
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-                [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
-                 not subreq.optional]):
+            [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if not subreq.optional]):
             return None
 
         obj = self._construct_class(context, config_path, args)
@@ -359,8 +358,7 @@ class SymbolTableRequirement(interfaces.configuration.ConstructableRequirementIn
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-                [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
-                 not subreq.optional]):
+            [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if not subreq.optional]):
             return None
 
         # Fill out the parameter for class creation
@@ -436,8 +434,12 @@ class PluginRequirement(VersionRequirement):
 class ModuleRequirement(interfaces.configuration.ConstructableRequirementInterface,
                         interfaces.configuration.ConfigurableRequirementInterface):
 
-    def __init__(self, name: str, description: str = None, default: bool = False,
-                 architectures: Optional[List[str]] = None, optional: bool = False):
+    def __init__(self,
+                 name: str,
+                 description: str = None,
+                 default: bool = False,
+                 architectures: Optional[List[str]] = None,
+                 optional: bool = False):
         super().__init__(name = name, description = description, default = default, optional = optional)
         self.add_requirement(TranslationLayerRequirement(name = 'layer_name', architectures = architectures))
         self.add_requirement(SymbolTableRequirement(name = 'symbol_table_name'))
@@ -493,8 +495,7 @@ class ModuleRequirement(interfaces.configuration.ConstructableRequirementInterfa
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-                [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
-                 not subreq.optional]):
+            [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if not subreq.optional]):
             return None
 
         obj = self._construct_class(context, config_path, args)

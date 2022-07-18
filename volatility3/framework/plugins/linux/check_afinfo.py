@@ -23,7 +23,8 @@ class Check_afinfo(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Linux kernel',
                                            architectures = ["Intel32", "Intel64"]),
         ]
 

@@ -120,8 +120,9 @@ class PoolScanner(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'handles', plugin = handles.Handles, version = (1, 0, 0)),
         ]
 
@@ -132,8 +133,8 @@ class PoolScanner(plugins.PluginInterface):
         symbol_table = kernel.symbol_table_name
         constraints = self.builtin_constraints(symbol_table)
 
-        for constraint, mem_object, header in self.generate_pool_scan(self.context, kernel.layer_name,
-                                                                      symbol_table, constraints):
+        for constraint, mem_object, header in self.generate_pool_scan(self.context, kernel.layer_name, symbol_table,
+                                                                      constraints):
             # generate some type-specific info for sanity checking
             if constraint.object_type == "Process":
                 name = mem_object.ImageFileName.cast("string",
@@ -214,7 +215,7 @@ class PoolScanner(plugins.PluginInterface):
                            type_name = symbol_table + constants.BANG + "_DRIVER_OBJECT",
                            object_type = "Driver",
                            size = (248, None),
-                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE, 
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE,
                            additional_structures = ["_DRIVER_EXTENSION"]),
             # drivers on windows starting with windows 8
             PoolConstraint(b'Driv',
@@ -295,9 +296,9 @@ class PoolScanner(plugins.PluginInterface):
         for constraint, header in cls.pool_scan(context, scan_layer, symbol_table, constraints, alignment = alignment):
 
             mem_objects = header.get_object(constraint = constraint,
-                                           use_top_down = is_windows_8_or_later,
-                                           native_layer_name = layer_name,
-                                           kernel_symbol_table = symbol_table)
+                                            use_top_down = is_windows_8_or_later,
+                                            native_layer_name = layer_name,
+                                            kernel_symbol_table = symbol_table)
 
             for mem_object in mem_objects:
                 if mem_object is None:

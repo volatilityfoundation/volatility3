@@ -23,7 +23,8 @@ class List_Files(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'mount', plugin = mount.Mount, version = (2, 0, 0)),
         ]
@@ -50,8 +51,7 @@ class List_Files(plugins.PluginInterface):
         except exceptions.InvalidAddressException:
             return None
 
-        if parent and not context.layers[vnode.vol.native_layer_name].is_valid(parent.vol.offset,
-                                                                               parent.vol.size):
+        if parent and not context.layers[vnode.vol.native_layer_name].is_valid(parent.vol.offset, parent.vol.size):
             return None
 
         return parent
@@ -65,8 +65,7 @@ class List_Files(plugins.PluginInterface):
         and holds its name, parent address, and object
         """
 
-        if not context.layers[vnode.vol.native_layer_name].is_valid(vnode.vol.offset,
-                                                                    vnode.vol.size):
+        if not context.layers[vnode.vol.native_layer_name].is_valid(vnode.vol.offset, vnode.vol.size):
             return False
 
         key = vnode.vol.offset
@@ -104,7 +103,7 @@ class List_Files(plugins.PluginInterface):
 
             if not cls._add_vnode(context, vnode, loop_vnodes):
                 break
- 
+
             added = True
 
             parent = cls._get_parent(context, vnode)

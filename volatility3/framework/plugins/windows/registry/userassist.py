@@ -37,8 +37,9 @@ class UserAssist(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.IntRequirement(name = 'offset', description = "Hive Offset", default = None, optional = True),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
         ]
@@ -153,12 +154,13 @@ class UserAssist(interfaces.plugins.PluginInterface):
                 countkey_last_write_time = conversion.wintime_to_datetime(countkey.LastWriteTime.QuadPart)
 
                 # output the parent Count key
-                result: Tuple[int, Tuple[format_hints.Hex, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]] = (
-                    0, (renderers.format_hints.Hex(hive.hive_offset), hive_name, countkey_path,
-                        countkey_last_write_time, "Key", renderers.NotApplicableValue(), renderers.NotApplicableValue(),
-                        renderers.NotApplicableValue(), renderers.NotApplicableValue(), renderers.NotApplicableValue(),
-                        renderers.NotApplicableValue(), renderers.NotApplicableValue())
-                )
+                result: Tuple[int,
+                              Tuple[format_hints.Hex, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any,
+                                    Any]] = (0, (renderers.format_hints.Hex(hive.hive_offset), hive_name, countkey_path,
+                                                 countkey_last_write_time, "Key", renderers.NotApplicableValue(),
+                                                 renderers.NotApplicableValue(), renderers.NotApplicableValue(),
+                                                 renderers.NotApplicableValue(), renderers.NotApplicableValue(),
+                                                 renderers.NotApplicableValue(), renderers.NotApplicableValue()))
                 yield result
 
                 # output any subkeys under Count

@@ -25,8 +25,9 @@ class Modules(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'dlllist', component = dlllist.DllList, version = (2, 0, 0)),
             requirements.BooleanRequirement(name = 'dump',

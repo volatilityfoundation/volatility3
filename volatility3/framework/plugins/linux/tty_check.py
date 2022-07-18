@@ -24,7 +24,8 @@ class tty_check(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Linux kernel',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'linuxutils', component = linux.LinuxUtilities, version = (2, 0, 0))

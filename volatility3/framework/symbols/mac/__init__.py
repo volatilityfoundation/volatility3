@@ -78,8 +78,11 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
                MacUtilities.mask_mods_list(context, layer_name, mods_list)
 
     @classmethod
-    def lookup_module_address(cls, context: interfaces.context.ContextInterface, handlers: Iterator[Any],
-                              target_address, kernel_module_name: str = None):
+    def lookup_module_address(cls,
+                              context: interfaces.context.ContextInterface,
+                              handlers: Iterator[Any],
+                              target_address,
+                              kernel_module_name: str = None):
         mod_name = "UNKNOWN"
         symbol_name = "N/A"
 

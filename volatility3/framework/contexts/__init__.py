@@ -180,11 +180,7 @@ def get_module_wrapper(method: str) -> Callable:
 class Module(interfaces.context.ModuleInterface):
 
     @classmethod
-    def create(cls,
-               context: interfaces.context.ContextInterface,
-               module_name: str,
-               layer_name: str,
-               offset: int,
+    def create(cls, context: interfaces.context.ContextInterface, module_name: str, layer_name: str, offset: int,
                **kwargs) -> 'Module':
         pathjoin = interfaces.configuration.path_join
         # Check if config_path is None

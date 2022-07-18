@@ -18,7 +18,6 @@ from volatility3.framework.symbols.windows.extensions import kdbg, pe, pool
 
 vollog = logging.getLogger(__name__)
 
-
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
 
@@ -95,8 +94,7 @@ class MMVAD_SHORT(objects.StructType):
         else:
             # any node other than the root that doesn't have a recognized tag
             # is just garbage and we skip the node entirely
-            vollog.log(constants.LOGLEVEL_VVV,
-                       f"Skipping VAD at {self.vol.offset} depth {depth} with tag {tag}")
+            vollog.log(constants.LOGLEVEL_VVV, f"Skipping VAD at {self.vol.offset} depth {depth} with tag {tag}")
             return
 
         if target:
@@ -312,8 +310,7 @@ class MMVAD(MMVAD_SHORT):
 
             # this is for vista through windows 7
             else:
-                filename_obj = self.Subsection.ControlArea.FilePointer.dereference().cast(
-                    "_FILE_OBJECT").FileName
+                filename_obj = self.Subsection.ControlArea.FilePointer.dereference().cast("_FILE_OBJECT").FileName
 
             if filename_obj.Length > 0:
                 file_name = filename_obj.get_string()
@@ -364,6 +361,7 @@ class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
             yield device
             device = device.AttachedDevice.dereference()
 
+
 class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel driver objects."""
 
@@ -374,7 +372,7 @@ class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
 
     def get_devices(self) -> Generator[ObjectInterface, None, None]:
         """Enumerate the driver's device objects"""
-        device =  self.DeviceObject.dereference()
+        device = self.DeviceObject.dereference()
         while device:
             yield device
             device = device.NextDevice.dereference()
@@ -487,7 +485,9 @@ class UNICODE_STRING(objects.StructType):
         return self._context.object(self.vol.type_name.split(constants.BANG)[0] + constants.BANG + 'string',
                                     layer_name = self.Buffer.vol.layer_name,
                                     offset = self.Buffer,
-                                    max_length = self.Length, errors = 'replace', encoding = 'utf16')
+                                    max_length = self.Length,
+                                    errors = 'replace',
+                                    encoding = 'utf16')
 
     String = property(get_string)
 
@@ -573,13 +573,10 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
         proc_layer = self._context.layers[proc_layer_name]
         if not proc_layer.is_valid(self.Peb):
-            raise exceptions.InvalidAddressException(proc_layer_name, self.Peb,
-                                                     f"Invalid Peb address at {self.Peb:0x}")
+            raise exceptions.InvalidAddressException(proc_layer_name, self.Peb, f"Invalid Peb address at {self.Peb:0x}")
 
         sym_table = self.get_symbol_table_name()
-        peb = self._context.object(f"{sym_table}{constants.BANG}_PEB",
-                                   layer_name = proc_layer_name,
-                                   offset = self.Peb)
+        peb = self._context.object(f"{sym_table}{constants.BANG}_PEB", layer_name = proc_layer_name, offset = self.Peb)
         return peb
 
     def load_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
@@ -588,8 +585,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         try:
             peb = self.get_peb()
             for entry in peb.Ldr.InLoadOrderModuleList.to_list(
-                    f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
-                    "InLoadOrderLinks"):
+                    f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY", "InLoadOrderLinks"):
                 yield entry
         except exceptions.InvalidAddressException:
             return
@@ -612,8 +608,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         try:
             peb = self.get_peb()
             for entry in peb.Ldr.InMemoryOrderModuleList.to_list(
-                    f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
-                    "InMemoryOrderLinks"):
+                    f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY", "InMemoryOrderLinks"):
                 yield entry
         except exceptions.InvalidAddressException:
             return
@@ -648,8 +643,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
                     return session.SessionId
 
         except exceptions.InvalidAddressException:
-            vollog.log(constants.LOGLEVEL_VVV,
-                       f"Cannot access _EPROCESS.Session.SessionId at {self.vol.offset:#x}")
+            vollog.log(constants.LOGLEVEL_VVV, f"Cannot access _EPROCESS.Session.SessionId at {self.vol.offset:#x}")
 
         return renderers.UnreadableValue()
 

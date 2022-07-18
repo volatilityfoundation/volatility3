@@ -23,7 +23,8 @@ class Check_modules(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Linux kernel',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0))
         ]
@@ -49,7 +50,8 @@ class Check_modules(plugins.PluginInterface):
 
         for kobj in module_kset.list.to_list(vmlinux.symbol_table_name + constants.BANG + "kobject", "entry"):
 
-            mod_kobj = vmlinux.object(object_type = "module_kobject", offset = kobj.vol.offset - kobj_off,
+            mod_kobj = vmlinux.object(object_type = "module_kobject",
+                                      offset = kobj.vol.offset - kobj_off,
                                       absolute = True)
 
             mod = mod_kobj.mod

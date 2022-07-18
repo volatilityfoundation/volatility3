@@ -53,8 +53,7 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
             if magic not in [0x4c4d5641] or version != 2:
                 raise exceptions.LayerException("File not completely in AVML format")
             chunk_data = base_layer.read(offset + avml_header_size,
-                                         min(end - start,
-                                             base_layer.maximum_address - (offset + avml_header_size)))
+                                         min(end - start, base_layer.maximum_address - (offset + avml_header_size)))
             segments, consumed = self._read_snappy_frames(chunk_data, end - start)
             # The returned segments are accurate the chunk_data that was passed in, but needs shifting
             for (thing, mapped_offset, size, mapped_size, compressed) in segments:
@@ -64,8 +63,8 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
             # TODO: Check whatever the remaining 8 bytes are
             offset += avml_header_size + consumed + 8
 
-    def _read_snappy_frames(self, data: bytes, expected_length: int) -> Tuple[
-        List[Tuple[int, int, int, int, bool]], int]:
+    def _read_snappy_frames(self, data: bytes,
+                            expected_length: int) -> Tuple[List[Tuple[int, int, int, int, bool]], int]:
         """
         Reads a framed-format snappy stream
 
@@ -94,7 +93,7 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
                     # CRC + (Un)compressed data
                     mapped_start = offset + frame_header_len
                     # frame_crc = data[mapped_start: mapped_start + crc_len]
-                    frame_data = data[mapped_start + crc_len: mapped_start + frame_size]
+                    frame_data = data[mapped_start + crc_len:mapped_start + frame_size]
                     if frame_type == 0x00:
                         # Compressed data
                         frame_data = snappy.decompress(frame_data)

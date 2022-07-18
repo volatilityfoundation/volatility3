@@ -27,8 +27,9 @@ class Cachedump(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'lsadump', plugin = lsadump.Lsadump, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'hashdump', plugin = hashdump.Hashdump, version = (1, 1, 0))
@@ -44,7 +45,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
             hmac_md5 = HMAC.new(nlkm, ch)
             rc4key = hmac_md5.digest()
             rc4 = ARC4.new(rc4key)
-            data = rc4.encrypt(edata) # lgtm [py/weak-cryptographic-algorithm]
+            data = rc4.encrypt(edata)  # lgtm [py/weak-cryptographic-algorithm]
         else:
             # based on  Based on code from http://lab.mediaservice.net/code/cachedump.rb
             aes = AES.new(nlkm[16:32], AES.MODE_CBC, ch)
@@ -61,7 +62,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
         (uname_len, domain_len) = unpack("<HH", cache_data[:4])
         if len(cache_data[60:62]) == 0:
             return (uname_len, domain_len, 0, b'', b'')
-        (domain_name_len,) = unpack("<H", cache_data[60:62])
+        (domain_name_len, ) = unpack("<H", cache_data[60:62])
         ch = cache_data[64:80]
         enc_data = cache_data[96:]
         return (uname_len, domain_len, domain_name_len, enc_data, ch)
@@ -90,8 +91,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
 
         kernel = self.context.modules[self.config['kernel']]
 
-        vista_or_later = versions.is_vista_or_later(context = self.context,
-                                                    symbol_table = kernel.symbol_table_name)
+        vista_or_later = versions.is_vista_or_later(context = self.context, symbol_table = kernel.symbol_table_name)
 
         lsakey = lsadump.Lsadump.get_lsa_key(sechive, bootkey, vista_or_later)
         if not lsakey:

@@ -9,15 +9,17 @@ from volatility3.framework import constants
 with open("README.md", "r", encoding = "utf-8") as fh:
     long_description = fh.read()
 
+
 def get_install_requires():
     requirements = []
-    with open("requirements-minimal.txt", "r", encoding="utf-8") as fh:
+    with open("requirements-minimal.txt", "r", encoding = "utf-8") as fh:
         for line in fh.readlines():
             stripped_line = line.strip()
             if stripped_line == "" or stripped_line.startswith("#"):
                 continue
             requirements.append(stripped_line)
     return requirements
+
 
 setuptools.setup(name = "volatility3",
                  description = "Memory forensics framework",

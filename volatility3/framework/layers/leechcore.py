@@ -155,7 +155,6 @@ if HAS_LEECHCORE:
         def closed(self):
             return self._handle
 
-
     class LeechCoreHandler(resources.VolatilityHandler):
         """Handler for the invented `leechcore` scheme.  This is an unofficial scheme and not registered with IANA
         """

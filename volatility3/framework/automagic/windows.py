@@ -41,8 +41,8 @@ class DtbSelfReferential:
     """A generic DTB test which looks for a self-referential pointer at *any*
     index within the page."""
 
-    def __init__(self, layer_type: Type[layers.intel.Intel], ptr_struct: str, mask: int,
-                 valid_range: Iterable[int], reserved_bits: int) -> None:
+    def __init__(self, layer_type: Type[layers.intel.Intel], ptr_struct: str, mask: int, valid_range: Iterable[int],
+                 reserved_bits: int) -> None:
         self.layer_type = layer_type
         self.ptr_struct = ptr_struct
         self.ptr_size = struct.calcsize(ptr_struct)
@@ -130,7 +130,7 @@ class DtbSelfRefPae(DtbSelfReferential):
             expected_table = b''.join([struct.pack(self.ptr_struct, top_pae_page + (i * 0x1000)) for i in range(1, 5)])
             # Mask off the page bits of top level page map
             page_table_mask = b"\x00\xf0\xff\xff\xff\xff\xff\xff" * 4
-            page_table = data[top_pae_page - data_offset: top_pae_page - data_offset + (4 * self.ptr_size)]
+            page_table = data[top_pae_page - data_offset:top_pae_page - data_offset + (4 * self.ptr_size)]
             # Compare them
             anded_bytes = self._and_bytes(page_table, page_table_mask)
             if (anded_bytes == expected_table):
@@ -166,11 +166,10 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
     exclusion_list = ['mac', 'linux']
 
     # Group these by region so we only run over the data once
-    test_sets = [("Detecting Self-referential pointer for recent windows",
-                  [DtbSelfRef64bit()], [(0x150000, 0x150000), (0x650000, 0xa0000)]),
+    test_sets = [("Detecting Self-referential pointer for recent windows", [DtbSelfRef64bit()], [(0x150000, 0x150000),
+                                                                                                 (0x650000, 0xa0000)]),
                  ("Older windows fixed location self-referential pointers",
-                  [DtbSelfRefPae(), DtbSelfRef32bit(), DtbSelfRef64bitOldWindows()], [(0x30000, 0x1000000)])
-                 ]
+                  [DtbSelfRefPae(), DtbSelfRef32bit(), DtbSelfRef64bitOldWindows()], [(0x30000, 0x1000000)])]
 
     @classmethod
     def stack(cls,
@@ -252,8 +251,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                     new_layer_name = context.layers.free_layer_name("IntelLayer")
                     config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
                     context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
-                    context.config[
-                        interfaces.configuration.path_join(config_path, "page_map_offset")] = page_map_offset
+                    context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = page_map_offset
                     layer = test.layer_type(context,
                                             config_path = config_path,
                                             name = new_layer_name,
@@ -261,7 +259,8 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                     break
                 else:
                     vollog.debug(
-                        f"Max pointer for hit with test {test.__class__.__name__} not met: {hex(max_pointer)} > {hex(base_layer.maximum_address)}")
+                        f"Max pointer for hit with test {test.__class__.__name__} not met: {hex(max_pointer)} > {hex(base_layer.maximum_address)}"
+                    )
             if layer is not None and config_path:
                 break
 

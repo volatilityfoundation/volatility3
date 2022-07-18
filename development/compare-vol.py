@@ -57,14 +57,12 @@ class VolatilityTest:
         end_time = time.perf_counter()
         total_time = end_time - start_time
         print(f"    Tested  {self.short_name} {plugin.name} with image {image.filepath}: {total_time}")
-        with open(
-                os.path.join(self.output_directory, f'{self.short_name}_{plugin.name}_{image_hash}_stdout'),
-                "wb") as f:
+        with open(os.path.join(self.output_directory, f'{self.short_name}_{plugin.name}_{image_hash}_stdout'),
+                  "wb") as f:
             f.write(completed.stdout)
         if completed.stderr:
-            with open(
-                    os.path.join(self.output_directory, f'{self.short_name}_{plugin.name}_{image_hash}_stderr'),
-                    "wb") as f:
+            with open(os.path.join(self.output_directory, f'{self.short_name}_{plugin.name}_{image_hash}_stderr'),
+                      "wb") as f:
                 f.write(completed.stderr)
         return [total_time]
 

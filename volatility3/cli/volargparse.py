@@ -7,7 +7,6 @@ import gettext
 import re
 from typing import List, Optional, Sequence, Any, Union
 
-
 # This effectively overrides/monkeypatches the core argparse module to provide more helpful output around choices
 # We shouldn't really steal a private member from argparse, but otherwise we're just duplicating code
 

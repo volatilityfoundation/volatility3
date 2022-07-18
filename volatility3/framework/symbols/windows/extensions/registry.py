@@ -173,8 +173,7 @@ class CM_KEY_NODE(objects.StructType):
                     try:
                         subnode = hive.get_node(subnode_offset)
                     except (exceptions.InvalidAddressException, RegistryFormatException):
-                        vollog.log(constants.LOGLEVEL_VVV,
-                                   f"Failed to get node at {hex(subnode_offset)}, skipping")
+                        vollog.log(constants.LOGLEVEL_VVV, f"Failed to get node at {hex(subnode_offset)}, skipping")
                         continue
                     yield from self._get_subkeys_recursive(hive, subnode)
 
@@ -279,9 +278,9 @@ class CM_KEY_VALUE(objects.StructType):
             res, = struct.unpack("<Q", data)
             return res
         if self_type in [
-            RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK, RegValueTypes.REG_MULTI_SZ,
-            RegValueTypes.REG_BINARY, RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR, RegValueTypes.REG_RESOURCE_LIST,
-            RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST
+                RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK, RegValueTypes.REG_MULTI_SZ,
+                RegValueTypes.REG_BINARY, RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR, RegValueTypes.REG_RESOURCE_LIST,
+                RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST
         ]:
             return data
         if self_type == RegValueTypes.REG_NONE:

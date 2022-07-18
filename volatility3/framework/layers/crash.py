@@ -166,13 +166,12 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         try:
             header_data = base_layer.read(offset, cls._magic_struct.size)
         except exceptions.InvalidAddressException:
-            raise WindowsCrashDumpFormatException(base_layer.name,
-                                                  f"Crashdump header not found at offset {offset}")
+            raise WindowsCrashDumpFormatException(base_layer.name, f"Crashdump header not found at offset {offset}")
         (signature, validdump) = cls._magic_struct.unpack(header_data)
 
         if signature != cls.SIGNATURE:
-            raise WindowsCrashDumpFormatException(
-                base_layer.name, f"Bad signature 0x{signature:x} at file offset 0x{offset:x}")
+            raise WindowsCrashDumpFormatException(base_layer.name,
+                                                  f"Bad signature 0x{signature:x} at file offset 0x{offset:x}")
         if validdump != cls.VALIDDUMP:
             raise WindowsCrashDumpFormatException(base_layer.name,
                                                   f"Invalid dump 0x{validdump:x} at file offset 0x{offset:x}")

@@ -28,8 +28,9 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'info', component = info.Info, version = (1, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -40,7 +41,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                             description = "Extract listed processes",
                                             default = False,
                                             optional = True),
-            requirements.BooleanRequirement(name = 'physical', 
+            requirements.BooleanRequirement(name = 'physical',
                                             description = "Display physical offset instead of virtual",
                                             default = False,
                                             optional = True)
@@ -152,7 +153,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                                 "windows",
                                                                 "pe",
                                                                 class_types = pe.class_types)
-        memory = self.context.layers[kernel.layer_name] 
+        memory = self.context.layers[kernel.layer_name]
         if not isinstance(memory, layers.intel.Intel):
             raise TypeError("Primary layer is not an intel layer")
 
@@ -170,8 +171,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     vproc = self.virtual_process_from_physical(self.context, kernel.layer_name,
                                                                kernel.symbol_table_name, proc)
 
-                file_handle = pslist.PsList.process_dump(self.context, kernel.symbol_table_name,
-                                                         pe_table_name, vproc,
+                file_handle = pslist.PsList.process_dump(self.context, kernel.symbol_table_name, pe_table_name, vproc,
                                                          self.open)
                 file_output = "Error outputting file"
                 if file_handle:
@@ -184,10 +184,11 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             try:
                 yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
-                       proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count,
-                                               errors = 'replace'), format_hints.Hex(offset),
-                       proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(), proc.get_is_wow64(),
-                       proc.get_create_time(), proc.get_exit_time(), file_output))
+                           proc.ImageFileName.cast("string",
+                                                   max_length = proc.ImageFileName.vol.count,
+                                                   errors = 'replace'), format_hints.Hex(offset), proc.ActiveThreads,
+                           proc.get_handle_count(), proc.get_session_id(), proc.get_is_wow64(), proc.get_create_time(),
+                           proc.get_exit_time(), file_output))
             except exceptions.InvalidAddressException:
                 vollog.info(f"Invalid process found at address: {proc.vol.offset:x}. Skipping")
 
@@ -200,8 +201,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     def run(self):
         offsettype = "(V)" if not self.config['physical'] else "(P)"
-        return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str), 
-                                   (f"Offset{offsettype}", format_hints.Hex), ("Threads", int), 
-                                   ("Handles", int), ("SessionId", int), ("Wow64", bool),
-                                   ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime),
-                                   ("File output", str)], self._generator())
+        return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str),
+                                   (f"Offset{offsettype}", format_hints.Hex), ("Threads", int), ("Handles", int),
+                                   ("SessionId", int), ("Wow64", bool), ("CreateTime", datetime.datetime),
+                                   ("ExitTime", datetime.datetime), ("File output", str)], self._generator())

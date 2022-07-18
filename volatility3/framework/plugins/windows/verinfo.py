@@ -35,7 +35,8 @@ class VerInfo(interfaces.plugins.PluginInterface):
         ## TODO: we might add a regex option on the name later, but otherwise we're good
         ## TODO: and we don't want any CLI options from pslist, modules, or moddump
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.PluginRequirement(name = 'modules', plugin = modules.Modules, version = (1, 0, 0)),
@@ -202,4 +203,3 @@ class VerInfo(interfaces.plugins.PluginInterface):
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Base", format_hints.Hex), ("Name", str),
                                    ("Major", int), ("Minor", int), ("Product", int), ("Build", int)],
                                   self._generator(procs, mods, session_layers))
-

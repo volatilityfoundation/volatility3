@@ -19,7 +19,8 @@ class Psaux(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -95,6 +96,4 @@ class Psaux(plugins.PluginInterface):
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Argc", int), ("Arguments", str)],
                                   self._generator(
-                                      list_tasks(self.context,
-                                                 self.config['kernel'],
-                                                 filter_func = filter_func)))
+                                      list_tasks(self.context, self.config['kernel'], filter_func = filter_func)))

@@ -176,7 +176,7 @@ class BaseSymbolTableInterface:
         """
         try:
             self.set_type_class(name, clazz)
-            
+
             return True
         except ValueError:
             return False
@@ -317,9 +317,9 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
     @classmethod
     def get_requirements(cls) -> List[RequirementInterface]:
         return super().get_requirements() + [
-            requirements.IntRequirement(name = 'symbol_mask', description = 'Address mask for symbols', optional = True,
-                                        default = 0),
-            ]
+            requirements.IntRequirement(
+                name = 'symbol_mask', description = 'Address mask for symbols', optional = True, default = 0),
+        ]
 
 
 class NativeTableInterface(BaseSymbolTableInterface):

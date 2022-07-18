@@ -39,7 +39,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_VACB', extensions.VACB)
         self.set_type_class('_POOL_TRACKER_BIG_PAGES', pool.POOL_TRACKER_BIG_PAGES)
         self.set_type_class('_IMAGE_DOS_HEADER', pe.IMAGE_DOS_HEADER)
-        
+
         # Might not necessarily defined in every version of windows
         self.optional_set_type_class('_IMAGE_NT_HEADERS', pe.IMAGE_NT_HEADERS)
         self.optional_set_type_class('_IMAGE_NT_HEADERS64', pe.IMAGE_NT_HEADERS)
@@ -55,10 +55,9 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 
         # these don't exist in windows XP
         self.optional_set_type_class('_MMADDRESS_NODE', extensions.MMVAD_SHORT)
-        
+
         # these were introduced starting in windows 8
         self.optional_set_type_class('_MM_AVL_NODE', extensions.MMVAD_SHORT)
-        
+
         # these were introduced starting in windows 7
         self.optional_set_type_class('_RTL_BALANCED_NODE', extensions.MMVAD_SHORT)
-        

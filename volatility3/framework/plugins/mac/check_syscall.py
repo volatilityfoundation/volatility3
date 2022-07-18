@@ -23,7 +23,8 @@ class Check_syscall(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0))
@@ -47,8 +48,8 @@ class Check_syscall(plugins.PluginInterface):
             if not call_addr or call_addr == 0:
                 continue
 
-            module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers,
-                                                                              call_addr, self.config['kernel'])
+            module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, call_addr,
+                                                                              self.config['kernel'])
 
             yield (0, (format_hints.Hex(table.vol.offset), "SysCall", i, format_hints.Hex(call_addr), module_name,
                        symbol_name))

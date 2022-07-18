@@ -139,7 +139,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                          vlayer: layers.intel.Intel,
                          progress_callback: constants.ProgressCallback = None) -> Optional[ValidKernelType]:
 
-        def test_virtual_kernel(physical_layer_name, virtual_layer_name: str, kernel: Dict[str, Any]) -> Optional[ValidKernelType]:
+        def test_virtual_kernel(physical_layer_name, virtual_layer_name: str,
+                                kernel: Dict[str, Any]) -> Optional[ValidKernelType]:
             # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
             if kernel['mz_offset'] is None or not isinstance(kernel['mz_offset'], int):
                 # Rule out kernels that couldn't find a suitable MZ header
@@ -159,7 +160,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                              vlayer: layers.intel.Intel,
                              progress_callback: constants.ProgressCallback = None) -> Optional[ValidKernelType]:
 
-        def test_physical_kernel(physical_layer_name:str , virtual_layer_name: str, kernel: Dict[str, Any]) -> Optional[ValidKernelType]:
+        def test_physical_kernel(physical_layer_name: str, virtual_layer_name: str,
+                                 kernel: Dict[str, Any]) -> Optional[ValidKernelType]:
             # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
             if kernel['mz_offset'] is None or not isinstance(kernel['mz_offset'], int):
                 # Rule out kernels that couldn't find a suitable MZ header

@@ -44,8 +44,7 @@ class LimeLayer(segmented.SegmentedLayer):
             start, end = self._check_header(base_layer, offset)
 
             if start < maxaddr or end < start:
-                raise LimeFormatException(
-                    self.name, f"Bad start/end 0x{start:x}/0x{end:x} at file offset 0x{offset:x}")
+                raise LimeFormatException(self.name, f"Bad start/end 0x{start:x}/0x{end:x} at file offset 0x{offset:x}")
 
             segment_length = end - start + 1
             segments.append((start, offset + header_size, segment_length, segment_length))
@@ -62,14 +61,12 @@ class LimeLayer(segmented.SegmentedLayer):
         try:
             header_data = base_layer.read(offset, cls._header_struct.size)
         except exceptions.InvalidAddressException:
-            raise LimeFormatException(base_layer.name,
-                                      f"Offset 0x{offset:0x} does not exist within the base layer")
+            raise LimeFormatException(base_layer.name, f"Offset 0x{offset:0x} does not exist within the base layer")
         (magic, version, start, end, reserved) = cls._header_struct.unpack(header_data)
         if magic != cls.MAGIC:
             raise LimeFormatException(base_layer.name, f"Bad magic 0x{magic:x} at file offset 0x{offset:x}")
         if version != cls.VERSION:
-            raise LimeFormatException(base_layer.name,
-                                      f"Unexpected version {version:d} at file offset 0x{offset:x}")
+            raise LimeFormatException(base_layer.name, f"Unexpected version {version:d} at file offset 0x{offset:x}")
         return start, end
 
 

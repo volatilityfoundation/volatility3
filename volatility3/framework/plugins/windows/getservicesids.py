@@ -53,8 +53,9 @@ class GetServiceSIDs(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
         ]
 

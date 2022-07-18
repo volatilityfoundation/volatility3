@@ -17,7 +17,8 @@ class Maps(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -46,6 +47,4 @@ class Maps(interfaces.plugins.PluginInterface):
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start", format_hints.Hex),
                                    ("End", format_hints.Hex), ("Protection", str), ("Map Name", str)],
                                   self._generator(
-                                      list_tasks(self.context,
-                                                 self.config['kernel'],
-                                                 filter_func = filter_func)))
+                                      list_tasks(self.context, self.config['kernel'], filter_func = filter_func)))

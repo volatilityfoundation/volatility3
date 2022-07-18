@@ -35,7 +35,6 @@ except ImportError:
 
 vollog = logging.getLogger(__name__)
 
-
 # TODO: Type-annotating the ResourceAccessor.open method is difficult because HTTPResponse is not actually an IO[Any] type
 #   fix this
 
@@ -110,9 +109,8 @@ class ResourceAccessor(object):
             if parsed_url.scheme == 'file' and (parsed_url.netloc or parsed_url.path.startswith('//')):
                 # Change the netloc to '/' and then prepend the netloc to the path
                 # Urlunparse will remove extra initial slashes from path, hence setting netloc
-                new_url = urllib.parse.urlunparse((parsed_url.scheme, '/',
-                                                   '/' + parsed_url.netloc + parsed_url.path, parsed_url.params,
-                                                   parsed_url.query, parsed_url.fragment))
+                new_url = urllib.parse.urlunparse((parsed_url.scheme, '/', '/' + parsed_url.netloc + parsed_url.path,
+                                                   parsed_url.params, parsed_url.query, parsed_url.fragment))
                 vollog.log(constants.LOGLEVEL_VVVV, f'UNC path detected, converted path {url} to {new_url}')
                 url = new_url
 
@@ -265,8 +263,7 @@ class JarHandler(VolatilityHandler):
 
             zipsplit = remainder.split("!")
             if len(zipsplit) != 2:
-                vollog.log(constants.LOGLEVEL_VVV,
-                           f"Path did not contain exactly one fragment indicator: {remainder}")
+                vollog.log(constants.LOGLEVEL_VVV, f"Path did not contain exactly one fragment indicator: {remainder}")
                 return None
 
             zippath, filepath = zipsplit
@@ -275,6 +272,7 @@ class JarHandler(VolatilityHandler):
 
 
 class OfflineHandler(VolatilityHandler):
+
     @staticmethod
     def default_open(req: urllib.request.Request) -> Optional[Any]:
         if constants.OFFLINE and req.type in ['http', 'https']:

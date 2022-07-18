@@ -87,8 +87,7 @@ class HierarchicalDict(collections.abc.Mapping):
             for k, v in initial_dict.items():
                 self[k] = v
         elif initial_dict is not None:
-            raise TypeError(
-                f"Initial_dict must be a dictionary or JSON string containing a dictionary: {initial_dict}")
+            raise TypeError(f"Initial_dict must be a dictionary or JSON string containing a dictionary: {initial_dict}")
 
     def __eq__(self, other):
         """Define equality between HierarchicalDicts"""

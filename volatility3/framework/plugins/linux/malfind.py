@@ -20,7 +20,8 @@ class Malfind(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Linux kernel',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',

@@ -274,7 +274,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         parent node otherwise, after all other children."""
         return self._insert(parent, None, values)
 
-    def _insert(self, parent: Optional[interfaces.renderers.TreeNode], position: Optional[int], values: Any) -> TreeNode:
+    def _insert(self, parent: Optional[interfaces.renderers.TreeNode], position: Optional[int],
+                values: Any) -> TreeNode:
         """Inserts an element into the tree at a specific position."""
         parent_path = ""
         children = self._find_children(parent)

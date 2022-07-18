@@ -26,7 +26,8 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Linux kernel',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -99,9 +100,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         for row in self._generator(
-                pslist.PsList.list_tasks(self.context,
-                                         self.config['kernel'],
-                                         filter_func = filter_func)):
+                pslist.PsList.list_tasks(self.context, self.config['kernel'], filter_func = filter_func)):
             _depth, row_data = row
             description = f"{row_data[0]} ({row_data[1]}): \"{row_data[3]}\""
             yield (description, timeliner.TimeLinerType.CREATED, row_data[2])

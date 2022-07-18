@@ -27,8 +27,9 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'info', component = info.Info, version = (1, 0, 0)),
             requirements.ListRequirement(name = 'pid',

@@ -27,8 +27,9 @@ class BigPools(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.StringRequirement(name = 'tags',
                                            description = "Comma separated list of pool tags to filter pools returned",
                                            optional = True,

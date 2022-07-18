@@ -155,7 +155,8 @@ class POOL_HEADER(objects.StructType):
                 type_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + type_name).size
                 if constraint.additional_structures:
                     for additional_structure in constraint.additional_structures:
-                        type_size += self._context.symbol_space.get_type(symbol_table_name + constants.BANG + additional_structure).size
+                        type_size += self._context.symbol_space.get_type(symbol_table_name + constants.BANG +
+                                                                         additional_structure).size
 
                 rounded_size = conversion.round(type_size, alignment, up = True)
 

@@ -609,7 +609,6 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
                 return template.vol.subtype
             raise IndexError(f"Member not present in array template: {child}")
 
-
     @overload
     def __getitem__(self, i: int) -> interfaces.objects.Template:
         ...
@@ -731,7 +730,6 @@ class AggregateType(interfaces.objects.ObjectInterface):
                 raise IndexError(f"Member not present in template: {child}")
             return retlist[1]
 
-
         @classmethod
         def has_member(cls, template: interfaces.objects.Template, member_name: str) -> bool:
             """Returns whether the object would contain a member called
@@ -809,8 +807,7 @@ class AggregateType(interfaces.objects.ObjectInterface):
         for agg_type in AggregateTypes:
             if isinstance(self, agg_type):
                 agg_name = agg_type.__name__
-        raise TypeError(
-            f"{agg_name}s cannot be written to directly, individual members must be written instead")
+        raise TypeError(f"{agg_name}s cannot be written to directly, individual members must be written instead")
 
 
 class StructType(AggregateType):

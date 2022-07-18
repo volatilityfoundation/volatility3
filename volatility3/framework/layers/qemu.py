@@ -56,14 +56,15 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
 
     distro_re = r"(\w+[\d{1,2}\.]*)"
 
-    pci_hole_table = {re.compile(r"^pc-i440fx-([23456789]|\d\d+)\.\d$"): (0xe0000000, 0xc0000000, 0x100000000),
-                      re.compile(r"^pc-i440fx-[01]\.\d$"): (0xe0000000, 0xe0000000, 0x100000000),
-                      re.compile(r"^pc-q35-\d\.\d$"): (0xb0000000, 0x80000000, 0x100000000),
-                      re.compile(r"^microvm$"): (0xc0000000, 0xc0000000, 0x100000000),
-                      re.compile(r"^xen$"): (0xf0000000, 0xf0000000, 0x100000000),
-                      re.compile(r"^pc-i440fx-" + distro_re + r"$"): (0xe0000000, 0xc0000000, 0x100000000),
-                      re.compile(r"^pc-q35-" + distro_re + r"$"): (0xb0000000, 0x80000000, 0x100000000),
-                      }
+    pci_hole_table = {
+        re.compile(r"^pc-i440fx-([23456789]|\d\d+)\.\d$"): (0xe0000000, 0xc0000000, 0x100000000),
+        re.compile(r"^pc-i440fx-[01]\.\d$"): (0xe0000000, 0xe0000000, 0x100000000),
+        re.compile(r"^pc-q35-\d\.\d$"): (0xb0000000, 0x80000000, 0x100000000),
+        re.compile(r"^microvm$"): (0xc0000000, 0xc0000000, 0x100000000),
+        re.compile(r"^xen$"): (0xf0000000, 0xf0000000, 0x100000000),
+        re.compile(r"^pc-i440fx-" + distro_re + r"$"): (0xe0000000, 0xc0000000, 0x100000000),
+        re.compile(r"^pc-q35-" + distro_re + r"$"): (0xb0000000, 0x80000000, 0x100000000),
+    }
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,
@@ -145,7 +146,8 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 if size_array.get(b'pc.ram', highest_possible_maximum) < self._pci_hole_minimum:
                     # Turns off the pci_hole if it's not supposed to be there
                     vollog.debug(
-                        f"QEVM turning off PCI hole due to small image size: 0x{size_array.get(b'pc.ram'):x} < 0x{self._pci_hole_minimum:x}")
+                        f"QEVM turning off PCI hole due to small image size: 0x{size_array.get(b'pc.ram'):x} < 0x{self._pci_hole_minimum:x}"
+                    )
                     self._pci_hole_start, self._pci_hole_end = 0, 0
 
             if flags & (self.SEGMENT_FLAG_COMPRESS | self.SEGMENT_FLAG_PAGE):
@@ -208,7 +210,8 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                                                   offset = index,
                                                   layer_name = self._base_layer)
                 self._architecture = self.context.object(self._qemu_table_name + constants.BANG + 'string',
-                                                         offset = index + 4, layer_name = self._base_layer,
+                                                         offset = index + 4,
+                                                         layer_name = self._base_layer,
                                                          max_length = section_len)
                 index += 4 + section_len
             elif section_byte == self.QEVM_SECTION_START or section_byte == self.QEVM_SECTION_FULL:

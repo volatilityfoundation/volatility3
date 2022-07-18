@@ -27,8 +27,9 @@ class Lsadump(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'hashdump', component = hashdump.Hashdump, version = (1, 1, 0)),
             requirements.VersionRequirement(name = 'hivelist', component = hivelist.HiveList, version = (1, 0, 0))
         ]
@@ -84,7 +85,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
             rc4key = md5.digest()
 
             rc4 = ARC4.new(rc4key)
-            lsa_key = rc4.decrypt(obf_lsa_key[12:60]) # lgtm [py/weak-cryptographic-algorithm]
+            lsa_key = rc4.decrypt(obf_lsa_key[12:60])  # lgtm [py/weak-cryptographic-algorithm]
             lsa_key = lsa_key[0x10:0x20]
         else:
             lsa_key = cls.decrypt_aes(obf_lsa_key, bootkey)
@@ -125,12 +126,12 @@ class Lsadump(interfaces.plugins.PluginInterface):
             des_key = hashdump.Hashdump.sidbytes_to_key(block_key)
             des = DES.new(des_key, DES.MODE_ECB)
             enc_block = enc_block + b"\x00" * int(abs(8 - len(enc_block)) % 8)
-            decrypted_data += des.decrypt(enc_block) # lgtm [py/weak-cryptographic-algorithm]
+            decrypted_data += des.decrypt(enc_block)  # lgtm [py/weak-cryptographic-algorithm]
             j += 7
             if len(key[j:j + 7]) < 7:
                 j = len(key[j:j + 7])
 
-        (dec_data_len,) = unpack("<L", decrypted_data[:4])
+        (dec_data_len, ) = unpack("<L", decrypted_data[:4])
 
         return decrypted_data[8:8 + dec_data_len]
 
@@ -138,8 +139,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
 
         kernel = self.context.modules[self.config['kernel']]
 
-        vista_or_later = versions.is_vista_or_later(context = self.context,
-                                                    symbol_table = kernel.symbol_table_name)
+        vista_or_later = versions.is_vista_or_later(context = self.context, symbol_table = kernel.symbol_table_name)
 
         bootkey = hashdump.Hashdump.get_bootkey(syshive)
         lsakey = self.get_lsa_key(sechive, bootkey, vista_or_later)
@@ -158,9 +158,8 @@ class Lsadump(interfaces.plugins.PluginInterface):
 
         for key in secrets_key.get_subkeys():
 
-            sec_val_key = hashdump.Hashdump.get_hive_key(sechive,
-                                                         'Policy\\Secrets\\' + key.get_key_path().split('\\')[
-                                                             3] + '\\CurrVal')
+            sec_val_key = hashdump.Hashdump.get_hive_key(
+                sechive, 'Policy\\Secrets\\' + key.get_key_path().split('\\')[3] + '\\CurrVal')
             if not sec_val_key:
                 continue
 

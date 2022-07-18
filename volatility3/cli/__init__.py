@@ -426,9 +426,7 @@ class CommandLine:
         else:
             general = "Volatility encountered an unexpected situation."
             detail = ""
-            caused_by = [
-                "Please re-run using with -vvv and file a bug with the output", f"at {constants.BUG_URL}"
-            ]
+            caused_by = ["Please re-run using with -vvv and file a bug with the output", f"at {constants.BUG_URL}"]
 
         # Code that actually renders the exception
         output = sys.stderr
@@ -488,8 +486,7 @@ class CommandLine:
                             scheme = parse.urlparse(value).scheme
                             if not scheme or len(scheme) <= 1:
                                 if not os.path.exists(value):
-                                    raise FileNotFoundError(
-                                        f"Non-existent file {value} passed to URIRequirement")
+                                    raise FileNotFoundError(f"Non-existent file {value} passed to URIRequirement")
                                 value = f"file://{request.pathname2url(os.path.abspath(value))}"
                     if isinstance(requirement, requirements.ListRequirement):
                         if not isinstance(value, list):

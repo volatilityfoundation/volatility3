@@ -22,8 +22,9 @@ class Envars(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,

@@ -142,10 +142,7 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
     This object is OS-independent.
     """
 
-    def __init__(self,
-                 context: ContextInterface,
-                 config_path: str,
-                 name: str) -> None:
+    def __init__(self, context: ContextInterface, config_path: str, name: str) -> None:
         """Constructs a new os-independent module.
 
         Args:
@@ -178,8 +175,10 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
         config = super().build_configuration()
 
         config['offset'] = self.config['offset']
-        subconfigs = {'symbol_table_name': self.context.symbol_space[self.symbol_table_name].build_configuration(),
-                      'layer_name': self.context.layers[self.layer_name].build_configuration()}
+        subconfigs = {
+            'symbol_table_name': self.context.symbol_space[self.symbol_table_name].build_configuration(),
+            'layer_name': self.context.layers[self.layer_name].build_configuration()
+        }
 
         if self.layer_name != self._native_layer_name:
             subconfigs['native_layer_name'] = self.context.layers[self._native_layer_name].build_configuration()

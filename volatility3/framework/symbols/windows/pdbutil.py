@@ -290,8 +290,13 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
             }
 
     @classmethod
-    def symbol_table_from_pdb(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
-                              pdb_name: str, module_offset: int = None, module_size: int = None) -> str:
+    def symbol_table_from_pdb(cls,
+                              context: interfaces.context.ContextInterface,
+                              config_path: str,
+                              layer_name: str,
+                              pdb_name: str,
+                              module_offset: int = None,
+                              module_size: int = None) -> str:
         """Creates symbol table for a module in the specified layer_name.
 
         Searches the memory section of the loaded module for its PDB GUID
@@ -312,8 +317,13 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         return symbol_table_name
 
     @classmethod
-    def _modtable_from_pdb(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
-                           pdb_name: str, module_offset: int = None, module_size: int = None,
+    def _modtable_from_pdb(cls,
+                           context: interfaces.context.ContextInterface,
+                           config_path: str,
+                           layer_name: str,
+                           pdb_name: str,
+                           module_offset: int = None,
+                           module_size: int = None,
                            create_module: bool = False) -> Tuple[Optional[str], Optional[str]]:
 
         if module_offset is None:
@@ -329,8 +339,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
                              end = module_offset + module_size))
 
         if not guids:
-            raise exceptions.VolatilityException(
-                f"Did not find GUID of {pdb_name} in module @ 0x{module_offset:x}!")
+            raise exceptions.VolatilityException(f"Did not find GUID of {pdb_name} in module @ 0x{module_offset:x}!")
 
         guid = guids[0]
 
@@ -338,24 +347,33 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
 
         module_name = guid["pdb_name"].strip('.pdb')
 
-        symbol_table_name = cls.load_windows_symbol_table(context,
-                                                          guid["GUID"],
-                                                          guid["age"],
-                                                          guid["pdb_name"],
-                                                          "volatility3.framework.symbols.intermed.IntermediateSymbolTable",
-                                                          config_path = config_path)
+        symbol_table_name = cls.load_windows_symbol_table(
+            context,
+            guid["GUID"],
+            guid["age"],
+            guid["pdb_name"],
+            "volatility3.framework.symbols.intermed.IntermediateSymbolTable",
+            config_path = config_path)
 
         new_module_name = None
         if create_module:
-            new_module = contexts.Module.create(context, module_name, layer_name, offset = guid['mz_offset'],
+            new_module = contexts.Module.create(context,
+                                                module_name,
+                                                layer_name,
+                                                offset = guid['mz_offset'],
                                                 symbol_table_name = symbol_table_name)
             new_module_name = new_module.name
 
         return new_module_name, symbol_table_name
 
     @classmethod
-    def module_from_pdb(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
-                        pdb_name: str, module_offset: int = None, module_size: int = None) -> str:
+    def module_from_pdb(cls,
+                        context: interfaces.context.ContextInterface,
+                        config_path: str,
+                        layer_name: str,
+                        pdb_name: str,
+                        module_offset: int = None,
+                        module_size: int = None) -> str:
         """Creates a module in the specified layer_name based on a pdb name.
 
         Searches the memory section of the loaded module for its PDB GUID
@@ -372,8 +390,13 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
             The name of the constructed and loaded symbol table
         """
 
-        module_name, _ = cls._modtable_from_pdb(context, config_path, layer_name, pdb_name, module_offset,
-                                                module_size, create_module = True)
+        module_name, _ = cls._modtable_from_pdb(context,
+                                                config_path,
+                                                layer_name,
+                                                pdb_name,
+                                                module_offset,
+                                                module_size,
+                                                create_module = True)
 
         return module_name
 
@@ -399,8 +422,8 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
         self._pdb_names = pdb_names
 
     def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[str, Any, bytes, int], None, None]:
-        pattern = b'RSDS' + (b'.' * self._RSDS_format.size) + b'(' + b'|'.join(
-            [re.escape(x) for x in self._pdb_names]) + b')\x00'
+        pattern = b'RSDS' + (b'.' * self._RSDS_format.size) + b'(' + b'|'.join([re.escape(x)
+                                                                                for x in self._pdb_names]) + b')\x00'
         for match in re.finditer(pattern, data, flags = re.DOTALL):
             pdb_name = data[match.start(0) + 4 + self._RSDS_format.size:match.start(0) + len(match.group()) - 1]
             if pdb_name in self._pdb_names:

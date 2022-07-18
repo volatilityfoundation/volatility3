@@ -19,20 +19,22 @@ class PsList(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Linux kernel',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
                                          optional = True),
-            requirements.BooleanRequirement(name="threads",
-                                            description="Include user threads",
-                                            optional=True,
-                                            default=False),
-            requirements.BooleanRequirement(name="decorate_comm",
-                                            description="Show `user threads` comm in curly brackets, and `kernel threads` comm in square brackets",
-                                            optional=True,
-                                            default=False),
+            requirements.BooleanRequirement(name = "threads",
+                                            description = "Include user threads",
+                                            optional = True,
+                                            default = False),
+            requirements.BooleanRequirement(
+                name = "decorate_comm",
+                description = "Show `user threads` comm in curly brackets, and `kernel threads` comm in square brackets",
+                optional = True,
+                default = False),
         ]
 
     @classmethod
@@ -57,10 +59,9 @@ class PsList(interfaces.plugins.PluginInterface):
         else:
             return lambda _: False
 
-    def _get_task_fields(
-            self,
-            task: interfaces.objects.ObjectInterface,
-            decorate_comm: bool = False) -> Tuple[int, int, int, str]:
+    def _get_task_fields(self,
+                         task: interfaces.objects.ObjectInterface,
+                         decorate_comm: bool = False) -> Tuple[int, int, int, str]:
         """Extract the fields needed for the final output
 
         Args:
@@ -85,11 +86,7 @@ class PsList(interfaces.plugins.PluginInterface):
         task_fields = (format_hints.Hex(task.vol.offset), pid, tid, ppid, name)
         return task_fields
 
-    def _generator(
-            self,
-            pid_filter: Callable[[Any], bool],
-            include_threads: bool = False,
-            decorate_comm: bool = False):
+    def _generator(self, pid_filter: Callable[[Any], bool], include_threads: bool = False, decorate_comm: bool = False):
         """Generates the tasks list.
 
         Args:
@@ -104,20 +101,16 @@ class PsList(interfaces.plugins.PluginInterface):
         Yields:
             Each rows
         """
-        for task in self.list_tasks(self.context,
-                                    self.config['kernel'],
-                                    pid_filter,
-                                    include_threads):
+        for task in self.list_tasks(self.context, self.config['kernel'], pid_filter, include_threads):
             row = self._get_task_fields(task, decorate_comm)
             yield (0, row)
 
     @classmethod
-    def list_tasks(
-            cls,
-            context: interfaces.context.ContextInterface,
-            vmlinux_module_name: str,
-            filter_func: Callable[[int], bool] = lambda _: False,
-            include_threads: bool = False) -> Iterable[interfaces.objects.ObjectInterface]:
+    def list_tasks(cls,
+                   context: interfaces.context.ContextInterface,
+                   vmlinux_module_name: str,
+                   filter_func: Callable[[int], bool] = lambda _: False,
+                   include_threads: bool = False) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer.
 
         Args:

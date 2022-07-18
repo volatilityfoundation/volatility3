@@ -30,7 +30,8 @@ class Check_syscall(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Linux kernel',
                                            architectures = ["Intel32", "Intel64"]),
         ]
 
@@ -64,9 +65,10 @@ class Check_syscall(plugins.PluginInterface):
         is a fast way to determine the number of system calls, but not the most
         accurate."""
 
-        return len(
-            [sym for sym in self.context.symbol_space[vmlinux.symbol_table_name].symbols if
-             sym.startswith("__syscall_meta__")])
+        return len([
+            sym for sym in self.context.symbol_space[vmlinux.symbol_table_name].symbols
+            if sym.startswith("__syscall_meta__")
+        ])
 
     def _get_table_info_other(self, table_addr, ptr_sz, vmlinux):
         table_size_meta = self._get_table_size_meta(vmlinux)

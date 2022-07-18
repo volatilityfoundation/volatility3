@@ -25,13 +25,14 @@ class Lsmod(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Linux kernel',
                                            architectures = ["Intel32", "Intel64"]),
         ]
 
     @classmethod
-    def list_modules(cls, context: interfaces.context.ContextInterface, vmlinux_module_name: str) -> Iterable[
-        interfaces.objects.ObjectInterface]:
+    def list_modules(cls, context: interfaces.context.ContextInterface,
+                     vmlinux_module_name: str) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the modules in the primary layer.
 
         Args:

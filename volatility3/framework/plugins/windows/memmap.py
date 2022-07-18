@@ -22,8 +22,9 @@ class Memmap(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.IntRequirement(name = 'pid',
                                         description = "Process ID to include (all other processes are excluded)",
@@ -33,7 +34,6 @@ class Memmap(interfaces.plugins.PluginInterface):
                                             default = False,
                                             optional = True)
         ]
-
 
     def _generator(self, procs):
         for proc in procs:
@@ -69,8 +69,7 @@ class Memmap(interfaces.plugins.PluginInterface):
                             vollog.debug("Unable to write {}'s address {} to {}".format(
                                 proc_layer_name, offset, file_handle.preferred_filename))
 
-                    yield (0, (format_hints.Hex(offset), format_hints.Hex(mapped_offset),
-                               format_hints.Hex(mapped_size),
+                    yield (0, (format_hints.Hex(offset), format_hints.Hex(mapped_offset), format_hints.Hex(mapped_size),
                                format_hints.Hex(file_offset), file_output))
 
                     file_offset += mapped_size

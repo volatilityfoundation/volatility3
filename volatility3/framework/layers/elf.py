@@ -55,8 +55,7 @@ class Elf64Layer(segmented.SegmentedLayer):
         try:
             header_data = base_layer.read(offset, cls._header_struct.size)
         except exceptions.InvalidAddressException:
-            raise ElfFormatException(base_layer.name,
-                                     f"Offset 0x{offset:0x} does not exist within the base layer")
+            raise ElfFormatException(base_layer.name, f"Offset 0x{offset:0x} does not exist within the base layer")
         (magic, elf_class, elf_data_encoding, elf_version) = cls._header_struct.unpack(header_data)
         if magic != cls.MAGIC:
             raise ElfFormatException(base_layer.name, f"Bad magic 0x{magic:x} at file offset 0x{offset:x}")

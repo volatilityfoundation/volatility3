@@ -25,7 +25,8 @@ class Strings(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -42,7 +43,7 @@ class Strings(interfaces.plugins.PluginInterface):
 
     def _generator(self) -> Generator[Tuple, None, None]:
         """Generates results from a strings file."""
-        string_list: List[Tuple[int,bytes]] = []
+        string_list: List[Tuple[int, bytes]] = []
 
         # Test strings file format is accurate
         accessor = resources.ResourceAccessor()
@@ -66,7 +67,7 @@ class Strings(interfaces.plugins.PluginInterface):
                                        pid_list = self.config['pid'])
 
         last_prog: float = 0
-        line_count: float  = 0
+        line_count: float = 0
         num_strings = len(string_list)
         for offset, string in string_list:
             line_count += 1

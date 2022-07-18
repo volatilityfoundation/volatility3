@@ -9,7 +9,7 @@ import zipfile
 
 required_python_version = (3, 6, 0)
 if (sys.version_info.major != required_python_version[0] or sys.version_info.minor < required_python_version[1] or
-        (sys.version_info.minor == required_python_version[1] and sys.version_info.micro < required_python_version[2])):
+    (sys.version_info.minor == required_python_version[1] and sys.version_info.micro < required_python_version[2])):
     raise RuntimeError(
         "Volatility framework requires python version {}.{}.{} or greater".format(*required_python_version))
 
@@ -20,7 +20,6 @@ import os
 from typing import Any, Dict, Generator, List, Tuple, Type, TypeVar
 
 from volatility3.framework import constants, interfaces
-
 
 # ##
 #
@@ -93,8 +92,7 @@ def import_files(base_module, ignore_errors: bool = False) -> List[str]:
     failures = []
     if not isinstance(base_module.__path__, list):
         raise TypeError("[base_module].__path__ must be a list of paths")
-    vollog.log(constants.LOGLEVEL_VVVV,
-               f"Importing from the following paths: {', '.join(base_module.__path__)}")
+    vollog.log(constants.LOGLEVEL_VVVV, f"Importing from the following paths: {', '.join(base_module.__path__)}")
     for path in base_module.__path__:
         for root, _, files in os.walk(path, followlinks = True):
             # TODO: Figure out how to import pycache files
@@ -122,8 +120,7 @@ def import_files(base_module, ignore_errors: bool = False) -> List[str]:
                     if _filter_files(filename):
                         modpath = os.path.join(root[len(path) + len(os.path.sep):], filename[:filename.rfind(".")])
                         submodule = modpath.replace(os.path.sep, ".")
-                        failures += import_file(base_module.__name__ + '.' + submodule,
-                                                os.path.join(root, filename),
+                        failures += import_file(base_module.__name__ + '.' + submodule, os.path.join(root, filename),
                                                 ignore_errors)
 
     return failures
@@ -131,8 +128,8 @@ def import_files(base_module, ignore_errors: bool = False) -> List[str]:
 
 def _filter_files(filename: str):
     """Ensures that a filename traversed is an importable python file"""
-    return (filename.endswith(".py") or filename.endswith(".pyc") or filename.endswith(
-        ".pyo")) and not filename.startswith("__")
+    return (filename.endswith(".py") or filename.endswith(".pyc")
+            or filename.endswith(".pyo")) and not filename.startswith("__")
 
 
 def import_file(module: str, path: str, ignore_errors: bool = False) -> List[str]:

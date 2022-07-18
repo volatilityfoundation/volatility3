@@ -24,8 +24,9 @@ class Callbacks(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'ssdt', plugin = ssdt.SSDT, version = (1, 0, 0)),
         ]
 
@@ -109,8 +110,8 @@ class Callbacks(interfaces.plugins.PluginInterface):
                     yield symbol_name, callback.Callback, None
 
     @classmethod
-    def _list_registry_callbacks_legacy(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
-                                        callback_table_name: str) -> Iterable[Tuple[str, int, None]]:
+    def _list_registry_callbacks_legacy(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                                        symbol_table: str, callback_table_name: str) -> Iterable[Tuple[str, int, None]]:
         """
         Lists all registry callbacks from the old format via the CmpCallBackVector.
         """
@@ -121,7 +122,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
 
         symbol_offset = ntkrnlmp.get_symbol("CmpCallBackVector").address
         symbol_count_offset = ntkrnlmp.get_symbol("CmpCallBackCount").address
-
 
         callback_count = ntkrnlmp.object(object_type = "unsigned int", offset = symbol_count_offset)
 
@@ -143,8 +143,8 @@ class Callbacks(interfaces.plugins.PluginInterface):
                 yield "CmRegisterCallback", callback.Function, None
 
     @classmethod
-    def _list_registry_callbacks_new(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
-                                     callback_table_name: str) -> Iterable[Tuple[str, int, None]]:
+    def _list_registry_callbacks_new(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                                     symbol_table: str, callback_table_name: str) -> Iterable[Tuple[str, int, None]]:
         """
         Lists all registry callbacks via the CallbackListHead.
         """
@@ -232,10 +232,12 @@ class Callbacks(interfaces.plugins.PluginInterface):
                 continue
 
             try:
-                component: Union[
-                    interfaces.renderers.BaseAbsentValue, interfaces.objects.ObjectInterface] = ntkrnlmp.object(
-                    "string", absolute = True, offset = callback.Component, max_length = 64, errors = "replace"
-                )
+                component: Union[interfaces.renderers.BaseAbsentValue,
+                                 interfaces.objects.ObjectInterface] = ntkrnlmp.object("string",
+                                                                                       absolute = True,
+                                                                                       offset = callback.Component,
+                                                                                       max_length = 64,
+                                                                                       errors = "replace")
             except exceptions.InvalidAddressException:
                 component = renderers.UnreadableValue()
 
@@ -288,8 +290,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
 
         kernel = self.context.modules[self.config['kernel']]
 
-        callback_table_name = self.create_callback_table(self.context, kernel.symbol_table_name,
-                                                         self.config_path)
+        callback_table_name = self.create_callback_table(self.context, kernel.symbol_table_name, self.config_path)
 
         collection = ssdt.SSDT.build_module_collection(self.context, kernel.layer_name, kernel.symbol_table_name)
 
@@ -297,8 +298,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
                             self.list_bugcheck_reason_callbacks, self.list_registry_callbacks)
 
         for callback_method in callback_methods:
-            for callback_type, callback_address, callback_detail in callback_method(self.context,
-                                                                                    kernel.layer_name,
+            for callback_type, callback_address, callback_detail in callback_method(self.context, kernel.layer_name,
                                                                                     kernel.symbol_table_name,
                                                                                     callback_table_name):
 

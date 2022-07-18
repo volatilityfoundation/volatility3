@@ -47,7 +47,8 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'vadinfo', component = vadinfo.VadInfo, version = (2, 0, 0)),
@@ -85,8 +86,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         return pe_ret
 
-    def _check_for_skeleton_key_vad(self, csystem: interfaces.objects.ObjectInterface,
-                                    cryptdll_base: int,
+    def _check_for_skeleton_key_vad(self, csystem: interfaces.objects.ObjectInterface, cryptdll_base: int,
                                     cryptdll_size: int) -> bool:
         """
         Checks if Initialize and/or Decrypt is hooked by determining if
@@ -102,8 +102,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         return not ((cryptdll_base <= csystem.Initialize <= cryptdll_base + cryptdll_size) and \
                     (cryptdll_base <= csystem.Decrypt <= cryptdll_base + cryptdll_size))
 
-    def _check_for_skeleton_key_symbols(self, csystem: interfaces.objects.ObjectInterface,
-                                        rc4HmacInitialize: int,
+    def _check_for_skeleton_key_symbols(self, csystem: interfaces.objects.ObjectInterface, rc4HmacInitialize: int,
                                         rc4HmacDecrypt: int) -> bool:
         """
         Uses the PDB information to specifically check if the csystem for RC4HMAC
@@ -147,11 +146,9 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         return array
 
-    def _find_array_with_pdb_symbols(self, cryptdll_symbols: str,
-                                     cryptdll_types: interfaces.context.ModuleInterface,
+    def _find_array_with_pdb_symbols(self, cryptdll_symbols: str, cryptdll_types: interfaces.context.ModuleInterface,
                                      proc_layer_name: str,
                                      cryptdll_base: int) -> Tuple[interfaces.objects.ObjectInterface, int, int, int]:
-
         """
         Finds the CSystems array through use of PDB symbols
 
@@ -191,11 +188,8 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         return array, rc4HmacInitialize, rc4HmacDecrypt
 
-    def _get_cryptdll_types(self, context: interfaces.context.ContextInterface,
-                            config,
-                            config_path: str,
-                            proc_layer_name: str,
-                            cryptdll_base: int):
+    def _get_cryptdll_types(self, context: interfaces.context.ContextInterface, config, config_path: str,
+                            proc_layer_name: str, cryptdll_base: int):
         """
         Builds a symbol table from the cryptdll types generated after binary analysis
 
@@ -288,13 +282,9 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             rc4HmacDecrypt: The expected address of the csystem Decryption function
         """
         try:
-            cryptdll_symbols = pdbutil.PDBUtility.symbol_table_from_pdb(self.context,
-                                                                        interfaces.configuration.path_join(
-                                                                            self.config_path, 'cryptdll'),
-                                                                        proc_layer_name,
-                                                                        "cryptdll.pdb",
-                                                                        cryptdll_base,
-                                                                        cryptdll_size)
+            cryptdll_symbols = pdbutil.PDBUtility.symbol_table_from_pdb(
+                self.context, interfaces.configuration.path_join(self.config_path, 'cryptdll'), proc_layer_name,
+                "cryptdll.pdb", cryptdll_base, cryptdll_size)
         except exceptions.VolatilityException:
             vollog.debug("Unable to use the cryptdll PDB. Stopping PDB symbols based analysis.")
             return None, None, None
@@ -333,8 +323,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         return inst.address + inst.size + opnd.mem.disp
 
-    def _analyze_cdlocatecsystem(self, function_bytes: bytes,
-                                 function_start: int,
+    def _analyze_cdlocatecsystem(self, function_bytes: bytes, function_start: int,
                                  cryptdll_types: interfaces.context.ModuleInterface,
                                  proc_layer_name: str) -> Optional[interfaces.objects.ObjectInterface]:
         """
@@ -392,10 +381,8 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         return array
 
-    def _find_csystems_with_export(self, proc_layer_name: str,
-                                   cryptdll_types: interfaces.context.ModuleInterface,
-                                   cryptdll_base: int,
-                                   _) -> Optional[interfaces.objects.ObjectInterface]:
+    def _find_csystems_with_export(self, proc_layer_name: str, cryptdll_types: interfaces.context.ModuleInterface,
+                                   cryptdll_base: int, _) -> Optional[interfaces.objects.ObjectInterface]:
         """
         Uses export table analysis to locate CDLocateCsystem
         This function references CSystems and cCsystems
@@ -440,7 +427,8 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
                 function_bytes = self.context.layers[proc_layer_name].read(function_start, 0x50)
             except exceptions.InvalidAddressException:
                 vollog.debug(
-                    "The CDLocateCSystem function is not present in the lsass address space. Stopping export based analysis.")
+                    "The CDLocateCSystem function is not present in the lsass address space. Stopping export based analysis."
+                )
                 break
 
             array = self._analyze_cdlocatecsystem(function_bytes, function_start, cryptdll_types, proc_layer_name)
@@ -451,8 +439,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         return None
 
-    def _find_csystems_with_scanning(self, proc_layer_name: str,
-                                     cryptdll_types: interfaces.context.ModuleInterface,
+    def _find_csystems_with_scanning(self, proc_layer_name: str, cryptdll_types: interfaces.context.ModuleInterface,
                                      cryptdll_base: int,
                                      cryptdll_size: int) -> List[interfaces.context.ModuleInterface]:
         """
@@ -488,9 +475,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             if not proc_layer.is_valid(address, ecrypt_size):
                 continue
 
-            kerb = cryptdll_types.object("_KERB_ECRYPT",
-                                         offset = address,
-                                         absolute = True)
+            kerb = cryptdll_types.object("_KERB_ECRYPT", offset = address, absolute = True)
 
             # ensure the Encrypt and Finish pointers are inside the VAD
             # these are not manipulated in the attack
@@ -518,7 +503,8 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         lsass_proc, proc_layer_name = self._find_lsass_proc(procs)
         if not lsass_proc:
             vollog.info(
-                "Unable to find a valid lsass.exe process in the process list. This should never happen. Analysis cannot proceed.")
+                "Unable to find a valid lsass.exe process in the process list. This should never happen. Analysis cannot proceed."
+            )
             return
 
         cryptdll_base, cryptdll_size = self._find_cryptdll(lsass_proc)
@@ -527,10 +513,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             return
 
         # the custom type information from binary analysis
-        cryptdll_types = self._get_cryptdll_types(self.context,
-                                                  self.config,
-                                                  self.config_path,
-                                                  proc_layer_name,
+        cryptdll_types = self._get_cryptdll_types(self.context, self.config, self.config_path, proc_layer_name,
                                                   cryptdll_base)
 
         # attempt to find the array and symbols directly from the PDB
@@ -545,14 +528,10 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         # we keep the address of the rc4 functions from the PDB
         # though as its our only source to get them
         if csystems is None:
-            fallback_sources = [self._find_csystems_with_export,
-                                self._find_csystems_with_scanning]
+            fallback_sources = [self._find_csystems_with_export, self._find_csystems_with_scanning]
 
             for source in fallback_sources:
-                csystems = source(proc_layer_name,
-                                  cryptdll_types,
-                                  cryptdll_base,
-                                  cryptdll_size)
+                csystems = source(proc_layer_name, cryptdll_types, cryptdll_base, cryptdll_size)
 
                 if csystems is not None:
                     break
@@ -592,11 +571,10 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
     def run(self):
         kernel = self.context.modules[self.config['kernel']]
 
-        return renderers.TreeGrid(
-            [("PID", int), ("Process", str), ("Skeleton Key Found", bool), ("rc4HmacInitialize", format_hints.Hex),
-             ("rc4HmacDecrypt", format_hints.Hex)],
-            self._generator(
-                pslist.PsList.list_processes(context = self.context,
-                                             layer_name = kernel.layer_name,
-                                             symbol_table = kernel.symbol_table_name,
-                                             filter_func = self._lsass_proc_filter)))
+        return renderers.TreeGrid([("PID", int), ("Process", str), ("Skeleton Key Found", bool),
+                                   ("rc4HmacInitialize", format_hints.Hex), ("rc4HmacDecrypt", format_hints.Hex)],
+                                  self._generator(
+                                      pslist.PsList.list_processes(context = self.context,
+                                                                   layer_name = kernel.layer_name,
+                                                                   symbol_table = kernel.symbol_table_name,
+                                                                   filter_func = self._lsass_proc_filter)))

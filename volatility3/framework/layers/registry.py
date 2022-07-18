@@ -47,8 +47,8 @@ class RegistryHive(linear.LinearlyMappedLayer):
 
         # TODO: Check the checksum
         if self.hive.Signature != 0xbee0bee0:
-            raise RegistryFormatException(
-                self.name, f"Registry hive at {self._hive_offset} does not have a valid signature")
+            raise RegistryFormatException(self.name,
+                                          f"Registry hive at {self._hive_offset} does not have a valid signature")
 
         # Win10 17063 introduced the Registry process to map most hives.  Check
         # if it exists and update RegistryHive._base_layer
@@ -199,13 +199,11 @@ class RegistryHive(linear.LinearlyMappedLayer):
         # Ignore the volatile bit when determining maxaddr validity
         volatile = self._mask(offset, 31, 31) >> 31
         if offset & 0x7fffffff > self._get_hive_maxaddr(volatile):
-            vollog.log(constants.LOGLEVEL_VVV,
-                       "Layer {} couldn't translate offset {}, greater than {} in {} store of {}".format(
-                               self.name,
-                               hex(offset & 0x7fffffff),
-                               hex(self._get_hive_maxaddr(volatile)),
-                               "volative" if volatile else "non-volatile",
-                               self.get_name()))
+            vollog.log(
+                constants.LOGLEVEL_VVV,
+                "Layer {} couldn't translate offset {}, greater than {} in {} store of {}".format(
+                    self.name, hex(offset & 0x7fffffff), hex(self._get_hive_maxaddr(volatile)),
+                    "volative" if volatile else "non-volatile", self.get_name()))
             raise RegistryInvalidIndex(self.name, "Mapping request for value greater than maxaddr")
 
         storage = self.hive.Storage[volatile]

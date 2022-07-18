@@ -38,8 +38,9 @@ class Handles(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
                                          description = "Process IDs to include (all other processes are excluded)",
@@ -104,7 +105,8 @@ class Handles(interfaces.plugins.PluginInterface):
                 offset = handle_table_entry.InfoTable & ~7
 
             # print("LowValue: {0:#x} Magic: {1:#x} Offset: {2:#x}".format(handle_table_entry.InfoTable, magic, offset))
-            object_header = self.context.object(kernel.symbol_table_name + constants.BANG + "_OBJECT_HEADER", virtual,
+            object_header = self.context.object(kernel.symbol_table_name + constants.BANG + "_OBJECT_HEADER",
+                                                virtual,
                                                 offset = offset)
             object_header.GrantedAccess = handle_table_entry.GrantedAccessBits
 
@@ -202,8 +204,7 @@ class Handles(interfaces.plugins.PluginInterface):
                 objt = ptr.dereference().cast(symbol_table + constants.BANG + "_OBJECT_TYPE")
                 type_name = objt.Name.String
             except exceptions.InvalidAddressException:
-                vollog.log(constants.LOGLEVEL_VVV,
-                           f"Cannot access _OBJECT_HEADER Name at {objt.vol.offset:#x}")
+                vollog.log(constants.LOGLEVEL_VVV, f"Cannot access _OBJECT_HEADER Name at {objt.vol.offset:#x}")
                 continue
 
             type_map[i] = type_name
@@ -307,8 +308,7 @@ class Handles(interfaces.plugins.PluginInterface):
             try:
                 object_table = proc.ObjectTable
             except exceptions.InvalidAddressException:
-                vollog.log(constants.LOGLEVEL_VVV,
-                           f"Cannot access _EPROCESS.ObjectType at {proc.vol.offset:#x}")
+                vollog.log(constants.LOGLEVEL_VVV, f"Cannot access _EPROCESS.ObjectType at {proc.vol.offset:#x}")
                 continue
 
             process_name = utility.array_to_string(proc.ImageFileName)
@@ -337,8 +337,7 @@ class Handles(interfaces.plugins.PluginInterface):
                             obj_name = ""
 
                 except (exceptions.InvalidAddressException):
-                    vollog.log(constants.LOGLEVEL_VVV,
-                               f"Cannot access _OBJECT_HEADER at {entry.vol.offset:#x}")
+                    vollog.log(constants.LOGLEVEL_VVV, f"Cannot access _OBJECT_HEADER at {entry.vol.offset:#x}")
                     continue
 
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(entry.Body.vol.offset),

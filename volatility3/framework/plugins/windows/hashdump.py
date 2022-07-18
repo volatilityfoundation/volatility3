@@ -27,7 +27,8 @@ class Hashdump(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
         ]
@@ -66,8 +67,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
             if hive:
                 result = hive.get_key(key)
         except KeyError:
-            vollog.info(
-                f"Unable to load the required registry key {hive.get_name()}\\{key} from this memory image")
+            vollog.info(f"Unable to load the required registry key {hive.get_name()}\\{key} from this memory image")
         return result
 
     @classmethod
@@ -212,9 +212,11 @@ class Hashdump(interfaces.plugins.PluginInterface):
     @classmethod
     def sidbytes_to_key(cls, s: bytes) -> bytes:
         """Builds final DES key from the strings generated in sid_to_key"""
-        key = [s[0] >> 1, ((s[0] & 0x01) << 6) | (s[1] >> 2), ((s[1] & 0x03) << 5) | (s[2] >> 3),
-               ((s[2] & 0x07) << 4) | (s[3] >> 4), ((s[3] & 0x0F) << 3) | (s[4] >> 5),
-               ((s[4] & 0x1F) << 2) | (s[5] >> 6), ((s[5] & 0x3F) << 1) | (s[6] >> 7), s[6] & 0x7F]
+        key = [
+            s[0] >> 1, ((s[0] & 0x01) << 6) | (s[1] >> 2), ((s[1] & 0x03) << 5) | (s[2] >> 3),
+            ((s[2] & 0x07) << 4) | (s[3] >> 4), ((s[3] & 0x0F) << 3) | (s[4] >> 5), ((s[4] & 0x1F) << 2) | (s[5] >> 6),
+            ((s[5] & 0x3F) << 1) | (s[6] >> 7), s[6] & 0x7F
+        ]
         for i in range(8):
             key[i] = (key[i] << 1)
             key[i] = cls.odd_parity[key[i]]

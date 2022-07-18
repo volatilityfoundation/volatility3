@@ -223,8 +223,7 @@ class PdbMSFStream(linear.LinearlyMappedLayer):
     @property
     def _pdb_layer(self) -> PdbMultiStreamFormat:
         if self._base_layer not in self._context.layers:
-            raise PDBFormatException(self._base_layer,
-                                     f"No PdbMultiStreamFormat layer found: {self._base_layer}")
+            raise PDBFormatException(self._base_layer, f"No PdbMultiStreamFormat layer found: {self._base_layer}")
         result = self._context.layers[self._base_layer]
         if isinstance(result, PdbMultiStreamFormat):
             return result

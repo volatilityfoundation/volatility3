@@ -23,8 +23,9 @@ class Malfind(interfaces.plugins.PluginInterface):
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
                                          description = "Process IDs to include (all other processes are excluded)",

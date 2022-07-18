@@ -14,6 +14,7 @@ from volatility3.framework.symbols import generic
 
 vollog = logging.getLogger(__name__)
 
+
 class proc(generic.GenericIntelProcess):
 
     def get_task(self):
@@ -54,9 +55,9 @@ class proc(generic.GenericIntelProcess):
         seen: Set[int] = set()
 
         for i in range(task.map.hdr.nentries):
-            if (not current_map or
-                current_map.vol.offset in seen or
-                not self._context.layers[task.vol.native_layer_name].is_valid(current_map.dereference().vol.offset, current_map.dereference().vol.size)):
+            if (not current_map or current_map.vol.offset in seen or
+                    not self._context.layers[task.vol.native_layer_name].is_valid(current_map.dereference().vol.offset,
+                                                                                  current_map.dereference().vol.size)):
 
                 vollog.log(constants.LOGLEVEL_VVV, "Breaking process maps iteration due to invalid state.")
                 break

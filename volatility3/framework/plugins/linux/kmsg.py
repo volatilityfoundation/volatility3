@@ -50,11 +50,7 @@ class ABCKmsg(ABC):
         "ftp"  # FTP daemon
     )
 
-    def __init__(
-            self,
-            context: interfaces.context.ContextInterface,
-            config: interfaces.configuration.HierarchicalDict
-    ):
+    def __init__(self, context: interfaces.context.ContextInterface, config: interfaces.configuration.HierarchicalDict):
         self._context = context
         self._config = config
         vmlinux = context.modules[self._config['kernel']]
@@ -64,11 +60,8 @@ class ABCKmsg(ABC):
         self.long_unsigned_int_size = self.vmlinux.get_type('long unsigned int').size
 
     @classmethod
-    def run_all(
-            cls,
-            context: interfaces.context.ContextInterface,
-            config: interfaces.configuration.HierarchicalDict
-    ) -> Iterator[Tuple[str, str, str, str, str]]:
+    def run_all(cls, context: interfaces.context.ContextInterface,
+                config: interfaces.configuration.HierarchicalDict) -> Iterator[Tuple[str, str, str, str, str]]:
         """It calls each subclass symtab_checks() to test the required
         conditions to that specific kernel implementation.
 
@@ -84,8 +77,8 @@ class ABCKmsg(ABC):
         kmsg_inst = None  # type: ignore
         for subclass in class_subclasses(cls):
             if not subclass.symtab_checks(vmlinux = vmlinux):
-                vollog.log(constants.LOGLEVEL_VVVV,
-                           "Kmsg implementation '%s' doesn't match this memory dump", subclass.__name__)
+                vollog.log(constants.LOGLEVEL_VVVV, "Kmsg implementation '%s' doesn't match this memory dump",
+                           subclass.__name__)
                 continue
 
             vollog.log(constants.LOGLEVEL_VVVV, "Kmsg implementation '%s' matches!", subclass.__name__)
@@ -380,7 +373,8 @@ class Kmsg(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Linux kernel',
                                            architectures = ['Intel32', 'Intel64']),
         ]
 
@@ -389,9 +383,5 @@ class Kmsg(plugins.PluginInterface):
             yield (0, values)
 
     def run(self):
-        return renderers.TreeGrid([("facility", str),
-                                   ("level", str),
-                                   ("timestamp", str),
-                                   ("caller", str),
-                                   ("line", str)],
-                                  self._generator())  # type: ignore
+        return renderers.TreeGrid([("facility", str), ("level", str), ("timestamp", str), ("caller", str),
+                                   ("line", str)], self._generator())  # type: ignore

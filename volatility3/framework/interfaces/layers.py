@@ -430,8 +430,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                                                                                            length,
                                                                                            ignore_errors = pad):
             if not pad and layer_offset > current_offset:
-                raise exceptions.InvalidAddressException(
-                    self.name, current_offset, f"Layer {self.name} cannot map offset: {current_offset}")
+                raise exceptions.InvalidAddressException(self.name, current_offset,
+                                                         f"Layer {self.name} cannot map offset: {current_offset}")
             elif layer_offset > current_offset:
                 output += b"\x00" * (layer_offset - current_offset)
                 current_offset = layer_offset
@@ -453,8 +453,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         length = len(value)
         for (layer_offset, sublength, mapped_offset, mapped_length, layer) in self.mapping(offset, length):
             if layer_offset > current_offset:
-                raise exceptions.InvalidAddressException(
-                    self.name, current_offset, f"Layer {self.name} cannot map offset: {current_offset}")
+                raise exceptions.InvalidAddressException(self.name, current_offset,
+                                                         f"Layer {self.name} cannot map offset: {current_offset}")
 
             value_chunk = value[layer_offset - offset:layer_offset - offset + sublength]
             new_data = self._encode_data(layer, mapped_offset, layer_offset, value_chunk)

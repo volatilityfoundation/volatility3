@@ -87,20 +87,20 @@ class VmwareLayer(segmented.SegmentedLayer):
                                              offset = offset + name_len + 2 + (index * index_len),
                                              layer_name = self._meta_layer))
                 data_len = flags & 0x3f
-                
+
                 if data_len in [62, 63]:  # Handle special data sizes that indicate a longer data stream
                     data_len = 4 if version == 0 else 8
                     # Read the size of the data
                     data_size = self._context.object(self._choose_type(data_len),
-                                            layer_name = self._meta_layer,
-                                            offset = offset + 2 + name_len + (indices_len * index_len))
+                                                     layer_name = self._meta_layer,
+                                                     offset = offset + 2 + name_len + (indices_len * index_len))
                     # Skip two bytes of padding (as it seems?)
                     # Read the actual data
-                    data = self._context.object("vmware!bytes",
-                                                layer_name = self._meta_layer,
-                                                offset = offset + 2 + name_len + (indices_len * index_len) +
-                                                         2 * data_len + 2,
-                                                length = data_size)
+                    data = self._context.object(
+                        "vmware!bytes",
+                        layer_name = self._meta_layer,
+                        offset = offset + 2 + name_len + (indices_len * index_len) + 2 * data_len + 2,
+                        length = data_size)
                     offset += 2 + name_len + (indices_len * index_len) + 2 * data_len + 2 + data_size
                 else:  # Handle regular cases
                     data = self._context.object(self._choose_type(data_len),

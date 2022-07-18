@@ -45,13 +45,20 @@ class BannerCacheGenerator:
                     # If there's no linux symbols, don't cry about it
                     pass
 
-            new_banners = banner_cache.read_new_banners(context, 'BannerServer', potentials, banner_cache.symbol_name,
-                                                        banner_cache.os, progress_callback = PrintedProgress())
+            new_banners = banner_cache.read_new_banners(context,
+                                                        'BannerServer',
+                                                        potentials,
+                                                        banner_cache.symbol_name,
+                                                        banner_cache.os,
+                                                        progress_callback = PrintedProgress())
             result_banners = {}
             for new_banner in new_banners:
                 # Only accept file schemes
-                value = [self.convert_url(url) for url in new_banners[new_banner] if
-                         urllib.parse.urlparse(url).scheme == 'file']
+                value = [
+                    self.convert_url(url)
+                    for url in new_banners[new_banner]
+                    if urllib.parse.urlparse(url).scheme == 'file'
+                ]
                 if value and new_banner:
                     # Convert files into URLs
                     result_banners[str(base64.b64encode(new_banner), 'latin-1')] = value
@@ -68,7 +75,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', default = os.path.dirname(__file__))
-    parser.add_argument('--urlprefix', help = 'Web prefix that will eventually serve the ISF files',
+    parser.add_argument('--urlprefix',
+                        help = 'Web prefix that will eventually serve the ISF files',
                         default = 'http://localhost/symbols')
 
     args = parser.parse_args()

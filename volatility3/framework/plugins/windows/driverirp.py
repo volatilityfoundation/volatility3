@@ -27,7 +27,8 @@ class DriverIrp(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'ssdt', plugin = ssdt.SSDT, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'driverscan', plugin = driverscan.DriverScan, version = (1, 0, 0)),

@@ -25,7 +25,8 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -94,18 +95,13 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
         return renderers.TreeGrid([("PID", int), ("Process", str), ("CommandTime", datetime.datetime),
                                    ("Command", str)],
                                   self._generator(
-                                      list_tasks(self.context,
-                                                 self.config['kernel'],
-                                                 filter_func = filter_func)))
+                                      list_tasks(self.context, self.config['kernel'], filter_func = filter_func)))
 
     def generate_timeline(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
         list_tasks = pslist.PsList.get_list_tasks(self.config.get('pslist_method', pslist.PsList.pslist_methods[0]))
 
-        for row in self._generator(
-                list_tasks(self.context,
-                           self.config['kernel'],
-                           filter_func = filter_func)):
+        for row in self._generator(list_tasks(self.context, self.config['kernel'], filter_func = filter_func)):
             _depth, row_data = row
             description = f"{row_data[0]} ({row_data[1]}): \"{row_data[3]}\""
             yield (description, timeliner.TimeLinerType.CREATED, row_data[2])

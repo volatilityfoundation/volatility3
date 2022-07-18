@@ -15,8 +15,7 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
         if len(mapping) == 1:
             original_offset, _, mapped_offset, _, layer = mapping[0]
             if original_offset != offset:
-                raise exceptions.LayerException(self.name,
-                                                f"Layer {self.name} claims to map linearly but does not")
+                raise exceptions.LayerException(self.name, f"Layer {self.name} claims to map linearly but does not")
         else:
             if ignore_errors:
                 # We should only hit this if we ignored errors, but check anyway
@@ -36,8 +35,8 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
         output: List[bytes] = []
         for (offset, _, mapped_offset, mapped_length, layer) in self.mapping(offset, length, ignore_errors = pad):
             if not pad and offset > current_offset:
-                raise exceptions.InvalidAddressException(
-                    self.name, current_offset, f"Layer {self.name} cannot map offset: {current_offset}")
+                raise exceptions.InvalidAddressException(self.name, current_offset,
+                                                         f"Layer {self.name} cannot map offset: {current_offset}")
             elif offset > current_offset:
                 output += [b"\x00" * (offset - current_offset)]
                 current_offset = offset
@@ -56,8 +55,8 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
         length = len(value)
         for (offset, _, mapped_offset, length, layer) in self.mapping(offset, length):
             if offset > current_offset:
-                raise exceptions.InvalidAddressException(
-                    self.name, current_offset, f"Layer {self.name} cannot map offset: {current_offset}")
+                raise exceptions.InvalidAddressException(self.name, current_offset,
+                                                         f"Layer {self.name} cannot map offset: {current_offset}")
             elif offset < current_offset:
                 raise exceptions.LayerException(self.name, "Mapping returned an overlapping element")
             self._context.layers.write(layer, mapped_offset, value[:length])

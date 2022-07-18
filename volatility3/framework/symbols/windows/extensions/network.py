@@ -205,7 +205,9 @@ class _TCP_ENDPOINT(_TCP_LISTENER):
 
         try:
             if self.get_address_family() not in (AF_INET, AF_INET6):
-                vollog.debug(f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid address_family {self.get_address_family()}")
+                vollog.debug(
+                    f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid address_family {self.get_address_family()}"
+                )
                 return False
 
             if not self.get_local_address() and (not self.get_owner() or self.get_owner().UniqueProcessId == 0

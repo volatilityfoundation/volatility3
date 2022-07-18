@@ -114,8 +114,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
                         yield 1, (format_hints.Hex(attr_data_offset), mft_record.get_signature(),
                                   mft_record.RecordNumber, mft_record.LinkCount, mft_flag, permissions,
-                                  attr_header.AttrType.lookup(),
-                                  conversion.wintime_to_datetime(attr_data.CreationTime),
+                                  attr_header.AttrType.lookup(), conversion.wintime_to_datetime(attr_data.CreationTime),
                                   conversion.wintime_to_datetime(attr_data.ModifiedTime),
                                   conversion.wintime_to_datetime(attr_data.UpdatedTime),
                                   conversion.wintime_to_datetime(attr_data.AccessedTime), file_name)

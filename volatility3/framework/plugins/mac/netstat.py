@@ -24,7 +24,8 @@ class Netstat(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
@@ -58,8 +59,8 @@ class Netstat(plugins.PluginInterface):
             task_name = utility.array_to_string(task.p_comm)
             pid = task.p_pid
 
-            for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(context, context.modules[
-                kernel_module_name].symbol_table_name, task):
+            for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(
+                    context, context.modules[kernel_module_name].symbol_table_name, task):
                 try:
                     ftype = filp.f_fglob.get_fg_type()
                 except exceptions.InvalidAddressException:
@@ -73,8 +74,7 @@ class Netstat(plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     continue
 
-                if not context.layers[task.vol.native_layer_name].is_valid(socket.vol.offset,
-                                                                           socket.vol.size):
+                if not context.layers[task.vol.native_layer_name].is_valid(socket.vol.offset, socket.vol.size):
                     continue
 
                 yield task_name, pid, socket
@@ -82,9 +82,7 @@ class Netstat(plugins.PluginInterface):
     def _generator(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
-        for task_name, pid, socket in self.list_sockets(self.context,
-                                                        self.config['kernel'],
-                                                        filter_func = filter_func):
+        for task_name, pid, socket in self.list_sockets(self.context, self.config['kernel'], filter_func = filter_func):
 
             family = socket.get_family()
 
@@ -95,8 +93,7 @@ class Netstat(plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     continue
 
-                yield (0, (format_hints.Hex(socket.vol.offset), "UNIX", path, 0, "", 0, "",
-                           f"{task_name}/{pid:d}"))
+                yield (0, (format_hints.Hex(socket.vol.offset), "UNIX", path, 0, "", 0, "", f"{task_name}/{pid:d}"))
 
             elif family in [2, 30]:
                 state = socket.get_state()

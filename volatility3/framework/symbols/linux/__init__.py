@@ -240,8 +240,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
 
     @classmethod
     def lookup_module_address(cls, kernel_module: interfaces.context.ModuleInterface,
-                              handlers: List[Tuple[str, int, int]],
-                              target_address: int):
+                              handlers: List[Tuple[str, int, int]], target_address: int):
         """
         Searches between the start and end address of the kernel module using target_address.
         Returns the module and symbol name of the address provided.

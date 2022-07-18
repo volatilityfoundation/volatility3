@@ -104,8 +104,12 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
             progress_callback(100, f"Built {self.os} caches")
 
     @classmethod
-    def read_new_banners(cls, context: interfaces.context.ContextInterface, config_path: str, new_urls: List[str],
-                         symbol_name: str, operating_system: str = None,
+    def read_new_banners(cls,
+                         context: interfaces.context.ContextInterface,
+                         config_path: str,
+                         new_urls: List[str],
+                         symbol_name: str,
+                         operating_system: str = None,
                          progress_callback = None) -> Optional[Dict[bytes, List[str]]]:
         """Reads the any new banners for the OS in question"""
         if operating_system is None:
@@ -174,6 +178,7 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
 
 
 class RemoteBannerFormat:
+
     def __init__(self, location: str):
         self._location = location
         with resources.ResourceAccessor().open(url = location) as fp:

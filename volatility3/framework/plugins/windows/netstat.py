@@ -26,8 +26,9 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel',
+                                           description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'netscan', component = netscan.NetScan, version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'modules', component = modules.Modules, version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'pdbutil', component = pdbutil.PDBUtility, version = (1, 0, 0)),
@@ -421,17 +422,15 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         kernel = self.context.modules[self.config['kernel']]
 
-        netscan_symbol_table = netscan.NetScan.create_netscan_symbol_table(self.context,
-                                                                           kernel.layer_name,
-                                                                           kernel.symbol_table_name,
-                                                                           self.config_path)
+        netscan_symbol_table = netscan.NetScan.create_netscan_symbol_table(self.context, kernel.layer_name,
+                                                                           kernel.symbol_table_name, self.config_path)
 
         tcpip_module = self.get_tcpip_module(self.context, kernel.layer_name, kernel.symbol_table_name)
 
         try:
             tcpip_symbol_table = pdbutil.PDBUtility.symbol_table_from_pdb(
-                self.context, interfaces.configuration.path_join(self.config_path, 'tcpip'),
-                kernel.layer_name, "tcpip.pdb", tcpip_module.DllBase, tcpip_module.SizeOfImage)
+                self.context, interfaces.configuration.path_join(self.config_path, 'tcpip'), kernel.layer_name,
+                "tcpip.pdb", tcpip_module.DllBase, tcpip_module.SizeOfImage)
         except exceptions.VolatilityException:
             vollog.warning("Unable to locate symbols for the memory image's tcpip module")
 

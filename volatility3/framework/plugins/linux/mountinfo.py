@@ -13,8 +13,9 @@ from volatility3.plugins.linux import pslist
 
 vollog = logging.getLogger(__name__)
 
-MountInfoData = namedtuple("MountInfoData", ("mnt_id", "parent_id", "st_dev", "mnt_root_path", "path_root",
-                                             "mnt_opts", "fields", "mnt_type", "devname", "sb_opts"))
+MountInfoData = namedtuple("MountInfoData", ("mnt_id", "parent_id", "st_dev", "mnt_root_path", "path_root", "mnt_opts",
+                                             "fields", "mnt_type", "devname", "sb_opts"))
+
 
 class MountInfo(plugins.PluginInterface):
     """Lists mount points on processes mount namespaces"""
@@ -26,25 +27,25 @@ class MountInfo(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name="kernel", description="Linux kernel",
-                                           architectures=["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name="pslist",
-                                           plugin=pslist.PsList, version=(2, 0, 0)),
-            requirements.ListRequirement(name="pids",
-                                         description="Filter on specific process IDs.",
-                                         element_type=int,
-                                         optional=True),
-            requirements.ListRequirement(name="mntns",
-                                         description="Filter results by mount namespace. "
-                                                     "Otherwise, all of them are shown.",
-                                         element_type=int,
-                                         optional=True),
-            requirements.BooleanRequirement(name="mount-format",
-                                            description="Shows a brief summary of the mount points information "
+            requirements.ModuleRequirement(name = "kernel",
+                                           description = "Linux kernel",
+                                           architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = "pslist", plugin = pslist.PsList, version = (2, 0, 0)),
+            requirements.ListRequirement(name = "pids",
+                                         description = "Filter on specific process IDs.",
+                                         element_type = int,
+                                         optional = True),
+            requirements.ListRequirement(name = "mntns",
+                                         description = "Filter results by mount namespace. "
+                                         "Otherwise, all of them are shown.",
+                                         element_type = int,
+                                         optional = True),
+            requirements.BooleanRequirement(name = "mount-format",
+                                            description = "Shows a brief summary of the mount points information "
                                             "with similar output format to the older /proc/[pid]/mounts or the "
                                             "user-land command 'mount -l'.",
-                                            optional=True,
-                                            default=False),
+                                            optional = True,
+                                            default = False),
         ]
 
     @classmethod
@@ -79,8 +80,8 @@ class MountInfo(plugins.PluginInterface):
         return path
 
     @classmethod
-    def get_mountinfo(cls, mnt, task) -> Union[None, Tuple[int, int, str, str, str, List[str],
-                                                           List[str], str, str, List[str]]]:
+    def get_mountinfo(cls, mnt,
+                      task) -> Union[None, Tuple[int, int, str, str, str, List[str], List[str], str, str, List[str]]]:
         """Extract various information about a mount point.
         It mimics the Linux kernel show_mountinfo function.
         """
@@ -129,8 +130,8 @@ class MountInfo(plugins.PluginInterface):
         sb_opts.append(superblock.get_flags_access())
         sb_opts.extend(superblock.get_flags_opts())
 
-        return MountInfoData(mnt_id, parent_id, st_dev, mnt_root_path, path_root, mnt_opts, fields,
-                             mnt_type, devname, sb_opts)
+        return MountInfoData(mnt_id, parent_id, st_dev, mnt_root_path, path_root, mnt_opts, fields, mnt_type, devname,
+                             sb_opts)
 
     def _get_tasks_mountpoints(self, tasks: Iterable[interfaces.objects.ObjectInterface], per_namespace: bool):
         seen_namespaces = set()
@@ -151,12 +152,8 @@ class MountInfo(plugins.PluginInterface):
             for mount in mnt_namespace.get_mount_points():
                 yield task, mount, mnt_ns_id
 
-    def _generator(
-            self,
-            tasks: Iterable[interfaces.objects.ObjectInterface],
-            mnt_ns_ids: List[int],
-            mount_format: bool,
-            per_namespace: bool) -> Iterable[Tuple[int, Tuple]]:
+    def _generator(self, tasks: Iterable[interfaces.objects.ObjectInterface], mnt_ns_ids: List[int], mount_format: bool,
+                   per_namespace: bool) -> Iterable[Tuple[int, Tuple]]:
 
         for task, mnt, mnt_ns_id in self._get_tasks_mountpoints(tasks, per_namespace):
             if mnt_ns_ids and mnt_ns_id not in mnt_ns_ids:
@@ -178,9 +175,10 @@ class MountInfo(plugins.PluginInterface):
                 fields_str = " ".join(mnt_info.fields)
                 sb_opts_str = ",".join(mnt_info.sb_opts)
 
-                extra_fields_values = [mnt_info.mnt_id, mnt_info.parent_id, mnt_info.st_dev, mnt_info.mnt_root_path,
-                                       mnt_info.path_root, mnt_opts_str, fields_str, mnt_info.mnt_type,
-                                       mnt_info.devname, sb_opts_str]
+                extra_fields_values = [
+                    mnt_info.mnt_id, mnt_info.parent_id, mnt_info.st_dev, mnt_info.mnt_root_path, mnt_info.path_root,
+                    mnt_opts_str, fields_str, mnt_info.mnt_type, mnt_info.devname, sb_opts_str
+                ]
 
             fields_values = [mnt_ns_id]
             if not per_namespace:
@@ -195,7 +193,7 @@ class MountInfo(plugins.PluginInterface):
         mount_format = self.config.get('mount-format')
 
         pid_filter = pslist.PsList.create_pid_filter(pids)
-        tasks = pslist.PsList.list_tasks(self.context, self.config['kernel'], filter_func=pid_filter)
+        tasks = pslist.PsList.list_tasks(self.context, self.config['kernel'], filter_func = pid_filter)
 
         columns = [("MNT_NS_ID", int)]
         # The PID column does not make sense when a PID filter is not specified. In that case, the default behavior is
