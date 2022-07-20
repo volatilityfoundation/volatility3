@@ -18,7 +18,9 @@ configurable within the framework and can usually be set within the user interfa
 These files can also be compressed into ZIP files, which Volatility will process in order to locate symbol files.
 
 Volatility maintains a cache mapping the appropriate identifier for each symbol file against its filename.  This cache
-is update by automagic called as part of the standard automagic that's run each time a plugin is run.
+is updated by automagic called as part of the standard automagic that's run each time a plugin is run.  If a large number of new
+symbols file are detected, this may take some time, but can be safely interrupted and restarted and will not need to run again
+as long as the symbol files stay in the same location.
 
 Windows symbol tables
 ---------------------
