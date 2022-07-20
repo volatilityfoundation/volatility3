@@ -6,3 +6,5 @@ pefile>=2017.8.1 #foo
 
 # This is required for the yara plugins
 yara-python>=3.8.0
+
+pytest>=7.1.2
