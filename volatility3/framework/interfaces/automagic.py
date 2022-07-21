@@ -9,9 +9,9 @@ that a user has not filled.
 """
 import logging
 from abc import ABCMeta
-from typing import Any, List, Optional, Tuple, Union, Type
+from typing import Any, List, Optional, Tuple, Type, Union
 
-from volatility3.framework import interfaces, constants
+from volatility3.framework import constants, interfaces
 from volatility3.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
@@ -47,9 +47,10 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
         super().__init__(context, config_path)
         for requirement in self.get_requirements():
             if not isinstance(requirement, (interfaces.configuration.SimpleTypeRequirement,
-                                            requirements.ChoiceRequirement, requirements.ListRequirement)):
+                                            requirements.ChoiceRequirement, requirements.ListRequirement,
+                                            requirements.VersionRequirement)):
                 raise TypeError(
-                    "Automagic requirements must be a SimpleTypeRequirement, ChoiceRequirement or ListRequirement")
+                    "Automagic requirements must be a SimpleTypeRequirement, ChoiceRequirement, ListRequirement or VersionRequirement")
 
     def __call__(self,
                  context: interfaces.context.ContextInterface,
