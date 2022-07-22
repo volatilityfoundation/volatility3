@@ -199,6 +199,16 @@ def test_windows_callbacks(image, volatility, python):
     assert out.count(b"KeBugCheckReasonCallbackListHead	") > 5
     assert rc == 0
 
+def test_windows_vadwalk(image, volatility, python):
+    rc, out, err = runvol_plugin("windows.vadwalk.VadWalk", image, volatility, python)
+
+    assert out.find(b"Vad") != -1
+    assert out.find(b"VadS") != -1
+    assert out.find(b"Vadl") != -1
+    assert out.find(b"VadF") != -1
+    assert out.find(b"0x0") != -1
+    assert rc == 0
+
 # LINUX
 
 def test_linux_pslist(image, volatility, python):
