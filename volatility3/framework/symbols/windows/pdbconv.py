@@ -518,7 +518,10 @@ class PdbReader:
                     old_stripped_symbol_address = self.symbols[stripped_name]['address']
                     if old_stripped_symbol_address != address:
                         vollog.debug(f"Multiple definitions for symbol: {stripped_name}. Lookup will resolve to {name}")
-                self.symbols[stripped_name] = {"address": address}
+                        self.symbols[stripped_name]["has_multiple_definitions"] = True
+                else:
+                    self.symbols[stripped_name] = {"address": address}
+                self.symbols[name] = {"address": address}
                 if name != stripped_name:
                     self.symbols[stripped_name]["linkage_name"] = name
             offset += sym.length + 2  # Add on length itself
@@ -559,6 +562,10 @@ class PdbReader:
     def omap_lookup(self, address):
         """Looks up an address using the omap mapping."""
         pos = bisect(self._omap_mapping, (address, -1))
+        if pos == len(self._omap_mapping):
+            vollog.warning(f"Weird address {hex(address)} in omap lookup")
+            return 0
+            
         if self._omap_mapping[pos][0] > address:
             pos -= 1
 
