@@ -544,7 +544,7 @@ class PdbReader:
 
         self.metadata['windows']['pdb'] = {
             "GUID": self.convert_bytes_to_guid(pdb_info.GUID),
-            "age": pdb_info.age,
+            "age": self._dbiheader.age,
             "database": self._database_name or 'unknown.pdb',
             "machine_type": self._dbiheader.machine
         }

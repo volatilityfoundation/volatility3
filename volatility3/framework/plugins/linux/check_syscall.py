@@ -80,7 +80,7 @@ class Check_syscall(plugins.PluginInterface):
 
     def _get_table_info_disassembly(self, ptr_sz, vmlinux):
         """Find the size of the system call table by disassembling functions
-        that immediately reference it in their first isntruction This is in the
+        that immediately reference it in their first instruction This is in the
         form 'cmp reg,NR_syscalls'."""
         table_size = 0
 

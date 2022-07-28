@@ -48,6 +48,12 @@ class ObjectTemplate(interfaces.objects.Template):
         plateProxy`)"""
         return self.vol.object_class.VolTemplateProxy.relative_child_offset(self, child)
 
+    def child_template(self, child: str) -> interfaces.objects.Template:
+        """Returns the template of a child of the templated object (see
+        :class:`~volatility3.framework.interfaces.objects.ObjectInterface.VolTem
+        plateProxy`)"""
+        return self.vol.object_class.VolTemplateProxy.child_template(self, child)
+
     def replace_child(self, old_child: interfaces.objects.Template, new_child: interfaces.objects.Template) -> None:
         """Replaces `old_child` for `new_child` in the templated object's child
         list (see :class:`~volatility3.framework.interfaces.objects.ObjectInterf
@@ -63,7 +69,7 @@ class ObjectTemplate(interfaces.objects.Template):
                  object_info: interfaces.objects.ObjectInformation) -> interfaces.objects.ObjectInterface:
         """Constructs the object.
 
-        Returns: an object adhereing to the :class:`~volatility3.framework.interfaces.objects.ObjectInterface`
+        Returns: an object adhering to the :class:`~volatility3.framework.interfaces.objects.ObjectInterface`
         """
         arguments: Dict[str, Any] = {}
         for arg in self.vol:
@@ -99,6 +105,7 @@ class ReferenceTemplate(interfaces.objects.Template):
     size: ClassVar[Any] = property(_unresolved)
     replace_child: ClassVar[Any] = _unresolved
     relative_child_offset: ClassVar[Any] = _unresolved
+    child_template: ClassVar[Any] = _unresolved
     has_member: ClassVar[Any] = _unresolved
 
     def __call__(self, context: interfaces.context.ContextInterface, object_info: interfaces.objects.ObjectInformation):

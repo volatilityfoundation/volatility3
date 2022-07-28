@@ -11,13 +11,13 @@ import os
 import pathlib
 import zipfile
 from abc import ABCMeta
-from typing import Any, Dict, Generator, Iterable, List, Optional, Type, Tuple, Mapping
+from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Tuple, Type
 
 from volatility3 import schemas, symbols
 from volatility3.framework import class_subclasses, constants, exceptions, interfaces, objects
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import resources
-from volatility3.framework.symbols import native, metadata
+from volatility3.framework.symbols import metadata, native
 
 vollog = logging.getLogger(__name__)
 
@@ -113,6 +113,9 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         metadata = json_object.get('metadata', None)
 
+        if not metadata:
+            raise exceptions.SymbolSpaceError(f"Invalid ISF file attempted to be parsed: {isf_url}")
+
         # Determine the delegate or throw an exception
         self._delegate = self._closest_version(metadata.get('format', "0.0.0"),
                                                self._versions)(context, config_path, name, json_object, native_types,
@@ -199,8 +202,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                     pass
 
             # Finally try looking in zip files
-            zip_path = os.path.join(path, sub_path + ".zip")
-            if os.path.exists(zip_path):
+            for zip_path in pathlib.Path(path).joinpath(sub_path).resolve().rglob(filename + '.zip'):
                 # We have a zipfile, so run through it and look for sub files that match the filename
                 with zipfile.ZipFile(zip_path) as zfile:
                     for name in zfile.namelist():
@@ -540,7 +542,8 @@ class Version3Format(Version2Format):
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
 
-        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name, address = address, type = symbol_type)
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name, address = address,
+                                                                      type = symbol_type)
         return self._symbol_cache[name]
 
 
