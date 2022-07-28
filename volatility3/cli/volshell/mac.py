@@ -56,7 +56,7 @@ class Volshell(generic.Volshell):
         """Display Type describes the members of a particular object in alphabetical order"""
         if isinstance(object, str):
             if constants.BANG not in object:
-                object = self.config['darwin'] + constants.BANG + object
+                object = self.current_symbol_table + constants.BANG + object
         return super().display_type(object, offset)
 
     def display_symbols(self, symbol_table: str = None):
