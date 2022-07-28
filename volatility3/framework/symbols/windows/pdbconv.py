@@ -8,6 +8,7 @@ import gzip
 import json
 import logging
 import lzma
+import sys
 import os
 from bisect import bisect
 from typing import Tuple, Dict, Any, Optional, Union, List
@@ -517,7 +518,7 @@ class PdbReader:
                 if stripped_name in self.symbols:
                     old_stripped_symbol_address = self.symbols[stripped_name]['address']
                     if old_stripped_symbol_address != address:
-                        vollog.debug(f"Multiple definitions for symbol: {stripped_name}. Lookup will resolve to {name}")
+                        vollog.debug(f"Multiple definitions for symbol: {stripped_name}")
                         self.symbols[stripped_name]["has_multiple_definitions"] = True
                 else:
                     self.symbols[stripped_name] = {"address": address}
@@ -999,6 +1000,7 @@ class PdbRetreiver:
 if __name__ == '__main__':
     import argparse
 
+    logging.basicConfig()
 
     class PrintedProgress(object):
         """A progress handler that prints the progress value and the
@@ -1024,6 +1026,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description = "Read PDB files and convert to Volatility 3 Intermediate Symbol Format")
     parser.add_argument("-o", "--output", metavar = "OUTPUT", help = "Filename for data output", default = None)
+    parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
     file_group = parser.add_argument_group("file", description = "File-based conversion of PDB to ISF")
     file_group.add_argument("-f", "--file", metavar = "FILE", help = "PDB file to translate to ISF")
     data_group = parser.add_argument_group("data", description = "Convert based on a GUID and filename pattern")
@@ -1039,6 +1042,13 @@ if __name__ == '__main__':
                             default = False,
                             help = "Keep the downloaded PDB file")
     args = parser.parse_args()
+    if args.verbosity < 3:
+        if args.verbosity < 1:
+            sys.tracebacklimit = None
+        vollog.setLevel(30 - (args.verbosity * 10))
+    else:
+        vollog.setLevel(10 - (args.verbosity - 2))
+
 
     pg_cb = PrintedProgress()
 
