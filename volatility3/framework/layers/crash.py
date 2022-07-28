@@ -78,7 +78,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
         self._metadata["page_map_offset"] = self.dtb
         self._metadata["os"] = "Windows"
-        if "PaeEnabled" in header.vol.members:
+        if header.has_member("PaeEnabled"):
             self._metadata["pae"] = header.PaeEnabled != 0
 
         if self.dump_header_name == "_DUMP_HEADER64":
