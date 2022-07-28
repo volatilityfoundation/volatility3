@@ -216,7 +216,7 @@ class SqliteCache(CacheManagerInterface):
         return result
 
     def get_local_locations(self) -> Generator[str, None, None]:
-        result = self._database.cursor().execute('SELECT DISTINCT location FROM cache WHERE local = True').fetchall()
+        result = self._database.cursor().execute('SELECT DISTINCT location FROM cache WHERE local = 1').fetchall()
         for row in result:
             yield row['location']
 
@@ -261,7 +261,7 @@ class SqliteCache(CacheManagerInterface):
         cache_update = set()
         files_to_timestamp = on_disk_locations.intersection(cached_locations)
         if files_to_timestamp:
-            result = self._database.cursor().execute("SELECT location FROM cache WHERE local = True "
+            result = self._database.cursor().execute("SELECT location FROM cache WHERE local = 1 "
                                                      f"AND cached < date('now', '{self.cache_period}');")
             for row in result:
                 if row['location'] in files_to_timestamp:
@@ -330,7 +330,7 @@ class SqliteCache(CacheManagerInterface):
             progress_callback(0, 'Reading remote ISF list')
             cursor = self._database.cursor()
             cursor.execute(
-                f"SELECT cached FROM cache WHERE remote = True and cached < datetime('now', {self.cache_period})")
+                f"SELECT cached FROM cache WHERE local = 0 and cached < datetime('now', {self.cache_period})")
             remote_identifiers = RemoteIdentifierFormat(constants.REMOTE_ISF_URL)
             progress_callback(50, 'Reading remote ISF list')
             for operating_system in constants.OS_CATEGORIES:
@@ -356,7 +356,7 @@ class SqliteCache(CacheManagerInterface):
         additions = []
         statement = 'SELECT location, identifier FROM cache'
         if local_only:
-            additions.append('local = True')
+            additions.append('local = 1')
         if operating_system:
             additions.append(f"operating_system = '{operating_system}'")
         if additions:
