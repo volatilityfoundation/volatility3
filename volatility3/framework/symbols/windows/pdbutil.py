@@ -10,10 +10,12 @@ import os
 import re
 import struct
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
-from urllib import request, parse
+from urllib import parse, request
 
 from volatility3 import symbols
-from volatility3.framework import constants, interfaces, exceptions
+from volatility3.framework import constants, contexts, exceptions, interfaces
+from volatility3.framework.automagic import symbol_cache
+from volatility3.framework.configuration import requirements
 from volatility3.framework.configuration.requirements import SymbolTableRequirement
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import pdbconv
@@ -24,7 +26,7 @@ vollog = logging.getLogger(__name__)
 class PDBUtility(interfaces.configuration.VersionableInterface):
     """Class to handle and manage all getting symbols based on MZ header"""
 
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
     _required_framework_version = (2, 0, 0)
 
     @classmethod
@@ -74,9 +76,15 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
 
         isf_path = None
         # Take the first result of search for the intermediate file
-        for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
+        if not requirements.VersionRequirement.matches_required((1, 0, 0), symbol_cache.SqliteCache.version):
+            vollog.debug(f"Required version of SQLiteCache not found")
+            return None
+
+        value = symbol_cache.SqliteCache(constants.IDENTIFIERS_PATH).find_location(
+            symbol_cache.WindowsIdentifier.generate(pdb_name.strip('\x00'), guid.upper(), age), 'windows')
+
+        if value:
             isf_path = value
-            break
         else:
             # If none are found, attempt to download the pdb, convert it and try again
             cls.download_pdb_isf(context, guid.upper(), age, pdb_name, progress_callback)
@@ -131,14 +139,14 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         # Check it is actually the MZ header
         if mz_sig != b"MZ":
             return None
-        
+
         nt_header_start, = struct.unpack("<I", layer.read(offset + 0x3C, 4))
         pe_sig = layer.read(offset + nt_header_start, 2)
-        
+
         # Check it is actually the Nt Headers
         if pe_sig != b"PE":
             return None
-        
+
         optional_header_size, = struct.unpack('<H', layer.read(offset + nt_header_start + 0x14, 2))
         # Just enough to tell us the max size
         pe_header = layer.read(offset, nt_header_start + 0x16 + optional_header_size)
@@ -146,7 +154,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         max_size = pe_data.OPTIONAL_HEADER.SizeOfImage
 
         # Proper data
-        virtual_data = layer.read(offset, max_size, pad=True)
+        virtual_data = layer.read(offset, max_size, pad = True)
         pe_data = pefile.PE(data = virtual_data)
 
         # De-virtualize the memory
@@ -291,7 +299,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
 
     @classmethod
     def symbol_table_from_pdb(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
-                              pdb_name: str, module_offset: int, module_size: int) -> str:
+                              pdb_name: str, module_offset: int = None, module_size: int = None) -> str:
         """Creates symbol table for a module in the specified layer_name.
 
         Searches the memory section of the loaded module for its PDB GUID
@@ -307,6 +315,19 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         Returns:
             The name of the constructed and loaded symbol table
         """
+        _, symbol_table_name = cls._modtable_from_pdb(context, config_path, layer_name, pdb_name, module_offset,
+                                                      module_size)
+        return symbol_table_name
+
+    @classmethod
+    def _modtable_from_pdb(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
+                           pdb_name: str, module_offset: int = None, module_size: int = None,
+                           create_module: bool = False) -> Tuple[Optional[str], Optional[str]]:
+
+        if module_offset is None:
+            module_offset = context.layers[layer_name].minimum_address
+        if module_size is None:
+            module_size = context.layers[layer_name].maximum_address - module_offset
 
         guids = list(
             cls.pdbname_scan(context,

@@ -39,8 +39,8 @@ BANG = "!"
 
 # We use the SemVer 2.0.0 versioning scheme
 VERSION_MAJOR = 2  # Number of releases of the library with a breaking change
-VERSION_MINOR = 0  # Number of changes that only add to the interface
-VERSION_PATCH = 3  # Number of changes that do not change the interface
+VERSION_MINOR = 3  # Number of changes that only add to the interface
+VERSION_PATCH = 0  # Number of changes that do not change the interface
 VERSION_SUFFIX = ""
 
 # TODO: At version 2.0.0, remove the symbol_shift feature
@@ -68,10 +68,16 @@ if sys.platform == 'win32':
 os.makedirs(CACHE_PATH, exist_ok = True)
 
 LINUX_BANNERS_PATH = os.path.join(CACHE_PATH, "linux_banners.cache")
-""""Default location to record information about available linux banners"""
+"""Default location to record information about available linux banners"""
 
 MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
-""""Default location to record information about available mac banners"""
+"""Default location to record information about available mac banners"""
+
+IDENTIFIERS_PATH = os.path.join(CACHE_PATH, "identifiers.cache")
+"""Default location to record information about available identifiers"""
+
+CACHE_SQLITE_SCEMA_VERSION = 1
+"""Version for the sqlite3 cache schema"""
 
 BUG_URL = "https://github.com/volatilityfoundation/volatility3/issues"
 

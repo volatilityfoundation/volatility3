@@ -92,6 +92,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         self._accessor = resources.ResourceAccessor()
         self._file_: Optional[IO[Any]] = None
         self._size: Optional[int] = None
+        self._maximum_address: Optional[int] = None
         # Construct the lock now (shared if made before threading) in case we ever need it
         self._lock: Union[DummyLock, threading.Lock] = DummyLock()
         if constants.PARALLELISM == constants.Parallelism.Threading:
@@ -117,14 +118,15 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     def maximum_address(self) -> int:
         """Returns the largest available address in the space."""
         # Zero based, so we return the size of the file minus 1
-        if self._size:
-            return self._size
+        if self._maximum_address:
+            return self._maximum_address
         with self._lock:
             orig = self._file.tell()
             self._file.seek(0, 2)
             self._size = self._file.tell()
             self._file.seek(orig)
-        return self._size
+            self._maximum_address = self._size - 1
+        return self._maximum_address
 
     @property
     def minimum_address(self) -> int:
@@ -193,7 +195,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         """Closes the file handle."""
         self._file.close()
 
-    def __del__(self) -> None:
+    def __exit__(self) -> None:
         self.destroy()
 
     @classmethod

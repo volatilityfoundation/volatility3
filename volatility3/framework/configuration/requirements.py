@@ -408,12 +408,18 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
                     config_path: str) -> Dict[str, interfaces.configuration.RequirementInterface]:
         # Mypy doesn't appreciate our classproperty implementation, self._plugin.version has no type
         config_path = interfaces.configuration.path_join(config_path, self.name)
-        if len(self._version) > 0 and self._component.version[0] != self._version[0]:
-            return {config_path: self}
-        if len(self._version) > 1 and self._component.version[1] < self._version[1]:
+        if not self.matches_required(self._version, self._component.version):
             return {config_path: self}
         context.config[interfaces.configuration.path_join(config_path, self.name)] = True
         return {}
+
+    @classmethod
+    def matches_required(cls, required: Tuple[int, ...], version: Tuple[int, int, int]) -> bool:
+        if len(required) > 0 and version[0] != required[0]:
+            return False
+        if len(required) > 1 and version[1] < required[1]:
+            return False
+        return True
 
 
 class PluginRequirement(VersionRequirement):
@@ -470,14 +476,14 @@ class ModuleRequirement(interfaces.configuration.ConstructableRequirementInterfa
             if req_unsatisfied:
                 result.update(req_unsatisfied)
         if not result:
+            vollog.log(constants.LOGLEVEL_V, f"IndexError - No configuration provided: {config_path}")
             result = {config_path: self}
-        return result
 
         ### NOTE: This validate method has side effects (the dependencies can change)!!!
 
         self._validate_class(context, interfaces.configuration.parent_path(config_path))
-        vollog.log(constants.LOGLEVEL_V, f"IndexError - No configuration provided: {config_path}")
-        return {config_path: self}
+
+        return result
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Constructs the appropriate layer and adds it based on the class parameter."""

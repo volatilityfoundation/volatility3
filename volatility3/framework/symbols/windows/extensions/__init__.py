@@ -574,9 +574,9 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         proc_layer = self._context.layers[proc_layer_name]
         if not proc_layer.is_valid(self.Peb):
             raise exceptions.InvalidAddressException(proc_layer_name, self.Peb,
-                                                     f"Invalid address at {self.Peb:0x}")
+                                                     f"Invalid Peb address at {self.Peb:0x}")
 
-        sym_table = self.vol.type_name.split(constants.BANG)[0]
+        sym_table = self.get_symbol_table_name()
         peb = self._context.object(f"{sym_table}{constants.BANG}_PEB",
                                    layer_name = proc_layer_name,
                                    offset = self.Peb)
@@ -719,7 +719,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             env = envar[:split_index]
             var = envar[split_index + 1:]
 
-            # Exlude parse problem with some types of env
+            # Exclude parse problem with some types of env
             if env and var:
                 yield env, var
 
@@ -746,7 +746,10 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
         trans_layer = self._context.layers[layer]
 
         try:
-            trans_layer.is_valid(self.vol.offset)
+            is_valid = trans_layer.is_valid(self.vol.offset)
+            if not is_valid:
+                return
+
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
             return
@@ -761,9 +764,7 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
         while link.vol.offset not in seen:
             obj_offset = link.vol.offset - relative_offset
 
-            try:
-                trans_layer.is_valid(obj_offset)
-            except exceptions.InvalidAddressException:
+            if not trans_layer.is_valid(obj_offset):
                 return
 
             obj = self._context.object(symbol_type,

@@ -115,7 +115,8 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         mask = context.layers[object_info.layer_name].address_mask
         normalized_offset = object_info.offset & mask
 
-        self._vol = collections.ChainMap({}, {'type_name': type_name, 'offset': normalized_offset}, object_info, kwargs)
+        vol_info_dict = {'type_name': type_name, 'offset': normalized_offset}
+        self._vol = collections.ChainMap({}, vol_info_dict, object_info, kwargs)
         self._context = context
 
     def __getattr__(self, attr: str) -> Any:
@@ -156,7 +157,7 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         """
         # TODO: Carefully consider the implications of casting and how it should work
         if constants.BANG not in new_type_name:
-            symbol_table = self.vol['type_name'].split(constants.BANG)[0]
+            symbol_table = self.get_symbol_table_name()
             new_type_name = symbol_table + constants.BANG + new_type_name
         object_template = self._context.symbol_space.get_type(new_type_name)
         object_template = object_template.clone()
@@ -242,6 +243,12 @@ class ObjectInterface(metaclass = abc.ABCMeta):
 
         @classmethod
         @abc.abstractmethod
+        def child_template(cls, template: 'Template', child: str) -> 'interfaces.objects.Template':
+            """Returns the template of the child member from the parent."""
+            raise KeyError(f"Template does not contain any children: {template.vol.type_name}")
+
+        @classmethod
+        @abc.abstractmethod
         def has_member(cls, template: 'Template', member_name: str) -> bool:
             """Returns whether the object would contain a member called
             member_name."""
@@ -303,6 +310,10 @@ class Template:
     def relative_child_offset(self, child: str) -> int:
         """Returns the relative offset of the `child` member from its parent
         offset."""
+
+    @abc.abstractmethod
+    def child_template(self, child: str) -> 'interfaces.objects.Template':
+        """Returns the `child` member template from its parent."""
 
     @abc.abstractmethod
     def replace_child(self, old_child: 'Template', new_child: 'Template') -> None:

@@ -65,7 +65,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             try:
                 name = dll_entry.FullDllName.get_string()
             except exceptions.InvalidAddressException:
-                name = 'UnreadbleDLLName'
+                name = 'UnreadableDLLName'
 
             if layer_name is None:
                 layer_name = dll_entry.vol.layer_name
