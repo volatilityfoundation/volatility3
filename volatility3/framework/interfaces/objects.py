@@ -6,6 +6,7 @@ interpreted values of data from a layer."""
 import abc
 import collections
 import collections.abc
+import contextlib
 import logging
 from typing import Any, Dict, List, Mapping, Optional
 
@@ -187,11 +188,9 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         """
         if self.has_member(member_name):
             # noinspection PyBroadException
-            try:
+            with contextlib.suppress(Exception):
                 _ = getattr(self, member_name)
                 return True
-            except Exception:
-                pass
         return False
 
     def has_valid_members(self, member_names: List[str]) -> bool:
@@ -239,6 +238,12 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         def relative_child_offset(cls, template: 'Template', child: str) -> int:
             """Returns the relative offset from the head of the parent data to
             the child member."""
+            raise KeyError(f"Template does not contain any children: {template.vol.type_name}")
+
+        @classmethod
+        @abc.abstractmethod
+        def child_template(cls, template: 'Template', child: str) -> 'interfaces.objects.Template':
+            """Returns the template of the child member from the parent."""
             raise KeyError(f"Template does not contain any children: {template.vol.type_name}")
 
         @classmethod
@@ -304,6 +309,10 @@ class Template:
     def relative_child_offset(self, child: str) -> int:
         """Returns the relative offset of the `child` member from its parent
         offset."""
+
+    @abc.abstractmethod
+    def child_template(self, child: str) -> 'interfaces.objects.Template':
+        """Returns the `child` member template from its parent."""
 
     @abc.abstractmethod
     def replace_child(self, old_child: 'Template', new_child: 'Template') -> None:

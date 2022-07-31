@@ -408,12 +408,18 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
                     config_path: str) -> Dict[str, interfaces.configuration.RequirementInterface]:
         # Mypy doesn't appreciate our classproperty implementation, self._plugin.version has no type
         config_path = interfaces.configuration.path_join(config_path, self.name)
-        if len(self._version) > 0 and self._component.version[0] != self._version[0]:
-            return {config_path: self}
-        if len(self._version) > 1 and self._component.version[1] < self._version[1]:
+        if not self.matches_required(self._version, self._component.version):
             return {config_path: self}
         context.config[interfaces.configuration.path_join(config_path, self.name)] = True
         return {}
+
+    @classmethod
+    def matches_required(cls, required: Tuple[int, ...], version: Tuple[int, int, int]) -> bool:
+        if len(required) > 0 and version[0] != required[0]:
+            return False
+        if len(required) > 1 and version[1] < required[1]:
+            return False
+        return True
 
 
 class PluginRequirement(VersionRequirement):
