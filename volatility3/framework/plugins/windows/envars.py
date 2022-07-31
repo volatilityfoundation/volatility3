@@ -1,9 +1,10 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
+import contextlib
 import logging
 from typing import List
 
-from volatility3.framework import renderers, interfaces, objects, exceptions, constants
+from volatility3.framework import constants, exceptions, interfaces, objects, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import registry
 from volatility3.plugins.windows import pslist
@@ -23,7 +24,7 @@ class Envars(interfaces.plugins.PluginInterface):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
@@ -61,13 +62,11 @@ class Envars(interfaces.plugins.PluginInterface):
                 key = hive.get_key('CurrentControlSet\\Control\\Session Manager\\Environment')
                 sys = True
             except KeyError:
-                try:
+                with contextlib.suppress(KeyError):
                     key = hive.get_key('ControlSet001\\Control\\Session Manager\\Environment')
                     sys = True
-                except KeyError:
-                    pass
             if sys:
-                try:
+                with contextlib.suppress(KeyError):
                     for node in key.get_values():
                         try:
                             value_node_name = node.get_name()
@@ -78,17 +77,13 @@ class Envars(interfaces.plugins.PluginInterface):
                                 constants.LOGLEVEL_VVV,
                                 "Error while parsing global environment variables keys (some keys might be excluded)")
                             continue
-                except KeyError:
-                    pass
 
             ## The user-specific variables
-            try:
+            with contextlib.suppress(KeyError):
                 key = hive.get_key('Environment')
                 ntuser = True
-            except KeyError:
-                pass
             if ntuser:
-                try:
+                with contextlib.suppress(KeyError):
                     for node in key.get_values():
                         try:
                             value_node_name = node.get_name()
@@ -99,8 +94,6 @@ class Envars(interfaces.plugins.PluginInterface):
                                 constants.LOGLEVEL_VVV,
                                 "Error while parsing user environment variables keys (some keys might be excluded)")
                             continue
-                except KeyError:
-                    pass
 
             ## The volatile user variables
             try:

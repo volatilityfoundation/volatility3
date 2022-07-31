@@ -1,18 +1,19 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import contextlib
 import datetime
 import logging
 import ntpath
 from typing import List, Optional, Type
 
-from volatility3.framework import exceptions, renderers, interfaces, constants
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework.renderers import format_hints, conversion
+from volatility3.framework.renderers import conversion, format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
 from volatility3.plugins import timeliner
-from volatility3.plugins.windows import pslist, info
+from volatility3.plugins.windows import info, pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'info', component = info.Info, version = (1, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -107,12 +108,10 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             for entry in proc.load_order_modules():
 
                 BaseDllName = FullDllName = renderers.UnreadableValue()
-                try:
+                with contextlib.suppress(exceptions.InvalidAddressException):
                     BaseDllName = entry.BaseDllName.get_string()
                     # We assume that if the BaseDllName points to an invalid buffer, so will FullDllName
                     FullDllName = entry.FullDllName.get_string()
-                except exceptions.InvalidAddressException:
-                    pass
 
                 if dll_load_time_field:
                     # Versions prior to 6.1 won't have the LoadTime attribute

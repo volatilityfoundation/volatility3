@@ -1,6 +1,7 @@
 # This file is Copyright 2021 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import contextlib
 import logging
 import struct
 from typing import Tuple, Optional
@@ -202,11 +203,9 @@ class WindowsCrashDumpStacker(interfaces.automagic.StackerLayerInterface):
               layer_name: str,
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         for layer in [WindowsCrashDump32Layer, WindowsCrashDump64Layer]:
-            try:
+            with contextlib.suppress(WindowsCrashDumpFormatException):
                 layer.check_header(context.layers[layer_name])
                 new_name = context.layers.free_layer_name(layer.__name__)
                 context.config[interfaces.configuration.path_join(new_name, "base_layer")] = layer_name
                 return layer(context, new_name, new_name)
-            except WindowsCrashDumpFormatException:
-                pass
         return None

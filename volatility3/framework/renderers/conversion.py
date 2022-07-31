@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import contextlib
 import datetime
 import ipaddress
 import socket
@@ -27,10 +27,8 @@ def unixtime_to_datetime(unixtime: int) -> Union[interfaces.renderers.BaseAbsent
     ret: Union[interfaces.renderers.BaseAbsentValue, datetime.datetime] = renderers.UnparsableValue()
 
     if unixtime > 0:
-        try:
+        with contextlib.suppress(ValueError):
             ret = datetime.datetime.utcfromtimestamp(unixtime)
-        except ValueError:
-            pass
 
     return ret
 
