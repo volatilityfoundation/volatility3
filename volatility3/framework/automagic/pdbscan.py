@@ -7,10 +7,11 @@ from loaded PE files.
 This module contains a standalone scanner, and also a :class:`~volatility3.framework.interfaces.layers.ScannerInterface`
 based scanner for use within the framework by calling :func:`~volatility3.framework.interfaces.layers.DataLayerInterface.scan`.
 """
+import contextlib
 import logging
 import math
 import os
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union, Callable
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from volatility3.framework import constants, exceptions, interfaces, layers
 from volatility3.framework.configuration import requirements
@@ -139,7 +140,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                          vlayer: layers.intel.Intel,
                          progress_callback: constants.ProgressCallback = None) -> Optional[ValidKernelType]:
 
-        def test_virtual_kernel(physical_layer_name, virtual_layer_name: str, kernel: Dict[str, Any]) -> Optional[ValidKernelType]:
+        def test_virtual_kernel(physical_layer_name, virtual_layer_name: str, kernel: Dict[str, Any]) -> Optional[
+            ValidKernelType]:
             # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
             if kernel['mz_offset'] is None or not isinstance(kernel['mz_offset'], int):
                 # Rule out kernels that couldn't find a suitable MZ header
@@ -159,7 +161,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                              vlayer: layers.intel.Intel,
                              progress_callback: constants.ProgressCallback = None) -> Optional[ValidKernelType]:
 
-        def test_physical_kernel(physical_layer_name:str , virtual_layer_name: str, kernel: Dict[str, Any]) -> Optional[ValidKernelType]:
+        def test_physical_kernel(physical_layer_name: str, virtual_layer_name: str, kernel: Dict[str, Any]) -> Optional[
+            ValidKernelType]:
             # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
             if kernel['mz_offset'] is None or not isinstance(kernel['mz_offset'], int):
                 # Rule out kernels that couldn't find a suitable MZ header
@@ -274,7 +277,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         kernel_pdb_names = [bytes(name + ".pdb", "utf-8") for name in constants.windows.KERNEL_MODULE_NAMES]
 
         virtual_layer_name = vlayer.name
-        try:
+        with contextlib.suppress(exceptions.InvalidAddressException):
             if vlayer.read(address, 0x2) == b'MZ':
                 res = list(
                     PDBUtility.pdbname_scan(ctx = context,
@@ -286,8 +289,6 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                                             end = address + self.max_pdb_size))
                 if res:
                     valid_kernel = (virtual_layer_name, address, res[0])
-        except exceptions.InvalidAddressException:
-            pass
         return valid_kernel
 
     # List of methods to be run, in order, to determine the valid kernels
