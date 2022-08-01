@@ -14,8 +14,6 @@ import hashlib
 import ntpath
 import json
 
-import pytest
-
 #
 # HELPER FUNCTIONS
 #
@@ -61,14 +59,12 @@ def test_windows_pslist(image, volatility, python):
     assert out.find(b"svchost.exe") != -1
     assert out.count(b"\n") > 10
     assert rc == 0
-    assert rc == 0
 
     rc, out, err = runvol_plugin(
         "windows.pslist.PsList", image, volatility, python, pluginargs=["--pid", "4"])
     out = out.lower()
     assert out.find(b"system") != -1
     assert out.count(b"\n") < 10
-    assert rc == 0
     assert rc == 0
 
 def test_windows_psscan(image, volatility, python):
@@ -79,20 +75,17 @@ def test_windows_psscan(image, volatility, python):
     assert out.find(b"svchost.exe") != -1
     assert out.count(b"\n") > 10
     assert rc == 0
-    assert rc == 0
 
 def test_windows_dlllist(image, volatility, python):
     rc, out, err = runvol_plugin("windows.dlllist.DllList", image, volatility, python)
     out = out.lower()
     assert out.count(b"\n") > 10
     assert rc == 0
-    assert rc == 0
 
 def test_windows_modules(image, volatility, python):
     rc, out, err = runvol_plugin("windows.modules.Modules", image, volatility, python)
     out = out.lower()
     assert out.count(b"\n") > 10
-    assert rc == 0
     assert rc == 0
 
 def test_windows_hivelist(image, volatility, python):
