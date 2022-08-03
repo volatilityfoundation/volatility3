@@ -13,7 +13,7 @@ from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from urllib import parse, request
 
 from volatility3 import symbols
-from volatility3.framework import constants, contexts, exceptions, interfaces
+from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.automagic import symbol_cache
 from volatility3.framework.configuration import requirements
 from volatility3.framework.configuration.requirements import SymbolTableRequirement
