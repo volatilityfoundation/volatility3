@@ -39,6 +39,18 @@ To enable the full range of Volatility 3 functionality, use a command like the o
 pip3 install -r requirements.txt
 ```
 
+### Snappy Library Required for Full Functionality Installation
+If you recieve an error informing you that `snappy-c.h` cannot be found, then you need to install the library and re-run the previous `pip3` command:
+
+DEB:
+```shell
+sudo apt-get install libsnappy-dev
+```
+RPM:
+```shell
+sudo yum install libsnappy-devel
+```
+
 ## Downloading Volatility
 
 The latest stable version of Volatility will always be the stable branch of the GitHub repository. You can get the latest version of the code using the following command:
