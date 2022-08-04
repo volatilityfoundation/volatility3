@@ -104,7 +104,7 @@ class WriteCrashDump(plugins.PluginInterface):
         physical_layer_name = cls.get_physical_layer_name(context, virtual_layer)
         physical_layer = context.layers[physical_layer_name]
 
-        page_count = (physical_layer.maximum_address - physical_layer.minimum_address) // 0x1000
+        page_count = (physical_layer.maximum_address + 1 - physical_layer.minimum_address) // 0x1000
         dump_header.PhysicalMemoryBlockBuffer.NumberOfRuns.write(1)
         dump_header.PhysicalMemoryBlockBuffer.NumberOfPages.write(page_count)
         run0 = dump_header.PhysicalMemoryBlockBuffer.Run[0]
