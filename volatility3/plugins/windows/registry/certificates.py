@@ -47,7 +47,7 @@ class Certificates(interfaces.plugins.PluginInterface):
                         Optional[interfaces.plugins.FileHandlerInterface]:
         try:
             if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
-                dump_name = "{} - {} - {}.crt".format(hive_offset, reg_section, key_hash)
+                dump_name = "{}-{}-{}.crt".format(hive_offset, reg_section, key_hash)
                 file_handle = open_method(dump_name)
                 file_handle.write(certificate_data)
                 return file_handle
