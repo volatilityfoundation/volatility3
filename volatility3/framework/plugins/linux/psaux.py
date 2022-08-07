@@ -4,11 +4,12 @@
 
 from typing import Optional
 
+from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework import symbols, exceptions, renderers, interfaces
+from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
 from volatility3.plugins.linux import pslist
-from volatility3.framework.interfaces import plugins
+
 
 class PsAux(plugins.PluginInterface):
     """ Lists processes with their command line arguments """
@@ -29,7 +30,7 @@ class PsAux(plugins.PluginInterface):
         ]
 
     def _get_command_line_args(self, task: interfaces.objects.ObjectInterface,
-                                    name: str) -> Optional[str]:
+                               name: str) -> Optional[str]:
         """
         Reads the command line arguments of a process
         These are stored on the userland stack
@@ -104,8 +105,7 @@ class PsAux(plugins.PluginInterface):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str), ("ARGS", str)],
-                                    self._generator(
-                                        pslist.PsList.list_tasks(self.context,
-                                                                self.config['kernel'],
-                                                                filter_func = filter_func)))
-
+                                  self._generator(
+                                      pslist.PsList.list_tasks(self.context,
+                                                               self.config['kernel'],
+                                                               filter_func = filter_func)))
