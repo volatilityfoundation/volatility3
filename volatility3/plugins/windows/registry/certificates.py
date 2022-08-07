@@ -68,7 +68,7 @@ class Certificates(interfaces.plugins.PluginInterface):
                     "Microsoft\\SystemCertificates",
                     "Software\\Microsoft\\SystemCertificates",
             ]:
-                with contextlib.suppress(KeyError, exceptions.SwappedInvalidAddressException):
+                with contextlib.suppress(KeyError, exceptions.InvalidAddressException):
                     # Walk it
                     node_path = hive.get_key(top_key, return_list = True)
                     for (_depth, is_key, _last_write_time, key_path, _volatility, node) in printkey.PrintKey.key_iterator(hive, node_path, recurse = True):
