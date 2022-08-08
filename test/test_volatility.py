@@ -14,8 +14,6 @@ import hashlib
 import ntpath
 import json
 
-import pytest
-
 #
 # HELPER FUNCTIONS
 #
@@ -61,14 +59,12 @@ def test_windows_pslist(image, volatility, python):
     assert out.find(b"svchost.exe") != -1
     assert out.count(b"\n") > 10
     assert rc == 0
-    assert rc == 0
 
     rc, out, err = runvol_plugin(
         "windows.pslist.PsList", image, volatility, python, pluginargs=["--pid", "4"])
     out = out.lower()
     assert out.find(b"system") != -1
     assert out.count(b"\n") < 10
-    assert rc == 0
     assert rc == 0
 
 def test_windows_psscan(image, volatility, python):
@@ -79,20 +75,17 @@ def test_windows_psscan(image, volatility, python):
     assert out.find(b"svchost.exe") != -1
     assert out.count(b"\n") > 10
     assert rc == 0
-    assert rc == 0
 
 def test_windows_dlllist(image, volatility, python):
     rc, out, err = runvol_plugin("windows.dlllist.DllList", image, volatility, python)
     out = out.lower()
     assert out.count(b"\n") > 10
     assert rc == 0
-    assert rc == 0
 
 def test_windows_modules(image, volatility, python):
     rc, out, err = runvol_plugin("windows.modules.Modules", image, volatility, python)
     out = out.lower()
     assert out.count(b"\n") > 10
-    assert rc == 0
     assert rc == 0
 
 def test_windows_hivelist(image, volatility, python):
@@ -197,6 +190,17 @@ def test_windows_callbacks(image, volatility, python):
     assert out.find(b"KeBugCheckCallbackListHead") != -1
     assert out.find(b"KeBugCheckReasonCallbackListHead") != -1
     assert out.count(b"KeBugCheckReasonCallbackListHead	") > 5
+    assert rc == 0
+
+def test_windows_devicetree(image, volatility, python):
+    rc, out, err = runvol_plugin("windows.devicetree.DeviceTree", image, volatility, python)
+
+    assert out.find(b"DEV") != -1
+    assert out.find(b"DRV") != -1
+    assert out.find(b"ATT") != -1
+    assert out.find(b"FILE_DEVICE_CONTROLLER") != -1
+    assert out.find(b"FILE_DEVICE_DISK") != -1
+    assert out.find(b"FILE_DEVICE_DISK_FILE_SYSTEM") != -1
     assert rc == 0
 
 # LINUX

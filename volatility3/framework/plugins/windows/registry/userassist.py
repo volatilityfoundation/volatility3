@@ -3,17 +3,18 @@
 #
 
 import codecs
+import contextlib
 import datetime
 import json
 import logging
 import os
-from typing import Any, List, Tuple, Generator
+from typing import Any, Generator, List, Tuple
 
-from volatility3.framework import exceptions, renderers, constants, interfaces
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers.physical import BufferDataLayer
 from volatility3.framework.layers.registry import RegistryHive
-from volatility3.framework.renderers import format_hints, conversion
+from volatility3.framework.renderers import conversion, format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.plugins.windows.registry import hivelist
 
@@ -38,7 +39,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.IntRequirement(name = 'offset', description = "Hive Offset", default = None, optional = True),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
         ]
@@ -126,11 +127,9 @@ class UserAssist(interfaces.plugins.PluginInterface):
         hive_name = hive.hive.cast(kernel.symbol_table_name + constants.BANG + "_CMHIVE").get_name()
 
         if self._win7 is None:
-            try:
+            with contextlib.suppress(exceptions.SymbolError):
                 self._win7 = self._win7_or_later()
-            except exceptions.SymbolError:
                 # self._win7 will be None and only registry value rawdata will be output
-                pass
 
         self._determine_userassist_type()
 
@@ -163,7 +162,6 @@ class UserAssist(interfaces.plugins.PluginInterface):
 
                 # output any subkeys under Count
                 for subkey in countkey.get_subkeys():
-
                     subkey_name = subkey.get_name()
                     result = (1, (
                         renderers.format_hints.Hex(hive.hive_offset),
@@ -185,10 +183,8 @@ class UserAssist(interfaces.plugins.PluginInterface):
                 for value in countkey.get_values():
 
                     value_name = value.get_name()
-                    try:
+                    with contextlib.suppress(UnicodeDecodeError):
                         value_name = codecs.encode(value_name, "rot_13")
-                    except UnicodeDecodeError:
-                        pass
 
                     if self._win7:
                         guid = value_name.split("\\")[0]

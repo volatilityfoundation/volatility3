@@ -3,6 +3,7 @@
 #
 
 import collections.abc
+import contextlib
 import datetime
 import functools
 import logging
@@ -305,7 +306,7 @@ class MMVAD(MMVAD_SHORT):
 
         file_name = renderers.NotApplicableValue()
 
-        try:
+        with contextlib.suppress(exceptions.InvalidAddressException):
             # this is for xp and 2003
             if self.has_member("ControlArea"):
                 filename_obj = self.ControlArea.FilePointer.FileName
@@ -317,9 +318,6 @@ class MMVAD(MMVAD_SHORT):
 
             if filename_obj.Length > 0:
                 file_name = filename_obj.get_string()
-
-        except exceptions.InvalidAddressException:
-            pass
 
         return file_name
 
@@ -364,6 +362,7 @@ class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
             yield device
             device = device.AttachedDevice.dereference()
 
+
 class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel driver objects."""
 
@@ -374,7 +373,7 @@ class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
 
     def get_devices(self) -> Generator[ObjectInterface, None, None]:
         """Enumerate the driver's device objects"""
-        device =  self.DeviceObject.dereference()
+        device = self.DeviceObject.dereference()
         while device:
             yield device
             device = device.NextDevice.dereference()
@@ -413,15 +412,11 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
         # this pointer needs to be checked against native_layer_name because the object may
         # be instantiated from a primary (virtual) layer or a memory (physical) layer.
         if self._context.layers[self.vol.native_layer_name].is_valid(self.DeviceObject):
-            try:
+            with contextlib.suppress(ValueError):
                 name = f"\\Device\\{self.DeviceObject.get_device_name()}"
-            except ValueError:
-                pass
 
-        try:
+        with contextlib.suppress(TypeError, exceptions.InvalidAddressException):
             name += self.FileName.String
-        except (TypeError, exceptions.InvalidAddressException):
-            pass
 
         return name
 
@@ -1122,12 +1117,10 @@ class SHARED_CACHE_MAP(objects.StructType):
         iterval = 0
         while (iterval < full_blocks) and (full_blocks <= 4):
             vacb_obj = self.InitialVacbs[iterval]
-            try:
+            with contextlib.suppress(exceptions.InvalidAddressException):
                 # Make sure that the SharedCacheMap member of the VACB points back to the parent object.
                 if vacb_obj.SharedCacheMap == self.vol.offset:
                     self.save_vacb(vacb_obj, vacb_list)
-            except exceptions.InvalidAddressException:
-                pass
             iterval += 1
 
         # We also have to account for the spill over data that is not found in the full blocks.

@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import contextlib
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
@@ -92,11 +92,9 @@ class RegistryHive(linear.LinearlyMappedLayer):
     @property
     def root_cell_offset(self) -> int:
         """Returns the offset for the root cell in this hive."""
-        try:
+        with contextlib.suppress(InvalidAddressException):
             if self._base_block.Signature.cast("string", max_length = 4, encoding = "latin-1") == 'regf':
                 return self._base_block.RootCell
-        except InvalidAddressException:
-            pass
         return 0x20
 
     def get_cell(self, cell_offset: int) -> 'objects.StructType':
@@ -201,11 +199,11 @@ class RegistryHive(linear.LinearlyMappedLayer):
         if offset & 0x7fffffff > self._get_hive_maxaddr(volatile):
             vollog.log(constants.LOGLEVEL_VVV,
                        "Layer {} couldn't translate offset {}, greater than {} in {} store of {}".format(
-                               self.name,
-                               hex(offset & 0x7fffffff),
-                               hex(self._get_hive_maxaddr(volatile)),
-                               "volative" if volatile else "non-volatile",
-                               self.get_name()))
+                           self.name,
+                           hex(offset & 0x7fffffff),
+                           hex(self._get_hive_maxaddr(volatile)),
+                           "volative" if volatile else "non-volatile",
+                           self.get_name()))
             raise RegistryInvalidIndex(self.name, "Mapping request for value greater than maxaddr")
 
         storage = self.hive.Storage[volatile]
@@ -252,14 +250,13 @@ class RegistryHive(linear.LinearlyMappedLayer):
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns a boolean based on whether the offset is valid or not."""
-        try:
+        with contextlib.suppress(exceptions.InvalidAddressException):
             # Pass this to the lower layers for now
             return all([
                 self.context.layers[layer].is_valid(offset, length)
                 for (_, _, offset, length, layer) in self.mapping(offset, length)
             ])
-        except exceptions.InvalidAddressException:
-            return False
+        return False
 
     @property
     def minimum_address(self) -> int:

@@ -12,9 +12,7 @@ import urllib.request
 from abc import abstractmethod
 from typing import Dict, Generator, Iterable, List, Optional, Tuple
 
-import volatility3.framework
-import volatility3.schemas
-from volatility3 import schemas
+from volatility3 import framework, schemas
 from volatility3.framework import constants, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import resources
@@ -41,7 +39,7 @@ class IdentifierProcessor:
         Returns:
             identifier is valid or None if not found
         """
-        raise NotImplemented("This base class has no get_identifier method defined")
+        raise NotImplementedError("This base class has no get_identifier method defined")
 
 
 class WindowsIdentifier(IdentifierProcessor):
@@ -94,7 +92,7 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         super().__init__()
         self._filename = filename
         self._classifiers = {}
-        for subclazz in volatility3.framework.class_subclasses(IdentifierProcessor):
+        for subclazz in framework.class_subclasses(IdentifierProcessor):
             self._classifiers[subclazz.operating_system] = subclazz
 
     def add_identifier(self, location: str, operating_system: str, identifier: str):
@@ -216,7 +214,7 @@ class SqliteCache(CacheManagerInterface):
         return result
 
     def get_local_locations(self) -> Generator[str, None, None]:
-        result = self._database.cursor().execute('SELECT DISTINCT location FROM cache WHERE local = True').fetchall()
+        result = self._database.cursor().execute('SELECT DISTINCT location FROM cache WHERE local = 1').fetchall()
         for row in result:
             yield row['location']
 
@@ -261,13 +259,13 @@ class SqliteCache(CacheManagerInterface):
         cache_update = set()
         files_to_timestamp = on_disk_locations.intersection(cached_locations)
         if files_to_timestamp:
-            result = self._database.cursor().execute("SELECT location FROM cache WHERE local = True "
+            result = self._database.cursor().execute("SELECT location FROM cache WHERE local = 1 "
                                                      f"AND cached < date('now', '{self.cache_period}');")
             for row in result:
                 if row['location'] in files_to_timestamp:
                     cache_update.add(row['location'])
 
-        idextractors = list(volatility3.framework.class_subclasses(IdentifierProcessor))
+        idextractors = list(framework.class_subclasses(IdentifierProcessor))
 
         # New or not recently updated
 
@@ -330,7 +328,7 @@ class SqliteCache(CacheManagerInterface):
             progress_callback(0, 'Reading remote ISF list')
             cursor = self._database.cursor()
             cursor.execute(
-                f"SELECT cached FROM cache WHERE remote = True and cached < datetime('now', {self.cache_period})")
+                f"SELECT cached FROM cache WHERE local = 0 and cached < datetime('now', {self.cache_period})")
             remote_identifiers = RemoteIdentifierFormat(constants.REMOTE_ISF_URL)
             progress_callback(50, 'Reading remote ISF list')
             for operating_system in constants.OS_CATEGORIES:
@@ -347,7 +345,8 @@ class SqliteCache(CacheManagerInterface):
 
         if missing_locations:
             self._database.cursor().execute(
-                f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})", [x for x in missing_locations])
+                f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})",
+                [x for x in missing_locations])
             self._database.commit()
 
     def get_identifier_dictionary(self, operating_system: Optional[str] = None, local_only: bool = False) -> \
@@ -356,7 +355,7 @@ class SqliteCache(CacheManagerInterface):
         additions = []
         statement = 'SELECT location, identifier FROM cache'
         if local_only:
-            additions.append('local = True')
+            additions.append('local = 1')
         if operating_system:
             additions.append(f"operating_system = '{operating_system}'")
         if additions:

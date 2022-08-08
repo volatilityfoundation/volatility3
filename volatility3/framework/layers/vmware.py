@@ -1,14 +1,14 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import contextlib
 import logging
 import struct
 from typing import Any, Dict, List, Optional
 
-from volatility3.framework import interfaces, constants, exceptions
+from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.configuration import requirements
-from volatility3.framework.layers import physical, segmented, resources
+from volatility3.framework.layers import physical, resources, segmented
 from volatility3.framework.symbols import native
 
 vollog = logging.getLogger(__name__)
@@ -87,13 +87,13 @@ class VmwareLayer(segmented.SegmentedLayer):
                                              offset = offset + name_len + 2 + (index * index_len),
                                              layer_name = self._meta_layer))
                 data_len = flags & 0x3f
-                
+
                 if data_len in [62, 63]:  # Handle special data sizes that indicate a longer data stream
                     data_len = 4 if version == 0 else 8
                     # Read the size of the data
                     data_size = self._context.object(self._choose_type(data_len),
-                                            layer_name = self._meta_layer,
-                                            offset = offset + 2 + name_len + (indices_len * index_len))
+                                                     layer_name = self._meta_layer,
+                                                     offset = offset + 2 + name_len + (indices_len * index_len))
                     # Skip two bytes of padding (as it seems?)
                     # Read the actual data
                     data = self._context.object("vmware!bytes",
@@ -113,9 +113,9 @@ class VmwareLayer(segmented.SegmentedLayer):
         if tags[("regionsCount", ())][1] == 0:
             raise VmwareFormatException(self.name, "VMware VMEM is not split into regions")
         for region in range(tags[("regionsCount", ())][1]):
-            offset = tags[("regionPPN", (region, ))][1] * self._page_size
-            mapped_offset = tags[("regionPageNum", (region, ))][1] * self._page_size
-            length = tags[("regionSize", (region, ))][1] * self._page_size
+            offset = tags[("regionPPN", (region,))][1] * self._page_size
+            mapped_offset = tags[("regionPageNum", (region,))][1] * self._page_size
+            length = tags[("regionSize", (region,))][1] * self._page_size
             self._segments.append((offset, mapped_offset, length, length))
 
     @property
@@ -153,23 +153,19 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
                                                                      current_layer_name)
 
             vmss_success = False
-            try:
+            with contextlib.suppress(IOError):
                 _ = resources.ResourceAccessor().open(vmss).read(10)
                 context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmss
                 context.layers.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
                 vmss_success = True
-            except IOError:
-                pass
 
             vmsn_success = False
             if not vmss_success:
-                try:
+                with contextlib.suppress(IOError):
                     _ = resources.ResourceAccessor().open(vmsn).read(10)
                     context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmsn
                     context.layers.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
                     vmsn_success = True
-                except IOError:
-                    pass
 
             vollog.log(constants.LOGLEVEL_VVVV, f"Metadata found: VMSS ({vmss_success}) or VMSN ({vmsn_success})")
 
