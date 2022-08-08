@@ -12,9 +12,7 @@ import urllib.request
 from abc import abstractmethod
 from typing import Dict, Generator, Iterable, List, Optional, Tuple
 
-import volatility3.framework
-import volatility3.schemas
-from volatility3 import schemas
+from volatility3 import framework, schemas
 from volatility3.framework import constants, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import resources
@@ -41,7 +39,7 @@ class IdentifierProcessor:
         Returns:
             identifier is valid or None if not found
         """
-        raise NotImplemented("This base class has no get_identifier method defined")
+        raise NotImplementedError("This base class has no get_identifier method defined")
 
 
 class WindowsIdentifier(IdentifierProcessor):
@@ -94,7 +92,7 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         super().__init__()
         self._filename = filename
         self._classifiers = {}
-        for subclazz in volatility3.framework.class_subclasses(IdentifierProcessor):
+        for subclazz in framework.class_subclasses(IdentifierProcessor):
             self._classifiers[subclazz.operating_system] = subclazz
 
     def add_identifier(self, location: str, operating_system: str, identifier: str):
@@ -267,7 +265,7 @@ class SqliteCache(CacheManagerInterface):
                 if row['location'] in files_to_timestamp:
                     cache_update.add(row['location'])
 
-        idextractors = list(volatility3.framework.class_subclasses(IdentifierProcessor))
+        idextractors = list(framework.class_subclasses(IdentifierProcessor))
 
         # New or not recently updated
 
@@ -347,7 +345,8 @@ class SqliteCache(CacheManagerInterface):
 
         if missing_locations:
             self._database.cursor().execute(
-                f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})", [x for x in missing_locations])
+                f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})",
+                [x for x in missing_locations])
             self._database.commit()
 
     def get_identifier_dictionary(self, operating_system: Optional[str] = None, local_only: bool = False) -> \
