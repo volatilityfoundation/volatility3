@@ -203,6 +203,11 @@ def test_windows_devicetree(image, volatility, python):
     assert out.find(b"FILE_DEVICE_DISK_FILE_SYSTEM") != -1
     assert rc == 0
 
+def test_windows_joblinks(image, volatility, python):
+    rc, out, err = runvol_plugin("windows.joblinks.JobLinks", image, volatility, python)
+
+    assert rc == 0
+
 # LINUX
 
 def test_linux_pslist(image, volatility, python):
