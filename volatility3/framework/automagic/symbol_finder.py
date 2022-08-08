@@ -123,9 +123,8 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                 requirement.construct(context, config_path)
                 break
             else:
-                if symbol_files:
-                    vollog.debug(f"Symbol library path not found: {symbol_files}")
-                    # print("Kernel", banner, hex(banner_offset))
+                vollog.debug(f"Symbol library path not found for: {banner}")
+                # print("Kernel", banner, hex(banner_offset))
         else:
             vollog.debug("No existing banners found")
             # TODO: Fallback to generic regex search?
