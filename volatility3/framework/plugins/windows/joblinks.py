@@ -56,8 +56,24 @@ class JobLinks(interfaces.plugins.PluginInterface):
                 ))
 
                 vollog.log(LOGLEVEL_VVVV, proc.JobLinks)
+                vollog.log(LOGLEVEL_VVVV, hex(proc.JobLinks.Flink))
+                vollog.log(LOGLEVEL_VVVV, hex(proc.JobLinks.Blink))
                 vollog.log(LOGLEVEL_VVVV, job.JobLinks)
+                vollog.log(LOGLEVEL_VVVV, hex(job.JobLinks.Flink))
+                vollog.log(LOGLEVEL_VVVV, hex(job.JobLinks.Blink))
                 vollog.log(LOGLEVEL_VVVV, job.ProcessListHead)
+                vollog.log(LOGLEVEL_VVVV, hex(job.ProcessListHead.Flink))
+                vollog.log(LOGLEVEL_VVVV, hex(job.ProcessListHead.Blink))
+                vollog.log(LOGLEVEL_VVVV, "")
+
+                for entry in job.ProcessListHead.to_list(proc.vol.type_name, "JobLinks"):
+                    yield (1, (
+                    format_hints.Hex(offset), utility.array_to_string(entry.ImageFileName), entry.UniqueProcessId,
+                    entry.InheritedFromUniqueProcessId, entry.get_session_id(), renderers.NotApplicableValue(), entry.get_is_wow64(),
+                    renderers.NotApplicableValue(), renderers.NotApplicableValue(), renderers.NotApplicableValue(),
+                    renderers.NotApplicableValue(),
+                    "(Original Process)"
+                ))
 
             except (exceptions.InvalidAddressException):
                 continue
