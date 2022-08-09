@@ -58,8 +58,8 @@ class JobLinks(interfaces.plugins.PluginInterface):
                 for entry in job.ProcessListHead.to_list(proc.vol.type_name, "JobLinks"):
                     yield (1, (
                     format_hints.Hex(offset), utility.array_to_string(entry.ImageFileName), entry.UniqueProcessId,
-                    entry.InheritedFromUniqueProcessId, entry.get_session_id(), renderers.NotApplicableValue(), entry.get_is_wow64(),
-                    renderers.NotApplicableValue(), renderers.NotApplicableValue(), renderers.NotApplicableValue(),
+                    entry.InheritedFromUniqueProcessId, entry.get_session_id(), 0, entry.get_is_wow64(),
+                    0, 0, 0,
                     "Yes",
                     entry.get_peb().ProcessParameters.ImagePathName.get_string()
                 ))
