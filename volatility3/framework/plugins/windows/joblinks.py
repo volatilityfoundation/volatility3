@@ -56,6 +56,12 @@ class JobLinks(interfaces.plugins.PluginInterface):
                 ))
 
                 for entry in job.ProcessListHead.to_list(proc.vol.type_name, "JobLinks"):
+
+                    if not self.config['physical']:
+                        offset = entry.vol.offset
+                    else:
+                        (_, _, offset, _, _) = list(memory.mapping(offset = entry.vol.offset, length = 0))[0]
+
                     yield (1, (
                         format_hints.Hex(offset), utility.array_to_string(entry.ImageFileName), entry.UniqueProcessId,
                         entry.InheritedFromUniqueProcessId, entry.get_session_id(), 0, entry.get_is_wow64(),
