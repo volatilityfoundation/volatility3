@@ -523,7 +523,7 @@ class ConstructableRequirementInterface(RequirementInterface):
     must happen after the class configuration value has been provided).
     These values are then provided to the object's constructor by name
     as arguments (as well as the standard `context` and `config_path`
-    arguments.
+    arguments).
     """
 
     def __init__(self, *args, **kwargs) -> None:

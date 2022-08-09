@@ -78,7 +78,7 @@ class DeviceTree(interfaces.plugins.PluginInterface):
     """Listing tree based on drivers and attached devices in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 3)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -96,7 +96,7 @@ class DeviceTree(interfaces.plugins.PluginInterface):
             try:
                 try:
                     driver_name = driver.get_driver_name()
-                except (ValueError, exceptions.PagedInvalidAddressException):
+                except (ValueError, exceptions.InvalidAddressException):
                     vollog.log(constants.LOGLEVEL_VVVV,
                         f"Failed to get Driver name : {driver.vol.offset:x}")
                     driver_name = renderers.UnparsableValue()
@@ -114,7 +114,7 @@ class DeviceTree(interfaces.plugins.PluginInterface):
                 for device in driver.get_devices():
                     try:
                         device_name = device.get_device_name()
-                    except (ValueError, exceptions.PagedInvalidAddressException):
+                    except (ValueError, exceptions.InvalidAddressException):
                         vollog.log(constants.LOGLEVEL_VVVV,
                             f"Failed to get Device name : {device.vol.offset:x}")
                         device_name = renderers.UnparsableValue()
@@ -134,7 +134,7 @@ class DeviceTree(interfaces.plugins.PluginInterface):
                     for level, attached_device in enumerate(device.get_attached_devices(), start=2):
                         try:
                             device_name = attached_device.get_device_name()
-                        except (ValueError, exceptions.PagedInvalidAddressException):
+                        except (ValueError, exceptions.InvalidAddressException):
                             vollog.log(constants.LOGLEVEL_VVVV,
                                 f"Failed to get Attached Device Name: {attached_device.vol.offset:x}")
                             device_name = renderers.UnparsableValue()
@@ -151,7 +151,7 @@ class DeviceTree(interfaces.plugins.PluginInterface):
                             attached_device_type
                         ))
                     
-            except(exceptions.PagedInvalidAddressException):
+            except(exceptions.InvalidAddressException):
                 vollog.log(constants.LOGLEVEL_VVVV,
                     f"Invalid address identified in drivers and devices: {driver.vol.offset:x}")
                 continue

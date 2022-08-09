@@ -1,18 +1,17 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import contextlib
+import logging
 from typing import Generator, Iterable, Optional, Set, Tuple
 
-import logging
-
-from volatility3.framework import constants, objects, renderers
-from volatility3.framework import exceptions, interfaces
+from volatility3.framework import constants, exceptions, interfaces, objects
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import conversion
 from volatility3.framework.symbols import generic
 
 vollog = logging.getLogger(__name__)
+
 
 class proc(generic.GenericIntelProcess):
 
@@ -29,10 +28,8 @@ class proc(generic.GenericIntelProcess):
         if not isinstance(parent_layer, interfaces.layers.TranslationLayerInterface):
             raise TypeError("Parent layer is not a translation layer, unable to construct process layer")
 
-        try:
+        with contextlib.suppress(exceptions.InvalidAddressException):
             dtb = self.get_task().map.pmap.pm_cr3
-        except exceptions.InvalidAddressException:
-            return None
 
         if preferred_name is None:
             preferred_name = self.vol.layer_name + f"_Process{self.p_pid}"
@@ -41,10 +38,8 @@ class proc(generic.GenericIntelProcess):
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 
     def get_map_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        try:
+        with contextlib.suppress(exceptions.InvalidAddressException):
             task = self.get_task()
-        except exceptions.InvalidAddressException:
-            return
 
         try:
             current_map = task.map.hdr.links.next
@@ -55,9 +50,9 @@ class proc(generic.GenericIntelProcess):
 
         for i in range(task.map.hdr.nentries):
             if (not current_map or
-                current_map.vol.offset in seen or
-                not self._context.layers[task.vol.native_layer_name].is_valid(current_map.dereference().vol.offset, current_map.dereference().vol.size)):
-
+                    current_map.vol.offset in seen or
+                    not self._context.layers[task.vol.native_layer_name].is_valid(current_map.dereference().vol.offset,
+                                                                                  current_map.dereference().vol.size)):
                 vollog.log(constants.LOGLEVEL_VVV, "Breaking process maps iteration due to invalid state.")
                 break
 
@@ -102,10 +97,8 @@ class fileglob(objects.StructType):
         if self.has_member("fg_type"):
             ret = self.fg_type
         elif self.fg_ops != 0:
-            try:
+            with contextlib.suppress(exceptions.InvalidAddressException):
                 ret = self.fg_ops.fo_type
-            except exceptions.InvalidAddressException:
-                pass
 
         if ret:
             ret = str(ret.description).replace("DTYPE_", "")
@@ -456,7 +449,7 @@ class queue_entry(objects.StructType):
         seen = set()
 
         for attr in ['next', 'prev']:
-            try:
+            with contextlib.suppress(exceptions.InvalidAddressException):
                 n = getattr(self, attr).dereference().cast(type_name)
 
                 while n is not None and n.vol.offset != list_head:
@@ -472,9 +465,6 @@ class queue_entry(objects.StructType):
                         return
 
                     n = getattr(n.member(attr = member_name), attr).dereference().cast(type_name)
-
-            except exceptions.InvalidAddressException:
-                pass
 
 
 class ifnet(objects.StructType):

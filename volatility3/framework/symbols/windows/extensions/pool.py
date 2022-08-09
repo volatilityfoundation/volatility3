@@ -1,11 +1,13 @@
+import contextlib
 import functools
 import logging
 import struct
-from typing import Optional, Tuple, List, Dict, Union
+from typing import Dict, List, Optional, Tuple, Union
 
-from volatility3.framework import objects, interfaces, constants, symbols, exceptions, renderers
-from volatility3.framework.renderers import conversion
 from volatility3.plugins.windows.poolscanner import PoolConstraint
+
+from volatility3.framework import constants, exceptions, interfaces, objects, renderers, symbols
+from volatility3.framework.renderers import conversion
 
 vollog = logging.getLogger(__name__)
 
@@ -138,7 +140,7 @@ class POOL_HEADER(objects.StructType):
                     if addr - optional_headers_length >= padding_length > addr:
                         continue
 
-                    try:
+                    with contextlib.suppress(TypeError, exceptions.InvalidAddressException):
                         mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
                                                           layer_name = self.vol.layer_name,
                                                           offset = addr + body_offset + start_offset,
@@ -147,15 +149,13 @@ class POOL_HEADER(objects.StructType):
                         if mem_object.is_valid():
                             yield mem_object
 
-                    except (TypeError, exceptions.InvalidAddressException):
-                        pass
-
             # use the bottom up approach for windows 7 and earlier
             else:
                 type_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + type_name).size
                 if constraint.additional_structures:
                     for additional_structure in constraint.additional_structures:
-                        type_size += self._context.symbol_space.get_type(symbol_table_name + constants.BANG + additional_structure).size
+                        type_size += self._context.symbol_space.get_type(
+                            symbol_table_name + constants.BANG + additional_structure).size
 
                 rounded_size = conversion.round(type_size, alignment, up = True)
 
@@ -164,11 +164,9 @@ class POOL_HEADER(objects.StructType):
                                                   offset = self.vol.offset + self.BlockSize * alignment - rounded_size,
                                                   native_layer_name = native_layer_name)
 
-                try:
+                with contextlib.suppress(TypeError, exceptions.InvalidAddressException):
                     if mem_object.is_valid():
                         yield mem_object
-                except (TypeError, exceptions.InvalidAddressException):
-                    pass
 
     @classmethod
     @functools.lru_cache()
@@ -177,20 +175,18 @@ class POOL_HEADER(objects.StructType):
         headers = []
         sizes = []
         for header in [
-                'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
-                'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
+            'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
+            'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
         ]:
-            try:
+            with contextlib.suppress(AttributeError, exceptions.SymbolError):
                 type_name = f"{symbol_table_name}{constants.BANG}_OBJECT_HEADER_{header}"
                 header_type = context.symbol_space.get_type(type_name)
                 headers.append(header)
                 sizes.append(header_type.size)
-            except (AttributeError, exceptions.SymbolError):
                 # Some of these may not exist, for example:
                 #   if build < 9200: PADDING_INFO else: AUDIT_INFO
                 #   if build == 10586: HANDLE_REVOCATION_INFO else EXTENDED_INFO
                 # based on what's present and what's not, this list should be the right order and the right length
-                pass
         return headers, sizes
 
     def is_free_pool(self):

@@ -26,7 +26,7 @@ except ImportError:
 
 # Volatility must be findable in sys.path in order for collect_submodules to work
 # This adds the current working directory, which should usually do the trick
-sys.path.append(os.getcwd())
+sys.path.append(os.path.dirname(os.path.abspath(SPEC)))
 
 vol_analysis = Analysis(['vol.py'],
                         pathex = [],

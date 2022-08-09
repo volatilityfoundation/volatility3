@@ -25,7 +25,7 @@ class ModScan(interfaces.plugins.PluginInterface):
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.VersionRequirement(name = 'poolerscanner',
+            requirements.VersionRequirement(name = 'poolscanner',
                                             component = poolscanner.PoolScanner,
                                             version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (2, 0, 0)),
