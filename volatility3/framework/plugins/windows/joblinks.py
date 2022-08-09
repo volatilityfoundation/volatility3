@@ -4,11 +4,10 @@
 
 import logging
 
-from typing import Iterable, Iterator, List, Tuple
+from typing import Iterator, List, Tuple
 
 from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework.constants import LOGLEVEL_VVVV
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins.windows import pslist
