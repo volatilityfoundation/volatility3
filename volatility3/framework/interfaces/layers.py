@@ -576,7 +576,7 @@ class LayerContainer(collections.abc.Mapping):
                     layer.name, f"Layer {layer.name} has unmet dependencies: {', '.join(missing_list)}")
         self._layers[layer.name] = layer
 
-    def del_layer(self, name: str) -> None:
+    def del_layer(self, name: str, verify: bool = True) -> None:
         """Removes the layer called name.
 
         This will throw an exception if other layers depend upon this layer
@@ -584,12 +584,13 @@ class LayerContainer(collections.abc.Mapping):
         Args:
             name: The name of the layer to delete
         """
-        for layer in self._layers:
-            depend_list = [superlayer for superlayer in self._layers if name in self._layers[layer].dependencies]
-            if depend_list:
-                raise exceptions.LayerException(
-                    self._layers[layer].name,
-                    f"Layer {self._layers[layer].name} is depended upon: {', '.join(depend_list)}")
+        if verify:
+            for layer in self._layers:
+                depend_list = [superlayer for superlayer in self._layers if name in self._layers[layer].dependencies]
+                if depend_list:
+                    raise exceptions.LayerException(
+                        self._layers[layer].name,
+                        f"Layer {self._layers[layer].name} is depended upon: {', '.join(depend_list)}")
         self._layers[name].destroy()
         del self._layers[name]
 
