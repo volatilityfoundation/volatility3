@@ -583,6 +583,7 @@ class LayerContainer(collections.abc.Mapping):
 
         Args:
             name: The name of the layer to delete
+            verify: A bool that determines whether we check the dependency list or not
         """
         if verify:
             for layer in self._layers:
