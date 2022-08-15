@@ -253,7 +253,8 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
                      pdb_names: List[bytes],
                      progress_callback: constants.ProgressCallback = None,
                      start: Optional[int] = None,
-                     end: Optional[int] = None) -> Generator[Dict[str, Optional[Union[bytes, str, int]]], None, None]:
+                     end: Optional[int] = None,
+                     maximum_invalid_count: int = 100) -> Generator[Dict[str, Optional[Union[bytes, str, int]]], None, None]:
         """Scans through `layer_name` at `ctx` looking for RSDS headers that
         indicate one of four common pdb kernel names (as listed in
         `self.pdb_names`) and returns the tuple (GUID, age, pdb_name,
@@ -278,10 +279,15 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
                                                               sections = [(start, end - start)]):
             mz_offset = None
             sig_pfn = signature_offset // page_size
+            current_invalid_counter = 0
 
             for i in range(sig_pfn, min_pfn, -1):
-                if not ctx.layers[layer_name].is_valid(i * page_size, 2):
+                if current_invalid_counter > maximum_invalid_count:
                     break
+                
+                if not ctx.layers[layer_name].is_valid(i * page_size, 2):
+                    current_invalid_counter += 1
+                    continue
 
                 data = ctx.layers[layer_name].read(i * page_size, 2)
                 if data == b'MZ':
