@@ -60,21 +60,24 @@ LOGLEVEL_VVV = 7
 LOGLEVEL_VVVV = 6
 """Logging level for -vvvv"""
 
-CACHE_PATH = os.path.join(os.path.expanduser("~"), ".cache", "volatility3")
-"""Default path to store cached data"""
+def update_cache_path(cache_path):
+    CACHE_PATH = cache_path
+    """Default path to store cached data"""
 
-if sys.platform == 'win32':
-    CACHE_PATH = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "volatility3")
-os.makedirs(CACHE_PATH, exist_ok = True)
+    if sys.platform == 'win32':
+        CACHE_PATH = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "volatility3")
+    os.makedirs(CACHE_PATH, exist_ok = True)
 
-LINUX_BANNERS_PATH = os.path.join(CACHE_PATH, "linux_banners.cache")
-"""Default location to record information about available linux banners"""
+    LINUX_BANNERS_PATH = os.path.join(CACHE_PATH, "linux_banners.cache")
+    """Default location to record information about available linux banners"""
 
-MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
-"""Default location to record information about available mac banners"""
+    MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
+    """Default location to record information about available mac banners"""
 
-IDENTIFIERS_PATH = os.path.join(CACHE_PATH, "identifiers.cache")
-"""Default location to record information about available identifiers"""
+    IDENTIFIERS_PATH = os.path.join(CACHE_PATH, "identifiers.cache")
+    """Default location to record information about available identifiers"""
+
+update_cache_path(os.path.join(os.path.expanduser("~"), ".cache", "volatility3"))
 
 CACHE_SQLITE_SCEMA_VERSION = 1
 """Version for the sqlite3 cache schema"""

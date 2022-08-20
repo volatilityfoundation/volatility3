@@ -193,7 +193,7 @@ class CommandLine:
                                             for p in partial_args.symbol_dirs.split(";")] + constants.SYMBOL_BASEPATHS
 
         if partial_args.cache_path:
-            constants.CACHE_PATH = partial_args.cache_path
+            constants.update_cache_path(partial_args.cache_path)
 
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)
