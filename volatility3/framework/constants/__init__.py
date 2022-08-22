@@ -61,6 +61,8 @@ LOGLEVEL_VVVV = 6
 """Logging level for -vvvv"""
 
 def update_cache_path(cache_path):
+    global CACHE_PATH, LINUX_BANNERS_PATH, MAC_BANNERS_PATH, IDENTIFIERS_PATH
+
     CACHE_PATH = cache_path
     """Default path to store cached data"""
 
