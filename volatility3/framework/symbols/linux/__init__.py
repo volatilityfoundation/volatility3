@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-from typing import Iterator, List, Tuple
+from typing import Iterator, List, Tuple, Optional
 
 from volatility3 import framework
 from volatility3.framework import constants, exceptions, interfaces, objects
@@ -29,6 +29,22 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('files_struct', extensions.files_struct)
         self.set_type_class('vfsmount', extensions.vfsmount)
         self.set_type_class('kobject', extensions.kobject)
+
+        # Network
+        sockets_extensions = dict(
+            net = extensions.net,
+            socket = extensions.socket,
+            sock = extensions.sock,
+            inet_sock = extensions.inet_sock,
+            unix_sock = extensions.unix_sock,
+            netlink_sock = extensions.netlink_sock,
+            vsock_sock = extensions.vsock_sock,
+            packet_sock = extensions.packet_sock,
+            bt_sock = extensions.bt_sock
+        )
+        for symbol, extension in sockets_extensions.items():
+            if symbol in self.types:
+                self.set_type_class(symbol, extension)
 
         if 'mnt_namespace' in self.types:
             self.set_type_class('mnt_namespace', extensions.mnt_namespace)
@@ -270,3 +286,29 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             list_struct = vmlinux.object(object_type = struct_name, offset = list_start.vol.offset)
             yield list_struct
             list_start = getattr(list_struct, list_member)
+
+    @classmethod
+    def container_of(cls,
+                     addr: int,
+                     type_name: str,
+                     member_name: str,
+                     vmlinux: interfaces.context.ModuleInterface
+                     ) -> Optional[interfaces.objects.ObjectInterface]:
+        """Cast a member of a structure out to the containing structure.
+        It mimicks the Linux kernel macro container_of() see include/linux.kernel.h
+        Args:
+            addr: The pointer to the member.
+            type_name: The type of the container struct this is embedded in.
+            member_name: The name of the member within the struct.
+            vmlinux: The kernel symbols object
+        Returns:
+            The constructed object or None
+        """
+
+        if not addr:
+            return
+
+        type_dec = vmlinux.get_type(type_name)
+        member_offset = type_dec.relative_child_offset(member_name)
+        container_addr = addr - member_offset
+        return vmlinux.object(object_type=type_name, offset=container_addr, absolute=True)
