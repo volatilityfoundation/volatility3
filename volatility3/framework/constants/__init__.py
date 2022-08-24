@@ -76,7 +76,7 @@ MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
 IDENTIFIERS_PATH = os.path.join(CACHE_PATH, "identifiers.cache")
 """Default location to record information about available identifiers"""
 
-CACHE_SQLITE_SCEMA_VERSION = 1
+CACHE_SQLITE_SCHEMA_VERSION = 1
 """Version for the sqlite3 cache schema"""
 
 BUG_URL = "https://github.com/volatilityfoundation/volatility3/issues"
