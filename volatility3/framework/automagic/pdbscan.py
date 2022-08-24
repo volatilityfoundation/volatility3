@@ -212,7 +212,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                                           start = start_scan_address,
                                           page_size = vlayer.page_size,
                                           pdb_names = kernel_pdb_names,
-                                          progress_callback = progress_callback)
+                                          progress_callback = progress_callback,
+                                          maximum_invalid_count = constants.windows.PE_MAX_EXTRACTION_SIZE // 0x1000)
         for kernel in kernels:
             valid_kernel = test_kernel(physical_layer_name, virtual_layer_name, kernel)
             if valid_kernel is not None:
