@@ -807,11 +807,7 @@ class socket(objects.StructType):
         return kernel
 
     def get_inode(self):
-        try:
-            kernel = self._get_vol_kernel()
-        except ValueError:
-            return 0
-
+        kernel = self._get_vol_kernel()
         socket_alloc = linux.LinuxUtilities.container_of(self.vol.offset, "socket_alloc", "socket", kernel)
         vfs_inode = socket_alloc.vfs_inode
 
@@ -822,15 +818,13 @@ class socket(objects.StructType):
         if 0 <= socket_state_idx < len(SOCKET_STATES):
             return SOCKET_STATES[socket_state_idx]
         else:
-            return "UNKNOWN"
+            return renderers.NotApplicableValue()
 
 class sock(objects.StructType):
     def get_family(self):
         family_idx = self.__sk_common.skc_family
         if 0 <= family_idx < len(SOCK_FAMILY):
             return SOCK_FAMILY[family_idx]
-        else:
-            return "UNKNOWN"
 
     def get_type(self):
         return SOCK_TYPES.get(self.sk_type, "")
@@ -889,8 +883,6 @@ class inet_sock(SocketType):
         family_idx = self.sk.__sk_common.skc_family
         if 0 <= family_idx < len(SOCK_FAMILY):
             return SOCK_FAMILY[family_idx]
-        else:
-            return "UNKNOWN"
 
     def get_protocol(self):
         # If INET6 family and a proto is defined, we use that specific IPv6 protocol.
@@ -955,7 +947,7 @@ class inet_sock(SocketType):
             addr_bytes = parent_layer.read(saddr.vol.offset, addr_size)
         except exceptions.InvalidAddressException:
             vollog.debug(f"Unable to read socket src address from {saddr.vol.offset:#x}")
-            return "?"
+            return None
 
         return inet_ntop(family, addr_bytes)
 
@@ -984,7 +976,7 @@ class inet_sock(SocketType):
             addr_bytes = parent_layer.read(daddr.vol.offset, addr_size)
         except exceptions.InvalidAddressException:
             vollog.debug(f"Unable to read socket dst address from {daddr.vol.offset:#x}")
-            return "?"
+            return None
 
         return inet_ntop(family, addr_bytes)
 
@@ -993,24 +985,20 @@ class netlink_sock(SocketType):
         protocol_idx = self.sk.sk_protocol
         if 0 <= protocol_idx < len(NETLINK_PROTOCOLS):
             return NETLINK_PROTOCOLS[protocol_idx]
-        else:
-            return "UNKNOWN"
 
 
 class vsock_sock(SocketType):
     def get_protocol(self):
         # The protocol should always be 0 for vsocks
         if self.sk.sk_protocol == 0:
-            return ""
-        else:
-            return "UNKNOWN"
+            return "VSOCK"
 
 
 class packet_sock(SocketType):
     def get_protocol(self):
         eth_proto = htons(self.num)
         if eth_proto == 0:
-            return ""
+            return "ETH"
         elif eth_proto in ETH_PROTOCOLS:
             return ETH_PROTOCOLS[eth_proto]
         else:
@@ -1021,13 +1009,9 @@ class bt_sock(objects.StructType):
     def get_protocol(self):
         type_idx = self.sk.sk_protocol
         if 0 <= type_idx < len(BLUETOOTH_PROTOCOLS):
-            return BLUETOOTH_PROTOCOLS[type_idx]
-        else:
-            return "UNKNOWN"
+            return BLUETOOTH_PROTOCOLS[type_idx]  
 
     def get_state(self):
         state_idx = self.sk.__sk_common.skc_state
         if 0 <= state_idx < len(BLUETOOTH_STATES):
             return BLUETOOTH_STATES[state_idx]
-        else:
-            return "UNKNOWN"

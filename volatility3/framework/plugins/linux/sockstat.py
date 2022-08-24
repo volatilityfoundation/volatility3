@@ -94,10 +94,10 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         # Even if the sock family is not supported, or the required types
         # are not present in the symbols, we can still show some general
         # information about the socket that may be helpful.
-        saddr_tag = daddr_tag = ''
+        saddr_tag = daddr_tag = renderers.NotApplicableValue()
         state = sock.get_state()
 
-        return sock, saddr_tag, daddr_tag, str(state), extended
+        return sock, saddr_tag, daddr_tag, state or renderers.NotApplicableValue(), extended
 
     def _update_extended_socket_filters_info(self, sock: objects.Pointer, extended: dict) -> None:
         """Get infomation from the socket and reuseport filters
