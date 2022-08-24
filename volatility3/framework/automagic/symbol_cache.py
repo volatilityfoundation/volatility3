@@ -171,11 +171,11 @@ class SqliteCache(CacheManagerInterface):
         database = sqlite3.connect(path)
         database.row_factory = sqlite3.Row
         database.cursor().execute(
-            f'CREATE TABLE IF NOT EXISTS database_info (schema_version INT DEFAULT {constants.CACHE_SQLITE_SCEMA_VERSION})')
+            f'CREATE TABLE IF NOT EXISTS database_info (schema_version INT DEFAULT {constants.CACHE_SQLITE_SCHEMA_VERSION})')
         schema_version = database.cursor().execute('SELECT schema_version FROM database_info').fetchone()
         if not schema_version:
-            database.cursor().execute(f'INSERT INTO database_info VALUES ({constants.CACHE_SQLITE_SCEMA_VERSION})')
-        elif schema_version['schema_version'] == constants.CACHE_SQLITE_SCEMA_VERSION:
+            database.cursor().execute(f'INSERT INTO database_info VALUES ({constants.CACHE_SQLITE_SCHEMA_VERSION})')
+        elif schema_version['schema_version'] == constants.CACHE_SQLITE_SCHEMA_VERSION:
             # All good, so pass and move on
             pass
         else:
@@ -196,7 +196,7 @@ class SqliteCache(CacheManagerInterface):
         If multiple locations exist for an identifier, the last found is returned
 
         Args:
-            identifier: string that uniquely identifies a particular symbolt table
+            identifier: string that uniquely identifies a particular symbol table
             operating_system: optional string to restrict identifiers to just those for a particular operating system
 
         Returns:
