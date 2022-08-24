@@ -69,6 +69,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         Args:
             sock: Kernel generic `sock` object
 
+        TODO:
         Returns a tuple with:
             sock: The respective kernel's *_sock object for that socket family
             sock_stat: A tuple with the source, destination and state strings.
@@ -76,13 +77,14 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         """
         family = sock.get_family()
         extended = {}
+
         sock_handler = self._sock_family_handlers.get(family)
         if sock_handler:
             try:
-                unix_sock, sock_stat = sock_handler(sock)
+                unix_sock, (saddr_tag, daddr_tag, state) = sock_handler(sock)
                 self._update_extended_socket_filters_info(sock, extended)
 
-                return unix_sock, sock_stat, extended
+                return unix_sock, saddr_tag, daddr_tag, state, extended
             except exceptions.SymbolError as e:
                 # Cannot finds the *_sock type in the symbols
                 vollog.log(constants.LOGLEVEL_V, "Error processing socket family '%s': %s", family, e)
@@ -92,12 +94,10 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         # Even if the sock family is not supported, or the required types
         # are not present in the symbols, we can still show some general
         # information about the socket that may be helpful.
-        saddr_tag = daddr_tag = "?"
+        saddr_tag = daddr_tag = ''
         state = sock.get_state()
 
-        sock_stat = saddr_tag, daddr_tag, state
-
-        return sock, sock_stat, extended
+        return sock, saddr_tag, daddr_tag, str(state), extended
 
     def _update_extended_socket_filters_info(self, sock: objects.Pointer, extended: dict) -> None:
         """Get infomation from the socket and reuseport filters
@@ -426,16 +426,13 @@ class Sockstat(plugins.PluginInterface):
             family = sock.get_family()
 
             sock_handler = SockHandlers(vmlinux, task)
-            sock_fields = sock_handler.process_sock(sock)
-            if not sock_fields:
-                continue
+            child_sock, saddr_tag, daddr_tag, state, extended = sock_handler.process_sock(sock)
 
-            child_sock = sock_fields[0]
             protocol = child_sock.get_protocol()
 
             net = task.nsproxy.net_ns
             netns_id = net.get_inode()
-            yield task, netns_id, fd_num, family, sock_type, protocol, sock_fields
+            yield task, netns_id, fd_num, family, sock_type, protocol, (child_sock, saddr_tag, daddr_tag, state, extended)
 
     def _generator(self, pids: List[int], netns_id_arg: int, symbol_table: str):
         """Enumerate tasks sockets. Each row represents a kernel socket.
@@ -457,14 +454,14 @@ class Sockstat(plugins.PluginInterface):
                    exteded information such as socket filters, bpf info, etc.
         """
         filter_func = lsof.pslist.PsList.create_pid_filter(pids)
-        socket_generator = self.list_sockets(self.context, symbol_table, filter_func=filter_func)
-
         tasks_per_sock = {}
-        for task, netns_id, fd_num, family, sock_type, protocol, sock_fields in socket_generator:
+
+        for task, netns_id, fd_num, family, sock_type, protocol, (sock, saddr_tag, daddr_tag, state, extended) \
+            in self.list_sockets(self.context, symbol_table, filter_func=filter_func):
+
+            # filter by network ns if active - TODO: move outside
             if netns_id_arg and netns_id_arg != netns_id:
                 continue
-
-            sock, sock_stat, extended = sock_fields
 
             task_comm = utility.array_to_string(task.comm)
             task_info = f"{task_comm},pid={task.pid},fd={fd_num}"
@@ -472,7 +469,7 @@ class Sockstat(plugins.PluginInterface):
                 extended_str = ",".join(f"{k}={v}" for k, v in extended.items())
                 task_info = f"{task_info},{extended_str}"
 
-            fields = netns_id, family, sock_type, protocol, *sock_stat
+            fields = netns_id, family, sock_type, protocol, saddr_tag, daddr_tag, state
 
             # Each row represents a kernel socket, so let's group the task FDs
             # by socket using the socket address

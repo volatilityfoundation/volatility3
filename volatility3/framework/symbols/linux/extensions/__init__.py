@@ -811,7 +811,7 @@ class socket(objects.StructType):
             kernel = self._get_vol_kernel()
         except ValueError:
             return 0
-        
+
         socket_alloc = linux.LinuxUtilities.container_of(self.vol.offset, "socket_alloc", "socket", kernel)
         vfs_inode = socket_alloc.vfs_inode
 
@@ -843,9 +843,19 @@ class sock(objects.StructType):
 
     def get_state(self):
         # Return the generic socket state
-        return self.sk.sk_socket.get_state()
+        return None
 
-class unix_sock(objects.StructType):
+    def get_protocol(self):
+        return ""
+
+class SocketType(objects.StructType):
+    def get_state(self):
+        if self.has_member('sk'):
+            return self.sk.sk_socket.get_state()
+
+        return self.sk_socket.get_state()
+
+class unix_sock(SocketType):
     def get_name(self):
         if self.addr:
             sockaddr_un = self.addr.name.cast("sockaddr_un")
@@ -869,12 +879,12 @@ class unix_sock(objects.StructType):
                 return "UNKNOWN"
         else:
             # Return the generic socket state
-            return self.sk.sk_socket.get_state()
+            return super().get_state()
 
     def get_inode(self):
         return self.sk.get_inode()
 
-class inet_sock(objects.StructType):
+class inet_sock(SocketType):
     def get_family(self):
         family_idx = self.sk.__sk_common.skc_family
         if 0 <= family_idx < len(SOCK_FAMILY):
@@ -901,12 +911,12 @@ class inet_sock(objects.StructType):
                 return "UNKNOWN"
         else:
             # Return the generic socket state
-            return self.sk.sk_socket.get_state()
+            return super().get_state()
 
     def get_src_port(self):
         sport_le = getattr(self, "sport", getattr(self, "inet_sport", None))
         if sport_le is not None:
-            return socket_module.htons(sport_le)
+            return htons(sport_le)
 
     def get_dst_port(self):
         sk_common = self.sk.__sk_common
@@ -946,6 +956,7 @@ class inet_sock(objects.StructType):
         except exceptions.InvalidAddressException:
             vollog.debug(f"Unable to read socket src address from {saddr.vol.offset:#x}")
             return "?"
+
         return inet_ntop(family, addr_bytes)
 
     def get_dst_addr(self):
@@ -977,7 +988,7 @@ class inet_sock(objects.StructType):
 
         return inet_ntop(family, addr_bytes)
 
-class netlink_sock(objects.StructType):
+class netlink_sock(SocketType):
     def get_protocol(self):
         protocol_idx = self.sk.sk_protocol
         if 0 <= protocol_idx < len(NETLINK_PROTOCOLS):
@@ -985,12 +996,8 @@ class netlink_sock(objects.StructType):
         else:
             return "UNKNOWN"
 
-    def get_state(self):
-        # Return the generic socket state
-        return self.sk.sk_socket.get_state()
 
-
-class vsock_sock(objects.StructType):
+class vsock_sock(SocketType):
     def get_protocol(self):
         # The protocol should always be 0 for vsocks
         if self.sk.sk_protocol == 0:
@@ -998,12 +1005,8 @@ class vsock_sock(objects.StructType):
         else:
             return "UNKNOWN"
 
-    def get_state(self):
-        # Return the generic socket state
-        return self.sk.sk_socket.get_state()
 
-
-class packet_sock(objects.StructType):
+class packet_sock(SocketType):
     def get_protocol(self):
         eth_proto = htons(self.num)
         if eth_proto == 0:
@@ -1012,10 +1015,6 @@ class packet_sock(objects.StructType):
             return ETH_PROTOCOLS[eth_proto]
         else:
             return f"0x{eth_proto:x}"
-
-    def get_state(self):
-        # Return the generic socket state
-        return self.sk.sk_socket.get_state()
 
 
 class bt_sock(objects.StructType):
