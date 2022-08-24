@@ -215,7 +215,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                 config_path, "page_map_offset")] = base_layer.metadata['page_map_offset']
             layer = layer_type(context, config_path = config_path, name = new_layer_name, metadata = {'os': 'Windows'})
             page_map_offset = context.config[interfaces.configuration.path_join(config_path, "page_map_offset")]
-            vollog.debug(f"DTB was given to as by base layer: {hex(page_map_offset)}")
+            vollog.debug(f"DTB was given to us by base layer: {hex(page_map_offset)}")
             return layer
 
         # Self Referential finder
