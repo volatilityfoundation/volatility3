@@ -80,7 +80,8 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
             vollog.debug(f"Required version of SQLiteCache not found")
             return None
 
-        value = symbol_cache.SqliteCache(constants.IDENTIFIERS_PATH).find_location(
+        identifiers_path = os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME)
+        value = symbol_cache.SqliteCache(identifiers_path).find_location(
             symbol_cache.WindowsIdentifier.generate(pdb_name.strip('\x00'), guid.upper(), age), 'windows')
 
         if value:

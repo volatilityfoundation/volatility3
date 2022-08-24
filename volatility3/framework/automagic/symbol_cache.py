@@ -388,7 +388,8 @@ class SymbolCacheMagic(interfaces.automagic.AutomagicInterface):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._cache = SqliteCache(constants.IDENTIFIERS_PATH)
+        identifiers_path = os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME)
+        self._cache = SqliteCache(identifiers_path)
 
     def __call__(self, context, config_path, configurable, progress_callback = None):
         """Runs the automagic over the configurable."""
