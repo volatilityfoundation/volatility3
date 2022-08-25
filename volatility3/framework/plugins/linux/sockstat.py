@@ -83,7 +83,6 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
             extended:       dict with additional information for specific sockets.
         """
         family = sock.get_family()
-        protocol = sock.get_protocol()
         state = sock.get_state()
         saddr = daddr = sport = dport = None
         extended = None
@@ -98,6 +97,7 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
             except exceptions.SymbolError as e:
                 vollog.log(constants.LOGLEVEL_V, f'Error processing socket socket family {family}: {e}')
 
+        protocol = sock.get_protocol()
 
         return sock, \
             protocol or NotApplicableValue(), \
