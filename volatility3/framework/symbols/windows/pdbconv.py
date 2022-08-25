@@ -653,8 +653,14 @@ class PdbReader:
                 if self.bases.get("pointer", None) is None:
                     self.bases['pointer'] = {"endian": "little", "kind": "int", "signed": False, "size": size}
                 else:
-                    if size != self.bases['pointer']['size']:
-                        raise ValueError("Native pointers with different sizes!")
+                    original_pointer_size = self.bases['pointer']['size']
+                    if size != original_pointer_size:
+                        pointer_type = "pointer32"
+                        if size == 8:
+                            pointer_type = "pointer64"
+                        if self.bases.get(pointer_type, None) is None:
+                            self.bases[pointer_type] = {"endian": "little", "kind": "int", "signed": False, "size": size}
+
                 result = {"kind": "pointer", "subtype": self.get_type_from_index(value.subtype_index)}
             elif leaf_type in [leaf_type.LF_PROCEDURE, leaf_type.LF_MFUNCTION]:
                 return {"kind": "function"}
@@ -687,6 +693,8 @@ class PdbReader:
             ]:
                 if not value.properties.forward_reference:
                     result = value.size
+                elif name in self.user_types:
+                    result = self.user_types[name]["size"]
             elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
                 result = value.size
             elif leaf_type in [leaf_type.LF_MODIFIER, leaf_type.LF_ENUM, leaf_type.LF_ARGLIST]:
@@ -799,7 +807,7 @@ class PdbReader:
     }
 
     # Skipping these types won't effect the parsing of fieldlists.
-    types_to_skip = ["LF_METHODLIST"]
+    types_to_skip = ["LF_METHODLIST", "LF_SUBSTR_LIST", "LF_VTSHAPE"]
 
     def consume_type(
             self, module: interfaces.context.ModuleInterface, offset: int, length: int
@@ -837,6 +845,11 @@ class PdbReader:
             parsed_obj = module.object(object_type = type_handler, offset = offset + consumed)
             current_consumed = remaining
             if has_name:
+                plus_offset = 0
+                # CV_MTintro or CV_MTpureintro
+                if leaf_type_name == "LF_ONEMETHOD" and ((parsed_obj.attributes >> 2) & 0x7) in [4, 6]:
+                    plus_offset += 4
+
                 name_offset = parsed_obj.name.vol.offset - parsed_obj.vol.offset
                 if value_attribute:
                     name, value, excess = self.determine_extended_value(leaf_type, getattr(parsed_obj, value_attribute),
@@ -844,9 +857,11 @@ class PdbReader:
                     setattr(parsed_obj, value_attribute, value)
                     current_consumed = parsed_obj.vol.size + len(name) + 1 + excess
                 else:
-                    name = self.parse_string(parsed_obj.name, leaf_type < leaf_type.LF_ST_MAX,
+                    name_start = parsed_obj.vol.offset + parsed_obj.vol.size + plus_offset
+                    name_obj = module.object(object_type = "string", offset = name_start)
+                    name = self.parse_string(name_obj, leaf_type < leaf_type.LF_ST_MAX,
                                              size = remaining - name_offset)
-                    current_consumed = parsed_obj.vol.size + len(name) + 1
+                    current_consumed = parsed_obj.vol.size + len(name) + plus_offset + 1
                 parsed_obj.name = name
             else:
                 name = None
@@ -864,9 +879,11 @@ class PdbReader:
         elif leaf_type_name in self.types_to_skip:
             result = leaf_type, None, None
             consumed += remaining
+        elif leaf_type_name == "LF_VFUNCTAB":
+            result = leaf_type, None, None
+            consumed += 6
         else:
             raise TypeError(f"Unhandled leaf_type: {leaf_type}")
-
         return result, consumed
 
     def consume_padding(self, layer_name: str, offset: int) -> int:
@@ -886,7 +903,7 @@ class PdbReader:
         for field in fields_struct:
             leaf_type, name, member = field
             # These types contain information about the structure or class, and are not relevant to its parsing. Skip them for now.
-            if leaf_type in [leaf_type.LF_NESTTYPE, leaf_type.LF_METHOD, leaf_type.LF_STMEMBER, leaf_type.LF_ONEMETHOD]:
+            if leaf_type in [leaf_type.LF_NESTTYPE, leaf_type.LF_METHOD, leaf_type.LF_STMEMBER, leaf_type.LF_ONEMETHOD, leaf_type.LF_VFUNCTAB]:
                 continue
             result[name] = {"offset": member.offset, "type": self.get_type_from_index(member.field_type)}
         return result
