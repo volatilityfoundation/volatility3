@@ -48,24 +48,16 @@ class Lsof(plugins.PluginInterface):
                     raise ValueError("Task is not part of a symbol table")
                 linuxutils_symbol_table = task.vol.type_name.split(constants.BANG)[0]
 
-            pid = int(task.pid)
-            comm = utility.array_to_string(task.comm)
-
-            for fd_fields in linux.LinuxUtilities.files_descriptors_for_process(
-                context, linuxutils_symbol_table, task):
-                yield pid, comm, task, fd_fields
+            for fd_num, filp, full_path in linux.LinuxUtilities.files_descriptors_for_process(context, linuxutils_symbol_table, task):
+                yield task, fd_num, filp, full_path
 
     def _generator(self, pids, symbol_table):
         filter_func = pslist.PsList.create_pid_filter(pids)
-        fds_generator = self.list_fds(self.context,
-                                      symbol_table,
-                                      filter_func=filter_func)
 
-        for pid, comm, task, fd_fields in fds_generator:
-            fd_num, _filp, full_path = fd_fields
-
-            fields = (pid, comm, fd_num, full_path)
-            yield (0, fields)
+        for task, fd_num, filp, full_path in self.list_fds(self.context, symbol_table, filter_func=filter_func):
+            pid = int(task.pid)
+            comm = utility.array_to_string(task.comm)
+            yield (0, (pid, comm, fd_num, full_path))
 
     def run(self):
         pids = self.config.get('pid', None)
