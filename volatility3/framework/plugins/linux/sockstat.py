@@ -7,7 +7,7 @@ from functools import partial
 from collections import defaultdict
 from typing import Callable, Tuple, List, Dict
 
-from volatility3.framework.renderers import format_hints
+from volatility3.framework.renderers import NotApplicableValue, format_hints
 from volatility3.framework import renderers, interfaces, exceptions, constants, objects
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
@@ -77,7 +77,7 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         protocol = sock.get_protocol()
         state = sock.get_state()
         saddr = daddr = sport = dport = None
-        extended = dict()
+        extended = None
 
         sock_family_handler = UnifiedSocketHandlers.get(family)
         if not sock_family_handler:
@@ -85,7 +85,7 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         else:
             try:
                 sock, (saddr, sport, daddr, dport, state) = sock_family_handler(sock, self.net_devices.get(netns_no))
-                extended = self.get_extended_socket_information(sock)
+                extended = self.get_socket_extended_information(sock)
                 if extended:
                     print(extended)
             except exceptions.SymbolError as e:
@@ -93,48 +93,39 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
 
 
         return sock, \
-            protocol or renderers.NotApplicableValue(), \
-            saddr or renderers.NotApplicableValue(), \
-            sport or renderers.NotApplicableValue(), \
-            daddr or renderers.NotApplicableValue(), \
-            dport or renderers.NotApplicableValue(), \
-            state or renderers.NotApplicableValue(), \
+            protocol or NotApplicableValue(), \
+            saddr or NotApplicableValue(), \
+            sport or NotApplicableValue(), \
+            daddr or NotApplicableValue(), \
+            dport or NotApplicableValue(), \
+            state or NotApplicableValue(), \
             extended
 
-    def _extract_socket_filter_info(self, sock_filter: objects.Pointer, extended: dict) -> None:
-        extended['bpf_filter_type'] = 'cBPF'
-
+    def get_socket_filter_information(self, sock_filter):
         if not sock_filter.has_member('prog') or not sock_filter.prog:
             return
 
         # BPF_PROG_TYPE_UNSPEC = 0
-        bpfprog = sock_filter.prog
-        if bpfprog.type > 0:
-            extended['bpf_filter_type'] = 'eBPF'
-            bpfprog_aux = bpfprog.aux
-            if bpfprog_aux:
-                extended['bpf_filter_id'] = str(bpfprog_aux.id)
-                bpfprog_name = utility.array_to_string(bpfprog_aux.name)
-                if bpfprog_name:
-                    extended['bpf_filter_name'] = bpfprog_name
+        bpf_prog = sock_filter.prog
+        if bpf_prog.type > 0:
+            if bpf_prog.aux:
+                bpf_prog_name = utility.array_to_string(bpf_prog.aux.name)
+                return dict(bpf_filter_type='eBPF', bpf_filter_id=str(bpf_prog.aux.id), bpf_filter_name=bpf_prog_name)
+            else:
+                return dict(bpf_filter_type='eBPF')
+        else:
+            return dict(bpf_filter_type='cBPF')
 
-    def get_extended_socket_information(self, sock: objects.Pointer) -> dict:
-        """
-        Get infomation from the socket and reuseport filters
-        """
-        extended = dict()
+    def get_socket_extended_information(self, sock):
+        data = dict()
 
         if sock.has_member('sk_filter') and sock.sk_filter:
-            sock_filter = sock.sk_filter
-            extended['filter_type'] = 'socket_filter'
-            self._extract_socket_filter_info(sock_filter, extended)
+            data['socket_filter'] = self.get_socket_filter_information(sock.sk_filter)
 
-        if sock.has_member('sk_reuseport_cb') and sock.sk_reuseport_cb:
-            sock_reuseport_cb = sock.sk_reuseport_cb
-            extended['filter_type'] = 'reuseport_filter'
-            self._extract_socket_filter_info(sock_reuseport_cb, extended)
-        
-        return extended
+        elif sock.has_member('sk_reuseport_cb') and sock.sk_reuseport_cb:
+            data['reuseport_filter'] = self.get_socket_filter_information(sock.sk_reuseport_cb)
+
+        return data
 
     @unified_socket_handler('AF_UNIX')
     def unix_sock_handler(sock, *args):
@@ -197,36 +188,28 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
     def packet_sock_handler(sock, net_devices):
         packet_sock = sock.cast('packet_sock')
         ifindex = packet_sock.ifindex
-        dev_name = net_devices.get(ifindex, None) if ifindex else 'ANY'
+        device = net_devices.get(ifindex, None) if ifindex else 'ANY'
 
         state = packet_sock.get_state()
-        return packet_sock, (dev_name, ifindex, None, None, state)
+        return packet_sock, (device, ifindex, None, None, state)
 
     @unified_socket_handler('AF_XDP')
     def xdp_sock_handler(sock, *args):
         xdp_sock = sock.cast('xdp_sock')
+        saddr = daddr = sport = dport = None
+
         device = xdp_sock.dev
-        if not device:
-            return
+        if device:
+            saddr = utility.array_to_string(device.name)
 
-        saddr = utility.array_to_string(device.name)
-
-        bpfprog = device.xdp_prog
-        if not bpfprog:
-            return
-
-        bpfprog_aux = bpfprog.aux
-        if bpfprog_aux:
-            bpfprog_id = bpfprog_aux.id
-            daddr = f'ebpf_prog_id:{bpfprog_id}'
-            bpf_name = utility.array_to_string(bpfprog_aux.name)
-            if bpf_name:
-                daddr += f',ebpf_prog_name:{bpf_name}'
-        else:
-            daddr = None
+            bpf_prog = device.xdp_prog
+            if bpf_prog and bpf_prog.aux:
+                bpf_name = utility.array_to_string(bpf_prog.aux.name)
+                daddr = f'ebpf_prog_id:{bpf_prog.aux.id}'
+                dport = f'ebpf_prog_name:{bpf_name}'
 
         state = xdp_sock.state.lookup()
-        return xdp_sock, (saddr, None, daddr, None, state)
+        return xdp_sock, (saddr, sport, daddr, dport, state)
 
     @unified_socket_handler('AF_BLUETOOTH')
     def bluetooth_sock_handler(sock, *args):
@@ -359,7 +342,7 @@ class Sockstat(plugins.PluginInterface):
             if netns_filter and netns_filter != netns_no:
                 continue
             
-            ext_info_encoded = ','.join(f'{k}={v}' for k, v in extended.items())
+            ext_info_encoded = ','.join(f'{k}={v}' for k, v in extended.items()) if extended else NotApplicableValue()
             yield (0, (
                 format_hints.Hex(sock.vol.offset), netns_no, task.pid,
                 family, sock_type, protocol,
