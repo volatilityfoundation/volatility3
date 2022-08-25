@@ -846,8 +846,6 @@ class unix_sock(sock):
             sockaddr_un = self.addr.name.cast('sockaddr_un')
             return utility.array_to_string(sockaddr_un.sun_path)
 
-        return ''
-
     def get_state(self):
         # Unix socket states reuse (a subset) of the inet_sock states contants
         if self.sk.get_type() == 'STREAM':
@@ -889,23 +887,23 @@ class inet_sock(sock):
             return htons(sport_le)
 
     def get_dst_port(self):
-        sk_common = self.sk.__sk_common
-        if hasattr(sk_common, 'skc_portpair'):
-            dport_le = sk_common.skc_portpair & 0xffff
+        skc = self.sk.__sk_common
+        if hasattr(skc, 'skc_portpair'):
+            dport_le = skc.skc_portpair & 0xffff
         elif hasattr(self, 'dport'):
             dport_le = self.dport
         elif hasattr(self, 'inet_dport'):
             dport_le = self.inet_dport
-        elif hasattr(sk_common, 'skc_dport'):
-            dport_le = sk_common.skc_dport
+        elif hasattr(skc, 'skc_dport'):
+            dport_le = skc.skc_dport
         else:
             return
 
         return htons(dport_le)
 
     def get_src_addr(self):
-        sk_common = self.sk.__sk_common
-        family = sk_common.skc_family
+        skc = self.sk.__sk_common
+        family = skc.skc_family
         if family == AF_INET:
             addr_size = 4
             if hasattr(self, 'rcv_saddr'):
@@ -913,7 +911,7 @@ class inet_sock(sock):
             elif hasattr(self, 'inet_rcv_saddr'):
                 saddr = self.inet_rcv_saddr
             else:
-                saddr = sk_common.skc_rcv_saddr
+                saddr = skc.skc_rcv_saddr
         elif family == AF_INET6:
             addr_size = 16
             saddr = self.pinet6.saddr
@@ -930,21 +928,21 @@ class inet_sock(sock):
         return inet_ntop(family, addr_bytes)
 
     def get_dst_addr(self):
-        sk_common = self.sk.__sk_common
-        family = sk_common.skc_family
+        skc = self.sk.__sk_common
+        family = skc.skc_family
         if family == AF_INET:
             if hasattr(self, 'daddr') and self.daddr:
                 daddr = self.daddr
             elif hasattr(self, 'inet_daddr') and self.inet_daddr:
                 daddr = self.inet_daddr
             else:
-                daddr = sk_common.skc_daddr
+                daddr = skc.skc_daddr
             addr_size = 4
         elif family == AF_INET6:
             if hasattr(self.pinet6, 'daddr'):
                 daddr = self.pinet6.daddr
             else:
-                daddr = sk_common.skc_v6_daddr
+                daddr = skc.skc_v6_daddr
             addr_size = 16
         else:
             return
@@ -958,19 +956,17 @@ class inet_sock(sock):
 
         return inet_ntop(family, addr_bytes)
 
-class netlink_sock(sock):
-    def get_protocol(self):
-        proto_num = self.sk.sk_protocol
-        if proto_num in range(0, len(NETLINK_PROTOCOLS)):
-            return NETLINK_PROTOCOLS[proto_num]
-
-
 class vsock_sock(sock):
     def get_protocol(self):
         # The protocol should always be 0 for vsocks
         if self.sk.sk_protocol == 0:
             return 'VSOCK'
 
+class netlink_sock(sock):
+    def get_protocol(self):
+        proto_num = self.sk.sk_protocol
+        if proto_num in range(0, len(NETLINK_PROTOCOLS)):
+            return NETLINK_PROTOCOLS[proto_num]
 
 class packet_sock(sock):
     def get_protocol(self):

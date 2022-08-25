@@ -3,7 +3,6 @@
 #
 
 import logging
-from functools import partial
 from collections import defaultdict
 from typing import Callable, Tuple, List, Dict
 
@@ -23,6 +22,14 @@ vollog = logging.getLogger(__name__)
 UnifiedSocketHandlers = dict()
 
 def unified_socket_handler(*sock_families):
+    """
+    Decorator for registering functions as unified socket handlers,
+        to make them accessible through the `UnifiedSocketHandlers` dictionary,
+        under the registered `sock_families` names.
+
+    A unified socket handler receives a `sock` object as an argument,
+        and returns a tuple of `sock, (saddr, sport, daddr, dport, state)`.
+    """
     def wrapper(sock_handler):
         for family in sock_families:
             UnifiedSocketHandlers[family] = sock_handler
@@ -32,7 +39,9 @@ def unified_socket_handler(*sock_families):
 
 
 class SocketHandlers(interfaces.configuration.VersionableInterface):
-    """Handles several socket families extracting the sockets information."""
+    """
+    Handles several socket families extracting the sockets information.
+    """
 
     _version = (1, 0, 0)
     _required_framework_version = (2, 0, 0)
@@ -43,9 +52,9 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
     @classmethod
     def get_net_devices(cls, vmlinux) -> Dict:
         """
-        Returns a dictionary, mapping for each network namespace, for each interface index (ifindex) its network interface name.
+        Returns a dictionary, mapping network namespaces to dictionaries of interface index and names, as pairs.
         
-        `{network_ns => {if_index => if_name}}`
+        scheme: `{net_namespace: {if_index: if_name}}`
         """
         net_devices = defaultdict(dict)
 
@@ -84,10 +93,8 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
             vollog.log(constants.LOGLEVEL_V, f'Unsupported socket family {family}')
         else:
             try:
-                sock, (saddr, sport, daddr, dport, state) = sock_family_handler(sock, self.net_devices.get(netns_no))
+                sock, (saddr, sport, daddr, dport, state) = sock_family_handler(sock, net_devices=self.net_devices.get(netns_no))
                 extended = self.get_socket_extended_information(sock)
-                if extended:
-                    print(extended)
             except exceptions.SymbolError as e:
                 vollog.log(constants.LOGLEVEL_V, f'Error processing socket socket family {family}: {e}')
 
@@ -128,7 +135,7 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         return data
 
     @unified_socket_handler('AF_UNIX')
-    def unix_sock_handler(sock, *args):
+    def unix_sock_handler(sock, **kwargs):
         unix_sock = sock.cast('unix_sock')
         state = unix_sock.get_state()
         saddr = unix_sock.get_name()
@@ -143,7 +150,7 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         return unix_sock, (saddr, sinode, daddr, dinode, state)
 
     @unified_socket_handler('AF_INET', 'AF_INET6')
-    def inet_sock_handler(sock, *args):
+    def inet_sock_handler(sock, **kwargs):
         inet_sock = sock.cast('inet_sock')
         saddr = inet_sock.get_src_addr()
         sport = inet_sock.get_src_port()
@@ -154,7 +161,7 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         return inet_sock, (saddr, sport, daddr, dport, state)
 
     @unified_socket_handler('AF_VSOCK')
-    def vsock_sock_handler(sock, *args):
+    def vsock_sock_handler(sock, **kwargs):
         vsock_sock = sock.cast('vsock_sock')
         saddr = vsock_sock.local_addr.svm_cid
         sport = vsock_sock.local_addr.svm_port
@@ -165,7 +172,7 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         return vsock_sock, (saddr, sport, daddr, dport, state)
 
     @unified_socket_handler('AF_NETLINK')
-    def netlink_sock_handler(sock, *args):
+    def netlink_sock_handler(sock, **kwargs):
         netlink_sock = sock.cast('netlink_sock')
         saddr = sport = daddr = dport = None
 
@@ -185,7 +192,7 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         return netlink_sock, (saddr, sport, daddr, dport, state)
 
     @unified_socket_handler('AF_PACKET')
-    def packet_sock_handler(sock, net_devices):
+    def packet_sock_handler(sock, net_devices, **kwargs):
         packet_sock = sock.cast('packet_sock')
         ifindex = packet_sock.ifindex
         device = net_devices.get(ifindex, None) if ifindex else 'ANY'
@@ -194,7 +201,7 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         return packet_sock, (device, ifindex, None, None, state)
 
     @unified_socket_handler('AF_XDP')
-    def xdp_sock_handler(sock, *args):
+    def xdp_sock_handler(sock, **kwargs):
         xdp_sock = sock.cast('xdp_sock')
         saddr = daddr = sport = dport = None
 
@@ -212,7 +219,7 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         return xdp_sock, (saddr, sport, daddr, dport, state)
 
     @unified_socket_handler('AF_BLUETOOTH')
-    def bluetooth_sock_handler(sock, *args):
+    def bluetooth_sock_handler(sock, **kwargs):
         bt_sock = sock.cast('bt_sock')
 
         def bt_addr(addr):
