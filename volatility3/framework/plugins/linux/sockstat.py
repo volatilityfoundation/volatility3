@@ -3,6 +3,7 @@
 #
 
 import logging
+from functools import partial
 from collections import defaultdict
 from typing import Callable, Tuple, List, Dict
 
@@ -17,6 +18,19 @@ from volatility3.plugins.linux import lsof
 
 vollog = logging.getLogger(__name__)
 
+
+
+UnifiedSocketHandlers = dict()
+
+def unified_socket_handler(*sock_families):
+    def wrapper(sock_handler):
+        for family in sock_families:
+            UnifiedSocketHandlers[family] = sock_handler
+        return sock_handler
+    return wrapper
+
+
+
 class SocketHandlers(interfaces.configuration.VersionableInterface):
     """Handles several socket families extracting the sockets information."""
 
@@ -24,21 +38,10 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
     _required_framework_version = (2, 0, 0)
 
     def __init__(self, vmlinux):
-        self.kernel = vmlinux
-        self.net_devices = self.get_net_devices()
+        self.net_devices = self.get_net_devices(vmlinux)
 
-        self.sock_family_handlers = {
-            'AF_XDP': self.xdp_sock_handler,
-            'AF_UNIX': self.unix_sock_handler,
-            'AF_INET': self.inet_sock_handler,
-            'AF_INET6': self.inet_sock_handler,
-            'AF_VSOCK': self.vsock_sock_handler,
-            'AF_PACKET': self.packet_sock_handler,
-            'AF_NETLINK': self.netlink_sock_handler,
-            'AF_BLUETOOTH': self.bluetooth_sock_handler,
-        }
-
-    def get_net_devices(self) -> Dict:
+    @classmethod
+    def get_net_devices(cls, vmlinux) -> Dict:
         """
         Returns a dictionary, mapping for each network namespace, for each interface index (ifindex) its network interface name.
         
@@ -46,10 +49,10 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         """
         net_devices = defaultdict(dict)
 
-        net_symname = self.kernel.symbol_table_name + constants.BANG + 'net'
-        net_device_symname = self.kernel.symbol_table_name + constants.BANG + 'net_device'
+        net_symname = vmlinux.symbol_table_name + constants.BANG + 'net'
+        net_device_symname = vmlinux.symbol_table_name + constants.BANG + 'net_device'
 
-        nethead = self.kernel.object_from_symbol(symbol_name='net_namespace_list')
+        nethead = vmlinux.object_from_symbol(symbol_name='net_namespace_list')
         for net in nethead.to_list(net_symname, 'list'):
             for net_dev in net.dev_base_head.to_list(net_device_symname, 'dev_list'):
                 netns_no = net.get_inode()
@@ -58,40 +61,39 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
 
         return net_devices
 
-    def process_sock(self, sock, netns_no):
+    def get_unified_socket(self, sock, netns_no):
         """
         Takes a kernel generic `sock` object, and extracts the generic parameters - using the respective socket family.
 
         Returns a tuple containing:
             sock:           volatility object of the proper socket type (per socker family).
+            protocol:       socket protocol.
             saddr, sport:   source address and port.
             daddr, dport:   destination address and port.
             state:          socket state.
             extended:       dict with additional information for specific sockets.
         """
-
-        # Even if the sock family is not supported, or the required types
-        # are not present in the symbols, we can still show some general
-        # information about the socket that may be helpful.
-        sock_family = sock.get_family()
-        saddr = daddr = sport = dport = None
+        family = sock.get_family()
+        protocol = sock.get_protocol()
         state = sock.get_state()
+        saddr = daddr = sport = dport = None
         extended = dict()
 
-        sock_family_handler = self.sock_family_handlers.get(sock_family)
+        sock_family_handler = UnifiedSocketHandlers.get(family)
         if not sock_family_handler:
-            vollog.log(constants.LOGLEVEL_V, "Unsupported socket family '%s'", sock_family)
+            vollog.log(constants.LOGLEVEL_V, f'Unsupported socket family {family}')
         else:
             try:
-                sock, (saddr, sport, daddr, dport, state) = sock_family_handler(sock, self.net_devices.get(netns_no), *args)
+                sock, (saddr, sport, daddr, dport, state) = sock_family_handler(sock, self.net_devices.get(netns_no))
                 extended = self.get_extended_socket_information(sock)
                 if extended:
                     print(extended)
             except exceptions.SymbolError as e:
-                vollog.log(constants.LOGLEVEL_V, "Error processing socket socket family '%s': %s", sock_family, e)
+                vollog.log(constants.LOGLEVEL_V, f'Error processing socket socket family {family}: {e}')
 
 
         return sock, \
+            protocol or renderers.NotApplicableValue(), \
             saddr or renderers.NotApplicableValue(), \
             sport or renderers.NotApplicableValue(), \
             daddr or renderers.NotApplicableValue(), \
@@ -134,7 +136,7 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         
         return extended
 
-    @staticmethod
+    @unified_socket_handler('AF_UNIX')
     def unix_sock_handler(sock, *args):
         unix_sock = sock.cast('unix_sock')
         state = unix_sock.get_state()
@@ -142,28 +144,36 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         sinode = unix_sock.get_inode()
         
         daddr = dinode = None
-        if unix_sock.peer != 0:
+        if unix_sock.peer:
             peer = unix_sock.peer.dereference().cast('unix_sock')
             daddr = peer.get_name()
             dinode = peer.get_inode()
 
         return unix_sock, (saddr, sinode, daddr, dinode, state)
 
-    @staticmethod
+    @unified_socket_handler('AF_INET', 'AF_INET6')
     def inet_sock_handler(sock, *args):
         inet_sock = sock.cast('inet_sock')
         saddr = inet_sock.get_src_addr()
         sport = inet_sock.get_src_port()
         daddr = inet_sock.get_dst_addr()
         dport = inet_sock.get_dst_port()
+
         state = inet_sock.get_state()
-
-        if inet_sock.get_family() == 'AF_INET6':
-            saddr = f'[{saddr}]'
-
         return inet_sock, (saddr, sport, daddr, dport, state)
 
-    @staticmethod
+    @unified_socket_handler('AF_VSOCK')
+    def vsock_sock_handler(sock, *args):
+        vsock_sock = sock.cast('vsock_sock')
+        saddr = vsock_sock.local_addr.svm_cid
+        sport = vsock_sock.local_addr.svm_port
+        daddr = vsock_sock.remote_addr.svm_cid
+        dport = vsock_sock.remote_addr.svm_port
+
+        state = vsock_sock.get_state()
+        return vsock_sock, (saddr, sport, daddr, dport, state)
+
+    @unified_socket_handler('AF_NETLINK')
     def netlink_sock_handler(sock, *args):
         netlink_sock = sock.cast('netlink_sock')
         saddr = sport = daddr = dport = None
@@ -183,18 +193,7 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         state = netlink_sock.get_state()
         return netlink_sock, (saddr, sport, daddr, dport, state)
 
-    @staticmethod
-    def vsock_sock_handler(sock, *args):
-        vsock_sock = sock.cast('vsock_sock')
-        saddr = vsock_sock.local_addr.svm_cid
-        sport = vsock_sock.local_addr.svm_port
-        daddr = vsock_sock.remote_addr.svm_cid
-        dport = vsock_sock.remote_addr.svm_port
-
-        state = vsock_sock.get_state()
-        return vsock_sock, (saddr, sport, daddr, dport, state)
-
-    @staticmethod
+    @unified_socket_handler('AF_PACKET')
     def packet_sock_handler(sock, net_devices):
         packet_sock = sock.cast('packet_sock')
         ifindex = packet_sock.ifindex
@@ -203,7 +202,7 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         state = packet_sock.get_state()
         return packet_sock, (dev_name, ifindex, None, None, state)
 
-    @staticmethod
+    @unified_socket_handler('AF_XDP')
     def xdp_sock_handler(sock, *args):
         xdp_sock = sock.cast('xdp_sock')
         device = xdp_sock.dev
@@ -226,13 +225,10 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         else:
             daddr = None
 
-        # Hallelujah, xdp_sock.state is an enum
-        xsk_state = xdp_sock.state.lookup()
-        state = xsk_state.replace('XSK_', '')
-
+        state = xdp_sock.state.lookup()
         return xdp_sock, (saddr, None, daddr, None, state)
 
-    @staticmethod
+    @unified_socket_handler('AF_BLUETOOTH')
     def bluetooth_sock_handler(sock, *args):
         bt_sock = sock.cast('bt_sock')
 
@@ -259,12 +255,13 @@ class SocketHandlers(interfaces.configuration.VersionableInterface):
         state = bt_sock.get_state()
         return bt_sock, (saddr, channel, daddr, None, state)
 
+
+
 class Sockstat(plugins.PluginInterface):
     """Lists all network connections for all processes."""
 
-    _required_framework_version = (2, 0, 0)
-
     _version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -294,7 +291,7 @@ class Sockstat(plugins.PluginInterface):
         Iterates the sockets for each task in the `context`'s kernel, and returns the data in a uniform format.
         * `filter_func` may contain a function which takes a `task` object and decides whether to output it's sockets.
 
-        Yields:
+        Yields a tuple containing:
             task:           volatility task object
             netns_no:       network namespace id
             fd_num:         socket's file descriptor
@@ -331,23 +328,24 @@ class Sockstat(plugins.PluginInterface):
             if not (socket and socket.sk):
                 continue
 
-            net = task.nsproxy.net_ns
-            netns_no = net.get_inode()
+            netns_no = task.nsproxy.net_ns.get_inode()
 
             sock = socket.sk.dereference()
-            sock_type = sock.get_type()
             family = sock.get_family()
+            sock_type = sock.get_type()
 
-            sock, saddr, sport, daddr, dport, state, extended = sock_handlers.process_sock(sock, netns_no)
-            protocol = sock.get_protocol() or renderers.NotApplicableValue()
+            sock, protocol, saddr, sport, daddr, dport, state, extended = sock_handlers.get_unified_socket(sock, netns_no)
 
             yield task, netns_no, fd_num, sock, family, sock_type, protocol, saddr, sport, daddr, dport, state, extended
 
-    def _generator(self, symbol_table: str, pids_filter: List[int] = None, netns_filter: int = None):
+    def _generator(self,
+                   symbol_table: str,
+                   pids_filter: List[int] = None,
+                   netns_filter: int = None):
         """
         Prepare sockets enumerated by `list_sockets` for volatility output.
 
-        Args:
+        Arguments:
             symbol_table:   the name of the kernel module layer.
             pids_filter:    show only results from this processes (if set).
             netns_filter:   show only results from this net namespace (if set).
@@ -357,15 +355,17 @@ class Sockstat(plugins.PluginInterface):
         for task, netns_no, fd_num, sock, family, sock_type, protocol, saddr, sport, daddr, dport, state, extended \
             in self.list_sockets(self.context, symbol_table, filter_func=filter_func):
 
-            # filter by network ns if active - TODO: move outside
+            # filter by network ns if active
             if netns_filter and netns_filter != netns_no:
                 continue
             
             ext_info_encoded = ','.join(f'{k}={v}' for k, v in extended.items())
-            yield (0, (format_hints.Hex(sock.vol.offset), netns_no, task.pid,
-                       family, sock_type, protocol,
-                       saddr, sport, daddr, dport,
-                       state, ext_info_encoded))
+            yield (0, (
+                format_hints.Hex(sock.vol.offset), netns_no, task.pid,
+                family, sock_type, protocol,
+                saddr, sport, daddr, dport,
+                state, ext_info_encoded
+            ))
 
     def run(self):
         pids_filter = self.config.get('pids')
