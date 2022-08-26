@@ -433,7 +433,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 self.context, interfaces.configuration.path_join(self.config_path, 'tcpip'),
                 kernel.layer_name, "tcpip.pdb", tcpip_module.DllBase, tcpip_module.SizeOfImage)
         except exceptions.VolatilityException:
-            vollog.warning("Unable to locate symbols for the memory image's tcpip module")
+            vollog.error("Unable to locate symbols for the memory image's tcpip module")
 
         for netw_obj in self.list_sockets(self.context, kernel.layer_name, kernel.symbol_table_name,
                                           netscan_symbol_table, tcpip_module.DllBase, tcpip_symbol_table):
