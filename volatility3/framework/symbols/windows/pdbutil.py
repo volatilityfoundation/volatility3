@@ -315,8 +315,8 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         Returns:
             The name of the constructed and loaded symbol table
         """
-        _, symbol_table_name = cls._modtable_from_pdb(context, config_path, layer_name, pdb_name, module_offset,
-                                                      module_size)
+        symbol_table_name = cls._modtable_from_pdb(context, config_path, layer_name, pdb_name, module_offset,
+                                                   module_size)
         return symbol_table_name
 
     @classmethod
