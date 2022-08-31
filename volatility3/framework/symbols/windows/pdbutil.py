@@ -292,7 +292,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
             for i in range(sig_pfn, min_pfn, -1):
                 if current_invalid_counter > maximum_invalid_count:
                     break
-                
+
                 if not ctx.layers[layer_name].is_valid(i * page_size, 2):
                     current_invalid_counter += 1
                     continue
