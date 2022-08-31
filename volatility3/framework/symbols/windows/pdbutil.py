@@ -264,6 +264,14 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
 
         The UI should always provide the user an opportunity to specify the
         appropriate types and PDB values themselves
+        Args:
+            layer_name: The layer name to scan
+            page_size: Size of page constant
+            pdb_names: List of pdb names to scan
+            progress_callback: Means of providing the user with feedback during long processes
+            start: Start address to start scanning from the pdb_names
+            end: Minimum address to scan the pdb_names
+            maximum_invalid_count: Amount of pages that can be invalid during scanning before aborting signature search
         """
         min_pfn = 0
 
