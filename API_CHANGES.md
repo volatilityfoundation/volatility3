@@ -4,6 +4,10 @@ API Changes
 When an addition to the existing API is made, the minor version is bumped.
 When an API feature or function is removed or changed, the major version is bumped.
 
+2.3.1
+=====
+Update in the windows `_EPROCESS.owning_process` method for support Windows Vista and later versions.
+
 2.3.0
 =====
 Add in `child_template` to template class
