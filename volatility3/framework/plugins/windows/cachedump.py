@@ -46,7 +46,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
             rc4 = ARC4.new(rc4key)
             data = rc4.encrypt(edata) # lgtm [py/weak-cryptographic-algorithm]
         else:
-            # based on  Based on code from http://lab.mediaservice.net/code/cachedump.rb
+            # Based on code from http://lab.mediaservice.net/code/cachedump.rb
             aes = AES.new(nlkm[16:32], AES.MODE_CBC, ch)
             data = b""
             for i in range(0, len(edata), 16):
