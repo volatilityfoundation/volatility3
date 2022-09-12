@@ -194,7 +194,7 @@ class rekall_types_translator:
         metadata["producer"]["name"] = f"rekall types to ISF {cls.VERSION}"
         metadata["producer"]["datetime"] = time.ctime()
         metadata["producer"]["version"] = cls.VERSION
-        metadata["rekall_metadata"] = rekall_metadata
+        metadata["producer"]["rekall_metadata"] = rekall_metadata
 
         return metadata
 
