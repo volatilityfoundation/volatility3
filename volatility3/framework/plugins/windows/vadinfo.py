@@ -52,6 +52,10 @@ class VadInfo(interfaces.plugins.PluginInterface):
                                                           "(all other address ranges are excluded). This must be " \
                                                           "a base address, not an address within the desired range.",
                                             optional = True),
+                requirements.IntRequirement(name='containing-address',
+                                            description="Process virtual memory address to include" \
+                                                        "This is a containing address in the VAD.",
+                                                        optional=True),
                 requirements.ListRequirement(name = 'pid',
                                              description = 'Filter on specific process IDs',
                                              element_type = int,
@@ -178,6 +182,13 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 return x.get_start() not in [self.config['address']]
 
             filter_func = filter_function
+
+        if self.config.get('containing-address', None) is not None:
+
+            def containing_filter_function(x: interfaces.objects.ObjectInterface) -> bool:
+                return not (x.get_start() <= self.config['containing-address'] <= x.get_end())
+
+            filter_func = containing_filter_function
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
