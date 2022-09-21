@@ -33,7 +33,7 @@ winnt_protections = {
 class VadInfo(interfaces.plugins.PluginInterface):
     """Lists process memory ranges."""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (2, 4, 0)
     _version = (2, 0, 0)
     MAXSIZE_DEFAULT = 1024 * 1024 * 1024  # 1 Gb
 
@@ -132,7 +132,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
             vollog.debug("Unable to find the starting/ending VPN member")
             return None
 
-        if 0 < maxsize < (vad_end - vad_start):
+        if 0 < maxsize < vad.get_size():
             vollog.debug(f"Skip VAD dump {vad_start:#x}-{vad_end:#x} due to maxsize limit")
             return None
 
@@ -151,8 +151,9 @@ class VadInfo(interfaces.plugins.PluginInterface):
             file_handle = open_method(file_name)
             chunk_size = 1024 * 1024 * 10
             offset = vad_start
-            while offset < vad_end:
-                to_read = min(chunk_size, vad_end - offset)
+            vad_size = vad.get_size()
+            while offset < vad_start + vad_size:
+                to_read = min(chunk_size, vad_start + vad_size - offset)
                 data = proc_layer.read(offset, to_read, pad = True)
                 if not data:
                     break
