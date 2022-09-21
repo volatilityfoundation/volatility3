@@ -1,5 +1,4 @@
-from volatility3.framework import interfaces, constants
-from volatility3.framework import renderers, interfaces, exceptions
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed

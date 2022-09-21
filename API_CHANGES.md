@@ -8,6 +8,10 @@ When an API feature or function is removed or changed, the major version is bump
 =====
 Add a `get_size()` method to Windows VAD structures and fix several off-by-one issues when calculating VAD sizes.
 
+2.3.1
+=====
+Update in the windows `_EPROCESS.owning_process` method to support Windows Vista and later versions.
+
 2.3.0
 =====
 Add in `child_template` to template class

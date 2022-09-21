@@ -13,7 +13,7 @@ from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from urllib import parse, request
 
 from volatility3 import symbols
-from volatility3.framework import constants, exceptions, interfaces
+from volatility3.framework import constants, contexts, exceptions, interfaces
 from volatility3.framework.automagic import symbol_cache
 from volatility3.framework.configuration import requirements
 from volatility3.framework.configuration.requirements import SymbolTableRequirement
@@ -344,12 +344,46 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
 
         vollog.debug(f"Found {guid['pdb_name']}: {guid['GUID']}-{guid['age']}")
 
-        return cls.load_windows_symbol_table(context,
-                                             guid["GUID"],
-                                             guid["age"],
-                                             guid["pdb_name"],
-                                             "volatility3.framework.symbols.intermed.IntermediateSymbolTable",
-                                             config_path = config_path)
+        module_name = guid["pdb_name"].strip('.pdb')
+
+        symbol_table_name = cls.load_windows_symbol_table(context,
+                                                          guid["GUID"],
+                                                          guid["age"],
+                                                          guid["pdb_name"],
+                                                          "volatility3.framework.symbols.intermed.IntermediateSymbolTable",
+                                                          config_path = config_path)
+
+        new_module_name = None
+        if create_module:
+            new_module = contexts.Module.create(context, module_name, layer_name, offset = guid['mz_offset'],
+                                                symbol_table_name = symbol_table_name)
+            new_module_name = new_module.name
+
+        return new_module_name, symbol_table_name
+
+    @classmethod
+    def module_from_pdb(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
+                        pdb_name: str, module_offset: int = None, module_size: int = None) -> str:
+        """Creates a module in the specified layer_name based on a pdb name.
+
+        Searches the memory section of the loaded module for its PDB GUID
+        and loads the associated symbol table into the symbol space.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            config_path: The config path where to find symbol files
+            layer_name: The name of the layer on which to operate
+            module_offset: This memory dump's module image offset
+            module_size: The size of the module for this dump
+
+        Returns:
+            The name of the constructed and loaded symbol table
+        """
+
+        module_name, _ = cls._modtable_from_pdb(context, config_path, layer_name, pdb_name, module_offset,
+                                                module_size, create_module = True)
+
+        return module_name
 
 
 class PdbSignatureScanner(interfaces.layers.ScannerInterface):
