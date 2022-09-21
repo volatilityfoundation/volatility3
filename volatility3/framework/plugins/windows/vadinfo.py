@@ -33,7 +33,7 @@ winnt_protections = {
 class VadInfo(interfaces.plugins.PluginInterface):
     """Lists process memory ranges."""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (2, 4, 0)
     _version = (2, 0, 0)
     MAXSIZE_DEFAULT = 1024 * 1024 * 1024  # 1 Gb
 
