@@ -3,6 +3,7 @@
 #
 
 import logging
+import os
 from typing import Any, Callable, Iterable, List, Optional, Tuple
 
 from volatility3.framework import constants, interfaces, layers
@@ -40,7 +41,8 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
         """Creates a cached copy of the results, but only it's been
         requested."""
         if not self._banners:
-            cache = symbol_cache.SqliteCache(constants.IDENTIFIERS_PATH)
+            identifiers_path = os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME)
+            cache = symbol_cache.SqliteCache(identifiers_path)
             self._banners = cache.get_identifier_dictionary(operating_system = self.operating_system)
         return self._banners
 

@@ -109,7 +109,8 @@ class IsfInfo(plugins.PluginInterface):
                         num_enums = len(data.get('enums', []))
                         num_bases = len(data.get('base_types', []))
 
-                        identifier_cache = symbol_cache.SqliteCache(constants.IDENTIFIERS_PATH)
+                        identifiers_path = os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME)
+                        identifier_cache = symbol_cache.SqliteCache(identifiers_path)
                         identifier = identifier_cache.get_identifier(location = entry)
                         if identifier:
                             identifier = identifier.decode('utf-8', errors = 'replace')
@@ -120,7 +121,8 @@ class IsfInfo(plugins.PluginInterface):
                         vollog.warning(f"Invalid ISF: {entry}")
                 yield (0, (entry, valid, num_bases, num_types, num_symbols, num_enums, identifier))
         else:
-            cache = symbol_cache.SqliteCache(constants.IDENTIFIERS_PATH)
+            identifiers_path = os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME)
+            cache = symbol_cache.SqliteCache(identifiers_path)
             valid = 'Unknown'
             for identifier, location in cache.get_identifier_dictionary().items():
                 num_bases, num_types, num_enums, num_symbols = cache.get_location_statistics(location)

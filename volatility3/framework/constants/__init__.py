@@ -67,13 +67,7 @@ if sys.platform == 'win32':
     CACHE_PATH = os.path.realpath(os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "volatility3"))
 os.makedirs(CACHE_PATH, exist_ok = True)
 
-LINUX_BANNERS_PATH = os.path.join(CACHE_PATH, "linux_banners.cache")
-"""Default location to record information about available linux banners"""
-
-MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
-"""Default location to record information about available mac banners"""
-
-IDENTIFIERS_PATH = os.path.join(CACHE_PATH, "identifiers.cache")
+IDENTIFIERS_FILENAME = "identifier.cache"
 """Default location to record information about available identifiers"""
 
 CACHE_SQLITE_SCHEMA_VERSION = 1

@@ -3,6 +3,7 @@
 #
 
 import logging
+import os
 import struct
 from typing import Optional
 
@@ -42,7 +43,8 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         if isinstance(layer, intel.Intel):
             return None
 
-        mac_banners = symbol_cache.SqliteCache(constants.IDENTIFIERS_PATH).get_identifier_dictionary(
+        identifiers_path = os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME)
+        mac_banners = symbol_cache.SqliteCache(identifiers_path).get_identifier_dictionary(
             operating_system = 'mac')
         # If we have no banners, don't bother scanning
         if not mac_banners:
