@@ -9,7 +9,6 @@ volatility This includes default scanning block sizes, etc.
 import enum
 import os.path
 import sys
-import warnings
 from typing import Callable, Optional
 
 import volatility3.framework.constants.linux
@@ -102,23 +101,3 @@ OFFLINE = False
 
 REMOTE_ISF_URL = None  # 'http://localhost:8000/banners.json'
 """Remote URL to query for a list of ISF addresses"""
-
-###
-# DEPRECATED VALUES
-###
-
-_deprecated_LINUX_BANNERS_FILENAME = os.path.join(CACHE_PATH, 'linux_banners.cache')
-"""This value is deprecated and is no longer used within volatility"""
-
-_deprecated_MAC_BANNERS_PATH = os.path.join(CACHE_PATH, 'mac_banners.cache')
-"""This value is deprecated and is no longer used within volatility"""
-
-_deprecated_IDENTIFIERS_PATH = os.path.join(CACHE_PATH, IDENTIFIERS_FILENAME)
-"""This value is deprecated in favour of CACHE_PATH joined to IDENTIFIER_FILENAME"""
-
-
-def __getattr__(name):
-    deprecated_tag = '_deprecated_'
-    if name in [x[len(deprecated_tag):] for x in globals() if x.startswith(deprecated_tag)]:
-        warnings.warn(f"{name} is deprecated", FutureWarning)
-        return globals()[f"{deprecated_tag}{name}"]
