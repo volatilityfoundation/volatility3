@@ -488,7 +488,7 @@ class UNICODE_STRING(objects.StructType):
         # We manually construct an object rather than casting a dereferenced pointer in case
         # the buffer length is 0 and the pointer is a NULL pointer
         return self._context.object(self.vol.type_name.split(constants.BANG)[0] + constants.BANG + 'string',
-                                    layer_name = self.Buffer.vol.layer_name,
+                                    layer_name = self.Buffer.vol.native_layer_name,
                                     offset = self.Buffer,
                                     max_length = self.Length, errors = 'replace', encoding = 'utf16')
 
