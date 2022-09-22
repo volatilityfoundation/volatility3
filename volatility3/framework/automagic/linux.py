@@ -3,6 +3,7 @@
 #
 
 import logging
+import os
 from typing import Optional, Tuple, Type
 
 from volatility3.framework import constants, interfaces
@@ -40,7 +41,8 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         if isinstance(layer, intel.Intel):
             return None
 
-        linux_banners = symbol_cache.SqliteCache(constants.IDENTIFIERS_PATH).get_identifier_dictionary(
+        identifiers_path = os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME)
+        linux_banners = symbol_cache.SqliteCache(identifiers_path).get_identifier_dictionary(
             operating_system = 'linux')
         # If we have no banners, don't bother scanning
         if not linux_banners:
