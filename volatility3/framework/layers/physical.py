@@ -5,7 +5,7 @@ import logging
 import threading
 from typing import Any, Dict, IO, List, Optional, Union
 
-from volatility3.framework import exceptions, interfaces, constants
+from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import resources
 
@@ -191,7 +191,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         """Closes the file handle."""
         self._file.close()
 
-    def __del__(self) -> None:
+    def __exit__(self, type, value, traceback) -> None:
         self.destroy()
 
     @classmethod

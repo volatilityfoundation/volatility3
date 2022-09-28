@@ -101,7 +101,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
 
         return [sortable(timestamp) for timestamp in data[2:]]
 
-    def _generator(self, runable_plugins: List[TimeLinerInterface]) -> Optional[Iterable[Tuple[int, Tuple]]]:
+    def _generator(self, runnable_plugins: List[TimeLinerInterface]) -> Optional[Iterable[Tuple[int, Tuple]]]:
         """Takes a timeline, sorts it and output the data from each relevant
         row from each plugin."""
         # Generate the results for each plugin
@@ -115,9 +115,9 @@ class Timeliner(interfaces.plugins.PluginInterface):
             file_data = None
             fp = None
 
-        for plugin in runable_plugins:
+        for plugin in runnable_plugins:
             plugin_name = plugin.__class__.__name__
-            self._progress_callback((runable_plugins.index(plugin) * 100) // len(runable_plugins),
+            self._progress_callback((runnable_plugins.index(plugin) * 100) // len(runnable_plugins),
                                     f"Running plugin {plugin_name}...")
             try:
                 vollog.log(logging.INFO, f"Running {plugin_name}")

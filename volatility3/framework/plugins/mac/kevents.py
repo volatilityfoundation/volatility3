@@ -74,7 +74,7 @@ class Kevents(interfaces.plugins.PluginInterface):
     @classmethod
     def _walk_klist_array(cls, kernel, fdp, array_pointer_member, array_size_member):
         """
-        Convience wrapper for walking an array of lists of kernel events
+        Convenience wrapper for walking an array of lists of kernel events
         Handles invalid address references
         """
         try:

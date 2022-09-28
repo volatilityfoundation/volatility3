@@ -9,7 +9,7 @@
 # For a thorough walkthrough on how the R&D was performed to develop this plugin,
 # please see our blogpost here:
 #
-# <insert blog URL once published>
+# https://volatility-labs.blogspot.com/2021/10/memory-forensics-r-illustrated.html
 
 import io
 import logging
@@ -41,7 +41,7 @@ vollog = logging.getLogger(__name__)
 class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
     """ Looks for signs of Skeleton Key malware """
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (2, 4, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -262,7 +262,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
             if isinstance(filename, str) and filename.lower().endswith("cryptdll.dll"):
                 base = vad.get_start()
-                return base, vad.get_end() - base
+                return base, vad.get_size()
 
         return None, None
 

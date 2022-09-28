@@ -3,11 +3,13 @@
 #
 
 import logging
+import os
 import struct
 from typing import Optional
 
-from volatility3.framework import interfaces, constants, layers, exceptions
+from volatility3.framework import constants, exceptions, interfaces, layers
 from volatility3.framework.automagic import symbol_cache, symbol_finder
+from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, scanners
 from volatility3.framework.symbols import mac
 
@@ -24,6 +26,13 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
               layer_name: str,
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to identify mac within this layer."""
+        # Version check the SQlite cache
+        required = (1, 0, 0)
+        if not requirements.VersionRequirement.matches_required(required, symbol_cache.SqliteCache.version):
+            vollog.info(
+                f"SQLiteCache version not suitable: required {required} found {symbol_cache.SqliteCache.version}")
+            return None
+
         # Bail out by default unless we can stack properly
         layer = context.layers[layer_name]
         new_layer = None
@@ -34,7 +43,9 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         if isinstance(layer, intel.Intel):
             return None
 
-        mac_banners = MacBannerCache.load_banners()
+        identifiers_path = os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME)
+        mac_banners = symbol_cache.SqliteCache(identifiers_path).get_identifier_dictionary(
+            operating_system = 'mac')
         # If we have no banners, don't bother scanning
         if not mac_banners:
             vollog.info("No Mac banners found - if this is a mac plugin, please check your symbol files location")
@@ -46,9 +57,8 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
             dtb = None
             vollog.debug(f"Identified banner: {repr(banner)}")
 
-            symbol_files = mac_banners.get(banner, None)
-            if symbol_files:
-                isf_path = symbol_files[0]
+            isf_path = mac_banners.get(banner, None)
+            if isf_path:
                 table_name = context.symbol_space.free_table_name('MacintelStacker')
                 table = mac.MacKernelIntermedSymbols(context = context,
                                                      config_path = join('temporary', table_name),
@@ -197,19 +207,11 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
             yield offset, banner
 
 
-class MacBannerCache(symbol_cache.SymbolBannerCache):
-    """Caches the banners found in the Mac symbol files."""
-    os = "mac"
-    symbol_name = "version"
-    banner_path = constants.MAC_BANNERS_PATH
-    exclusion_list = ['windows', 'linux']
-
-
 class MacSymbolFinder(symbol_finder.SymbolFinder):
     """Mac symbol loader based on uname signature strings."""
 
     banner_config_key = 'kernel_banner'
-    banner_cache = MacBannerCache
+    operating_system = 'mac'
     find_aslr = MacIntelStacker.find_aslr
     symbol_class = "volatility3.framework.symbols.mac.MacKernelIntermedSymbols"
     exclusion_list = ['windows', 'linux']

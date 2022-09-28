@@ -95,10 +95,10 @@ class SSDT(plugins.PluginInterface):
         if is_kernel_64:
             array_subtype = "long"
 
-            def kvo_calulator(func: int) -> int:
+            def kvo_calculator(func: int) -> int:
                 return kvo + service_table_address + (func >> 4)
 
-            find_address = kvo_calulator
+            find_address = kvo_calculator
         else:
             array_subtype = "unsigned long"
 
