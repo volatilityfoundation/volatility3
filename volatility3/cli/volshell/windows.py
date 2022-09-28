@@ -64,6 +64,6 @@ class Volshell(generic.Volshell):
 
     @property
     def current_layer(self):
-        if self.__current_layer is None:
-            self.__current_layer = self.kernel.layer_name
-        return self.__current_layer
+        if self._current_layer is None:
+            self._current_layer = self.kernel.layer_name
+        return self._current_layer

@@ -7,11 +7,13 @@ import json
 import logging
 import os
 import sys
+from typing import Any, List, Tuple
 
 import volatility3.plugins
 import volatility3.symbols
 from volatility3 import cli, framework
 from volatility3.cli.volshell import generic, linux, mac, windows
+from volatility3.cli.volshell.generic import VolshellShellPlugin
 from volatility3.framework import automagic, constants, contexts, exceptions, interfaces, plugins
 
 # Make sure we log everything
@@ -257,6 +259,17 @@ class VolShell(cli.CommandLine):
                 constructed.run()
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
+
+
+class VolshellPlugin:
+    def __init__(self, parent: VolshellShellPlugin):
+        super().__init__()
+        self._parent = parent
+
+    def construct_locals(self) -> List[Tuple[List[str], Any]]:
+        """Returns a list of tuples that contain a list of aliases and what those aliases point to
+        """
+        return []
 
 
 def main():
