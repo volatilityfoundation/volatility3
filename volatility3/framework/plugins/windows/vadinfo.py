@@ -49,13 +49,8 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 # TODO: Convert this to a ListRequirement so that people can filter on sets of ranges
                 requirements.IntRequirement(name = 'address',
                                             description = "Process virtual memory address to include " \
-                                                          "(all other address ranges are excluded). This must be " \
-                                                          "a base address, not an address within the desired range.",
+                                                          "(all other address ranges are excluded).",
                                             optional = True),
-                requirements.IntRequirement(name='containing-address',
-                                            description="Process virtual memory address to include" \
-                                                        "This is a containing address in the VAD.",
-                                                        optional=True),
                 requirements.ListRequirement(name = 'pid',
                                              description = 'Filter on specific process IDs',
                                              element_type = int,
@@ -179,16 +174,9 @@ class VadInfo(interfaces.plugins.PluginInterface):
         if self.config.get('address', None) is not None:
 
             def filter_function(x: interfaces.objects.ObjectInterface) -> bool:
-                return x.get_start() not in [self.config['address']]
+                return not (x.get_start() <= self.config['address'] <= x.get_end())
 
             filter_func = filter_function
-
-        if self.config.get('containing-address', None) is not None:
-
-            def containing_filter_function(x: interfaces.objects.ObjectInterface) -> bool:
-                return not (x.get_start() <= self.config['containing-address'] <= x.get_end())
-
-            filter_func = containing_filter_function
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
