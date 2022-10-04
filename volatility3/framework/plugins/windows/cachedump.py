@@ -79,8 +79,9 @@ class Cachedump(interfaces.plugins.PluginInterface):
         username = dec_data[uname_offset:uname_offset + uname_len].decode('utf-16-le', 'replace')
         domain = dec_data[domain_offset:domain_offset + domain_len].decode('utf-16-le', 'replace')
         domain_name = dec_data[domain_name_offset:domain_name_offset + domain_name_len].decode('utf-16-le', 'replace')
+        john_hash = domain_name + "\\" + username + ":$DCC2$10240#" + username + "#" + hashh.hex()
 
-        return (username, domain, domain_name, hashh)
+        return (username, domain, domain_name, john_hash)
 
     def _generator(self, syshive, sechive):
         bootkey = hashdump.Hashdump.get_bootkey(syshive)
@@ -121,9 +122,9 @@ class Cachedump(interfaces.plugins.PluginInterface):
                 continue
             dec_data = self.decrypt_hash(enc_data, nlkm, ch, not vista_or_later)
 
-            (username, domain, domain_name, hashh) = self.parse_decrypted_cache(dec_data, uname_len, domain_len,
+            (username, domain, domain_name, john_hash) = self.parse_decrypted_cache(dec_data, uname_len, domain_len,
                                                                                 domain_name_len)
-            yield (0, (username, domain, domain_name, hashh))
+            yield (0, (username, domain, domain_name, john_hash))
 
     def run(self):
         offset = self.config.get('offset', None)
@@ -149,5 +150,5 @@ class Cachedump(interfaces.plugins.PluginInterface):
                 vollog.warning('Unable to locate SECURITY hive')
             return
 
-        return renderers.TreeGrid([("Username", str), ("Domain", str), ("Domain name", str), ('Hash', bytes)],
+        return renderers.TreeGrid([("Username", str), ("Domain", str), ("Domain name", str), ('Hash', str)],
                                   self._generator(syshive, sechive))
