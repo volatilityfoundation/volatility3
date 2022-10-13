@@ -3,7 +3,6 @@
 #
 import functools
 import json
-import math
 from typing import Optional, Dict, Any, Tuple, List, Set
 
 from volatility3.framework import interfaces, exceptions, constants
@@ -131,8 +130,6 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         index = 8
         section_info = dict()
         current_section_id = -1
-        version_id = -1
-        name = None
         while section_byte != self.QEVM_EOF and index <= base_layer.maximum_address:
             section_byte = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
                                                offset = index,
