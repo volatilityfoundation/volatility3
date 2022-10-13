@@ -1,10 +1,10 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-from typing import List, Tuple, Iterator, Optional
+from typing import Iterator, List, Tuple, Optional
 
 from volatility3 import framework
-from volatility3.framework import exceptions, constants, interfaces, objects
+from volatility3.framework import constants, exceptions, interfaces, objects
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux import extensions
@@ -39,8 +39,12 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('netlink_sock', extensions.netlink_sock)
         self.set_type_class('vsock_sock', extensions.vsock_sock)
         self.set_type_class('packet_sock', extensions.packet_sock)
+
         if 'bt_sock' in self.types:
             self.set_type_class('bt_sock', extensions.bt_sock)
+
+        if 'mnt_namespace' in self.types:
+            self.set_type_class('mnt_namespace', extensions.mnt_namespace)
 
         if 'module' in self.types:
             self.set_type_class('module', extensions.module)

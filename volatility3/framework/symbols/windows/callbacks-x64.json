@@ -8,6 +8,12 @@
             "signed": false,
             "endian": "little"
         },
+        "unsigned long long": {
+            "kind": "int",
+            "size": 8,
+            "signed": false,
+            "endian": "little"
+        },
         "unsigned char": {
             "kind": "char",
             "size": 1,
@@ -133,6 +139,43 @@
                         }
                     },
                     "offset": 8
+                }
+            },
+            "kind": "struct",
+            "size": 64
+        },
+        "_CM_CALLBACK_ENTRY": {
+            "fields": {
+                "Link": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 0
+                },
+                "Cookie": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                    },
+                    "offset": 24
+                },
+                "Function": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 40
+                },
+                "Altitude": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_UNICODE_STRING"
+                    },
+                    "offset": 48
                 }
             },
             "kind": "struct",

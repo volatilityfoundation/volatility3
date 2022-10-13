@@ -3,9 +3,10 @@
 #
 
 import logging
-from typing import Any, Iterable, List, Tuple, Type, Optional, Callable
+import os
+from typing import Any, Callable, Iterable, List, Optional, Tuple
 
-from volatility3.framework import interfaces, constants, layers
+from volatility3.framework import constants, interfaces, layers
 from volatility3.framework.automagic import symbol_cache
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import scanners
@@ -18,7 +19,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
     priority = 40
 
     banner_config_key: str = "banner"
-    banner_cache: Optional[Type[symbol_cache.SymbolBannerCache]] = None
+    operating_system: Optional[str] = None
     symbol_class: Optional[str] = None
     find_aslr: Optional[Callable] = None
 
@@ -27,14 +28,22 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
         self._requirements: List[Tuple[str, interfaces.configuration.RequirementInterface]] = []
         self._banners: symbol_cache.BannersType = {}
 
+    @classmethod
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+        return [
+            requirements.VersionRequirement(name = 'SQLiteCache',
+                                            component = symbol_cache.SqliteCache,
+                                            version = (1, 0, 0))
+        ]
+
     @property
     def banners(self) -> symbol_cache.BannersType:
         """Creates a cached copy of the results, but only it's been
         requested."""
         if not self._banners:
-            if not self.banner_cache:
-                raise RuntimeError(f"Cache has not been properly defined for {self.__class__.__name__}")
-            self._banners = self.banner_cache.load_banners()
+            identifiers_path = os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME)
+            cache = symbol_cache.SqliteCache(identifiers_path)
+            self._banners = cache.get_identifier_dictionary(operating_system = self.operating_system)
         return self._banners
 
     def __call__(self,
@@ -103,8 +112,8 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
             vollog.debug(f"Identified banner: {repr(banner)}")
             symbol_files = self.banners.get(banner, None)
             if symbol_files:
-                isf_path = symbol_files[0]
-                vollog.debug(f"Using symbol library: {symbol_files[0]}")
+                isf_path = symbol_files
+                vollog.debug(f"Using symbol library: {symbol_files}")
                 clazz = self.symbol_class
                 # Set the discovered options
                 path_join = interfaces.configuration.path_join
@@ -116,9 +125,8 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                 requirement.construct(context, config_path)
                 break
             else:
-                if symbol_files:
-                    vollog.debug(f"Symbol library path not found: {symbol_files[0]}")
-                    # print("Kernel", banner, hex(banner_offset))
+                vollog.debug(f"Symbol library path not found for: {banner}")
+                # print("Kernel", banner, hex(banner_offset))
         else:
             vollog.debug("No existing banners found")
             # TODO: Fallback to generic regex search?

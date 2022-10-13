@@ -294,6 +294,29 @@ class super_block(objects.StructType):
     # include/linux/kdev_t.h
     MINORBITS = 20
 
+    # Superblock flags
+    SB_RDONLY = 1            # Mount read-only
+    SB_NOSUID = 2            # Ignore suid and sgid bits
+    SB_NODEV = 4             # Disallow access to device special files
+    SB_NOEXEC = 8            # Disallow program execution
+    SB_SYNCHRONOUS = 16      # Writes are synced at once
+    SB_MANDLOCK = 64         # Allow mandatory locks on an FS
+    SB_DIRSYNC = 128         # Directory modifications are synchronous
+    SB_NOATIME = 1024        # Do not update access times
+    SB_NODIRATIME = 2048     # Do not update directory access times
+    SB_SILENT = 32768
+    SB_POSIXACL = (1 << 16)   # VFS does not apply the umask
+    SB_KERNMOUNT = (1 << 22)  # this is a kern_mount call
+    SB_I_VERSION = (1 << 23)  # Update inode I_version field
+    SB_LAZYTIME = (1 << 25)   # Update the on-disk [acm]times lazily
+
+    SB_OPTS = {
+        SB_SYNCHRONOUS: "sync",
+        SB_DIRSYNC: "dirsync",
+        SB_MANDLOCK: "mand",
+        SB_LAZYTIME: "lazytime"
+    }
+
     @property
     def major(self) -> int:
         return self.s_dev >> self.MINORBITS
@@ -301,6 +324,20 @@ class super_block(objects.StructType):
     @property
     def minor(self) -> int:
         return self.s_dev & ((1 << self.MINORBITS) - 1)
+
+    def get_flags_access(self) -> str:
+        return 'ro' if self.s_flags & self.SB_RDONLY else 'rw'
+
+    def get_flags_opts(self) -> Iterable[str]:
+        sb_opts = [self.SB_OPTS[sb_opt] for sb_opt in self.SB_OPTS if sb_opt & self.s_flags]
+        return sb_opts
+
+    def get_type(self):
+        mnt_sb_type = utility.pointer_to_string(self.s_type.name, count=255)
+        if self.s_subtype:
+            mnt_sb_subtype = utility.pointer_to_string(self.s_subtype, count=255)
+            mnt_sb_type += "." + mnt_sb_subtype
+        return mnt_sb_type
 
 
 class vm_area_struct(objects.StructType):
@@ -378,7 +415,7 @@ class vm_area_struct(objects.StructType):
             fname = linux.LinuxUtilities.path_for_file(context, task, self.vm_file)
         elif self.vm_start <= task.mm.start_brk and self.vm_end >= task.mm.brk:
             fname = "[heap]"
-        elif self.vm_start <= task.mm.start_stack and self.vm_end >= task.mm.start_stack:
+        elif self.vm_start <= task.mm.start_stack <= self.vm_end:
             fname = "[stack]"
         elif self.vm_mm.context.has_member("vdso") and self.vm_start == self.vm_mm.context.vdso:
             fname = "[vdso]"
@@ -421,7 +458,50 @@ class qstr(objects.StructType):
 class dentry(objects.StructType):
 
     def path(self) -> str:
-        return self.d_name.name_as_str()
+        """Based on __dentry_path Linux kernel function"""
+        reversed_path = []
+        dentry_seen = set()
+        current_dentry = self
+        while (not current_dentry.is_root() and
+               current_dentry.vol.offset not in dentry_seen):
+            parent = current_dentry.d_parent
+            reversed_path.append(current_dentry.d_name.name_as_str())
+            dentry_seen.add(current_dentry.vol.offset)
+            current_dentry = parent
+        return "/" + "/".join(reversed(reversed_path))
+
+    def is_root(self) -> bool:
+        return self.vol.offset == self.d_parent
+
+    def is_subdir(self, old_dentry):
+        """Is this dentry a subdirectory of old_dentry?
+
+        Returns true if this dentry is a subdirectory of the parent (at any depth).
+        Otherwise, it returns false.
+        """
+        if self.vol.offset == old_dentry:
+            return True
+
+        return self.d_ancestor(old_dentry)
+
+    def d_ancestor(self, ancestor_dentry):
+        """Search for an ancestor
+
+        Returns the ancestor dentry which is a child of "ancestor_dentry",
+        if "ancestor_dentry" is an ancestor of "child_dentry", else None.
+        """
+
+        dentry_seen = set()
+        current_dentry = self
+        while (not current_dentry.is_root() and
+               current_dentry.vol.offset not in dentry_seen):
+            if current_dentry.d_parent == ancestor_dentry.vol.offset:
+                return current_dentry
+
+            dentry_seen.add(current_dentry.vol.offset)
+            current_dentry = current_dentry.d_parent
+
+        return None
 
 
 class struct_file(objects.StructType):
@@ -516,6 +596,27 @@ class files_struct(objects.StructType):
 
 class mount(objects.StructType):
 
+    MNT_NOSUID = 0x01
+    MNT_NODEV = 0x02
+    MNT_NOEXEC = 0x04
+    MNT_NOATIME = 0x08
+    MNT_NODIRATIME = 0x10
+    MNT_RELATIME = 0x20
+    MNT_READONLY = 0x40
+    MNT_SHRINKABLE = 0x100
+    MNT_WRITE_HOLD = 0x200
+    MNT_SHARED = 0x1000
+    MNT_UNBINDABLE = 0x2000
+
+    MNT_FLAGS = {
+        MNT_NOSUID: "nosuid",
+        MNT_NODEV: "nodev",
+        MNT_NOEXEC: "noexec",
+        MNT_NOATIME: "noatime",
+        MNT_NODIRATIME: "nodiratime",
+        MNT_RELATIME: "relatime",
+    }
+
     def get_mnt_sb(self):
         if self.has_member("mnt"):
             return self.mnt.mnt_sb
@@ -546,6 +647,82 @@ class mount(objects.StructType):
     def get_mnt_mountpoint(self):
         return self.mnt_mountpoint
 
+    def get_flags_access(self) -> str:
+        return "ro" if self.get_mnt_flags() & self.MNT_READONLY else "rw"
+
+    def get_flags_opts(self) -> Iterable[str]:
+        flags = [self.MNT_FLAGS[mntflag] for mntflag in self.MNT_FLAGS if mntflag & self.get_mnt_flags()]
+        return flags
+
+    def is_shared(self) -> bool:
+        return self.get_mnt_flags() & self.MNT_SHARED
+
+    def is_unbindable(self) -> bool:
+        return self.get_mnt_flags() & self.MNT_UNBINDABLE
+
+    def is_slave(self) -> bool:
+        return self.mnt_master and self.mnt_master.vol.offset != 0
+
+    def get_devname(self) -> str:
+        return utility.pointer_to_string(self.mnt_devname, count=255)
+
+    def has_parent(self) -> bool:
+        return self.vol.offset != self.mnt_parent
+
+    def get_dominating_id(self, root) -> int:
+        """Get ID of closest dominating peer group having a representative under the given root."""
+        mnt_seen = set()
+        current_mnt = self.mnt_master
+        while (current_mnt and
+               current_mnt.vol.offset != 0 and
+               current_mnt.vol.offset not in mnt_seen):
+            peer = current_mnt.get_peer_under_root(self.mnt_ns, root)
+            if peer and peer.vol.offset != 0:
+                return peer.mnt_group_id
+
+            mnt_seen.add(current_mnt.vol.offset)
+            current_mnt = current_mnt.mnt_master
+        return 0
+
+    def get_peer_under_root(self, ns, root):
+        """Return true if path is reachable from root.
+        It mimics the kernel function is_path_reachable(), ref: fs/namespace.c
+        """
+        mnt_seen = set()
+        current_mnt = self
+        while current_mnt.vol.offset not in mnt_seen:
+            if current_mnt.mnt_ns == ns and current_mnt.is_path_reachable(current_mnt.mnt.mnt_root, root):
+                return current_mnt
+
+            mnt_seen.add(current_mnt.vol.offset)
+            current_mnt = current_mnt.next_peer()
+            if current_mnt.vol.offset == self.vol.offset:
+                break
+
+        return None
+
+    def is_path_reachable(self, current_dentry, root):
+        """Return true if path is reachable.
+        It mimics the kernel function with same name, ref fs/namespace.c:
+        """
+        mnt_seen = set()
+        current_mnt = self
+        while (current_mnt.mnt.vol.offset != root.mnt and
+               current_mnt.has_parent() and
+               current_mnt.vol.offset not in mnt_seen):
+
+            current_dentry = current_mnt.mnt_mountpoint
+            mnt_seen.add(current_mnt.vol.offset)
+            current_mnt = current_mnt.mnt_parent
+
+        return current_mnt.mnt.vol.offset == root.mnt and current_dentry.is_subdir(root.dentry)
+
+    def next_peer(self):
+        table_name = self.vol.type_name.split(constants.BANG)[0]
+        mount_struct = "{0}{1}mount".format(table_name, constants.BANG)
+        offset = self._context.symbol_space.get_type(mount_struct).relative_child_offset("mnt_share")
+
+        return self._context.object(mount_struct, self.vol.layer_name, offset=self.mnt_share.next.vol.offset - offset)
 
 class vfsmount(objects.StructType):
 
@@ -576,7 +753,6 @@ class vfsmount(objects.StructType):
     def get_mnt_root(self):
         return self.mnt_root
 
-
 class kobject(objects.StructType):
 
     def reference_count(self):
@@ -596,6 +772,16 @@ class mnt_namespace(objects.StructType):
             return self.ns.inum
         else:
             raise AttributeError("Unable to find mnt_namespace inode")
+
+    def get_mount_points(self):
+        table_name = self.vol.type_name.split(constants.BANG)[0]
+        mnt_type = table_name + constants.BANG + "mount"
+        if not self._context.symbol_space.has_type(mnt_type):
+            # Old kernels ~ 2.6
+            mnt_type = table_name + constants.BANG + "vfsmount"
+
+        for mount in self.list.to_list(mnt_type, "mnt_list"):
+            yield mount
 
 class net(objects.StructType):
     def get_inode(self):

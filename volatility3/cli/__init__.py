@@ -332,6 +332,7 @@ class CommandLine:
                     parser.error(f"Cannot write configuration: file {args.save_config} already exists")
                 with open(args.save_config, "w") as f:
                     json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
+                    f.write("\n")
         except exceptions.UnsatisfiedException as excp:
             self.process_unsatisfied_exceptions(excp)
             parser.exit(1, f"Unable to validate the plugin requirements: {[x for x in excp.unsatisfied]}\n")
@@ -423,7 +424,7 @@ class CommandLine:
             detail = f"{excp}"
             caused_by = ["A required python module is not installed (install the module and re-run)"]
         else:
-            general = "Volatilty encountered an unexpected situation."
+            general = "Volatility encountered an unexpected situation."
             detail = ""
             caused_by = [
                 "Please re-run using with -vvv and file a bug with the output", f"at {constants.BUG_URL}"

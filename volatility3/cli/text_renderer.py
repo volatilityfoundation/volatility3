@@ -224,7 +224,7 @@ class CSVRenderer(CLIRenderer):
             # Ignore the type because namedtuples don't realize they have accessible attributes
             header_list.append(f"{column.name}")
 
-        writer = csv.DictWriter(outfd, header_list)
+        writer = csv.DictWriter(outfd, header_list, lineterminator='\n')
         writer.writeheader()
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
@@ -345,7 +345,7 @@ class JsonRenderer(CLIRenderer):
 
     def output_result(self, outfd, result):
         """Outputs the JSON data to a file in a particular format"""
-        outfd.write(json.dumps(result, indent = 2, sort_keys = True))
+        outfd.write("{}\n".format(json.dumps(result, indent = 2, sort_keys = True)))
 
     def render(self, grid: interfaces.renderers.TreeGrid):
         outfd = sys.stdout

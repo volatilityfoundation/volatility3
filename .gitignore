@@ -27,3 +27,18 @@ config*.json
 # Pyinstaller files
 build
 dist
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Memory dump files
+*.dmp
+*.vmem
+*.img
+
+# PyTest cache files
+.pytest_cache/

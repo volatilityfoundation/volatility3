@@ -171,6 +171,8 @@ class ResourceAccessor(object):
                         cache_file.write(block)
                         block = fp.read(block_size)
                     cache_file.close()
+                else:
+                    vollog.debug(f"Using already cached file at: {temp_filename}")
                 # Re-open the cache with a different mode
                 # Since we don't want people thinking they're able to save to the cache file,
                 # open it in read mode only and allow breakages to happen if they wanted to write
@@ -182,14 +184,12 @@ class ResourceAccessor(object):
             stop = False
             while not stop:
                 detected = None
-                try:
+                with contextlib.suppress(AttributeError, IOError):
                     # Detect the content
                     detected = magic.detect_from_fobj(curfile)
                     IMPORTED_MAGIC = True
                     # This is because python-magic and file provide a magic module
                     # Only file's python has magic.detect_from_fobj
-                except (AttributeError, IOError):
-                    pass
 
                 if detected:
                     if detected.mime_type == 'application/x-xz':

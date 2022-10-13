@@ -1,7 +1,7 @@
 # This file is Copyright 2022 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import contextlib
 import datetime
 import logging
 
@@ -56,7 +56,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         # Scan the layer for Raw MFT records and parse the fields
         for offset, _rule_name, _name, _value in layer.scan(context = self.context,
                                                             scanner = yarascan.YaraScanner(rules = rules)):
-            try:
+            with contextlib.suppress(exceptions.PagedInvalidAddressException):
                 mft_record = self.context.object(mft_object, offset = offset, layer_name = layer.name)
                 # We will update this on each pass in the next loop and use it as the new offset.
                 attr_base_offset = mft_record.FirstAttrOffset
@@ -130,9 +130,6 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     attr_header = self.context.object(header_object,
                                                       offset = offset + attr_base_offset,
                                                       layer_name = layer.name)
-
-            except exceptions.PagedInvalidAddressException:
-                pass
 
     def generate_timeline(self):
         for row in self._generator():

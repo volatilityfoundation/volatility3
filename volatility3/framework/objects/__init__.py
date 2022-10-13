@@ -602,6 +602,14 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
                 return 0
             raise IndexError(f"Member not present in array template: {child}")
 
+        @classmethod
+        def child_template(cls, template: interfaces.objects.Template, child: str) -> interfaces.objects.Template:
+            """Returns the template of the child member."""
+            if 'subtype' in template.vol and child == 'subtype':
+                return template.vol.subtype
+            raise IndexError(f"Member not present in array template: {child}")
+
+
     @overload
     def __getitem__(self, i: int) -> interfaces.objects.Template:
         ...
@@ -714,6 +722,15 @@ class AggregateType(interfaces.objects.ObjectInterface):
             if retlist is None:
                 raise IndexError(f"Member not present in template: {child}")
             return retlist[0]
+
+        @classmethod
+        def child_template(cls, template: interfaces.objects.Template, child: str) -> interfaces.objects.Template:
+            """Returns the template of a child to its parent."""
+            retlist = template.vol.members.get(child, None)
+            if retlist is None:
+                raise IndexError(f"Member not present in template: {child}")
+            return retlist[1]
+
 
         @classmethod
         def has_member(cls, template: interfaces.objects.Template, member_name: str) -> bool:
