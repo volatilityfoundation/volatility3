@@ -1,7 +1,7 @@
 Linux Tutorial
 ==============
 
-This guide gives you a brief introduction to how volatility3 works and some demonstration of several of the plugins available from
+This guide will give you a brief overview of how volatility3 works as well as a demonstration of several of the plugins available in the suite of plugins.
 
 Acquiring memory
 ----------------
