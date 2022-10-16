@@ -40,7 +40,7 @@ following command:
 The :envvar:`PYTHONPATH` environment variable is not required if the Volatility library is installed in the system's library path
 or a virtual environment.
 
-Mac/Linux symbol tables
+Mac or Linux symbol tables
 -----------------------
 
 For Mac/Linux systems, both use the same mechanism for identification.  The generated files contain an identifying string (the operating system
