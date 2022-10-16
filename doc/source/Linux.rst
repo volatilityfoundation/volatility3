@@ -11,20 +11,6 @@ You can use any of the following tools to Acquire memory or the ones you are con
     - `AVML - Acquire Volatile Memory for Linux <https://github.com/microsoft/avml>`_    
     - `LIME - Linux Memory Extract <https://github.com/504ensicsLabs/LiME>`_
 
-.. code-block:: shell-session
-
-    $ tar -xvzf lime-forensics-1.1-r14.tar.gz 
-    $ cd lime-forensics-1.1-r14/src
-    $ make
-    ....
-      CC [M]  lime-forensics-1.1-r14/src/tcp.o
-      CC [M]  lime-forensics-1.1-r14/src/disk.o
-    ....
-    $ sudo insmod lime-3.2.0-23-generic.ko "path=/tmp/ubuntu.lime format=lime"
-    $ ls -alh /tmp/ubuntu.lime 
-    -r--r--r-- 1 root root 2.0G Aug 17 19:37 /tmp/ubuntu.lime
-
-.. note:: The above command required sudo inorder to access the files which are root only. 
 
 Procedure to create symbol tables for linux
 --------------------------------------------
