@@ -7,9 +7,9 @@ Acquiring memory
 ----------------
 
 Volatility does not provide the ability to acquire memory. 
-
-.. tip:: - You could use `WinPmem <https://github.com/Velocidex/WinPmem/releases/latest>`_ for collecting windows memory dump.
-    - You could also use `FTK Imager <https://accessdata.com/product-download/ftk-imager-version-4-5>`_
+You can use any of the following tools to Acquire memory or the ones you are convenient with:
+    - `WinPmem <https://github.com/Velocidex/WinPmem/releases/latest>`_ 
+    - `FTK Imager <https://accessdata.com/product-download/ftk-imager-version-4-5>`_
 
 Listing Plugins
 ---------------

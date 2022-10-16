@@ -6,9 +6,10 @@ This guide will give you a brief overview of how volatility3 works as well as a 
 Acquiring memory
 ----------------
 
-Volatility3 does not provide the ability to acquire memory. In this tutorial we will see how we can use  `LiME <https://github.com/504ensicslabs/lime>`_ for this purpose. 
-It supports 32 and 64 bit captures from native Intel hardware as well as virtual machine guests. 
-It also supports capture from Android devices. See below for example commands building and running LiME:
+Volatility3 does not provide the ability to acquire memory. 
+You can use any of the following tools to Acquire memory or the ones you are convenient with:
+    - `AVML - Acquire Volatile Memory for Linux <https://github.com/microsoft/avml>`_    
+    - `LIME - Linux Memory Extract <https://github.com/504ensicsLabs/LiME>`_
 
 .. code-block:: shell-session
 
