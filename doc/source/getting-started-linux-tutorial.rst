@@ -1,31 +1,34 @@
 Linux Tutorial
 ==============
 
-This guide will give you a brief overview of how volatility3 works as well as a demonstration of several of the plugins available in the suite of plugins.
+This guide will give you a brief overview of how volatility3 works as well as a demonstration of several of the plugins available in the suite.
 
 Acquiring memory
 ----------------
 
-Volatility3 does not provide the ability to acquire memory. 
-You can use any of the following tools to Acquire memory or the ones you are convenient with:
-    - `AVML - Acquire Volatile Memory for Linux <https://github.com/microsoft/avml>`_    
-    - `LIME - Linux Memory Extract <https://github.com/504ensicsLabs/LiME>`_
+Volatility3 does not provide the ability to acquire memory.  Below are some examples of tools that can be used to acquire memory, but more are available:
+
+* `AVML - Acquire Volatile Memory for Linux <https://github.com/microsoft/avml>`_
+* `LIME - Linux Memory Extract <https://github.com/504ensicsLabs/LiME>`_
 
 
 Procedure to create symbol tables for linux
 --------------------------------------------
 
-To create a symbol table please refer this :ref:`symbol-tables:Mac or Linux symbol tables`.
+To create a symbol table please refer to :ref:`symbol-tables:Mac or Linux symbol tables`.
 
-.. tip:: We can also find some ISF files from `Linux ISF Server <https://isf-server.techanarchy.net/>`_ ,  which is built and maintained by `kevthehermit <https://twitter.com/kevthehermit>`_.
-        After creating the file or downloading the file from the ISF server, please place the file under the directory ``volatility3/symbols/linux``. Make a directory linux under symbols.
+.. tip:: It may be possible to locate pre-made ISF files from the `Linux ISF Server <https://isf-server.techanarchy.net/>`_ ,
+    which is built and maintained by `kevthehermit <https://twitter.com/kevthehermit>`_.
+    After creating the file or downloading it from the ISF server, place the file under the directory ``volatility3/symbols/linux``.
+    If necessary create a linux directory under the symbols directory (this will become unncessary in future versions).
 
 
 Listing plugins
 ---------------
 
-Following are the sample of linux plugins available for volatility3. More plugins will be available on future releases.
-For plugin requests, Please create an issue with description of the plugin.
+The following is a sample of the linux plugins available for volatility3, it is not complete and more more plugins may
+be added.  For a complete reference, please see the volatility 3 :doc:`list of plugins <volatility3.plugins>`.
+For plugin requests, please create an issue with a description of the requested plugin.
 
 .. code-block:: shell-session
 
@@ -36,13 +39,13 @@ For plugin requests, Please create an issue with description of the plugin.
         linux.check_creds.Check_creds
         linux.check_idt.Check_idt
 
-.. note:: Here the the command is piped to grep and head in-order to give you sample list of linux plugins.
+.. note:: Here the the command is piped to grep and head in-order to provide the start of the list of linux plugins.
 
 
 Using plugins
 -------------
 
-The following is the syntax to run volatility tool.
+The following is the syntax to run the volatility CLI.
 
 .. code-block:: shell-session
 
@@ -52,11 +55,11 @@ The following is the syntax to run volatility tool.
 Example
 -------
 
-Example 1
-~~~~~~~~~
+banners
+~~~~~~~
 
-In this example we will be using memory dump from Insomni'hack teaser 2020 CTF. Challenge name Getdents.  We will limit the discussion to memory forensics with volatility3 and not extend to other parts of the challenges.
-I'd like to say thanks to `stuxnet <https://github.com/stuxnet999/>`_ for providing this memory dump and `writeup <https://stuxnet999.github.io/insomnihack/2020/09/17/Insomihack-getdents.html>`_.
+In this example we will be using a memory dump from the Insomni'hack teaser 2020 CTF Challenge called Getdents.  We will limit the discussion to memory forensics with volatility 3 and not extend it to other parts of the challenge.
+Thanks go to `stuxnet <https://github.com/stuxnet999/>`_ for providing this memory dump and `writeup <https://stuxnet999.github.io/insomnihack/2020/09/17/Insomihack-getdents.html>`_.
 
 
 .. code-block:: shell-session
@@ -75,11 +78,13 @@ I'd like to say thanks to `stuxnet <https://github.com/stuxnet999/>`_ for provid
         0x7fde0010      Linux version 4.15.0-72-generic (buildd@lcy01-amd64-026) (gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.04.1)) #81-Ubuntu SMP Tue Nov 26 12:20:02 UTC 2019 (Ubuntu 4.15.0-72.81-generic 4.15.18)
 
 
-This above command helps us to find the memory dump's kernel version and the distribution version. Now using the above banner we can search for ISF file from the ISF server.
-If you do not find the ISF file then, please follow the instructions on :ref:`Linux:Procedure to create symbol tables for linux`. After that place the ISF file under ``volatility3/symbols/linux`` directory.
+The above command helps us to find the memory dump's kernel version and the distribution version. Now using the above banner we can search for the needed ISF file from the ISF server.
+If ISF file cannt be found then, follow the instructions on :ref:`getting-started-linux-tutorial:Procedure to create symbol tables for linux`. After that, place the ISF file under the ``volatility3/symbols/linux`` directory.
 
 .. tip:: Use the banner text which is most repeated to search from ISF Server.
 
+linux.pslist
+~~~~~~~~~~~~
 
 .. code-block:: shell-session
 
@@ -108,6 +113,9 @@ If you do not find the ISF file then, please follow the instructions on :ref:`Li
         .....
 
 ``linux.pslist`` helps us to list the processes which are running, their PIDs and PPIDs.
+
+linux.pstree
+~~~~~~~~~~~~
 
 .. code-block:: shell-session
 
@@ -148,9 +156,12 @@ If you do not find the ISF file then, please follow the instructions on :ref:`Li
         ***** 1548      1266    gsd-keyboard
         ***** 1550      1266    gsd-media-keys
 
-``linux.pstree`` helps us to display the parent child relation of processes. 
+``linux.pstree`` helps us to display the parent child relationships between processes.
 
-Now to find the commands ran in bash shell. Lets use ``linux.bash``.
+linux.bash
+~~~~~~~~~~
+
+Now to find the commands that were run in the bash shell by using ``linux.bash``.
 
 .. code-block:: shell-session
 

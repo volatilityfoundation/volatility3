@@ -7,7 +7,7 @@ Volatility 3 is Open Source.
 
 :doc:`List of plugins <volatility3.plugins>`
 
-Here are some guidelines for using Volatility 3 effectively:
+Below is the main documentation regarding volatility 3:
 
 .. toctree::
     :caption: Documentation
@@ -19,20 +19,20 @@ Here are some guidelines for using Volatility 3 effectively:
     volshell
     glossary
 
+There is also some information to get you started quickly:
+
+.. toctree::
+    :caption: Getting Started
+
+    getting-started-linux-tutorial
+    getting-started-windows-tutorial
+
 
 .. toctree::
     :caption: Python Packages
 
     volatility3
 
-
-.. toctree::
-    :caption: Getting Started
-
-    FAQ
-    Installation
-    Linux
-    Windows
 
 Indices and tables
 ==================
