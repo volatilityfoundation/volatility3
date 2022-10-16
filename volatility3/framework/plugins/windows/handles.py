@@ -323,7 +323,7 @@ class Handles(interfaces.plugins.PluginInterface):
                         obj_name = item.file_name_with_device()
                     elif obj_type == "Process":
                         item = entry.Body.cast("_EPROCESS")
-                        obj_name = f"{utility.array_to_string(proc.ImageFileName)} Pid {item.UniqueProcessId}"
+                        obj_name = f"{utility.array_to_string(item.ImageFileName)} Pid {item.UniqueProcessId}"
                     elif obj_type == "Thread":
                         item = entry.Body.cast("_ETHREAD")
                         obj_name = f"Tid {item.Cid.UniqueThread} Pid {item.Cid.UniqueProcess}"
