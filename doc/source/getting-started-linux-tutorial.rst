@@ -20,7 +20,7 @@ To create a symbol table please refer to :ref:`symbol-tables:Mac or Linux symbol
 .. tip:: It may be possible to locate pre-made ISF files from the `Linux ISF Server <https://isf-server.techanarchy.net/>`_ ,
     which is built and maintained by `kevthehermit <https://twitter.com/kevthehermit>`_.
     After creating the file or downloading it from the ISF server, place the file under the directory ``volatility3/symbols/linux``.
-    If necessary create a linux directory under the symbols directory (this will become unncessary in future versions).
+    If necessary create a linux directory under the symbols directory (this will become unnecessary in future versions).
 
 
 Listing plugins
