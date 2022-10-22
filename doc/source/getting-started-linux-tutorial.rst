@@ -79,7 +79,7 @@ Thanks go to `stuxnet <https://github.com/stuxnet999/>`_ for providing this memo
 
 
 The above command helps us to find the memory dump's kernel version and the distribution version. Now using the above banner we can search for the needed ISF file from the ISF server.
-If ISF file cannt be found then, follow the instructions on :ref:`getting-started-linux-tutorial:Procedure to create symbol tables for linux`. After that, place the ISF file under the ``volatility3/symbols/linux`` directory.
+If ISF file cannot be found then, follow the instructions on :ref:`getting-started-linux-tutorial:Procedure to create symbol tables for linux`. After that, place the ISF file under the ``volatility3/symbols/linux`` directory.
 
 .. tip:: Use the banner text which is most repeated to search from ISF Server.
 
