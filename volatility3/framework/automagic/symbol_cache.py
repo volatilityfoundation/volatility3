@@ -157,10 +157,10 @@ class SqliteCache(CacheManagerInterface):
     _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
-    cache_period = '-3 days'
 
     def __init__(self, filename: str):
         super().__init__(filename)
+        self.cache_period = constants.SQLITE_CACHE_PERIOD
         try:
             self._database = self._connect_storage(filename)
         except sqlite3.DatabaseError:
