@@ -40,7 +40,7 @@ setuptools.setup(name = "volatility3",
                      '': ['development', 'development.*'],
                      'development': ['*']
                  },
-                 packages = setuptools.find_packages(exclude = ["development", "development.*"]),
+                 packages = setuptools.find_namespace_packages(exclude = ["development", "development.*"]),
                  entry_points = {
                      'console_scripts': [
                          'vol = volatility3.cli:main',
