@@ -12,6 +12,19 @@ from volatility3.framework.symbols.windows import pdbutil
 
 vollog = logging.getLogger(__name__)
 
+"""
+A common technique by modern Windows rootkits is disabling Driver Signing Enforcement so that
+unsigned kernel rootkits can load. Rapid 7 documented many examples here:
+
+https://www.rapid7.com/blog/post/2021/12/13/driver-based-attacks-past-and-present/
+
+To disable DSE, malware will set the `g_CiOptions` global variable in the kernel to 0.
+
+This plugin locates this variable in memory and then reports its status and value.
+
+If this global variable is disabled on Windows 10 systems then it means the system is either in
+developer mode or that a rootkit purposely overwrote the value. Neither would be expected in production settings.
+"""
 class driver_signing_enforcement(interfaces.plugins.PluginInterface):
     """Reports the status of Driving Signing Enforcement"""
 
