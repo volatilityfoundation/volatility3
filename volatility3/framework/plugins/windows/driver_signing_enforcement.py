@@ -6,7 +6,6 @@ from typing import List
 
 from volatility3.framework import exceptions, renderers, interfaces, symbols
 from volatility3.framework.configuration import requirements
-from volatility3.framework.objects import utility
 from volatility3.plugins.windows import info, modules
 from volatility3.framework.symbols.windows import pdbutil
 
@@ -25,7 +24,7 @@ This plugin locates this variable in memory and then reports its status and valu
 If this global variable is disabled on Windows 10 systems then it means the system is either in
 developer mode or that a rootkit purposely overwrote the value. Neither would be expected in production settings.
 """
-class driver_signing_enforcement(interfaces.plugins.PluginInterface):
+class DriverSigningEnforcement(interfaces.plugins.PluginInterface):
     """Reports the status of Driving Signing Enforcement"""
 
     _required_framework_version = (2, 0, 0)
@@ -43,7 +42,7 @@ class driver_signing_enforcement(interfaces.plugins.PluginInterface):
     def _get_ci_dll(self, kernel):
         """
         Finds the CI.DLL kernel module. This module is used for
-        Code Integrity enforcement, and is targetted by malware to disable security checks.
+        Code Integrity enforcement, and is targeted by malware to disable security checks.
 
         Args:
             kernel: interfaces.context.ModuleInterface of the kernel
