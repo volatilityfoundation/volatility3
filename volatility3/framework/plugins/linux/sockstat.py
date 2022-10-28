@@ -100,7 +100,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         return sock, sock_stat, extended
 
     def _update_extended_socket_filters_info(self, sock: objects.Pointer, extended: dict) -> None:
-        """Get infomation from the socket and reuseport filters
+        """Get information from the socket and reuseport filters
 
         Args:
             sock: The kernel sock (sk) struct
@@ -454,7 +454,7 @@ class Sockstat(plugins.PluginInterface):
             destination: Destination address string
             state: State strings (LISTEN, CONNECTED, etc)
             tasks: String with a list of tasks and FDs using a socket. It can also have
-                   exteded information such as socket filters, bpf info, etc.
+                   extended information such as socket filters, bpf info, etc.
         """
         filter_func = lsof.pslist.PsList.create_pid_filter(pids)
         socket_generator = self.list_sockets(self.context, symbol_table, filter_func=filter_func)
