@@ -27,8 +27,15 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('dentry', extensions.dentry)
         self.set_type_class('fs_struct', extensions.fs_struct)
         self.set_type_class('files_struct', extensions.files_struct)
-        self.set_type_class('vfsmount', extensions.vfsmount)
         self.set_type_class('kobject', extensions.kobject)
+        # Might not exist in the current symbols
+        self.optional_set_type_class('module', extensions.module)
+
+        # Mount
+        self.set_type_class('vfsmount', extensions.vfsmount)
+        # Might not exist in older kernels or the current symbols
+        self.optional_set_type_class('mount', extensions.mount)
+        self.optional_set_type_class('mnt_namespace', extensions.mnt_namespace)
 
         # Network
         self.set_type_class('net', extensions.net)
@@ -36,21 +43,12 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('sock', extensions.sock)
         self.set_type_class('inet_sock', extensions.inet_sock)
         self.set_type_class('unix_sock', extensions.unix_sock)
-        self.set_type_class('netlink_sock', extensions.netlink_sock)
-        self.set_type_class('vsock_sock', extensions.vsock_sock)
-        self.set_type_class('packet_sock', extensions.packet_sock)
-
-        if 'bt_sock' in self.types:
-            self.set_type_class('bt_sock', extensions.bt_sock)
-
-        if 'mnt_namespace' in self.types:
-            self.set_type_class('mnt_namespace', extensions.mnt_namespace)
-
-        if 'module' in self.types:
-            self.set_type_class('module', extensions.module)
-
-        if 'mount' in self.types:
-            self.set_type_class('mount', extensions.mount)
+        # Might not exist in older kernels or the current symbols
+        self.optional_set_type_class('netlink_sock', extensions.netlink_sock)
+        self.optional_set_type_class('vsock_sock', extensions.vsock_sock)
+        self.optional_set_type_class('packet_sock', extensions.packet_sock)
+        self.optional_set_type_class('bt_sock', extensions.bt_sock)
+        self.optional_set_type_class('xdp_sock', extensions.xdp_sock)
 
 
 class LinuxUtilities(interfaces.configuration.VersionableInterface):

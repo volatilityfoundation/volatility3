@@ -16,8 +16,7 @@ from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_ST
 from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
-from volatility3.framework.symbols import generic, linux
-from volatility3.framework.symbols import intermed
+from volatility3.framework.symbols import generic, linux, intermed
 from volatility3.framework.symbols.linux.extensions import elf
 
 vollog = logging.getLogger(__name__)
@@ -840,9 +839,15 @@ class sock(objects.StructType):
 
         return self.sk_socket.get_inode()
 
+    def get_protocol(self):
+        return ""
+
     def get_state(self):
         # Return the generic socket state
-        return self.sk.sk_socket.get_state()
+        if self.has_member("sk"):
+            return self.sk.sk_socket.get_state()
+
+        return self.sk_socket.get_state()
 
 class unix_sock(objects.StructType):
     def get_name(self):
@@ -989,7 +994,6 @@ class netlink_sock(objects.StructType):
         # Return the generic socket state
         return self.sk.sk_socket.get_state()
 
-
 class vsock_sock(objects.StructType):
     def get_protocol(self):
         # The protocol should always be 0 for vsocks
@@ -1001,7 +1005,6 @@ class vsock_sock(objects.StructType):
     def get_state(self):
         # Return the generic socket state
         return self.sk.sk_socket.get_state()
-
 
 class packet_sock(objects.StructType):
     def get_protocol(self):
@@ -1017,7 +1020,6 @@ class packet_sock(objects.StructType):
         # Return the generic socket state
         return self.sk.sk_socket.get_state()
 
-
 class bt_sock(objects.StructType):
     def get_protocol(self):
         type_idx = self.sk.sk_protocol
@@ -1032,3 +1034,15 @@ class bt_sock(objects.StructType):
             return BLUETOOTH_STATES[state_idx]
         else:
             return "UNKNOWN"
+
+class xdp_sock(objects.StructType):
+    def get_protocol(self):
+        # The protocol should always be 0 for xdp_sock
+        if self.sk.sk_protocol == 0:
+            return ""
+        else:
+            return "UNKNOWN"
+
+    def get_state(self):
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()

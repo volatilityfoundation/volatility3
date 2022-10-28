@@ -5,7 +5,8 @@
 import logging
 from typing import Callable, Tuple, List, Dict
 
-from volatility3.framework import renderers, interfaces, exceptions, constants, objects
+from volatility3.framework import interfaces, exceptions, constants, objects
+from volatility3.framework.renderers import TreeGrid, NotAvailableValue
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
@@ -92,7 +93,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         # Even if the sock family is not supported, or the required types
         # are not present in the symbols, we can still show some general
         # information about the socket that may be helpful.
-        saddr_tag = daddr_tag = "?"
+        saddr_tag = daddr_tag = NotAvailableValue()
         state = sock.get_state()
 
         sock_stat = saddr_tag, daddr_tag, state
@@ -123,16 +124,22 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             return
 
         bpfprog = sock_filter.prog
+        if bpfprog.type == 0:
+            # BPF_PROG_TYPE_UNSPEC = 0
+            return
 
-        # BPF_PROG_TYPE_UNSPEC = 0
-        if bpfprog.type > 0:
-            extended["bpf_filter_type"] = "eBPF"
-            bpfprog_aux = bpfprog.aux
-            if bpfprog_aux:
-                extended["bpf_filter_id"] = str(bpfprog_aux.id)
-                bpfprog_name = utility.array_to_string(bpfprog_aux.name)
-                if bpfprog_name:
-                    extended["bpf_filter_name"] = bpfprog_name
+        extended["bpf_filter_type"] = "eBPF"
+        if not bpfprog.has_member("aux") or not bpfprog.aux:
+            return
+        bpfprog_aux = bpfprog.aux
+        if bpfprog_aux.has_member("id"):
+            # `id` member was added to `bpf_prog_aux` in kernels 4.13
+            extended["bpf_filter_id"] = str(bpfprog_aux.id)
+        if bpfprog_aux.has_member("name"):
+            # `name` was added to `bpf_prog_aux` in kernels 4.15
+            bpfprog_name = utility.array_to_string(bpfprog_aux.name)
+            if bpfprog_name:
+                extended["bpf_filter_name"] = bpfprog_name
 
     def _unix_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
         """Handles the AF_UNIX socket family
@@ -503,4 +510,4 @@ class Sockstat(plugins.PluginInterface):
                           ("State", str),
                           ("Tasks", str)]
 
-        return renderers.TreeGrid(tree_grid_args, self._generator(pids, netns_id, symbol_table))
+        return TreeGrid(tree_grid_args, self._generator(pids, netns_id, symbol_table))
