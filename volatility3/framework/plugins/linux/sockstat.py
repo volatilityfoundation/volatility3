@@ -72,7 +72,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns a tuple with:
             sock: The respective kernel's *_sock object for that socket family
-            sock_stat: A tuple with the source, destination and state strings.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string.
             extended: A dictionary with key/value extended information.
         """
         family = sock.get_family()
@@ -93,10 +93,10 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         # Even if the sock family is not supported, or the required types
         # are not present in the symbols, we can still show some general
         # information about the socket that may be helpful.
-        saddr_tag = daddr_tag = NotAvailableValue()
+        src_addr = src_port = dst_addr = dst_port = None
         state = sock.get_state()
 
-        sock_stat = saddr_tag, daddr_tag, state
+        sock_stat = src_addr, src_port, dst_addr, dst_port, state
 
         return sock, sock_stat, extended
 
@@ -149,22 +149,21 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             unix_sock: The kernel's `unix_sock` object
-            sock_stat: A tuple with the source, destination and state strings.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string.
         """
         unix_sock = sock.cast("unix_sock")
         state = unix_sock.get_state()
-        saddr = unix_sock.get_name()
-        sinode = unix_sock.get_inode()
-        if unix_sock.peer != 0:
-            peer = unix_sock.peer.dereference().cast("unix_sock")
-            daddr = peer.get_name()
-            dinode = peer.get_inode()
-        else:
-            daddr = dinode = ""
+        src_addr = unix_sock.get_name()
+        src_port = unix_sock.get_inode()
 
-        saddr_tag = f"{saddr} {sinode}"
-        daddr_tag = f"{daddr} {dinode}"
-        sock_stat = saddr_tag, daddr_tag, state
+        if unix_sock.peer:
+            peer = unix_sock.peer.dereference().cast("unix_sock")
+            dst_addr = peer.get_name()
+            dst_port = peer.get_inode()
+        else:
+            dst_addr = dst_port = None
+
+        sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return unix_sock, sock_stat
 
     def _inet_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
@@ -175,21 +174,16 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             inet_sock: The kernel's `inet_sock` object
-            sock_stat: A tuple with the source, destination and state strings.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string.
         """
         inet_sock = sock.cast("inet_sock")
-        saddr = inet_sock.get_src_addr()
-        sport = inet_sock.get_src_port()
-        daddr = inet_sock.get_dst_addr()
-        dport = inet_sock.get_dst_port()
+        src_addr = inet_sock.get_src_addr()
+        src_port = inet_sock.get_src_port()
+        dst_addr = inet_sock.get_dst_addr()
+        dst_port = inet_sock.get_dst_port()
         state = inet_sock.get_state()
 
-        if inet_sock.get_family() == "AF_INET6":
-            saddr = f"[{saddr}]"
-
-        saddr_tag = f"{saddr}:{sport}"
-        daddr_tag = f"{daddr}:{dport}"
-        sock_stat = saddr_tag, daddr_tag, state
+        sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return inet_sock, sock_stat
 
     def _netlink_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
@@ -200,34 +194,26 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             netlink_sock: The kernel's `netlink_sock` object
-            sock_stat: A tuple with the source, destination and state strings.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string.
         """
         netlink_sock = sock.cast("netlink_sock")
 
-        saddr_list = []
-        src_portid = f"portid:{netlink_sock.portid}"
-        saddr_list.append(src_portid)
-        if netlink_sock.groups != 0:
+        src_addr = None
+        if netlink_sock.groups:
             groups_bitmap = netlink_sock.groups.dereference()
-            groups_str = f"groups:0x{groups_bitmap:08x}"
-            saddr_list.append(groups_str)
+            src_addr = f"groups:0x{groups_bitmap:08x}"
+        src_port = netlink_sock.portid
 
-        daddr_list = []
-        dst_portid = f"portid:{netlink_sock.dst_portid}"
-        daddr_list.append(dst_portid)
-        dst_group = f"group:0x{netlink_sock.dst_group:08x}"
-        daddr_list.append(dst_group)
+        dst_addr = f"group:0x{netlink_sock.dst_group:08x}"
         module = netlink_sock.module
-        if module and netlink_sock.module.name:
-            module_name_str = utility.array_to_string(netlink_sock.module.name)
-            module_name = f"lkm:{module_name_str}"
-            daddr_list.append(module_name)
+        if module and module.name:
+            module_name_str = utility.array_to_string(module.name)
+            dst_addr = f"{dst_addr},lkm:{module_name_str}"
+        dst_port = netlink_sock.dst_portid
 
-        saddr_tag = ",".join(saddr_list)
-        daddr_tag = ",".join(daddr_list)
         state = netlink_sock.get_state()
 
-        sock_stat = saddr_tag, daddr_tag, state
+        sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return netlink_sock, sock_stat
 
     def _vsock_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
@@ -238,18 +224,16 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             vsock_sock: The kernel `vsock_sock` object
-            sock_stat: A tuple with the source, destination and state strings.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string.
         """
         vsock_sock = sock.cast("vsock_sock")
-        saddr = vsock_sock.local_addr.svm_cid
-        sport = vsock_sock.local_addr.svm_port
-        daddr = vsock_sock.remote_addr.svm_cid
-        dport = vsock_sock.remote_addr.svm_port
+        src_addr = vsock_sock.local_addr.svm_cid
+        src_port = vsock_sock.local_addr.svm_port
+        dst_addr = vsock_sock.remote_addr.svm_cid
+        dst_port = vsock_sock.remote_addr.svm_port
         state = vsock_sock.get_state()
 
-        saddr_tag = f"{saddr}:{sport}"
-        daddr_tag = f"{daddr}:{dport}"
-        sock_stat = saddr_tag, daddr_tag, state
+        sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return vsock_sock, sock_stat
 
     def _packet_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
@@ -260,16 +244,17 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             packet_sock: The kernel's `packet_sock` object
-            sock_stat: A tuple with the source, destination and state strings.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string.
         """
         packet_sock = sock.cast("packet_sock")
         ifindex = packet_sock.ifindex
-        dev_name = self._netdevices.get(ifindex, "") if ifindex > 0 else "ANY"
+        dev_name = self._netdevices.get(ifindex) if ifindex > 0 else "ANY"
 
-        saddr_tag = f"{dev_name}"
-        daddr_tag = ""
+        src_addr = dev_name
+        src_port = dst_addr = dst_port = None
         state = packet_sock.get_state()
-        sock_stat = saddr_tag, daddr_tag, state
+
+        sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return packet_sock, sock_stat
 
     def _xdp_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
@@ -280,34 +265,39 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             xdp_sock: The kernel's `xdp_sock` object
-            sock_stat: A tuple with the source, destination and state strings.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string.
         """
         xdp_sock = sock.cast("xdp_sock")
         device = xdp_sock.dev
         if not device:
             return
 
-        saddr_tag = utility.array_to_string(device.name)
+        src_addr = utility.array_to_string(device.name)
+        src_port = dst_addr = dst_port = None
 
         bpfprog = device.xdp_prog
         if not bpfprog:
             return
 
+        if not bpfprog.has_member("aux") or not bpfprog.aux:
+            return
+
         bpfprog_aux = bpfprog.aux
-        if bpfprog_aux:
+        if bpfprog_aux.has_member("id"):
+            # `id` member was added to `bpf_prog_aux` in kernels 4.13
             bpfprog_id = bpfprog_aux.id
-            daddr_tag = f"ebpf_prog_id:{bpfprog_id}"
+            dst_port = f"ebpf_prog_id:{bpfprog_id}"
+        if bpfprog_aux.has_member("name"):
+            # `name` was added to `bpf_prog_aux` in kernels 4.15
             bpf_name = utility.array_to_string(bpfprog_aux.name)
             if bpf_name:
-                daddr_tag += f",ebpf_prog_name:{bpf_name}"
-        else:
-            daddr_tag = ""
+                dst_addr = f"ebpf_prog_name:{bpf_name}"
 
         # Hallelujah, xdp_sock.state is an enum
         xsk_state = xdp_sock.state.lookup()
         state = xsk_state.replace("XSK_", "")
 
-        sock_stat = saddr_tag, daddr_tag, state
+        sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return xdp_sock, sock_stat
 
     def _bluetooth_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
@@ -318,14 +308,14 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             bt_sock: The kernel's `bt_sock` object
-            sock_stat: A tuple with the source, destination and state strings.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string.
         """
         bt_sock = sock.cast("bt_sock")
 
         def bt_addr(addr):
             return ":".join(reversed(["%02x" % x for x in addr.b]))
 
-        saddr_tag = daddr_tag = ""
+        src_addr = src_port = dst_addr = dst_port = None
         bt_protocol = bt_sock.get_protocol()
         if bt_protocol == "HCI":
             pinfo = bt_sock.cast("hci_pinfo")
@@ -333,20 +323,17 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             pinfo = bt_sock.cast("l2cap_pinfo")
             src_addr = bt_addr(pinfo.chan.src)
             dst_addr = bt_addr(pinfo.chan.dst)
-            saddr_tag = f"{src_addr}"
-            daddr_tag = f"{dst_addr}"
         elif bt_protocol == "RFCOMM":
             pinfo = bt_sock.cast("rfcomm_pinfo")
             src_addr = bt_addr(pinfo.src)
             dst_addr = bt_addr(pinfo.dst)
-            channel = pinfo.channel
-            saddr_tag = f"[{src_addr}]:{channel}"
-            daddr_tag = f"{dst_addr}"
+            src_port = pinfo.channel
         else:
             vollog.log(constants.LOGLEVEL_V, "Unsupported bluetooth protocol '%s'", bt_protocol)
 
         state = bt_sock.get_state()
-        sock_stat = saddr_tag, daddr_tag, state
+
+        sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return bt_sock, sock_stat
 
 class Sockstat(plugins.PluginInterface):
@@ -457,8 +444,10 @@ class Sockstat(plugins.PluginInterface):
             family: Socket family string (AF_UNIX, AF_INET, etc)
             sock_type: Socket type string (STREAM, DGRAM, etc)
             protocol: Protocol string (UDP, TCP, etc)
-            source: Source address string
-            destination: Destination address string
+            source addr: Source address string
+            source port: Source port string (not all of them are int)
+            destination addr: Destination address string
+            destination port: Destination port (not all of them are int)
             state: State strings (LISTEN, CONNECTED, etc)
             tasks: String with a list of tasks and FDs using a socket. It can also have
                    extended information such as socket filters, bpf info, etc.
@@ -472,6 +461,7 @@ class Sockstat(plugins.PluginInterface):
                 continue
 
             sock, sock_stat, extended = sock_fields
+            sock_stat, protocol = self._format_fields(sock_stat, protocol)
 
             task_comm = utility.array_to_string(task.comm)
             task_info = f"{task_comm},pid={task.pid},fd={fd_num}"
@@ -496,6 +486,22 @@ class Sockstat(plugins.PluginInterface):
             fields = data['fields'] + (tasks,)
             yield (0, fields)
 
+    def _format_fields(self, sock_stat, protocol):
+        """Prepare the socket fields to be rendered
+
+        Args:
+            sock_stat: A tuple with the source and destination (address and port) along with its state string.
+            protocol: Protocol string (UDP, TCP, etc)
+
+        Returns:
+            `sock_stat` and `protocol` formatted.
+        """
+        sock_stat = [NotAvailableValue() if field is None else str(field) for field in sock_stat]
+        if protocol is None:
+            protocol = NotAvailableValue()
+
+        return tuple(sock_stat), protocol
+
     def run(self):
         pids = self.config.get('pids')
         netns_id = self.config['netns']
@@ -505,8 +511,10 @@ class Sockstat(plugins.PluginInterface):
                           ("Family", str),
                           ("Type", str),
                           ("Proto", str),
-                          ("Source Addr:Port", str),
-                          ("Destination Addr:Port", str),
+                          ("Source Addr", str),
+                          ("Source Port", str),
+                          ("Destination Addr", str),
+                          ("Destination Port", str),
                           ("State", str),
                           ("Tasks", str)]
 
