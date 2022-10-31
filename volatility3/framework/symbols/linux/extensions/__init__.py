@@ -1023,5 +1023,5 @@ class xdp_sock(objects.StructType):
         return
 
     def get_state(self):
-        # Return the generic socket state
-        return self.sk.sk_socket.get_state()
+        # xdp_sock.state is an enum
+        return self.state.lookup()

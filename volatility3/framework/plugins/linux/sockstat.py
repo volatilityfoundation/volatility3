@@ -6,7 +6,7 @@ import logging
 from typing import Callable, Tuple, List, Dict
 
 from volatility3.framework import interfaces, exceptions, constants, objects
-from volatility3.framework.renderers import TreeGrid, NotAvailableValue
+from volatility3.framework.renderers import TreeGrid, NotAvailableValue, format_hints
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
@@ -72,18 +72,18 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns a tuple with:
             sock: The respective kernel's *_sock object for that socket family
-            sock_stat: A tuple with the source and destination (address and port) along with its state string.
-            extended: A dictionary with key/value extended information.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string
+            socket_filter: A dictionary with information about the socket filter
         """
         family = sock.get_family()
-        extended = {}
+        socket_filter = {}
         sock_handler = self._sock_family_handlers.get(family)
         if sock_handler:
             try:
                 unix_sock, sock_stat = sock_handler(sock)
-                self._update_extended_socket_filters_info(sock, extended)
+                self._update_socket_filters_info(sock, socket_filter)
 
-                return unix_sock, sock_stat, extended
+                return unix_sock, sock_stat, socket_filter
             except exceptions.SymbolError as e:
                 # Cannot finds the *_sock type in the symbols
                 vollog.log(constants.LOGLEVEL_V, "Error processing socket family '%s': %s", family, e)
@@ -98,27 +98,32 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         sock_stat = src_addr, src_port, dst_addr, dst_port, state
 
-        return sock, sock_stat, extended
+        return sock, sock_stat, socket_filter
 
-    def _update_extended_socket_filters_info(self, sock: objects.Pointer, extended: dict) -> None:
+    def _update_socket_filters_info(self, sock: objects.Pointer, socket_filter: dict) -> None:
         """Get information from the socket and reuseport filters
 
         Args:
             sock: The kernel sock (sk) struct
-            extended: Dictionary to store extended information
+            socket_filter: A dictionary with information about the socket filter
         """
         if sock.has_member("sk_filter") and sock.sk_filter:
             sock_filter = sock.sk_filter
-            extended["filter_type"] = "socket_filter"
-            self._extract_socket_filter_info(sock_filter, extended)
+            socket_filter["filter_type"] = "socket_filter"
+            self._extract_socket_filter_info(sock_filter, socket_filter)
 
         if sock.has_member("sk_reuseport_cb") and sock.sk_reuseport_cb:
             sock_reuseport_cb = sock.sk_reuseport_cb
-            extended["filter_type"] = "reuseport_filter"
-            self._extract_socket_filter_info(sock_reuseport_cb, extended)
+            socket_filter["filter_type"] = "reuseport_filter"
+            self._extract_socket_filter_info(sock_reuseport_cb, socket_filter)
 
-    def _extract_socket_filter_info(self, sock_filter: objects.Pointer, extended: dict) -> None:
-        extended["bpf_filter_type"] = "cBPF"
+    def _extract_socket_filter_info(self, sock_filter: objects.Pointer, socket_filter: dict) -> None:
+        """Get specific information for each type of filter
+
+        Args:
+            socket_filter: A dictionary with information about the socket filter
+        """
+        socket_filter["bpf_filter_type"] = "cBPF"
 
         if not sock_filter.has_member("prog") or not sock_filter.prog:
             return
@@ -128,18 +133,18 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             # BPF_PROG_TYPE_UNSPEC = 0
             return
 
-        extended["bpf_filter_type"] = "eBPF"
+        socket_filter["bpf_filter_type"] = "eBPF"
         if not bpfprog.has_member("aux") or not bpfprog.aux:
             return
         bpfprog_aux = bpfprog.aux
         if bpfprog_aux.has_member("id"):
             # `id` member was added to `bpf_prog_aux` in kernels 4.13
-            extended["bpf_filter_id"] = str(bpfprog_aux.id)
+            socket_filter["bpf_filter_id"] = str(bpfprog_aux.id)
         if bpfprog_aux.has_member("name"):
             # `name` was added to `bpf_prog_aux` in kernels 4.15
             bpfprog_name = utility.array_to_string(bpfprog_aux.name)
             if bpfprog_name:
-                extended["bpf_filter_name"] = bpfprog_name
+                socket_filter["bpf_filter_name"] = bpfprog_name
 
     def _unix_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
         """Handles the AF_UNIX socket family
@@ -149,7 +154,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             unix_sock: The kernel's `unix_sock` object
-            sock_stat: A tuple with the source and destination (address and port) along with its state string.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string
         """
         unix_sock = sock.cast("unix_sock")
         state = unix_sock.get_state()
@@ -174,7 +179,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             inet_sock: The kernel's `inet_sock` object
-            sock_stat: A tuple with the source and destination (address and port) along with its state string.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string
         """
         inet_sock = sock.cast("inet_sock")
         src_addr = inet_sock.get_src_addr()
@@ -194,7 +199,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             netlink_sock: The kernel's `netlink_sock` object
-            sock_stat: A tuple with the source and destination (address and port) along with its state string.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string
         """
         netlink_sock = sock.cast("netlink_sock")
 
@@ -224,7 +229,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             vsock_sock: The kernel `vsock_sock` object
-            sock_stat: A tuple with the source and destination (address and port) along with its state string.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string
         """
         vsock_sock = sock.cast("vsock_sock")
         src_addr = vsock_sock.local_addr.svm_cid
@@ -244,7 +249,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             packet_sock: The kernel's `packet_sock` object
-            sock_stat: A tuple with the source and destination (address and port) along with its state string.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string
         """
         packet_sock = sock.cast("packet_sock")
         ifindex = packet_sock.ifindex
@@ -265,7 +270,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             xdp_sock: The kernel's `xdp_sock` object
-            sock_stat: A tuple with the source and destination (address and port) along with its state string.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string
         """
         xdp_sock = sock.cast("xdp_sock")
         device = xdp_sock.dev
@@ -293,8 +298,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             if bpf_name:
                 dst_addr = f"ebpf_prog_name:{bpf_name}"
 
-        # Hallelujah, xdp_sock.state is an enum
-        xsk_state = xdp_sock.state.lookup()
+        xsk_state = xdp_sock.get_state()
         state = xsk_state.replace("XSK_", "")
 
         sock_stat = src_addr, src_port, dst_addr, dst_port, state
@@ -308,7 +312,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         Returns:
             bt_sock: The kernel's `bt_sock` object
-            sock_stat: A tuple with the source and destination (address and port) along with its state string.
+            sock_stat: A tuple with the source and destination (address and port) along with its state string
         """
         bt_sock = sock.cast("bt_sock")
 
@@ -318,16 +322,37 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         src_addr = src_port = dst_addr = dst_port = None
         bt_protocol = bt_sock.get_protocol()
         if bt_protocol == "HCI":
-            pinfo = bt_sock.cast("hci_pinfo")
+            if self._vmlinux.has_type("hci_pinfo"):
+                pinfo = bt_sock.cast("hci_pinfo")
+                if pinfo.has_member("hdev") and self._vmlinux.has_type("hci_dev") \
+                        and pinfo.hdev.has_member("dev_name"):
+                    src_addr = utility.array_to_string(pinfo.hdev.dev_name)
+            else:
+                vollog.log(constants.LOGLEVEL_V, "Type definition for 'hci_pinfo' is not available in the symbols")
         elif bt_protocol == "L2CAP":
-            pinfo = bt_sock.cast("l2cap_pinfo")
-            src_addr = bt_addr(pinfo.chan.src)
-            dst_addr = bt_addr(pinfo.chan.dst)
+            if self._vmlinux.has_type("l2cap_pinfo"):
+                pinfo = bt_sock.cast("l2cap_pinfo")
+                src_addr = bt_addr(pinfo.chan.src)
+                dst_addr = bt_addr(pinfo.chan.dst)
+                src_port = pinfo.chan.sport
+                dst_port = pinfo.chan.psm
+            else:
+                vollog.log(constants.LOGLEVEL_V, "Type definition for 'l2cap_pinfo' is not available in the symbols")
         elif bt_protocol == "RFCOMM":
-            pinfo = bt_sock.cast("rfcomm_pinfo")
-            src_addr = bt_addr(pinfo.src)
-            dst_addr = bt_addr(pinfo.dst)
-            src_port = pinfo.channel
+            if self._vmlinux.has_type("rfcomm_pinfo"):
+                pinfo = bt_sock.cast("rfcomm_pinfo")
+                src_addr = bt_addr(pinfo.src)
+                dst_addr = bt_addr(pinfo.dst)
+                src_port = pinfo.channel
+            else:
+                vollog.log(constants.LOGLEVEL_V, "Type definition for 'rfcomm_pinfo' is not available in the symbols")
+        elif bt_protocol == "SCO":
+            if self._vmlinux.has_type("sco_pinfo"):
+                pinfo = bt_sock.cast("sco_pinfo")
+                src_addr = bt_addr(pinfo.src)
+                dst_addr = bt_addr(pinfo.dst)
+            else:
+                vollog.log(constants.LOGLEVEL_V, "Type definition for 'sco_pinfo' is not available in the symbols")
         else:
             vollog.log(constants.LOGLEVEL_V, "Unsupported bluetooth protocol '%s'", bt_protocol)
 
@@ -431,6 +456,22 @@ class Sockstat(plugins.PluginInterface):
             netns_id = net.get_inode()
             yield task, netns_id, fd_num, family, sock_type, protocol, sock_fields
 
+    def _format_fields(self, sock_stat, protocol):
+        """Prepare the socket fields to be rendered
+
+        Args:
+            sock_stat: A tuple with the source and destination (address and port) along with its state string
+            protocol: Protocol string (UDP, TCP, etc)
+
+        Returns:
+            `sock_stat` and `protocol` formatted.
+        """
+        sock_stat = [NotAvailableValue() if field is None else str(field) for field in sock_stat]
+        if protocol is None:
+            protocol = NotAvailableValue()
+
+        return tuple(sock_stat), protocol
+
     def _generator(self, pids: List[int], netns_id_arg: int, symbol_table: str):
         """Enumerate tasks sockets. Each row represents a kernel socket.
 
@@ -455,7 +496,6 @@ class Sockstat(plugins.PluginInterface):
         filter_func = lsof.pslist.PsList.create_pid_filter(pids)
         socket_generator = self.list_sockets(self.context, symbol_table, filter_func=filter_func)
 
-        tasks_per_sock = {}
         for task, netns_id, fd_num, family, sock_type, protocol, sock_fields in socket_generator:
             if netns_id_arg and netns_id_arg != netns_id:
                 continue
@@ -463,59 +503,32 @@ class Sockstat(plugins.PluginInterface):
             sock, sock_stat, extended = sock_fields
             sock_stat, protocol = self._format_fields(sock_stat, protocol)
 
-            task_comm = utility.array_to_string(task.comm)
-            task_info = f"{task_comm},pid={task.pid},fd={fd_num}"
-            if extended:
-                extended_str = ",".join(f"{k}={v}" for k, v in extended.items())
-                task_info = f"{task_info},{extended_str}"
+            socket_filter_str = ",".join(f"{k}={v}" for k, v in extended.items()) if extended else NotAvailableValue()
 
-            fields = netns_id, family, sock_type, protocol, *sock_stat
+            fields = (netns_id, task.pid, fd_num, format_hints.Hex(sock.vol.offset),
+                      family, sock_type, protocol, *sock_stat, socket_filter_str)
 
-            # Each row represents a kernel socket, so let's group the task FDs
-            # by socket using the socket address
-            sock_addr = sock.vol.offset
-            tasks_per_sock.setdefault(sock_addr, {})
-            tasks_per_sock[sock_addr].setdefault('tasks', [])
-            tasks_per_sock[sock_addr]['tasks'].append(task_info)
-            tasks_per_sock[sock_addr]['fields'] = fields
-
-        for data in tasks_per_sock.values():
-            task_list = [f"({task})" for task in data['tasks']]
-            tasks = ",".join(task_list)
-
-            fields = data['fields'] + (tasks,)
             yield (0, fields)
-
-    def _format_fields(self, sock_stat, protocol):
-        """Prepare the socket fields to be rendered
-
-        Args:
-            sock_stat: A tuple with the source and destination (address and port) along with its state string.
-            protocol: Protocol string (UDP, TCP, etc)
-
-        Returns:
-            `sock_stat` and `protocol` formatted.
-        """
-        sock_stat = [NotAvailableValue() if field is None else str(field) for field in sock_stat]
-        if protocol is None:
-            protocol = NotAvailableValue()
-
-        return tuple(sock_stat), protocol
 
     def run(self):
         pids = self.config.get('pids')
         netns_id = self.config['netns']
         symbol_table = self.config['kernel']
 
-        tree_grid_args = [("NetNS", int),
-                          ("Family", str),
-                          ("Type", str),
-                          ("Proto", str),
-                          ("Source Addr", str),
-                          ("Source Port", str),
-                          ("Destination Addr", str),
-                          ("Destination Port", str),
-                          ("State", str),
-                          ("Tasks", str)]
+        tree_grid_args = [
+            ("NetNS", int),
+            ("Pid", int),
+            ("FD", int),
+            ("Sock Offset", format_hints.Hex),
+            ("Family", str),
+            ("Type", str),
+            ("Proto", str),
+            ("Source Addr", str),
+            ("Source Port", str),
+            ("Destination Addr", str),
+            ("Destination Port", str),
+            ("State", str),
+            ("Filter", str),
+        ]
 
         return TreeGrid(tree_grid_args, self._generator(pids, netns_id, symbol_table))
