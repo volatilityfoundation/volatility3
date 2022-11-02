@@ -48,7 +48,10 @@ class DriverIrp(interfaces.plugins.PluginInterface):
             for i, address in enumerate(driver.MajorFunction):
                 module_symbols = collection.get_module_symbols_by_absolute_location(address)
 
+                module_found = False
+
                 for module_name, symbol_generator in module_symbols:
+                    module_found = True
                     symbols_found = False
 
                     for symbol in symbol_generator:
@@ -59,6 +62,11 @@ class DriverIrp(interfaces.plugins.PluginInterface):
                     if not symbols_found:
                         yield (0, (format_hints.Hex(driver.vol.offset), driver_name, MAJOR_FUNCTIONS[i],
                                    format_hints.Hex(address), module_name, renderers.NotAvailableValue()))
+
+                if not module_found:
+                     yield (0, (format_hints.Hex(driver.vol.offset), driver_name, MAJOR_FUNCTIONS[i],
+                                format_hints.Hex(address), renderers.NotAvailableValue(), renderers.NotAvailableValue()))
+
 
     def run(self):
 
