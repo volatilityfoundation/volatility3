@@ -41,10 +41,8 @@ class proc(generic.GenericIntelProcess):
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 
     def get_map_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        with contextlib.suppress(exceptions.InvalidAddressException):
-            task = self.get_task()
-
         try:
+            task = self.get_task()
             current_map = task.map.hdr.links.next
         except exceptions.InvalidAddressException:
             return
