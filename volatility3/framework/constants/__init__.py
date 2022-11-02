@@ -63,7 +63,7 @@ LOGLEVEL_VVVV = 6
 CACHE_PATH = os.path.join(os.path.expanduser("~"), ".cache", "volatility3")
 """Default path to store cached data"""
 
-SQLITE_CACHE_PERIOD = '-1 month'
+SQLITE_CACHE_PERIOD = '-3 days'
 """SQLite time modifier for how long each item is valid in the cache for"""
 
 if sys.platform == 'win32':
