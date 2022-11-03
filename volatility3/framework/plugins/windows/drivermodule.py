@@ -19,9 +19,10 @@ class DriverModule(interfaces.plugins.PluginInterface):
     """Determines if any loaded drivers were hidden by a rootkit"""
 
     _required_framework_version = (2, 0, 0)
+    _version = (1, 0, 0)
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                            architectures = ["Intel32", "Intel64"]),
@@ -29,7 +30,7 @@ class DriverModule(interfaces.plugins.PluginInterface):
             requirements.PluginRequirement(name = 'driverscan', plugin = driverscan.DriverScan, version = (1, 0, 0)),
         ]
 
-    def _generator(self):
+    def _generator(self) -> Iterator[Tuple]:
         """
         Attempt to match each driver's start code address to a known kernel module
         A common rootkit technique is to register drivers from modules that are hidden,
@@ -49,12 +50,12 @@ class DriverModule(interfaces.plugins.PluginInterface):
 
                 yield (0, (format_hints.Hex(driver.vol.offset), known_exception, driver_name, service_key, name))
 
-    def run(self):
+    def run(self) -> renderers.TreeGrid:
 
         return renderers.TreeGrid([
             ("Offset", format_hints.Hex),
             ("Known Exception", bool),
             ("Driver Name", str),
-            ("Serivce Key", str),
+            ("Service Key", str),
             ("Alternative Name", str),
         ], self._generator())
