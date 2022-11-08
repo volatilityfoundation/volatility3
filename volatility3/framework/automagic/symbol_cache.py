@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import base64
+import datetime
 import json
 import logging
 import os
@@ -157,10 +158,10 @@ class SqliteCache(CacheManagerInterface):
     _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
-    cache_period = '-3 days'
 
     def __init__(self, filename: str):
         super().__init__(filename)
+        self.cache_period = constants.SQLITE_CACHE_PERIOD
         try:
             self._database = self._connect_storage(filename)
         except sqlite3.DatabaseError:
@@ -170,6 +171,7 @@ class SqliteCache(CacheManagerInterface):
     def _connect_storage(self, path: str) -> sqlite3.Connection:
         database = sqlite3.connect(path)
         database.row_factory = sqlite3.Row
+
         database.cursor().execute(
             f'CREATE TABLE IF NOT EXISTS database_info (schema_version INT DEFAULT {constants.CACHE_SQLITE_SCHEMA_VERSION})')
         schema_version = database.cursor().execute('SELECT schema_version FROM database_info').fetchone()
@@ -259,10 +261,31 @@ class SqliteCache(CacheManagerInterface):
         cache_update = set()
         files_to_timestamp = on_disk_locations.intersection(cached_locations)
         if files_to_timestamp:
-            result = self._database.cursor().execute("SELECT location FROM cache WHERE local = 1 "
+            result = self._database.cursor().execute("SELECT location, cached FROM cache WHERE local = 1 "
                                                      f"AND cached < date('now', '{self.cache_period}');")
             for row in result:
-                if row['location'] in files_to_timestamp:
+                location = row['location']
+                stored_timestamp = datetime.datetime.fromisoformat(row['cached'])
+                timestamp = stored_timestamp # Default to requiring update
+
+                # See if the file is a local URL type we can handle:
+                parsed = urllib.parse.urlparse(location)
+                pathname = None
+                if parsed.scheme == 'file':
+                    pathname = urllib.request.url2pathname(parsed.path)
+                if parsed.scheme == 'jar':
+                    inner_url = urllib.parse.urlparse(parsed.path)
+                    if inner_url.scheme == 'file':
+                        pathname = inner_url.path.split('!')[0]
+
+                if pathname:
+                    timestamp = datetime.datetime.fromtimestamp(os.stat(pathname).st_mtime)
+                else:
+                    vollog.log(constants.LOGLEVEL_VVVV,
+                               "File location in database classed as local but not file/jar URL")
+
+                # If we're supposed to include it, and our last check is older than (or equal to) the file timestamp
+                if row['location'] in files_to_timestamp and stored_timestamp < timestamp:
                     cache_update.add(row['location'])
 
         idextractors = list(framework.class_subclasses(IdentifierProcessor))

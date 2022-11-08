@@ -111,8 +111,10 @@ needs_sphinx = '2.0'
 # ones.
 extensions = [
     'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.napoleon', 'sphinx.ext.intersphinx', 'sphinx.ext.todo',
-    'sphinx.ext.coverage', 'sphinx.ext.viewcode'
+    'sphinx.ext.coverage', 'sphinx.ext.viewcode', 'sphinx.ext.autosectionlabel'
 ]
+
+autosectionlabel_prefix_document = True
 
 try:
     import sphinx_autodoc_typehints
