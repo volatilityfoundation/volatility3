@@ -427,6 +427,8 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                                            self.config_path)
 
         tcpip_module = self.get_tcpip_module(self.context, kernel.layer_name, kernel.symbol_table_name)
+        if not tcpip_module:
+            vollog.error("Unable to locate symbols for the memory image's tcpip module")
 
         try:
             tcpip_symbol_table = pdbutil.PDBUtility.symbol_table_from_pdb(
