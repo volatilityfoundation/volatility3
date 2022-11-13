@@ -42,7 +42,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     @classmethod
-    def _decode_pointer(self, value):
+    def _decode_pointer(cls, value):
         """Copied from `windows.handles`.
 
         Windows encodes pointers to objects and decodes them on the fly

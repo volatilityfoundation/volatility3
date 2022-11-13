@@ -78,7 +78,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                       layer_name: str,
                                       symbol_table: str,
                                       proc: interfaces.objects.ObjectInterface) -> \
-            Iterable[interfaces.objects.ObjectInterface]:
+            Optional[interfaces.objects.ObjectInterface]:
         """ Returns a virtual process from a physical addressed one
 
         Args:
@@ -124,6 +124,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if virtual_process and \
                     proc.vol.offset == ph_offset:
                 return virtual_process
+        return None
 
     @classmethod
     def get_osversion(cls, context: interfaces.context.ContextInterface, layer_name: str,

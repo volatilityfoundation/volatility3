@@ -128,6 +128,7 @@ class module(generic.GenericIntelProcess):
             sym_addr = sym.st_value
             if wanted_sym_name == sym_name:
                 return sym_addr
+        return # Generation finished
 
     @property
     def section_symtab(self):
