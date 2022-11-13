@@ -359,7 +359,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
 
         vollog.debug(f"Found {guid['pdb_name']}: {guid['GUID']}-{guid['age']}")
 
-        module_name = guid["pdb_name"].strip('.pdb')
+        module_name = guid["pdb_name"].replace('.pdb', '')
 
         symbol_table_name = cls.load_windows_symbol_table(context,
                                                           guid["GUID"],
