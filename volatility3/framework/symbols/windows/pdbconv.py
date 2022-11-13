@@ -934,6 +934,7 @@ class PdbRetreiver:
         if progress_callback is not None:
             progress_callback(100, f"Downloading {url + suffix}")
         if result is None:
+            result.close()
             return None
         return url + suffix
 

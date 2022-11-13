@@ -17,6 +17,7 @@ def seekread(f, offset = None, length = 0, relative = True):
         f.seek(offset, [0, 1, 2][relative])
     if length:
         return f.read(length)
+    return None
 
 
 def parse_pbzx(pbzx_path):
@@ -64,10 +65,6 @@ def parse_pbzx(pbzx_path):
                     xar_f.write(f_content)
                     if tail != 'YZ':
                         raise RuntimeError("Error: Footer is not xar file footer")
-    try:
-        xar_f.close()
-    except IOError:
-        pass
 
 
 def main():
