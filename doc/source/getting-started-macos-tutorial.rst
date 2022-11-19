@@ -131,6 +131,8 @@ mac.ifconfig
 ~~~~~~~~~~
 
 we can use the ``mac.ifconfig`` plugin to get information about the configuration of the network interfaces of the host under investigation.
+
+
 .. code-block:: shell-session
 
     $ python3 vol.py -f contact_me mac.ifconfig
