@@ -81,7 +81,7 @@ Thanks go to `stuxnet <https://github.com/stuxnet999/>`_ for providing this memo
 The above command helps us to find the memory dump's Darwin kernel version. Now using the above banner we can search for the needed ISF file.
 If ISF file cannot be found then, follow the instructions on :ref:`getting-started-macos-tutorial:Procedure to create symbol tables for macOS`. After that, place the ISF file under the ``volatility3/symbols/mac`` directory.
 
-linux.pslist
+mac.pslist
 ~~~~~~~~~~~~
 
 .. code-block:: shell-session
