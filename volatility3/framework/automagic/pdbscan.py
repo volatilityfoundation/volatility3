@@ -181,6 +181,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         hex(kvo)))
             except exceptions.InvalidAddressException:
                 vollog.debug(f"Potential kernel_virtual_offset caused a page fault: {hex(kvo)}")
+            return None
 
         vollog.debug("Kernel base determination - testing fixed base address")
         return self._method_layer_pdb_scan(context, vlayer, test_physical_kernel, False, True, progress_callback)

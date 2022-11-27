@@ -111,14 +111,17 @@ needs_sphinx = '2.0'
 # ones.
 extensions = [
     'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.napoleon', 'sphinx.ext.intersphinx', 'sphinx.ext.todo',
-    'sphinx.ext.coverage', 'sphinx.ext.viewcode'
+    'sphinx.ext.coverage', 'sphinx.ext.viewcode', 'sphinx.ext.autosectionlabel'
 ]
+
+autosectionlabel_prefix_document = True
 
 try:
     import sphinx_autodoc_typehints
 
     extensions.append('sphinx_autodoc_typehints')
 except ImportError:
+    # If the autodoc typehints extension isn't available, carry on regardless
     pass
 
 # Add any paths that contain templates here, relative to this directory.

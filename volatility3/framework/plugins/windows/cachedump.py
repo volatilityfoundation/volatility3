@@ -83,6 +83,13 @@ class Cachedump(interfaces.plugins.PluginInterface):
         return (username, domain, domain_name, hashh)
 
     def _generator(self, syshive, sechive):
+        if not syshive or not sechive:
+            if syshive is None:
+                vollog.warning('Unable to locate SYSTEM hive')
+            if sechive is None:
+                vollog.warning('Unable to locate SECURITY hive')
+            return
+
         bootkey = hashdump.Hashdump.get_bootkey(syshive)
         if not bootkey:
             vollog.warning('Unable to find bootkey')
@@ -141,13 +148,6 @@ class Cachedump(interfaces.plugins.PluginInterface):
                 syshive = hive
             if hive.get_name().split('\\')[-1].upper() == 'SECURITY':
                 sechive = hive
-
-        if syshive is None or sechive is None:
-            if syshive is None:
-                vollog.warning('Unable to locate SYSTEM hive')
-            if sechive is None:
-                vollog.warning('Unable to locate SECURITY hive')
-            return
 
         return renderers.TreeGrid([("Username", str), ("Domain", str), ("Domain name", str), ('Hash', bytes)],
                                   self._generator(syshive, sechive))

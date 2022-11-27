@@ -9,7 +9,7 @@ import struct
 from typing import Any, ClassVar, Dict, Iterable, List, Optional, Tuple, Type, Union as TUnion, overload
 
 from volatility3.framework import constants, interfaces
-from volatility3.framework.objects import templates, utility
+from volatility3.framework.objects import templates
 
 vollog = logging.getLogger(__name__)
 
@@ -611,12 +611,10 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
 
 
     @overload
-    def __getitem__(self, i: int) -> interfaces.objects.Template:
-        ...
+    def __getitem__(self, i: int) -> interfaces.objects.Template: ...
 
     @overload
-    def __getitem__(self, s: slice) -> List[interfaces.objects.Template]:
-        ...
+    def __getitem__(self, s: slice) -> List[interfaces.objects.Template]: ...
 
     def __getitem__(self, i):
         """Returns the i-th item from the array."""
@@ -749,10 +747,8 @@ class AggregateType(interfaces.objects.ObjectInterface):
             if isinstance(cls, agg_type):
                 agg_name = agg_type.__name__
 
-        assert isinstance(members, collections.abc.Mapping)
-        f"{agg_name} members parameter must be a mapping: {type(members)}"
-        assert all([(isinstance(member, tuple) and len(member) == 2) for member in members.values()])
-        f"{agg_name} members must be a tuple of relative_offsets and templates"
+        assert isinstance(members, collections.abc.Mapping), f"{agg_name} members parameter must be a mapping: {type(members)}"
+        assert all([(isinstance(member, tuple) and len(member) == 2) for member in members.values()]), f"{agg_name} members must be a tuple of relative_offsets and templates"
 
     def member(self, attr: str = 'member') -> object:
         """Specifically named method for retrieving members."""

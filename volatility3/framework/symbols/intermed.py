@@ -102,10 +102,9 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         # Check there are no obvious errors
         # Open the file and test the version
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
-        fp = resources.ResourceAccessor().open(isf_url)
-        reader = codecs.getreader("utf-8")
-        json_object = json.load(reader(fp))  # type: ignore
-        fp.close()
+        with resources.ResourceAccessor().open(isf_url) as fp:
+            reader = codecs.getreader("utf-8")
+            json_object = json.load(reader(fp))  # type: ignore
 
         # Validation is expensive, but we cache to store the hashes of successfully validated json objects
         if validate and not schemas.validate(json_object):
