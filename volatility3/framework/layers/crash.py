@@ -169,11 +169,11 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             0x05: self.handle_summary_dump,
             0x06: self.handle_summary_dump,
         }
-        
+
         if self.dump_type not in type_to_handler_dict:
             vollog.log(constants.LOGLEVEL_VVVV, f"unsupported dump format 0x{self.dump_type:x}")
             raise WindowsCrashDumpFormatException(self.name, f"unsupported dump format 0x{self.dump_type:x}")
-            
+
         segments = []
         type_handler = type_to_handler_dict[self.dump_type]
         segments = type_handler()
