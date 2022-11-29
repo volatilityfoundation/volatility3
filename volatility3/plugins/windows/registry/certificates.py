@@ -3,7 +3,7 @@ import logging
 import struct
 from typing import List, Iterator, Optional, Tuple, Type
 
-from volatility3.framework import constants, exceptions, interfaces, renderers
+from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.symbols.windows.extensions.registry import RegValueTypes
 from volatility3.plugins.windows.registry import hivelist, printkey
@@ -46,14 +46,13 @@ class Certificates(interfaces.plugins.PluginInterface):
                         open_method: Type[interfaces.plugins.FileHandlerInterface]) -> \
                         Optional[interfaces.plugins.FileHandlerInterface]:
         try:
-            if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
-                dump_name = "{}-{}-{}.crt".format(hive_offset, reg_section, key_hash)
-                file_handle = open_method(dump_name)
-                file_handle.write(certificate_data)
-                return file_handle
+            dump_name = "{}-{}-{}.crt".format(hive_offset, reg_section, key_hash)
+            file_handle = open_method(dump_name)
+            file_handle.write(certificate_data)
+            return file_handle
         except exceptions.InvalidAddressException:
-            vollog.debug(f"Unable to certificate file at {hive_offset:#x}")
-            return None
+            vollog.debug(f"Unable to dump certificate file at {hive_offset:#x}")
+        return None
 
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[str, str, str, str]]]:
@@ -79,9 +78,10 @@ class Certificates(interfaces.plugins.PluginInterface):
                             key_hash = key_path[key_path.rindex("\\") + 1:]
 
                             if self.config['dump']:
-                                file_handle = self.dump_certificate(certificate_data, hive.hive_offset, reg_section, key_hash, self.open)
-                                if file_handle:
-                                    file_handle.close()
+                                if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
+                                    file_handle = self.dump_certificate(certificate_data, hive.hive_offset, reg_section, key_hash, self.open)
+                                    if file_handle:
+                                        file_handle.close()
                             
                             yield (0, (top_key, reg_section, key_hash, name))
 

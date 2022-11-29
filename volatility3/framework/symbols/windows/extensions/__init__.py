@@ -719,7 +719,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             envars = context.layers[process_space].read(block, block_size).decode("utf-16-le",
                                                                                   errors = 'replace').split('\x00')[:-1]
         except exceptions.InvalidAddressException:
-            return renderers.UnreadableValue()
+            return # Generation finished
 
         for envar in envars:
             split_index = envar.find('=')
@@ -729,6 +729,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             # Exclude parse problem with some types of env
             if env and var:
                 yield env, var
+        return # Generation finished
 
 
 class LIST_ENTRY(objects.StructType, collections.abc.Iterable):

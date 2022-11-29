@@ -324,11 +324,11 @@ class Volshell(interfaces.plugins.PluginInterface):
                           " " * (longest_member - len_member), "  ", member_type.vol.type_name)
 
     @classmethod
-    def _display_value(self, value: Any) -> str:
+    def _display_value(cls, value: Any) -> str:
         if isinstance(value, objects.PrimitiveObject):
             return repr(value)
         elif isinstance(value, objects.Array):
-            return repr([self._display_value(val) for val in value])
+            return repr([cls._display_value(val) for val in value])
         else:
             return hex(value.vol.offset)
 
@@ -390,8 +390,8 @@ class Volshell(interfaces.plugins.PluginInterface):
             location = "file:" + request.pathname2url(location)
         print(f"Running code from {location}\n")
         accessor = resources.ResourceAccessor()
-        with io.TextIOWrapper(accessor.open(url = location), encoding = 'utf-8') as fp:
-            self.__console.runsource(fp.read(), symbol = 'exec')
+        with accessor.open(url = location) as fp:
+            self.__console.runsource(io.TextIOWrapper(fp.read(), encoding = 'utf-8'), symbol = 'exec')
         print("\nCode complete")
 
     def load_file(self, location: str):

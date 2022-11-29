@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 from volatility3.framework import interfaces
 
@@ -11,7 +11,7 @@ class WindowsMetadata(interfaces.symbols.MetadataInterface):
     """Class to handle the metadata from a Windows symbol table."""
 
     @property
-    def pe_version(self) -> Optional[Tuple]:
+    def pe_version(self) -> Optional[Union[Tuple[int, int, int], Tuple[int, int, int, int]]]:
         build = self._json_data.get('pe', {}).get('build', None)
         revision = self._json_data.get('pe', {}).get('revision', None)
         minor = self._json_data.get('pe', {}).get('minor', None)

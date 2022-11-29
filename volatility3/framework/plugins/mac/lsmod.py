@@ -46,14 +46,14 @@ class Lsmod(plugins.PluginInterface):
         try:
             kmod = kmod_ptr.dereference().cast("kmod_info")
         except exceptions.InvalidAddressException:
-            return []
+            return # Generation finished
 
         yield kmod
 
         try:
             kmod = kmod.next
         except exceptions.InvalidAddressException:
-            return []
+            return # Generation finished
 
         seen: Set = set()
 
@@ -74,6 +74,7 @@ class Lsmod(plugins.PluginInterface):
                 kmod = kmod.next
             except exceptions.InvalidAddressException:
                 return
+        return # Generation finished
 
     def _generator(self):
         for module in self.list_modules(self.context, self.config['kernel']):

@@ -223,8 +223,7 @@ class SqliteCache(CacheManagerInterface):
     def is_url_local(self, url: str) -> bool:
         """Determines whether an url is local or not"""
         parsed = urllib.parse.urlparse(url)
-        if parsed.scheme in ['file', 'jar']:
-            return True
+        return parsed.scheme in ['file', 'jar']
 
     def get_identifier(self, location: str) -> Optional[bytes]:
         results = self._database.cursor().execute('SELECT identifier FROM cache WHERE location = ?',
@@ -246,6 +245,7 @@ class SqliteCache(CacheManagerInterface):
                                                   (location,)).fetchall()
         for row in results:
             return row['hash']
+        return None
 
     def update(self, progress_callback = None):
         """Locates all files under the symbol directories.  Updates the cache with additions, modifications and removals.
