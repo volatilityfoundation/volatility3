@@ -6,13 +6,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6.7"]
+        python-version: ["3.6"]
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+      env:
+        AGENT_TOOLSDIRECTORY: /opt/hostedtoolcache
 
     - name: Install dependencies
       run: |
