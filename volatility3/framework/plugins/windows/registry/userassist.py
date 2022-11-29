@@ -33,7 +33,11 @@ class UserAssist(interfaces.plugins.PluginInterface):
         self._reg_table_name = None
         self._win7 = None
         # taken from http://msdn.microsoft.com/en-us/library/dd378457%28v=vs.85%29.aspx
-        self._folder_guids = json.load(open(os.path.join(os.path.dirname(__file__), "userassist.json"), "rb"))
+        try:
+            with open(os.path.join(os.path.dirname(__file__), "userassist.json"), "rb") as fp:
+                self._folder_guids = json.load(fp)
+        except IOError:
+            vollog.error("Usersassist data file not found")
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
