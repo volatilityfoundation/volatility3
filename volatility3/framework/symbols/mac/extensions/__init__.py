@@ -28,8 +28,11 @@ class proc(generic.GenericIntelProcess):
         if not isinstance(parent_layer, interfaces.layers.TranslationLayerInterface):
             raise TypeError("Parent layer is not a translation layer, unable to construct process layer")
 
-        with contextlib.suppress(exceptions.InvalidAddressException):
+        try:
             dtb = self.get_task().map.pmap.pm_cr3
+        except exceptions.InvalidAddressException:
+            # Bail out because we couldn't find the DTB
+            return None
 
         if preferred_name is None:
             preferred_name = self.vol.layer_name + f"_Process{self.p_pid}"
@@ -38,10 +41,8 @@ class proc(generic.GenericIntelProcess):
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 
     def get_map_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        with contextlib.suppress(exceptions.InvalidAddressException):
-            task = self.get_task()
-
         try:
+            task = self.get_task()
             current_map = task.map.hdr.links.next
         except exceptions.InvalidAddressException:
             return

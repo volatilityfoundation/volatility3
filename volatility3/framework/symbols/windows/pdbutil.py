@@ -254,7 +254,8 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
                      pdb_names: List[bytes],
                      progress_callback: constants.ProgressCallback = None,
                      start: Optional[int] = None,
-                     end: Optional[int] = None) -> Generator[Dict[str, Optional[Union[bytes, str, int]]], None, None]:
+                     end: Optional[int] = None,
+                     maximum_invalid_count: int = 100) -> Generator[Dict[str, Optional[Union[bytes, str, int]]], None, None]:
         """Scans through `layer_name` at `ctx` looking for RSDS headers that
         indicate one of four common pdb kernel names (as listed in
         `self.pdb_names`) and returns the tuple (GUID, age, pdb_name,
@@ -264,6 +265,14 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
 
         The UI should always provide the user an opportunity to specify the
         appropriate types and PDB values themselves
+        Args:
+            layer_name: The layer name to scan
+            page_size: Size of page constant
+            pdb_names: List of pdb names to scan
+            progress_callback: Means of providing the user with feedback during long processes
+            start: Start address to start scanning from the pdb_names
+            end: Minimum address to scan the pdb_names
+            maximum_invalid_count: Amount of pages that can be invalid during scanning before aborting signature search
         """
         min_pfn = 0
 
@@ -279,10 +288,15 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
                                                               sections = [(start, end - start)]):
             mz_offset = None
             sig_pfn = signature_offset // page_size
+            current_invalid_counter = 0
 
             for i in range(sig_pfn, min_pfn, -1):
-                if not ctx.layers[layer_name].is_valid(i * page_size, 2):
+                if current_invalid_counter > maximum_invalid_count:
                     break
+
+                if not ctx.layers[layer_name].is_valid(i * page_size, 2):
+                    current_invalid_counter += 1
+                    continue
 
                 data = ctx.layers[layer_name].read(i * page_size, 2)
                 if data == b'MZ':
@@ -345,7 +359,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
 
         vollog.debug(f"Found {guid['pdb_name']}: {guid['GUID']}-{guid['age']}")
 
-        module_name = guid["pdb_name"].strip('.pdb')
+        module_name = guid["pdb_name"].replace('.pdb', '')
 
         symbol_table_name = cls.load_windows_symbol_table(context,
                                                           guid["GUID"],

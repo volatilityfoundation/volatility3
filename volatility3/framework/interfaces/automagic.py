@@ -113,7 +113,7 @@ class StackerLayerInterface(metaclass = ABCMeta):
     """The list operating systems/first-level plugin hierarchy that should exclude this stacker"""
 
     @classmethod
-    def stack(self,
+    def stack(cls,
               context: interfaces.context.ContextInterface,
               layer_name: str,
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
