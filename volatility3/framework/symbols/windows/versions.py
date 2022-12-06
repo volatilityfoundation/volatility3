@@ -31,13 +31,18 @@ class OsDistinguisher:
         A function that takes a context and a symbol table name and determines whether that symbol table passes the distinguishing checks
     """
 
-    def __init__(self, version_check: Callable[[Tuple[int, ...]], bool], fallback_checks: List[Tuple[str, Optional[str],
-                                                                                                     bool]]) -> None:
+    def __init__(
+        self,
+        version_check: Callable[[Tuple[int, ...]], bool],
+        fallback_checks: List[Tuple[str, Optional[str], bool]],
+    ) -> None:
         self._version_check = version_check
         self._fallback_checks = fallback_checks
 
     # try the primary method based on the pe version in the ISF
-    def __call__(self, context: interfaces.context.ContextInterface, symbol_table: str) -> bool:
+    def __call__(
+        self, context: interfaces.context.ContextInterface, symbol_table: str
+    ) -> bool:
         """
 
         Args:
@@ -53,17 +58,27 @@ class OsDistinguisher:
             major, minor, revision, build = pe_version
             return self._version_check((major, minor, revision, build))
         except (AttributeError, ValueError, TypeError):
-            vollog.log(constants.LOGLEVEL_VVV, "Windows PE version data is not available")
+            vollog.log(
+                constants.LOGLEVEL_VVV, "Windows PE version data is not available"
+            )
 
         # fall back to the backup method, if necessary
         for name, member, response in self._fallback_checks:
             if member is None:
-                if (context.symbol_space.has_symbol(symbol_table + constants.BANG + name)
-                        or context.symbol_space.has_type(symbol_table + constants.BANG + name)) != response:
+                if (
+                    context.symbol_space.has_symbol(
+                        symbol_table + constants.BANG + name
+                    )
+                    or context.symbol_space.has_type(
+                        symbol_table + constants.BANG + name
+                    )
+                ) != response:
                     return False
             else:
                 try:
-                    symbol_type = context.symbol_space.get_type(symbol_table + constants.BANG + name)
+                    symbol_type = context.symbol_space.get_type(
+                        symbol_table + constants.BANG + name
+                    )
                     if symbol_type.has_member(member) != response:
                         return False
                 except exceptions.SymbolError:
@@ -73,49 +88,88 @@ class OsDistinguisher:
         return True
 
 
-is_windows_8_1_or_later = OsDistinguisher(version_check = lambda x: x >= (6, 3),
-                                          fallback_checks = [("_KPRCB", "PendingTickFlags", True)])
+is_windows_8_1_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (6, 3),
+    fallback_checks=[("_KPRCB", "PendingTickFlags", True)],
+)
 
-is_vista_or_later = OsDistinguisher(version_check = lambda x: x >= (6, 0),
-                                    fallback_checks = [("KdCopyDataBlock", None, True)])
+is_vista_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (6, 0),
+    fallback_checks=[("KdCopyDataBlock", None, True)],
+)
 
-is_win10 = OsDistinguisher(version_check = lambda x: (10, 0) <= x,
-                           fallback_checks = [("ObHeaderCookie", None, True), ("_HANDLE_TABLE", "HandleCount", False)])
+is_win10 = OsDistinguisher(
+    version_check=lambda x: (10, 0) <= x,
+    fallback_checks=[
+        ("ObHeaderCookie", None, True),
+        ("_HANDLE_TABLE", "HandleCount", False),
+    ],
+)
 
-is_windows_xp = OsDistinguisher(version_check = lambda x: (5, 1) <= x < (5, 2),
-                                fallback_checks = [("KdCopyDataBlock", None, False),
-                                                   ("_HANDLE_TABLE", "HandleCount", True)])
+is_windows_xp = OsDistinguisher(
+    version_check=lambda x: (5, 1) <= x < (5, 2),
+    fallback_checks=[
+        ("KdCopyDataBlock", None, False),
+        ("_HANDLE_TABLE", "HandleCount", True),
+    ],
+)
 
-is_xp_or_2003 = OsDistinguisher(version_check = lambda x: (5, 1) <= x < (6, 0),
-                                fallback_checks = [("KdCopyDataBlock", None, False),
-                                                   ("_HANDLE_TABLE", "HandleCount", True)])
+is_xp_or_2003 = OsDistinguisher(
+    version_check=lambda x: (5, 1) <= x < (6, 0),
+    fallback_checks=[
+        ("KdCopyDataBlock", None, False),
+        ("_HANDLE_TABLE", "HandleCount", True),
+    ],
+)
 
-is_win10_up_to_15063 = OsDistinguisher(version_check = lambda x: (10, 0) <= x < (10, 0, 15063),
-                                       fallback_checks = [("ObHeaderCookie", None, True),
-                                                          ("_HANDLE_TABLE", "HandleCount", False),
-                                                          ("_EPROCESS", "KeepAliveCounter", True)])
+is_win10_up_to_15063 = OsDistinguisher(
+    version_check=lambda x: (10, 0) <= x < (10, 0, 15063),
+    fallback_checks=[
+        ("ObHeaderCookie", None, True),
+        ("_HANDLE_TABLE", "HandleCount", False),
+        ("_EPROCESS", "KeepAliveCounter", True),
+    ],
+)
 
-is_win10_15063 = OsDistinguisher(version_check = lambda x: x == (10, 0, 15063),
-                                 fallback_checks = [("ObHeaderCookie", None, True),
-                                                    ("_HANDLE_TABLE", "HandleCount", False),
-                                                    ("_EPROCESS", "KeepAliveCounter", False),
-                                                    ("_EPROCESS", "ControlFlowGuardEnabled", True)])
+is_win10_15063 = OsDistinguisher(
+    version_check=lambda x: x == (10, 0, 15063),
+    fallback_checks=[
+        ("ObHeaderCookie", None, True),
+        ("_HANDLE_TABLE", "HandleCount", False),
+        ("_EPROCESS", "KeepAliveCounter", False),
+        ("_EPROCESS", "ControlFlowGuardEnabled", True),
+    ],
+)
 
-is_win10_16299_or_later = OsDistinguisher(version_check = lambda x: x >= (10, 0, 16299),
-                                          fallback_checks = [("ObHeaderCookie", None, True),
-                                                             ("_HANDLE_TABLE", "HandleCount", False),
-                                                             ("_EPROCESS", "KeepAliveCounter", False),
-                                                             ("_EPROCESS", "ControlFlowGuardEnabled", False)])
+is_win10_16299_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0, 16299),
+    fallback_checks=[
+        ("ObHeaderCookie", None, True),
+        ("_HANDLE_TABLE", "HandleCount", False),
+        ("_EPROCESS", "KeepAliveCounter", False),
+        ("_EPROCESS", "ControlFlowGuardEnabled", False),
+    ],
+)
 
-is_win10_18363_or_later = OsDistinguisher(version_check = lambda x: x >= (10, 0, 18363),
-                                          fallback_checks = [("_KQOS_GROUPING_SETS", None, True)])
+is_win10_18363_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0, 18363),
+    fallback_checks=[("_KQOS_GROUPING_SETS", None, True)],
+)
 
-is_windows_10 = OsDistinguisher(version_check = lambda x: x >= (10, 0),
-                                fallback_checks = [("ObHeaderCookie", None, True)])
+is_windows_10 = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0),
+    fallback_checks=[("ObHeaderCookie", None, True)],
+)
 
-is_windows_8_or_later = OsDistinguisher(version_check = lambda x: x >= (6, 2),
-                                        fallback_checks = [("_HANDLE_TABLE", "HandleCount", False)])
+is_windows_8_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (6, 2),
+    fallback_checks=[("_HANDLE_TABLE", "HandleCount", False)],
+)
 # Technically, this is win7 or less
-is_windows_7 = OsDistinguisher(version_check = lambda x: x == (6, 1),
-                               fallback_checks = [("_OBJECT_HEADER", "TypeIndex", True),
-                                                  ("_HANDLE_TABLE", "HandleCount", True)])
+is_windows_7 = OsDistinguisher(
+    version_check=lambda x: x == (6, 1),
+    fallback_checks=[
+        ("_OBJECT_HEADER", "TypeIndex", True),
+        ("_HANDLE_TABLE", "HandleCount", True),
+    ],
+)

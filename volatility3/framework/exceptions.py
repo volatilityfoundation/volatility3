@@ -30,7 +30,9 @@ class PluginRequirementException(VolatilityException):
 class SymbolError(VolatilityException):
     """Thrown when a symbol lookup has failed."""
 
-    def __init__(self, symbol_name: Optional[str], table_name: Optional[str], *args) -> None:
+    def __init__(
+        self, symbol_name: Optional[str], table_name: Optional[str], *args
+    ) -> None:
         super().__init__(*args)
         self.symbol_name = symbol_name
         self.table_name = table_name
@@ -63,7 +65,14 @@ class PagedInvalidAddressException(InvalidAddressException):
     that are invalid
     """
 
-    def __init__(self, layer_name: str, invalid_address: int, invalid_bits: int, entry: int, *args) -> None:
+    def __init__(
+        self,
+        layer_name: str,
+        invalid_address: int,
+        invalid_bits: int,
+        entry: int,
+        *args,
+    ) -> None:
         super().__init__(layer_name, invalid_address, *args)
         self.invalid_bits = invalid_bits
         self.entry = entry
@@ -77,8 +86,15 @@ class SwappedInvalidAddressException(PagedInvalidAddressException):
     the lookup that were invalid.
     """
 
-    def __init__(self, layer_name: str, invalid_address: int, invalid_bits: int, entry: int, swap_offset: int,
-                 *args) -> None:
+    def __init__(
+        self,
+        layer_name: str,
+        invalid_address: int,
+        invalid_bits: int,
+        entry: int,
+        swap_offset: int,
+        *args,
+    ) -> None:
         super().__init__(layer_name, invalid_address, invalid_bits, entry, *args)
         self.swap_offset = swap_offset
 
@@ -88,14 +104,14 @@ class SymbolSpaceError(VolatilityException):
 
 
 class UnsatisfiedException(VolatilityException):
-
-    def __init__(self, unsatisfied: Dict[str, interfaces.configuration.RequirementInterface]) -> None:
+    def __init__(
+        self, unsatisfied: Dict[str, interfaces.configuration.RequirementInterface]
+    ) -> None:
         super().__init__()
         self.unsatisfied = unsatisfied
 
 
 class MissingModuleException(VolatilityException):
-
     def __init__(self, module: str, *args) -> None:
         super().__init__(*args)
         self.module = module
@@ -109,4 +125,4 @@ class OfflineException(VolatilityException):
         self._url = url
 
     def __str__(self):
-        return f'Volatility 3 is offline: unable to access {self._url}'
+        return f"Volatility 3 is offline: unable to access {self._url}"

@@ -16,23 +16,27 @@ import volatility3.framework.constants.windows
 
 PLUGINS_PATH = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "plugins")),
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins"))
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins")),
 ]
 """Default list of paths to load plugins from (volatility3/plugins and volatility3/framework/plugins)"""
 
 SYMBOL_BASEPATHS = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "symbols")),
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "symbols"))
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "symbols")),
 ]
 """Default list of paths to load symbols from (volatility3/symbols and volatility3/framework/symbols)"""
 
-ISF_EXTENSIONS = ['.json', '.json.xz', '.json.gz', '.json.bz2']
+ISF_EXTENSIONS = [".json", ".json.xz", ".json.gz", ".json.bz2"]
 """List of accepted extensions for ISF files"""
 
-if hasattr(sys, 'frozen') and sys.frozen:
+if hasattr(sys, "frozen") and sys.frozen:
     # Ensure we include the executable's directory as the base for plugins and symbols
-    PLUGINS_PATH = [os.path.abspath(os.path.join(os.path.dirname(sys.executable), 'plugins'))] + PLUGINS_PATH
-    SYMBOL_BASEPATHS = [os.path.abspath(os.path.join(os.path.dirname(sys.executable), 'symbols'))] + SYMBOL_BASEPATHS
+    PLUGINS_PATH = [
+        os.path.abspath(os.path.join(os.path.dirname(sys.executable), "plugins"))
+    ] + PLUGINS_PATH
+    SYMBOL_BASEPATHS = [
+        os.path.abspath(os.path.join(os.path.dirname(sys.executable), "symbols"))
+    ] + SYMBOL_BASEPATHS
 
 BANG = "!"
 """Constant used to delimit table names from type names when referring to a symbol"""
@@ -45,10 +49,13 @@ VERSION_SUFFIX = ""
 
 # TODO: At version 2.0.0, remove the symbol_shift feature
 
-PACKAGE_VERSION = ".".join([str(x) for x in [VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH]]) + VERSION_SUFFIX
+PACKAGE_VERSION = (
+    ".".join([str(x) for x in [VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH]])
+    + VERSION_SUFFIX
+)
 """The canonical version of the volatility3 package"""
 
-AUTOMAGIC_CONFIG_PATH = 'automagic'
+AUTOMAGIC_CONFIG_PATH = "automagic"
 """The root section within the context configuration for automagic values"""
 
 LOGLEVEL_V = 9
@@ -63,12 +70,14 @@ LOGLEVEL_VVVV = 6
 CACHE_PATH = os.path.join(os.path.expanduser("~"), ".cache", "volatility3")
 """Default path to store cached data"""
 
-SQLITE_CACHE_PERIOD = '-3 days'
+SQLITE_CACHE_PERIOD = "-3 days"
 """SQLite time modifier for how long each item is valid in the cache for"""
 
-if sys.platform == 'win32':
-    CACHE_PATH = os.path.realpath(os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "volatility3"))
-os.makedirs(CACHE_PATH, exist_ok = True)
+if sys.platform == "win32":
+    CACHE_PATH = os.path.realpath(
+        os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "volatility3")
+    )
+os.makedirs(CACHE_PATH, exist_ok=True)
 
 IDENTIFIERS_FILENAME = "identifier.cache"
 """Default location to record information about available identifiers"""
@@ -81,12 +90,13 @@ BUG_URL = "https://github.com/volatilityfoundation/volatility3/issues"
 ProgressCallback = Optional[Callable[[float, str], None]]
 """Type information for ProgressCallback objects"""
 
-OS_CATEGORIES = ['windows', 'mac', 'linux']
+OS_CATEGORIES = ["windows", "mac", "linux"]
 
 
 class Parallelism(enum.IntEnum):
     """An enumeration listing the different types of parallelism applied to
     volatility."""
+
     Off = 0
     Threading = 1
     Multiprocessing = 2

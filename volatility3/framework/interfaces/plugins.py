@@ -64,7 +64,9 @@ class FileHandlerInterface(io.RawIOBase):
         if exc_type is None and exc_value is None and traceback is None:
             self.close()
         else:
-            vollog.warning(f"File {self._preferred_filename} could not be written: {str(exc_value)}")
+            vollog.warning(
+                f"File {self._preferred_filename} could not be written: {str(exc_value)}"
+            )
             self.close()
 
 
@@ -82,9 +84,11 @@ class FileHandlerInterface(io.RawIOBase):
 #  The plugin runs and produces a TreeGrid output
 
 
-class PluginInterface(interfaces.configuration.ConfigurableInterface,
-                      interfaces.configuration.VersionableInterface,
-                      metaclass = ABCMeta):
+class PluginInterface(
+    interfaces.configuration.ConfigurableInterface,
+    interfaces.configuration.VersionableInterface,
+    metaclass=ABCMeta,
+):
     """Class that defines the basic interface that all Plugins must maintain.
 
     The constructor must only take a `context` and `config_path`, so
@@ -97,10 +101,12 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
     _required_framework_version: Tuple[int, int, int] = (0, 0, 0)
     """The _version variable is a quick way for plugins to define their current interface, it should follow SemVer rules"""
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 progress_callback: constants.ProgressCallback = None) -> None:
+    def __init__(
+        self,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        progress_callback: constants.ProgressCallback = None,
+    ) -> None:
         """
 
         Args:
@@ -114,7 +120,9 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
         # the validation doesn't need to be repeated over and over again by externals
         if self.unsatisfied(context, config_path):
             vollog.warning("Plugin failed validation")
-            raise exceptions.PluginRequirementException("The plugin configuration failed to validate")
+            raise exceptions.PluginRequirementException(
+                "The plugin configuration failed to validate"
+            )
         # Populate any optional defaults
         for requirement in self.get_requirements():
             if requirement.name not in self.config:

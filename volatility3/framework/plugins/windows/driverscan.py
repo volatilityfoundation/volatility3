@@ -19,17 +19,23 @@ class DriverScan(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'poolscanner', plugin = poolscanner.PoolScanner, version = (1, 0, 0)),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Windows kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.PluginRequirement(
+                name="poolscanner", plugin=poolscanner.PoolScanner, version=(1, 0, 0)
+            ),
         ]
 
     @classmethod
-    def scan_drivers(cls,
-                     context: interfaces.context.ContextInterface,
-                     layer_name: str,
-                     symbol_table: str) -> \
-            Iterable[interfaces.objects.ObjectInterface]:
+    def scan_drivers(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        symbol_table: str,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Scans for drivers using the poolscanner module and constraints.
 
         Args:
@@ -41,17 +47,23 @@ class DriverScan(interfaces.plugins.PluginInterface):
             A list of Driver objects as found from the `layer_name` layer based on Driver pool signatures
         """
 
-        constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Dri\xf6', b'Driv'])
+        constraints = poolscanner.PoolScanner.builtin_constraints(
+            symbol_table, [b"Dri\xf6", b"Driv"]
+        )
 
-        for result in poolscanner.PoolScanner.generate_pool_scan(context, layer_name, symbol_table, constraints):
+        for result in poolscanner.PoolScanner.generate_pool_scan(
+            context, layer_name, symbol_table, constraints
+        ):
 
             _constraint, mem_object, _header = result
             yield mem_object
 
     def _generator(self):
-        kernel = self.context.modules[self.config['kernel']]
+        kernel = self.context.modules[self.config["kernel"]]
 
-        for driver in self.scan_drivers(self.context, kernel.layer_name, kernel.symbol_table_name):
+        for driver in self.scan_drivers(
+            self.context, kernel.layer_name, kernel.symbol_table_name
+        ):
 
             try:
                 driver_name = driver.get_driver_name()
@@ -68,10 +80,27 @@ class DriverScan(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 name = renderers.NotApplicableValue()
 
-            yield (0, (format_hints.Hex(driver.vol.offset), format_hints.Hex(driver.DriverStart),
-                       format_hints.Hex(driver.DriverSize), service_key, driver_name, name))
+            yield (
+                0,
+                (
+                    format_hints.Hex(driver.vol.offset),
+                    format_hints.Hex(driver.DriverStart),
+                    format_hints.Hex(driver.DriverSize),
+                    service_key,
+                    driver_name,
+                    name,
+                ),
+            )
 
     def run(self):
-        return renderers.TreeGrid([("Offset", format_hints.Hex),
-                                   ("Start", format_hints.Hex), ("Size", format_hints.Hex), ("Service Key", str),
-                                   ("Driver Name", str), ("Name", str)], self._generator())
+        return renderers.TreeGrid(
+            [
+                ("Offset", format_hints.Hex),
+                ("Start", format_hints.Hex),
+                ("Size", format_hints.Hex),
+                ("Service Key", str),
+                ("Driver Name", str),
+                ("Name", str),
+            ],
+            self._generator(),
+        )

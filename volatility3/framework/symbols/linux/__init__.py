@@ -17,27 +17,27 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         super().__init__(*args, **kwargs)
 
         # Set-up Linux specific types
-        self.set_type_class('file', extensions.struct_file)
-        self.set_type_class('list_head', extensions.list_head)
-        self.set_type_class('mm_struct', extensions.mm_struct)
-        self.set_type_class('super_block', extensions.super_block)
-        self.set_type_class('task_struct', extensions.task_struct)
-        self.set_type_class('vm_area_struct', extensions.vm_area_struct)
-        self.set_type_class('qstr', extensions.qstr)
-        self.set_type_class('dentry', extensions.dentry)
-        self.set_type_class('fs_struct', extensions.fs_struct)
-        self.set_type_class('files_struct', extensions.files_struct)
-        self.set_type_class('vfsmount', extensions.vfsmount)
-        self.set_type_class('kobject', extensions.kobject)
+        self.set_type_class("file", extensions.struct_file)
+        self.set_type_class("list_head", extensions.list_head)
+        self.set_type_class("mm_struct", extensions.mm_struct)
+        self.set_type_class("super_block", extensions.super_block)
+        self.set_type_class("task_struct", extensions.task_struct)
+        self.set_type_class("vm_area_struct", extensions.vm_area_struct)
+        self.set_type_class("qstr", extensions.qstr)
+        self.set_type_class("dentry", extensions.dentry)
+        self.set_type_class("fs_struct", extensions.fs_struct)
+        self.set_type_class("files_struct", extensions.files_struct)
+        self.set_type_class("vfsmount", extensions.vfsmount)
+        self.set_type_class("kobject", extensions.kobject)
 
-        if 'mnt_namespace' in self.types:
-            self.set_type_class('mnt_namespace', extensions.mnt_namespace)
+        if "mnt_namespace" in self.types:
+            self.set_type_class("mnt_namespace", extensions.mnt_namespace)
 
-        if 'module' in self.types:
-            self.set_type_class('module', extensions.module)
+        if "module" in self.types:
+            self.set_type_class("module", extensions.module)
 
-        if 'mount' in self.types:
-            self.set_type_class('mount', extensions.mount)
+        if "mount" in self.types:
+            self.set_type_class("mount", extensions.mount)
 
 
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
@@ -59,7 +59,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             if dname == "":
                 break
 
-            ret_path.insert(0, dname.strip('/'))
+            ret_path.insert(0, dname.strip("/"))
             if dentry == vfsmnt.get_mnt_root() or dentry == dentry.d_parent:
                 if vfsmnt.get_mnt_parent() == vfsmnt:
                     break
@@ -79,7 +79,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         if not ret_path:
             return ""
 
-        ret_val = '/'.join([str(p) for p in ret_path if p != ""])
+        ret_val = "/".join([str(p) for p in ret_path if p != ""])
 
         if ret_val.startswith(("socket:", "pipe:")):
             if ret_val.find("]") == -1:
@@ -94,7 +94,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
                 ret_val = ret_val.replace("/", "")
 
         elif ret_val != "inotify":
-            ret_val = '/' + ret_val
+            ret_val = "/" + ret_val
 
         return ret_val
 
@@ -169,7 +169,11 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
 
         # TODO COMPARE THIS IN LSOF OUTPUT TO VOL2
         try:
-            if dentry.d_op and dentry.d_op.has_member("d_dname") and dentry.d_op.d_dname:
+            if (
+                dentry.d_op
+                and dentry.d_op.has_member("d_dname")
+                and dentry.d_op.d_dname
+            ):
                 dname_is_valid = True
 
         except exceptions.InvalidAddressException:
@@ -183,8 +187,12 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         return ret
 
     @classmethod
-    def files_descriptors_for_process(cls, context: interfaces.context.ContextInterface, symbol_table: str,
-                                      task: interfaces.objects.ObjectInterface):
+    def files_descriptors_for_process(
+        cls,
+        context: interfaces.context.ContextInterface,
+        symbol_table: str,
+        task: interfaces.objects.ObjectInterface,
+    ):
 
         fd_table = task.files.get_fds()
         if fd_table == 0:
@@ -196,9 +204,11 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         if max_fds > 500000:
             return
 
-        file_type = symbol_table + constants.BANG + 'file'
+        file_type = symbol_table + constants.BANG + "file"
 
-        fds = objects.utility.array_of_pointers(fd_table, count = max_fds, subtype = file_type, context = context)
+        fds = objects.utility.array_of_pointers(
+            fd_table, count=max_fds, subtype=file_type, context=context
+        )
 
         for (fd_num, filp) in enumerate(fds):
             if filp != 0:
@@ -207,20 +217,33 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
                 yield fd_num, filp, full_path
 
     @classmethod
-    def mask_mods_list(cls, context: interfaces.context.ContextInterface, layer_name: str,
-                       mods: Iterator[interfaces.objects.ObjectInterface]) -> List[Tuple[str, int, int]]:
+    def mask_mods_list(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        mods: Iterator[interfaces.objects.ObjectInterface],
+    ) -> List[Tuple[str, int, int]]:
         """
         A helper function to mask the starting and end address of kernel modules
         """
         mask = context.layers[layer_name].address_mask
 
-        return [(utility.array_to_string(mod.name), mod.get_module_base() & mask,
-                 (mod.get_module_base() & mask) + mod.get_core_size()) for mod in mods]
+        return [
+            (
+                utility.array_to_string(mod.name),
+                mod.get_module_base() & mask,
+                (mod.get_module_base() & mask) + mod.get_core_size(),
+            )
+            for mod in mods
+        ]
 
     @classmethod
     def generate_kernel_handler_info(
-            cls, context: interfaces.context.ContextInterface, kernel_module_name: str,
-            mods_list: Iterator[interfaces.objects.ObjectInterface]) -> List[Tuple[str, int, int]]:
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        mods_list: Iterator[interfaces.objects.ObjectInterface],
+    ) -> List[Tuple[str, int, int]]:
         """
         A helper function that gets the beginning and end address of the kernel module
         """
@@ -235,13 +258,17 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         end_addr = kernel.object_from_symbol("_etext")
         end_addr = end_addr.vol.offset & mask
 
-        return [(constants.linux.KERNEL_NAME, start_addr, end_addr)] + \
-               LinuxUtilities.mask_mods_list(context, kernel.layer_name, mods_list)
+        return [
+            (constants.linux.KERNEL_NAME, start_addr, end_addr)
+        ] + LinuxUtilities.mask_mods_list(context, kernel.layer_name, mods_list)
 
     @classmethod
-    def lookup_module_address(cls, kernel_module: interfaces.context.ModuleInterface,
-                              handlers: List[Tuple[str, int, int]],
-                              target_address: int):
+    def lookup_module_address(
+        cls,
+        kernel_module: interfaces.context.ModuleInterface,
+        handlers: List[Tuple[str, int, int]],
+        target_address: int,
+    ):
         """
         Searches between the start and end address of the kernel module using target_address.
         Returns the module and symbol name of the address provided.
@@ -254,11 +281,16 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             if start <= target_address <= end:
                 mod_name = name
                 if name == constants.linux.KERNEL_NAME:
-                    symbols = list(kernel_module.get_symbols_by_absolute_location(target_address))
+                    symbols = list(
+                        kernel_module.get_symbols_by_absolute_location(target_address)
+                    )
 
                     if len(symbols):
-                        symbol_name = symbols[0].split(constants.BANG)[1] if constants.BANG in symbols[0] else \
-                            symbols[0]
+                        symbol_name = (
+                            symbols[0].split(constants.BANG)[1]
+                            if constants.BANG in symbols[0]
+                            else symbols[0]
+                        )
 
                 break
 
@@ -267,6 +299,8 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
     @classmethod
     def walk_internal_list(cls, vmlinux, struct_name, list_member, list_start):
         while list_start:
-            list_struct = vmlinux.object(object_type = struct_name, offset = list_start.vol.offset)
+            list_struct = vmlinux.object(
+                object_type=struct_name, offset=list_start.vol.offset
+            )
             yield list_struct
             list_start = getattr(list_struct, list_member)

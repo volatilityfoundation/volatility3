@@ -35,6 +35,7 @@ class RegExScanner(layers.ScannerInterface):
 
     The default flags include DOTALL, since the searches are through binary data and the newline character should
     have no specific significance in such searches"""
+
     thread_safe = True
 
     _required_framework_version = (2, 0, 0)
@@ -80,7 +81,7 @@ class MultiStringScanner(layers.ScannerInterface):
     def _process_trie(self, trie: Optional[Dict[int, Optional[Dict]]]) -> bytes:
         if trie is None or len(trie) == 1 and -1 in trie:
             # We've reached the end of this path, return the empty byte string
-            return b''
+            return b""
 
         choices = []
         suffixes = []
@@ -101,16 +102,16 @@ class MultiStringScanner(layers.ScannerInterface):
         if len(suffixes) == 1:
             choices.append(suffixes[0])
         elif len(suffixes) > 1:
-            choices.append(b'[' + b''.join(suffixes) + b']')
+            choices.append(b"[" + b"".join(suffixes) + b"]")
 
         if len(choices) == 0:
             # If there's none, return the empty byte string
-            response = b''
+            response = b""
         elif len(choices) == 1:
             # If there's only one return it
             response = choices[0]
         else:
-            response = b'(?:' + b'|'.join(choices) + b')'
+            response = b"(?:" + b"|".join(choices) + b")"
 
         if finished:
             # We finished one string, so everything after this is optional
@@ -118,7 +119,9 @@ class MultiStringScanner(layers.ScannerInterface):
 
         return response
 
-    def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[int, bytes], None, None]:
+    def __call__(
+        self, data: bytes, data_offset: int
+    ) -> Generator[Tuple[int, bytes], None, None]:
         """Runs through the data looking for the needles."""
         for offset, pattern in self.search(data):
             if offset < self.chunk_size:
@@ -128,6 +131,8 @@ class MultiStringScanner(layers.ScannerInterface):
         if not isinstance(haystack, bytes):
             raise TypeError("Search haystack must be a byte string")
         if not self._regex:
-            raise ValueError("MultiRegexp cannot be used with an empty set of search strings")
+            raise ValueError(
+                "MultiRegexp cannot be used with an empty set of search strings"
+            )
         for match in re.finditer(self._regex, haystack):
             yield match.start(0), match.group()
