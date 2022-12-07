@@ -48,25 +48,40 @@ class DriverScan(interfaces.plugins.PluginInterface):
             _constraint, mem_object, _header = result
             yield mem_object
 
+    @classmethod
+    def get_names_for_driver(cls, driver):
+        """
+        Convenience method for getting the commonly used
+        names associated with a driver
+
+        Args:
+            driver: A Eriver object
+
+        Returns:
+            A tuple of strings of (driver name, service key, driver alt. name)
+        """
+        try:
+            driver_name = driver.get_driver_name()
+        except (ValueError, exceptions.InvalidAddressException):
+            driver_name = renderers.NotApplicableValue()
+
+        try:
+            service_key = driver.DriverExtension.ServiceKeyName.String
+        except exceptions.InvalidAddressException:
+            service_key = renderers.NotApplicableValue()
+
+        try:
+            name = driver.DriverName.String
+        except exceptions.InvalidAddressException:
+            name = renderers.NotApplicableValue()
+
+        return driver_name, service_key, name
+
     def _generator(self):
         kernel = self.context.modules[self.config['kernel']]
 
         for driver in self.scan_drivers(self.context, kernel.layer_name, kernel.symbol_table_name):
-
-            try:
-                driver_name = driver.get_driver_name()
-            except (ValueError, exceptions.InvalidAddressException):
-                driver_name = renderers.NotApplicableValue()
-
-            try:
-                service_key = driver.DriverExtension.ServiceKeyName.String
-            except exceptions.InvalidAddressException:
-                service_key = renderers.NotApplicableValue()
-
-            try:
-                name = driver.DriverName.String
-            except exceptions.InvalidAddressException:
-                name = renderers.NotApplicableValue()
+            driver_name, service_key, name = self.get_names_for_driver(driver)
 
             yield (0, (format_hints.Hex(driver.vol.offset), format_hints.Hex(driver.DriverStart),
                        format_hints.Hex(driver.DriverSize), service_key, driver_name, name))
