@@ -140,7 +140,9 @@ class ResourceAccessor(object):
         except error.URLError as excp:
             if excp.args:
                 if isinstance(excp.args[0], ssl.SSLCertVerificationError):
-                    vollog.warning("SSL certificate verification failed: attempting UNVERIFIED retrieval")
+                    vollog.warning(
+                        "SSL certificate verification failed: attempting UNVERIFIED retrieval"
+                    )
                     non_verifying_ctx = ssl.SSLContext()
                     non_verifying_ctx.check_hostname = False
                     non_verifying_ctx.verify_mode = ssl.CERT_NONE
