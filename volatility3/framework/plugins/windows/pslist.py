@@ -62,7 +62,9 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         """
 
         file_handle = None
+        proc_id = 'Invalid process object'
         try:
+            proc_id = proc.UniqueProcessId
             proc_layer_name = proc.add_process_layer()
             peb = context.object(kernel_table_name + constants.BANG + "_PEB",
                                  layer_name = proc_layer_name,
@@ -76,7 +78,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 file_handle.seek(offset)
                 file_handle.write(data)
         except Exception as excp:
-            vollog.debug(f"Unable to dump PE with pid {proc.UniqueProcessId}: {excp}")
+            vollog.debug(f"Unable to dump PE with pid {proc_id}: {excp}")
 
         return file_handle
 

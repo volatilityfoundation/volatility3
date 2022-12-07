@@ -926,14 +926,16 @@ class PdbRetreiver:
                 try:
                     vollog.debug(f"Attempting to retrieve {url + suffix}")
                     # We have to cache this because the file is opened by a layer and we can't control whether that caches
-                    result = resources.ResourceAccessor(progress_callback).open(url + suffix)
+                    with resources.ResourceAccessor(progress_callback).open(url + suffix) as fp:
+                        fp.read(10)
+                        result = True
                 except (error.HTTPError, error.URLError) as excp:
                     vollog.debug(f"Failed with {excp}")
                 if result:
                     break
         if progress_callback is not None:
             progress_callback(100, f"Downloading {url + suffix}")
-        if result is None:
+        if not result:
             return None
         return url + suffix
 

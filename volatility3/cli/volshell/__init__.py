@@ -36,7 +36,6 @@ class VolShell(cli.CommandLine):
 
     def __init__(self):
         super().__init__()
-        self.output_dir = None
 
     def run(self):
         """Executes the command line module, taking the system arguments,

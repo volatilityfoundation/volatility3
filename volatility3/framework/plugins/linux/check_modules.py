@@ -29,7 +29,7 @@ class Check_modules(plugins.PluginInterface):
         ]
 
     @classmethod
-    def get_kset_modules(self, context: interfaces.context.ContextInterface, vmlinux_name: str):
+    def get_kset_modules(cls, context: interfaces.context.ContextInterface, vmlinux_name: str):
 
         vmlinux = context.modules[vmlinux_name]
 

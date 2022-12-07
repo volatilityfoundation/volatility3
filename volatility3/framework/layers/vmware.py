@@ -154,7 +154,8 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
 
             vmss_success = False
             with contextlib.suppress(IOError):
-                _ = resources.ResourceAccessor().open(vmss).read(10)
+                with resources.ResourceAccessor().open(vmss) as fp:
+                    _ = fp.read(10)
                 context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmss
                 context.layers.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
                 vmss_success = True

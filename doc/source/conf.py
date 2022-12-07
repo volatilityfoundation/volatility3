@@ -121,6 +121,7 @@ try:
 
     extensions.append('sphinx_autodoc_typehints')
 except ImportError:
+    # If the autodoc typehints extension isn't available, carry on regardless
     pass
 
 # Add any paths that contain templates here, relative to this directory.
