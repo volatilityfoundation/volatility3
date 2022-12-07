@@ -24,14 +24,23 @@ class Lsof(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
-            requirements.VersionRequirement(name = 'linuxutils', component = linux.LinuxUtilities, version = (2, 0, 0)),
-            requirements.ListRequirement(name = 'pid',
-                                         description = 'Filter on specific process IDs',
-                                         element_type = int,
-                                         optional = True)
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="linuxutils", component=linux.LinuxUtilities, version=(2, 0, 0)
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                description="Filter on specific process IDs",
+                element_type=int,
+                optional=True,
+            ),
         ]
 
     def _generator(self, tasks):
@@ -45,15 +54,23 @@ class Lsof(plugins.PluginInterface):
             name = utility.array_to_string(task.comm)
             pid = int(task.pid)
 
-            for fd_num, _, full_path in linux.LinuxUtilities.files_descriptors_for_process(
-                    self.context, symbol_table, task):
+            for (
+                fd_num,
+                _,
+                full_path,
+            ) in linux.LinuxUtilities.files_descriptors_for_process(
+                self.context, symbol_table, task
+            ):
                 yield (0, (pid, name, fd_num, full_path))
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
-        return renderers.TreeGrid([("PID", int), ("Process", str), ("FD", int), ("Path", str)],
-                                  self._generator(
-                                      pslist.PsList.list_tasks(self.context,
-                                                               self.config['kernel'],
-                                                               filter_func = filter_func)))
+        return renderers.TreeGrid(
+            [("PID", int), ("Process", str), ("FD", int), ("Path", str)],
+            self._generator(
+                pslist.PsList.list_tasks(
+                    self.context, self.config["kernel"], filter_func=filter_func
+                )
+            ),
+        )

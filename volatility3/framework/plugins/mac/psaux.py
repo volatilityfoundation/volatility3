@@ -19,16 +19,25 @@ class Psaux(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
-            requirements.ListRequirement(name = 'pid',
-                                         description = 'Filter on specific process IDs',
-                                         element_type = int,
-                                         optional = True)
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                description="Filter on specific process IDs",
+                element_type=int,
+                optional=True,
+            ),
         ]
 
-    def _generator(self, tasks: Iterator[Any]) -> Generator[Tuple[int, Tuple[int, str, int, str]], None, None]:
+    def _generator(
+        self, tasks: Iterator[Any]
+    ) -> Generator[Tuple[int, Tuple[int, str, int, str]], None, None]:
         for task in tasks:
             proc_layer_name = task.add_process_layer()
             if proc_layer_name is None:
@@ -38,7 +47,11 @@ class Psaux(plugins.PluginInterface):
 
             argsstart = task.user_stack - task.p_argslen
 
-            if not proc_layer.is_valid(argsstart) or task.p_argslen == 0 or task.p_argc == 0:
+            if (
+                not proc_layer.is_valid(argsstart)
+                or task.p_argslen == 0
+                or task.p_argc == 0
+            ):
                 continue
 
             # Add one because the first two are usually duplicates
@@ -58,7 +71,7 @@ class Psaux(plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     break
 
-                idx = arg.find(b'\x00')
+                idx = arg.find(b"\x00")
                 if idx != -1:
                     arg = arg[:idx]
 
@@ -85,16 +98,19 @@ class Psaux(plugins.PluginInterface):
 
                 argc = argc - 1
 
-            args_str = " ".join([s.decode("utf-8", errors = 'replace') for s in args])
+            args_str = " ".join([s.decode("utf-8", errors="replace") for s in args])
 
             yield (0, (task.p_pid, task_name, task.p_argc, args_str))
 
     def run(self) -> renderers.TreeGrid:
-        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
-        list_tasks = pslist.PsList.get_list_tasks(self.config.get('pslist_method', pslist.PsList.pslist_methods[0]))
+        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
+        list_tasks = pslist.PsList.get_list_tasks(
+            self.config.get("pslist_method", pslist.PsList.pslist_methods[0])
+        )
 
-        return renderers.TreeGrid([("PID", int), ("Process", str), ("Argc", int), ("Arguments", str)],
-                                  self._generator(
-                                      list_tasks(self.context,
-                                                 self.config['kernel'],
-                                                 filter_func = filter_func)))
+        return renderers.TreeGrid(
+            [("PID", int), ("Process", str), ("Argc", int), ("Arguments", str)],
+            self._generator(
+                list_tasks(self.context, self.config["kernel"], filter_func=filter_func)
+            ),
+        )
