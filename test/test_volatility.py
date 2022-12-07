@@ -120,9 +120,8 @@ def test_windows_hivelist(image, volatility, python):
 
 def test_windows_dumpfiles(image, volatility, python):
 
-    json_file = open("./test/known_files.json")
-
-    known_files = json.load(json_file)
+    with open("./test/known_files.json") as json_file:
+        known_files = json.load(json_file)
 
     failed_chksms = 0
 
