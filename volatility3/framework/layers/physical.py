@@ -16,13 +16,17 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
     """A DataLayer class backed by a buffer in memory, designed for testing and
     swift data access."""
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 name: str,
-                 buffer: bytes,
-                 metadata: Optional[Dict[str, Any]] = None) -> None:
-        super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
+    def __init__(
+        self,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        name: str,
+        buffer: bytes,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        super().__init__(
+            context=context, config_path=config_path, name=name, metadata=metadata
+        )
         self._buffer = buffer
 
     @property
@@ -37,8 +41,10 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns whether the offset is valid or not."""
-        return bool(self.minimum_address <= offset <= self.maximum_address
-                    and self.minimum_address <= offset + length - 1 <= self.maximum_address)
+        return bool(
+            self.minimum_address <= offset <= self.maximum_address
+            and self.minimum_address <= offset + length - 1 <= self.maximum_address
+        )
 
     def read(self, address: int, length: int, pad: bool = False) -> bytes:
         """Reads the data from the buffer."""
@@ -46,26 +52,30 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
             invalid_address = address
             if self.minimum_address < address <= self.maximum_address:
                 invalid_address = self.maximum_address + 1
-            raise exceptions.InvalidAddressException(self.name, invalid_address,
-                                                     "Offset outside of the buffer boundaries")
-        return self._buffer[address:address + length]
+            raise exceptions.InvalidAddressException(
+                self.name, invalid_address, "Offset outside of the buffer boundaries"
+            )
+        return self._buffer[address : address + length]
 
     def write(self, address: int, data: bytes):
         """Writes the data from to the buffer."""
-        self._buffer = self._buffer[:address] + data + self._buffer[address + len(data):]
+        self._buffer = (
+            self._buffer[:address] + data + self._buffer[address + len(data) :]
+        )
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # No real requirements (only the buffer).  Need to figure out if there's a better way of representing this
         return [
-            requirements.BytesRequirement(name = 'buffer',
-                                          description = "The direct bytes to interact with",
-                                          optional = False)
+            requirements.BytesRequirement(
+                name="buffer",
+                description="The direct bytes to interact with",
+                optional=False,
+            )
         ]
 
 
 class DummyLock:
-
     def __enter__(self) -> None:
         pass
 
@@ -76,12 +86,16 @@ class DummyLock:
 class FileLayer(interfaces.layers.DataLayerInterface):
     """a DataLayer backed by a file on the filesystem."""
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 name: str,
-                 metadata: Optional[Dict[str, Any]] = None) -> None:
-        super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
+    def __init__(
+        self,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        name: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        super().__init__(
+            context=context, config_path=config_path, name=name, metadata=metadata
+        )
 
         self._write_warning = False
         self._location = self.config["location"]
@@ -133,8 +147,10 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         """Returns whether the offset is valid or not."""
         if length <= 0:
             raise ValueError("Length must be positive")
-        return bool(self.minimum_address <= offset <= self.maximum_address
-                    and self.minimum_address <= offset + length - 1 <= self.maximum_address)
+        return bool(
+            self.minimum_address <= offset <= self.maximum_address
+            and self.minimum_address <= offset + length - 1 <= self.maximum_address
+        )
 
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads from the file at offset for length."""
@@ -142,8 +158,9 @@ class FileLayer(interfaces.layers.DataLayerInterface):
             invalid_address = offset
             if self.minimum_address < offset <= self.maximum_address:
                 invalid_address = self.maximum_address + 1
-            raise exceptions.InvalidAddressException(self.name, invalid_address,
-                                                     "Offset outside of the buffer boundaries")
+            raise exceptions.InvalidAddressException(
+                self.name, invalid_address, "Offset outside of the buffer boundaries"
+            )
 
         # TODO: implement locking for multi-threading
         with self._lock:
@@ -152,10 +169,13 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
         if len(data) < length:
             if pad:
-                data += (b"\x00" * (length - len(data)))
+                data += b"\x00" * (length - len(data))
             else:
                 raise exceptions.InvalidAddressException(
-                    self.name, offset + len(data), "Could not read sufficient bytes from the " + self.name + " file")
+                    self.name,
+                    offset + len(data),
+                    "Could not read sufficient bytes from the " + self.name + " file",
+                )
         return data
 
     def write(self, offset: int, data: bytes) -> None:
@@ -172,8 +192,11 @@ class FileLayer(interfaces.layers.DataLayerInterface):
             invalid_address = offset
             if self.minimum_address < offset <= self.maximum_address:
                 invalid_address = self.maximum_address + 1
-            raise exceptions.InvalidAddressException(self.name, invalid_address,
-                                                     "Data segment outside of the " + self.name + " file boundaries")
+            raise exceptions.InvalidAddressException(
+                self.name,
+                invalid_address,
+                "Data segment outside of the " + self.name + " file boundaries",
+            )
         with self._lock:
             self._file.seek(offset)
             self._file.write(data)
@@ -196,4 +219,4 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.StringRequirement(name = 'location', optional = False)]
+        return [requirements.StringRequirement(name="location", optional=False)]

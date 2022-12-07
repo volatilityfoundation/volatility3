@@ -21,13 +21,20 @@ class Mount(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="macutils", component=mac.MacUtilities, version=(1, 0, 0)
+            ),
         ]
 
     @classmethod
-    def list_mounts(cls, context: interfaces.context.ContextInterface, kernel_module_name: str):
+    def list_mounts(
+        cls, context: interfaces.context.ContextInterface, kernel_module_name: str
+    ):
         """Lists all the mount structures in the primary layer.
 
         Args:
@@ -40,13 +47,13 @@ class Mount(plugins.PluginInterface):
         """
         kernel = context.modules[kernel_module_name]
 
-        list_head = kernel.object_from_symbol(symbol_name = "mountlist")
+        list_head = kernel.object_from_symbol(symbol_name="mountlist")
 
         for mount in mac.MacUtilities.walk_tailq(list_head, "mnt_list"):
             yield mount
 
     def _generator(self):
-        for mount in self.list_mounts(self.context, self.config['kernel']):
+        for mount in self.list_mounts(self.context, self.config["kernel"]):
             vfs = mount.mnt_vfsstat
             device_name = utility.array_to_string(vfs.f_mntonname)
             mount_point = utility.array_to_string(vfs.f_mntfromname)
@@ -55,4 +62,6 @@ class Mount(plugins.PluginInterface):
             yield 0, (device_name, mount_point, mount_type)
 
     def run(self):
-        return renderers.TreeGrid([("Device", str), ("Mount Point", str), ("Type", str)], self._generator())
+        return renderers.TreeGrid(
+            [("Device", str), ("Mount Point", str), ("Type", str)], self._generator()
+        )

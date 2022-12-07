@@ -8,20 +8,34 @@ from volatility3.framework.objects import utility
 
 
 class VFSevents(interfaces.plugins.PluginInterface):
-    """ Lists processes that are filtering file system events """
+    """Lists processes that are filtering file system events"""
 
     _required_framework_version = (2, 0, 0)
 
     event_types = [
-        "CREATE_FILE", "DELETE", "STAT_CHANGED", "RENAME", "CONTENT_MODIFIED", "EXCHANGE", "FINDER_INFO_CHANGED",
-        "CREATE_DIR", "CHOWN", "XATTR_MODIFIED", "XATTR_REMOVED", "DOCID_CREATED", "DOCID_CHANGED"
+        "CREATE_FILE",
+        "DELETE",
+        "STAT_CHANGED",
+        "RENAME",
+        "CONTENT_MODIFIED",
+        "EXCHANGE",
+        "FINDER_INFO_CHANGED",
+        "CREATE_DIR",
+        "CHOWN",
+        "XATTR_MODIFIED",
+        "XATTR_REMOVED",
+        "DOCID_CREATED",
+        "DOCID_CHANGED",
     ]
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
         ]
 
     def _generator(self):
@@ -30,7 +44,7 @@ class VFSevents(interfaces.plugins.PluginInterface):
         Also lists which event(s) a process is registered for
         """
 
-        kernel = self.context.modules[self.config['kernel']]
+        kernel = self.context.modules[self.config["kernel"]]
 
         watcher_table = kernel.object_from_symbol("watcher_table")
 
@@ -44,11 +58,13 @@ class VFSevents(interfaces.plugins.PluginInterface):
             events = []
 
             try:
-                event_array = kernel.object(object_type = "array",
-                                            offset = watcher.event_list,
-                                            absolute = True,
-                                            count = 13,
-                                            subtype = kernel.get_type("unsigned char"))
+                event_array = kernel.object(
+                    object_type="array",
+                    offset=watcher.event_list,
+                    absolute=True,
+                    count=13,
+                    subtype=kernel.get_type("unsigned char"),
+                )
 
             except exceptions.InvalidAddressException:
                 continue
@@ -61,4 +77,6 @@ class VFSevents(interfaces.plugins.PluginInterface):
                 yield (0, (task_name, task_pid, ",".join(events)))
 
     def run(self):
-        return renderers.TreeGrid([("Name", str), ("PID", int), ("Events", str)], self._generator())
+        return renderers.TreeGrid(
+            [("Name", str), ("PID", int), ("Events", str)], self._generator()
+        )

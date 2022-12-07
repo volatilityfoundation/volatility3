@@ -12,6 +12,7 @@ from volatility3.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
 
+
 class PsTree(interfaces.plugins.PluginInterface):
     """Plugin for listing processes in a tree based on their parent process
     ID."""
@@ -27,17 +28,26 @@ class PsTree(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.BooleanRequirement(name = 'physical',
-                                            description = 'Display physical offsets instead of virtual',
-                                            default = pslist.PsList.PHYSICAL_DEFAULT,
-                                            optional = True),
-            requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (2, 0, 0)),
-            requirements.ListRequirement(name = 'pid',
-                                         element_type = int,
-                                         description = "Process ID to include (all other processes are excluded)",
-                                         optional = True)
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Windows kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.BooleanRequirement(
+                name="physical",
+                description="Display physical offsets instead of virtual",
+                default=pslist.PsList.PHYSICAL_DEFAULT,
+                optional=True,
+            ),
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(2, 0, 0)
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                element_type=int,
+                description="Process ID to include (all other processes are excluded)",
+                optional=True,
+            ),
         ]
 
     def find_level(self, pid: objects.Pointer) -> None:
@@ -51,22 +61,27 @@ class PsTree(interfaces.plugins.PluginInterface):
             child_list.add(proc.UniqueProcessId)
             self._children[proc.InheritedFromUniqueProcessId] = child_list
             seen.add(proc.InheritedFromUniqueProcessId)
-            proc, _ = self._processes.get(proc.InheritedFromUniqueProcessId, (None, None))
+            proc, _ = self._processes.get(
+                proc.InheritedFromUniqueProcessId, (None, None)
+            )
             level += 1
         self._levels[pid] = level
 
     def _generator(self):
         """Generates the Tree of processes."""
-        kernel = self.context.modules[self.config['kernel']]
+        kernel = self.context.modules[self.config["kernel"]]
 
-        for proc in pslist.PsList.list_processes(self.context, kernel.layer_name,
-                                                 kernel.symbol_table_name):
-            if not self.config.get('physical', pslist.PsList.PHYSICAL_DEFAULT):
+        for proc in pslist.PsList.list_processes(
+            self.context, kernel.layer_name, kernel.symbol_table_name
+        ):
+            if not self.config.get("physical", pslist.PsList.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset
             else:
                 layer_name = kernel.layer_name
                 memory = self.context.layers[layer_name]
-                (_, _, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
+                (_, _, offset, _, _) = list(
+                    memory.mapping(offset=proc.vol.offset, length=0)
+                )[0]
 
             self._processes[proc.UniqueProcessId] = proc, offset
 
@@ -75,16 +90,27 @@ class PsTree(interfaces.plugins.PluginInterface):
             self.find_level(pid)
 
         process_pids = set([])
+
         def yield_processes(pid):
             if pid in process_pids:
                 vollog.debug(f"Pid cycle: already processed pid {pid}")
                 return
             process_pids.add(pid)
             proc, offset = self._processes[pid]
-            row = (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
-                   proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
-                   format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
-                   proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time())
+            row = (
+                proc.UniqueProcessId,
+                proc.InheritedFromUniqueProcessId,
+                proc.ImageFileName.cast(
+                    "string", max_length=proc.ImageFileName.vol.count, errors="replace"
+                ),
+                format_hints.Hex(offset),
+                proc.ActiveThreads,
+                proc.get_handle_count(),
+                proc.get_session_id(),
+                proc.get_is_wow64(),
+                proc.get_create_time(),
+                proc.get_exit_time(),
+            )
 
             yield (self._levels[pid] - 1, row)
             for child_pid in self._children.get(pid, []):
@@ -95,10 +121,24 @@ class PsTree(interfaces.plugins.PluginInterface):
                 yield from yield_processes(pid)
 
     def run(self):
-        offsettype = "(V)" if not self.config.get('physical', pslist.PsList.PHYSICAL_DEFAULT) else "(P)"
+        offsettype = (
+            "(V)"
+            if not self.config.get("physical", pslist.PsList.PHYSICAL_DEFAULT)
+            else "(P)"
+        )
 
-        return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str),
-                                   (f"Offset{offsettype}", format_hints.Hex), ("Threads", int),
-                                   ("Handles", int), ("SessionId", int), ("Wow64", bool),
-                                   ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime)],
-                                  self._generator())
+        return renderers.TreeGrid(
+            [
+                ("PID", int),
+                ("PPID", int),
+                ("ImageFileName", str),
+                (f"Offset{offsettype}", format_hints.Hex),
+                ("Threads", int),
+                ("Handles", int),
+                ("SessionId", int),
+                ("Wow64", bool),
+                ("CreateTime", datetime.datetime),
+                ("ExitTime", datetime.datetime),
+            ],
+            self._generator(),
+        )
