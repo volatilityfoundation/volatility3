@@ -120,10 +120,10 @@ REMOTE_ISF_URL = None  # 'http://localhost:8000/banners.json'
 # DEPRECATED VALUES
 ###
 
-_deprecated_LINUX_BANNERS_FILENAME = os.path.join(CACHE_PATH, 'linux_banners.cache')
+_deprecated_LINUX_BANNERS_FILENAME = os.path.join(CACHE_PATH, "linux_banners.cache")
 """This value is deprecated and is no longer used within volatility"""
 
-_deprecated_MAC_BANNERS_PATH = os.path.join(CACHE_PATH, 'mac_banners.cache')
+_deprecated_MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
 """This value is deprecated and is no longer used within volatility"""
 
 _deprecated_IDENTIFIERS_PATH = os.path.join(CACHE_PATH, IDENTIFIERS_FILENAME)
@@ -131,7 +131,10 @@ _deprecated_IDENTIFIERS_PATH = os.path.join(CACHE_PATH, IDENTIFIERS_FILENAME)
 
 
 def __getattr__(name):
-    deprecated_tag = '_deprecated_'
-    if name in [x[len(deprecated_tag):] for x in globals() if x.startswith(deprecated_tag)]:
+    deprecated_tag = "_deprecated_"
+    if name in [
+        x[len(deprecated_tag) :] for x in globals() if x.startswith(deprecated_tag)
+    ]:
         warnings.warn(f"{name} is deprecated", FutureWarning)
         return globals()[f"{deprecated_tag}{name}"]
+    return None
