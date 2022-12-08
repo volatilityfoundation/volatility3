@@ -15,13 +15,19 @@ class Volshell(generic.Volshell):
 
     @classmethod
     def get_requirements(cls):
-        return ([
-            requirements.ModuleRequirement(name = "kernel", description = "Darwin kernel module"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
-            requirements.IntRequirement(name = 'pid', description = "Process ID", optional = True)
-        ])
+        return [
+            requirements.ModuleRequirement(
+                name="kernel", description="Darwin kernel module"
+            ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+            ),
+            requirements.IntRequirement(
+                name="pid", description="Process ID", optional=True
+            ),
+        ]
 
-    def change_task(self, pid = None):
+    def change_task(self, pid=None):
         """Change the current process and layer, based on a process ID"""
         tasks = self.list_tasks()
         for task in tasks:
@@ -34,25 +40,31 @@ class Volshell(generic.Volshell):
                 return
         print(f"No task with task ID {pid} found")
 
-    def list_tasks(self, method = None):
+    def list_tasks(self, method=None):
         """Returns a list of task objects from the primary layer"""
         # We always use the main kernel memory and associated symbols
-        return list(pslist.PsList.get_list_tasks(method)(self.context, self.current_kernel_name))
+        return list(
+            pslist.PsList.get_list_tasks(method)(self.context, self.current_kernel_name)
+        )
 
     def construct_locals(self) -> List[Tuple[List[str], Any]]:
         result = super().construct_locals()
         result += [
-            (['ct', 'change_task', 'cp'], self.change_task),
-            (['lt', 'list_tasks', 'ps'], self.list_tasks),
-            (['symbols'], self.context.symbol_space[self.current_symbol_table]),
+            (["ct", "change_task", "cp"], self.change_task),
+            (["lt", "list_tasks", "ps"], self.list_tasks),
+            (["symbols"], self.context.symbol_space[self.current_symbol_table]),
         ]
-        if self.config.get('pid', None) is not None:
-            self.change_task(self.config['pid'])
+        if self.config.get("pid", None) is not None:
+            self.change_task(self.config["pid"])
         return result
 
-    def display_type(self,
-                     object: Union[str, interfaces.objects.ObjectInterface, interfaces.objects.Template],
-                     offset: int = None):
+    def display_type(
+        self,
+        object: Union[
+            str, interfaces.objects.ObjectInterface, interfaces.objects.Template
+        ],
+        offset: int = None,
+    ):
         """Display Type describes the members of a particular object in alphabetical order"""
         if isinstance(object, str):
             if constants.BANG not in object:

@@ -16,18 +16,23 @@ class Ifconfig(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0))
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="macutils", component=mac.MacUtilities, version=(1, 0, 0)
+            ),
         ]
 
     def _generator(self):
-        kernel = self.context.modules[self.config['kernel']]
+        kernel = self.context.modules[self.config["kernel"]]
 
         try:
-            list_head = kernel.object_from_symbol(symbol_name = "ifnet_head")
+            list_head = kernel.object_from_symbol(symbol_name="ifnet_head")
         except exceptions.SymbolError:
-            list_head = kernel.object_from_symbol(symbol_name = "dlil_ifnet_head")
+            list_head = kernel.object_from_symbol(symbol_name="dlil_ifnet_head")
 
         for ifnet in mac.MacUtilities.walk_tailq(list_head, "if_link"):
             name = utility.pointer_to_string(ifnet.if_name, 32)
@@ -46,5 +51,12 @@ class Ifconfig(plugins.PluginInterface):
                 yield (0, (f"{name}{unit}", ip, mac_addr, prom))
 
     def run(self):
-        return renderers.TreeGrid([("Interface", str), ("IP Address", str), ("Mac Address", str),
-                                   ("Promiscuous", bool)], self._generator())
+        return renderers.TreeGrid(
+            [
+                ("Interface", str),
+                ("IP Address", str),
+                ("Mac Address", str),
+                ("Promiscuous", bool),
+            ],
+            self._generator(),
+        )
