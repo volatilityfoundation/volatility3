@@ -269,14 +269,8 @@ class Handles(interfaces.plugins.PluginInterface):
         """Parse a process' handle table and yield valid handle table entries,
         going as deep into the table "levels" as necessary."""
 
-        kernel = self.context.modules[self.config["kernel"]]
-
-        virtual = kernel.layer_name
-        kvo = self.context.layers[virtual].config["kernel_virtual_offset"]
-
-        ntkrnlmp = self.context.module(
-            kernel.symbol_table_name, layer_name=virtual, offset=kvo
-        )
+        ntkrnlmp = self.context.modules[self.config["kernel"]]
+        virtual = ntkrnlmp.layer_name
 
         if level > 0:
             subtype = ntkrnlmp.get_type("pointer")

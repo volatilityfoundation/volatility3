@@ -395,32 +395,21 @@ class OBJECT_HEADER(objects.StructType):
                 f"Invalid symbol table name syntax (no {constants.BANG} found)"
             )
 
-        symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
+        symbol_table_name = self.get_symbol_table_name()
 
         try:
             header_offset = self.NameInfoOffset
         except AttributeError:
             # http://codemachine.com/article_objectheader.html (Windows 7 and later)
             name_info_bit = 0x2
-
-            layer = self._context.layers[self.vol.native_layer_name]
-            kvo = layer.config.get("kernel_virtual_offset", None)
-
-            if kvo is None:
-                raise AttributeError(
-                    f"Could not find kernel_virtual_offset for layer: {self.vol.layer_name}"
-                )
-
-            ntkrnlmp = self._context.module(
-                symbol_table_name, layer_name=self.vol.layer_name, offset=kvo
-            )
-            address = ntkrnlmp.get_symbol("ObpInfoMaskToOffset").address
+            ntkrnlmp = self._get_kernel_module()
+            ObpInfoMaskToOffset_address = ntkrnlmp.get_absolute_symbol_address("ObpInfoMaskToOffset")
             calculated_index = self.InfoMask & (name_info_bit | (name_info_bit - 1))
 
             header_offset = self._context.object(
-                symbol_table_name + constants.BANG + "unsigned char",
+                f"{symbol_table_name}{constants.BANG}unsigned char",
                 layer_name=self.vol.native_layer_name,
-                offset=kvo + address + calculated_index,
+                offset=ObpInfoMaskToOffset_address + calculated_index,
             )
 
         if header_offset == 0:
@@ -431,9 +420,26 @@ class OBJECT_HEADER(objects.StructType):
             )
 
         header = self._context.object(
-            symbol_table_name + constants.BANG + "_OBJECT_HEADER_NAME_INFO",
+            f"{symbol_table_name}{constants.BANG}_OBJECT_HEADER_NAME_INFO",
             layer_name=self.vol.layer_name,
             offset=self.vol.offset - header_offset,
             native_layer_name=self.vol.native_layer_name,
         )
         return header
+
+    def _get_kernel_module(self) -> interfaces.context.ModuleInterface:
+        layer = self._context.layers[self.vol.native_layer_name]
+        kvo = layer.config.get("kernel_virtual_offset", None)
+
+        if kvo is None:
+            raise AttributeError(
+                f"Could not find kernel_virtual_offset for layer: {self.vol.layer_name}"
+            )
+        found_module = self._context.modules.get_module_by_offset_and_layer(kvo, self.vol.layer_name)
+        if found_module:
+            return found_module
+
+        return self._context.module(
+                self.get_symbol_table_name(), layer_name=self.vol.layer_name, offset=kvo
+            )
+
