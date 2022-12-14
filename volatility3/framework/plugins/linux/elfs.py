@@ -22,13 +22,20 @@ class Elfs(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
-            requirements.ListRequirement(name = 'pid',
-                                         description = 'Filter on specific process IDs',
-                                         element_type = int,
-                                         optional = True)
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                description="Filter on specific process IDs",
+                element_type=int,
+                optional=True,
+            ),
         ]
 
     def _generator(self, tasks):
@@ -42,20 +49,42 @@ class Elfs(plugins.PluginInterface):
             name = utility.array_to_string(task.comm)
 
             for vma in task.mm.get_mmap_iter():
-                hdr = proc_layer.read(vma.vm_start, 4, pad = True)
-                if not (hdr[0] == 0x7f and hdr[1] == 0x45 and hdr[2] == 0x4c and hdr[3] == 0x46):
+                hdr = proc_layer.read(vma.vm_start, 4, pad=True)
+                if not (
+                    hdr[0] == 0x7F
+                    and hdr[1] == 0x45
+                    and hdr[2] == 0x4C
+                    and hdr[3] == 0x46
+                ):
                     continue
 
                 path = vma.get_name(self.context, task)
 
-                yield (0, (task.pid, name, format_hints.Hex(vma.vm_start), format_hints.Hex(vma.vm_end), path))
+                yield (
+                    0,
+                    (
+                        task.pid,
+                        name,
+                        format_hints.Hex(vma.vm_start),
+                        format_hints.Hex(vma.vm_end),
+                        path,
+                    ),
+                )
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
-        return renderers.TreeGrid([("PID", int), ("Process", str), ("Start", format_hints.Hex),
-                                   ("End", format_hints.Hex), ("File Path", str)],
-                                  self._generator(
-                                      pslist.PsList.list_tasks(self.context,
-                                                               self.config['kernel'],
-                                                               filter_func = filter_func)))
+        return renderers.TreeGrid(
+            [
+                ("PID", int),
+                ("Process", str),
+                ("Start", format_hints.Hex),
+                ("End", format_hints.Hex),
+                ("File Path", str),
+            ],
+            self._generator(
+                pslist.PsList.list_tasks(
+                    self.context, self.config["kernel"], filter_func=filter_func
+                )
+            ),
+        )

@@ -16,11 +16,13 @@ from volatility3.framework.interfaces.configuration import RequirementInterface
 class SymbolInterface:
     """Contains information about a named location in a program's memory."""
 
-    def __init__(self,
-                 name: str,
-                 address: int,
-                 type: Optional[objects.Template] = None,
-                 constant_data: Optional[bytes] = None) -> None:
+    def __init__(
+        self,
+        name: str,
+        address: int,
+        type: Optional[objects.Template] = None,
+        constant_data: Optional[bytes] = None,
+    ) -> None:
         """
 
         Args:
@@ -31,7 +33,9 @@ class SymbolInterface:
         """
         self._name = name
         if constants.BANG in self._name:
-            raise ValueError(f"Symbol names cannot contain the symbol differentiator ({constants.BANG})")
+            raise ValueError(
+                f"Symbol names cannot contain the symbol differentiator ({constants.BANG})"
+            )
 
         # Scope can be added at a later date
         self._location = None
@@ -50,7 +54,7 @@ class SymbolInterface:
         # Objects and ObjectTemplates should *always* get a type_name when they're constructed, so allow the IndexError
         if self.type is None:
             return None
-        return self.type.vol['type_name']
+        return self.type.vol["type_name"]
 
     @property
     def type(self) -> Optional[objects.Template]:
@@ -78,11 +82,13 @@ class BaseSymbolTableInterface:
     Note: table_mapping is a rarely used feature (since symbol tables are typically self-contained)
     """
 
-    def __init__(self,
-                 name: str,
-                 native_types: 'NativeTableInterface',
-                 table_mapping: Optional[Dict[str, str]] = None,
-                 class_types: Optional[Mapping[str, Type[objects.ObjectInterface]]] = None) -> None:
+    def __init__(
+        self,
+        name: str,
+        native_types: "NativeTableInterface",
+        table_mapping: Optional[Dict[str, str]] = None,
+        class_types: Optional[Mapping[str, Type[objects.ObjectInterface]]] = None,
+    ) -> None:
         """
 
         Args:
@@ -110,44 +116,54 @@ class BaseSymbolTableInterface:
 
         If the symbol isn't found, it raises a SymbolError exception
         """
-        raise NotImplementedError("Abstract property get_symbol not implemented by subclass.")
+        raise NotImplementedError(
+            "Abstract property get_symbol not implemented by subclass."
+        )
 
     @property
     def symbols(self) -> Iterable[str]:
         """Returns an iterator of the Symbol names."""
-        raise NotImplementedError("Abstract property symbols not implemented by subclass.")
+        raise NotImplementedError(
+            "Abstract property symbols not implemented by subclass."
+        )
 
     # ## Required Type functions
 
     @property
     def types(self) -> Iterable[str]:
         """Returns an iterator of the Symbol type names."""
-        raise NotImplementedError("Abstract property types not implemented by subclass.")
+        raise NotImplementedError(
+            "Abstract property types not implemented by subclass."
+        )
 
     def get_type(self, name: str) -> objects.Template:
         """Resolves a symbol name into an object template.
 
         If the symbol isn't found it raises a SymbolError exception
         """
-        raise NotImplementedError("Abstract method get_type not implemented by subclass.")
+        raise NotImplementedError(
+            "Abstract method get_type not implemented by subclass."
+        )
 
     # ## Required Symbol enumeration functions
 
     @property
     def enumerations(self) -> Iterable[Any]:
         """Returns an iterator of the Enumeration names."""
-        raise NotImplementedError("Abstract property enumerations not implemented by subclass.")
+        raise NotImplementedError(
+            "Abstract property enumerations not implemented by subclass."
+        )
 
     # ## Native Type Handler
 
     @property
-    def natives(self) -> 'NativeTableInterface':
+    def natives(self) -> "NativeTableInterface":
         """Returns None or a NativeTable for handling space specific native
         types."""
         return self._native_types
 
     @natives.setter
-    def natives(self, value: 'NativeTableInterface') -> None:
+    def natives(self, value: "NativeTableInterface") -> None:
         """Checks the natives value and then applies it internally.
 
         WARNING: This allows changing the underlying size of all the other types referenced in the SymbolTable
@@ -167,7 +183,9 @@ class BaseSymbolTableInterface:
         """
         raise NotImplementedError("Abstract method set_type_class not implemented yet.")
 
-    def optional_set_type_class(self, name: str, clazz: Type[objects.ObjectInterface]) -> bool:
+    def optional_set_type_class(
+        self, name: str, clazz: Type[objects.ObjectInterface]
+    ) -> bool:
         """Calls the set_type_class function but does not throw an exception.
         Returns whether setting the type class was successful.
         Args:
@@ -176,7 +194,7 @@ class BaseSymbolTableInterface:
         """
         try:
             self.set_type_class(name, clazz)
-            
+
             return True
         except ValueError:
             return False
@@ -206,8 +224,10 @@ class BaseSymbolTableInterface:
             # This allows for searching with and without the table name (in case multiple tables contain
             # the same symbol name and we've not specifically been told which one)
             symbol = self.get_symbol(symbol_name)
-            if symbol.type_name is not None and (symbol.type_name == type_name or
-                                                 (symbol.type_name.endswith(constants.BANG + type_name))):
+            if symbol.type_name is not None and (
+                symbol.type_name == type_name
+                or (symbol.type_name.endswith(constants.BANG + type_name))
+            ):
                 yield symbol.name
 
     def get_symbols_by_location(self, offset: int, size: int = 0) -> Iterable[str]:
@@ -216,11 +236,15 @@ class BaseSymbolTableInterface:
         if size < 0:
             raise ValueError("Size must be strictly non-negative")
         if not self._sort_symbols:
-            self._sort_symbols = sorted([(self.get_symbol(sn).address, sn) for sn in self.symbols])
+            self._sort_symbols = sorted(
+                [(self.get_symbol(sn).address, sn) for sn in self.symbols]
+            )
         sort_symbols = self._sort_symbols
         result = bisect.bisect_left(sort_symbols, (offset, ""))
-        while result < len(sort_symbols) and \
-                (sort_symbols[result][0] >= offset and sort_symbols[result][0] <= offset + size):
+        while result < len(sort_symbols) and (
+            sort_symbols[result][0] >= offset
+            and sort_symbols[result][0] <= offset + size
+        ):
             yield sort_symbols[result][1]
             result += 1
 
@@ -247,7 +271,9 @@ class SymbolSpaceInterface(collections.abc.Mapping):
         """Returns all symbols based on the type of the symbol."""
 
     @abstractmethod
-    def get_symbols_by_location(self, offset: int, size: int = 0, table_name: Optional[str] = None) -> Iterable[str]:
+    def get_symbols_by_location(
+        self, offset: int, size: int = 0, table_name: Optional[str] = None
+    ) -> Iterable[str]:
         """Returns all symbols that exist at a specific relative address."""
 
     @abstractmethod
@@ -281,17 +307,21 @@ class SymbolSpaceInterface(collections.abc.Mapping):
         """Adds a symbol_list to the end of the space."""
 
 
-class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableInterface, ABC):
+class SymbolTableInterface(
+    BaseSymbolTableInterface, configuration.ConfigurableInterface, ABC
+):
     """Handles a table of symbols."""
 
     # FIXME: native_types and table_mapping aren't recorded in the configuration
-    def __init__(self,
-                 context: 'interfaces.context.ContextInterface',
-                 config_path: str,
-                 name: str,
-                 native_types: 'NativeTableInterface',
-                 table_mapping: Optional[Dict[str, str]] = None,
-                 class_types: Optional[Mapping[str, Type[objects.ObjectInterface]]] = None) -> None:
+    def __init__(
+        self,
+        context: "interfaces.context.ContextInterface",
+        config_path: str,
+        name: str,
+        native_types: "NativeTableInterface",
+        table_mapping: Optional[Dict[str, str]] = None,
+        class_types: Optional[Mapping[str, Type[objects.ObjectInterface]]] = None,
+    ) -> None:
         """Instantiates an SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
         appropriate schema.
 
@@ -305,9 +335,11 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
             class_types: A dictionary of type names and classes that override StructType when they are instantiated
         """
         configuration.ConfigurableInterface.__init__(self, context, config_path)
-        BaseSymbolTableInterface.__init__(self, name, native_types, table_mapping, class_types = class_types)
+        BaseSymbolTableInterface.__init__(
+            self, name, native_types, table_mapping, class_types=class_types
+        )
 
-    def build_configuration(self) -> 'configuration.HierarchicalDict':
+    def build_configuration(self) -> "configuration.HierarchicalDict":
         config = super().build_configuration()
 
         # Symbol Tables are constructable, and therefore require a class configuration variable
@@ -317,9 +349,13 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
     @classmethod
     def get_requirements(cls) -> List[RequirementInterface]:
         return super().get_requirements() + [
-            requirements.IntRequirement(name = 'symbol_mask', description = 'Address mask for symbols', optional = True,
-                                        default = 0),
-            ]
+            requirements.IntRequirement(
+                name="symbol_mask",
+                description="Address mask for symbols",
+                optional=True,
+                default=0,
+            ),
+        ]
 
 
 class NativeTableInterface(BaseSymbolTableInterface):
@@ -333,7 +369,9 @@ class NativeTableInterface(BaseSymbolTableInterface):
         return []
 
     def get_enumeration(self, name: str) -> objects.Template:
-        raise exceptions.SymbolError(name, self.name, "NativeTables never hold enumerations")
+        raise exceptions.SymbolError(
+            name, self.name, "NativeTables never hold enumerations"
+        )
 
     @property
     def enumerations(self) -> Iterable[str]:

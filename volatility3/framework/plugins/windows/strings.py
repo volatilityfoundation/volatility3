@@ -25,28 +25,39 @@ class Strings(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
-            requirements.ListRequirement(name = 'pid',
-                                         element_type = int,
-                                         description = "Process ID to include (all other processes are excluded)",
-                                         optional = True),
-            requirements.URIRequirement(name = "strings_file", description = "Strings file")
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Windows kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                element_type=int,
+                description="Process ID to include (all other processes are excluded)",
+                optional=True,
+            ),
+            requirements.URIRequirement(
+                name="strings_file", description="Strings file"
+            ),
         ]
         # TODO: Make URLRequirement that can accept a file address which the framework can open
 
     def run(self):
-        return renderers.TreeGrid([("String", str), ("Physical Address", format_hints.Hex), ("Result", str)],
-                                  self._generator())
+        return renderers.TreeGrid(
+            [("String", str), ("Physical Address", format_hints.Hex), ("Result", str)],
+            self._generator(),
+        )
 
     def _generator(self) -> Generator[Tuple, None, None]:
         """Generates results from a strings file."""
-        string_list: List[Tuple[int,bytes]] = []
+        string_list: List[Tuple[int, bytes]] = []
 
         # Test strings file format is accurate
         accessor = resources.ResourceAccessor()
-        strings_fp = accessor.open(self.config['strings_file'], "rb")
+        strings_fp = accessor.open(self.config["strings_file"], "rb")
         line = strings_fp.readline()
         count: float = 0
         while line:
@@ -57,24 +68,35 @@ class Strings(interfaces.plugins.PluginInterface):
             except ValueError:
                 vollog.error(f"Line in unrecognized format: line {count}")
             line = strings_fp.readline()
-        kernel = self.context.modules[self.config['kernel']]
+        kernel = self.context.modules[self.config["kernel"]]
 
-        revmap = self.generate_mapping(self.context,
-                                       kernel.layer_name,
-                                       kernel.symbol_table_name,
-                                       progress_callback = self._progress_callback,
-                                       pid_list = self.config['pid'])
+        revmap = self.generate_mapping(
+            self.context,
+            kernel.layer_name,
+            kernel.symbol_table_name,
+            progress_callback=self._progress_callback,
+            pid_list=self.config["pid"],
+        )
 
         last_prog: float = 0
-        line_count: float  = 0
+        line_count: float = 0
         num_strings = len(string_list)
         for offset, string in string_list:
             line_count += 1
             try:
-                revmap_list = [name + ":" + hex(offset) for (name, offset) in revmap[offset >> 12]]
+                revmap_list = [
+                    name + ":" + hex(offset) for (name, offset) in revmap[offset >> 12]
+                ]
             except (IndexError, KeyError):
                 revmap_list = ["FREE MEMORY"]
-            yield (0, (str(string, 'latin-1'), format_hints.Hex(offset), ", ".join(revmap_list)))
+            yield (
+                0,
+                (
+                    str(string, "latin-1"),
+                    format_hints.Hex(offset),
+                    ", ".join(revmap_list),
+                ),
+            )
             prog = line_count / num_strings * 100
             if round(prog, 1) > last_prog:
                 last_prog = round(prog, 1)
@@ -97,12 +119,14 @@ class Strings(interfaces.plugins.PluginInterface):
         return int(offset), string
 
     @classmethod
-    def generate_mapping(cls,
-                         context: interfaces.context.ContextInterface,
-                         layer_name: str,
-                         symbol_table: str,
-                         progress_callback: constants.ProgressCallback = None,
-                         pid_list: Optional[List[int]] = None) -> Dict[int, Set[Tuple[str, int]]]:
+    def generate_mapping(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        symbol_table: str,
+        progress_callback: constants.ProgressCallback = None,
+        pid_list: Optional[List[int]] = None,
+    ) -> Dict[int, Set[Tuple[str, int]]]:
         """Creates a reverse mapping between virtual addresses and physical
         addresses.
 
@@ -122,39 +146,55 @@ class Strings(interfaces.plugins.PluginInterface):
         reverse_map: Dict[int, Set[Tuple[str, int]]] = dict()
         if isinstance(layer, intel.Intel):
             # We don't care about errors, we just wanted chunks that map correctly
-            for mapval in layer.mapping(0x0, layer.maximum_address, ignore_errors = True):
+            for mapval in layer.mapping(0x0, layer.maximum_address, ignore_errors=True):
                 offset, _, mapped_offset, mapped_size, maplayer = mapval
                 for val in range(mapped_offset, mapped_offset + mapped_size, 0x1000):
                     cur_set = reverse_map.get(mapped_offset >> 12, set())
                     cur_set.add(("kernel", offset))
                     reverse_map[mapped_offset >> 12] = cur_set
                 if progress_callback:
-                    progress_callback((offset * 100) / layer.maximum_address, "Creating reverse kernel map")
+                    progress_callback(
+                        (offset * 100) / layer.maximum_address,
+                        "Creating reverse kernel map",
+                    )
 
             # TODO: Include kernel modules
 
-            for process in pslist.PsList.list_processes(context, layer_name, symbol_table):
+            for process in pslist.PsList.list_processes(
+                context, layer_name, symbol_table
+            ):
                 if not filter(process):
                     proc_id = "Unknown"
                     try:
                         proc_id = process.UniqueProcessId
                         proc_layer_name = process.add_process_layer()
                     except exceptions.InvalidAddressException as excp:
-                        vollog.debug("Process {}: invalid address {} in layer {}".format(
-                            proc_id, excp.invalid_address, excp.layer_name))
+                        vollog.debug(
+                            "Process {}: invalid address {} in layer {}".format(
+                                proc_id, excp.invalid_address, excp.layer_name
+                            )
+                        )
                         continue
 
                     proc_layer = context.layers[proc_layer_name]
                     if isinstance(proc_layer, linear.LinearlyMappedLayer):
-                        for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
+                        for mapval in proc_layer.mapping(
+                            0x0, proc_layer.maximum_address, ignore_errors=True
+                        ):
                             mapped_offset, _, offset, mapped_size, maplayer = mapval
-                            for val in range(mapped_offset, mapped_offset + mapped_size, 0x1000):
+                            for val in range(
+                                mapped_offset, mapped_offset + mapped_size, 0x1000
+                            ):
                                 cur_set = reverse_map.get(mapped_offset >> 12, set())
-                                cur_set.add((f"Process {process.UniqueProcessId}", offset))
+                                cur_set.add(
+                                    (f"Process {process.UniqueProcessId}", offset)
+                                )
                                 reverse_map[mapped_offset >> 12] = cur_set
                             # FIXME: make the progress for all processes, rather than per-process
                             if progress_callback:
-                                progress_callback((offset * 100) / layer.maximum_address,
-                                                  f"Creating mapping for task {process.UniqueProcessId}")
+                                progress_callback(
+                                    (offset * 100) / layer.maximum_address,
+                                    f"Creating mapping for task {process.UniqueProcessId}",
+                                )
 
         return reverse_map
