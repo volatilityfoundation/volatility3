@@ -1,10 +1,10 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-from typing import List, Tuple, Iterator
+from typing import Iterator, List, Tuple
 
 from volatility3 import framework
-from volatility3.framework import exceptions, constants, interfaces, objects
+from volatility3.framework import constants, exceptions, interfaces, objects
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux import extensions
@@ -29,6 +29,9 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('files_struct', extensions.files_struct)
         self.set_type_class('vfsmount', extensions.vfsmount)
         self.set_type_class('kobject', extensions.kobject)
+
+        if 'mnt_namespace' in self.types:
+            self.set_type_class('mnt_namespace', extensions.mnt_namespace)
 
         if 'module' in self.types:
             self.set_type_class('module', extensions.module)

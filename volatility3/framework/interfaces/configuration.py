@@ -73,7 +73,7 @@ class HierarchicalDict(collections.abc.Mapping):
                  separator: str = CONFIG_SEPARATOR) -> None:
         """
         Args:
-            initial_dict: A dictionary to populate the HierachicalDict with initially
+            initial_dict: A dictionary to populate the HierarchicalDict with initially
             separator: A custom hierarchy separator (defaults to CONFIG_SEPARATOR)
         """
         if not (isinstance(separator, str) and len(separator) == 1):
@@ -523,7 +523,7 @@ class ConstructableRequirementInterface(RequirementInterface):
     must happen after the class configuration value has been provided).
     These values are then provided to the object's constructor by name
     as arguments (as well as the standard `context` and `config_path`
-    arguments.
+    arguments).
     """
 
     def __init__(self, *args, **kwargs) -> None:

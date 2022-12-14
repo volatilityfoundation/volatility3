@@ -6,10 +6,10 @@ import collections
 import collections.abc
 import logging
 import struct
-from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, Union as TUnion, overload
+from typing import Any, ClassVar, Dict, Iterable, List, Optional, Tuple, Type, Union as TUnion, overload
 
-from volatility3.framework import interfaces, constants
-from volatility3.framework.objects import templates, utility
+from volatility3.framework import constants, interfaces
+from volatility3.framework.objects import templates
 
 vollog = logging.getLogger(__name__)
 
@@ -136,12 +136,15 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
             if k not in ["context", "data_format", "object_info", "type_name"]:
                 kwargs[k] = v
         kwargs['new_value'] = self.__new_value
-        return (self._context, self._vol.maps[-2]['type_name'], self._vol.maps[-3], self._data_format), kwargs
+        return (self._context, self._vol.maps[-3]['type_name'], self._vol.maps[-2], self._data_format), kwargs
 
     @classmethod
     def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
                     object_info: interfaces.objects.ObjectInformation) -> TUnion[int, float, bool, bytes, str]:
-        data = context.layers.read(object_info.layer_name, object_info.offset, data_format.length)
+        # Don't try to lookup a 0 length data format, incase it's at an invalid offset.  Length 0 means b''
+        data = b''
+        if data_format.length > 0:
+            data = context.layers.read(object_info.layer_name, object_info.offset, data_format.length)
         return convert_data_to_value(data, cls._struct_type, data_format)
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
@@ -203,7 +206,7 @@ class Bytes(PrimitiveObject, bytes):
                 length: int = 1,
                 **kwargs) -> 'Bytes':
         """Creates the appropriate class and returns it so that the native type
-        is inherritted.
+        is inherited.
 
         The only reason the kwargs is added, is so that the
         inheriting types can override __init__ without needing to
@@ -599,6 +602,14 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
                 return 0
             raise IndexError(f"Member not present in array template: {child}")
 
+        @classmethod
+        def child_template(cls, template: interfaces.objects.Template, child: str) -> interfaces.objects.Template:
+            """Returns the template of the child member."""
+            if 'subtype' in template.vol and child == 'subtype':
+                return template.vol.subtype
+            raise IndexError(f"Member not present in array template: {child}")
+
+
     @overload
     def __getitem__(self, i: int) -> interfaces.objects.Template:
         ...
@@ -701,7 +712,7 @@ class AggregateType(interfaces.objects.ObjectInterface):
                     tmp_list[member] = (relative_offset, new_child)
                     # If there's trouble with mutability, consider making update_vol return a clone with the changes
                     # (there will be a few other places that will be necessary) and/or making these part of the
-                    # permanent dictionaries rather than the non-clonable ones
+                    # permanent dictionaries rather than the non-cloneable ones
                     template.update_vol(members = tmp_list)
 
         @classmethod
@@ -711,6 +722,15 @@ class AggregateType(interfaces.objects.ObjectInterface):
             if retlist is None:
                 raise IndexError(f"Member not present in template: {child}")
             return retlist[0]
+
+        @classmethod
+        def child_template(cls, template: interfaces.objects.Template, child: str) -> interfaces.objects.Template:
+            """Returns the template of a child to its parent."""
+            retlist = template.vol.members.get(child, None)
+            if retlist is None:
+                raise IndexError(f"Member not present in template: {child}")
+            return retlist[1]
+
 
         @classmethod
         def has_member(cls, template: interfaces.objects.Template, member_name: str) -> bool:

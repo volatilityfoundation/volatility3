@@ -12,7 +12,7 @@ from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols.windows import pdbutil
 from volatility3.framework.symbols.windows.extensions import network
 from volatility3.plugins import timeliner
-from volatility3.plugins.windows import netscan, modules
+from volatility3.plugins.windows import netscan, modules, info, verinfo
 
 vollog = logging.getLogger(__name__)
 
@@ -31,6 +31,8 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             requirements.VersionRequirement(name = 'netscan', component = netscan.NetScan, version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'modules', component = modules.Modules, version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'pdbutil', component = pdbutil.PDBUtility, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'info', component = info.Info, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'verinfo', component = verinfo.VerInfo, version = (1, 0, 0)),
             requirements.BooleanRequirement(
                 name = 'include-corrupt',
                 description =
@@ -431,7 +433,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 self.context, interfaces.configuration.path_join(self.config_path, 'tcpip'),
                 kernel.layer_name, "tcpip.pdb", tcpip_module.DllBase, tcpip_module.SizeOfImage)
         except exceptions.VolatilityException:
-            vollog.warning("Unable to locate symbols for the memory image's tcpip module")
+            vollog.error("Unable to locate symbols for the memory image's tcpip module")
 
         for netw_obj in self.list_sockets(self.context, kernel.layer_name, kernel.symbol_table_name,
                                           netscan_symbol_table, tcpip_module.DllBase, tcpip_symbol_table):

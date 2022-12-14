@@ -1,4 +1,4 @@
-# This file is opyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
@@ -74,7 +74,7 @@ class Kevents(interfaces.plugins.PluginInterface):
     @classmethod
     def _walk_klist_array(cls, kernel, fdp, array_pointer_member, array_size_member):
         """
-        Convience wrapper for walking an array of lists of kernel events
+        Convenience wrapper for walking an array of lists of kernel events
         Handles invalid address references
         """
         try:

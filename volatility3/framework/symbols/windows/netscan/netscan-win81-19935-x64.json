@@ -1,0 +1,723 @@
+{
+    "base_types": {
+        "unsigned long": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned char": {
+            "kind": "char",
+            "size": 1,
+            "signed": false,
+            "endian": "little"
+        },
+        "pointer": {
+            "kind": "int",
+            "size": 8,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned int": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned short": {
+            "kind": "int",
+            "size": 2,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned be short": {
+            "kind": "int",
+            "size": 2,
+            "signed": false,
+            "endian": "big"
+        },
+        "long long": {
+          "endian": "little",
+          "kind": "int",
+          "signed": true,
+          "size": 8
+        },
+        "long": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        }
+    },
+  "symbols": {},
+  "user_types": {
+    "_TCP_SYN_ENDPOINT": {
+        "fields": {
+            "Owner": {
+                "offset": 64,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_SYN_OWNER"
+                    }
+                }
+            },
+            "CreateTime": {
+                "offset": 0,
+                "type": {
+                    "kind": "union",
+                    "name": "_LARGE_INTEGER"
+                }
+            },
+            "ListEntry": {
+                "offset": 16,
+                "type": {
+                    "kind": "union",
+                    "name": "nt_symbols!_LIST_ENTRY"
+                }
+            },
+            "InetAF": {
+                "offset": 48,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_INETAF"
+                    }
+
+                }
+            },
+            "LocalPort": {
+                "offset": 100,
+                "type": {
+                    "kind": "base",
+                    "name": "unsigned be short"
+                }
+            },
+            "RemotePort": {
+                "offset": 102,
+                "type": {
+                    "kind": "base",
+                    "name": "unsigned be short"
+                }
+            },
+            "LocalAddr": {
+                "offset": 56,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_LOCAL_ADDRESS"
+                    }
+                }
+            },
+            "RemoteAddress": {
+                "offset": 80,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_IN_ADDR"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 104
+    },
+    "_TCP_TIMEWAIT_ENDPOINT": {
+        "fields": {
+            "CreateTime": {
+                "offset": 0,
+                "type": {
+                    "kind": "union",
+                    "name": "_LARGE_INTEGER"
+                }
+            },
+            "ListEntry": {
+                "offset": 0,
+                "type": {
+                    "kind": "union",
+                    "name": "nt_symbols!_LIST_ENTRY"
+                }
+            },
+            "InetAF": {
+                "offset": 24,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_INETAF"
+                    }
+                }
+            },
+            "LocalPort": {
+                "offset": 48,
+                "type": {
+                    "kind": "base",
+                    "name": "unsigned be short"
+                }
+            },
+            "RemotePort": {
+                "offset": 50,
+                "type": {
+                    "kind": "base",
+                    "name": "unsigned be short"
+                }
+            },
+            "LocalAddr": {
+                "offset": 56,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_LOCAL_ADDRESS"
+                    }
+                }
+            },
+            "RemoteAddress": {
+                "offset": 64,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_IN_ADDR"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 72
+    },
+    "_UDP_ENDPOINT": {
+        "fields": {
+            "Owner": {
+                "offset": 40,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_EPROCESS"
+                    }
+
+                }
+            },
+            "CreateTime": {
+                "offset": 88,
+                "type": {
+                    "kind": "union",
+                    "name": "_LARGE_INTEGER"
+                }
+            },
+            "LocalAddr": {
+                "offset": 96,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_LOCAL_ADDRESS"
+                    }
+                }
+            },
+            "InetAF": {
+                "offset": 32,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_INETAF"
+                    }
+
+                }
+            },
+            "Port": {
+                "offset": 120,
+                "type": {
+                    "kind": "base",
+                    "name": "unsigned be short"
+                }
+            },
+            "Next": {
+                "offset": 112,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_UDP_ENDPOINT"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 130
+    },
+    "_TCP_LISTENER": {
+        "fields": {
+            "Owner": {
+                "offset": 40,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_EPROCESS"
+                    }
+
+                }
+            },
+            "CreateTime": {
+                "offset": 64,
+                "type": {
+                    "kind": "union",
+                    "name": "_LARGE_INTEGER"
+                }
+            },
+            "LocalAddr": {
+                "offset": 88,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_LOCAL_ADDRESS"
+                    }
+
+                }
+            },
+            "InetAF": {
+                "offset": 96,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_INETAF"
+                    }
+
+                }
+            },
+            "Port": {
+                "offset": 106,
+                "type": {
+                    "kind": "base",
+                    "name": "unsigned be short"
+                }
+            },
+            "Next": {
+                "offset": 112,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_TCP_LISTENER"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 108
+    },
+    "_TCP_ENDPOINT": {
+        "fields": {
+            "Owner": {
+                "offset": 608,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_EPROCESS"
+                    }
+
+                }
+            },
+            "CreateTime": {
+                "offset": 624,
+                "type": {
+                    "kind": "union",
+                    "name": "_LARGE_INTEGER"
+                }
+            },
+            "ListEntry": {
+                "offset": 40,
+                "type": {
+                    "kind": "union",
+                    "name": "nt_symbols!_LIST_ENTRY"
+                }
+            },
+            "AddrInfo": {
+                "offset": 24,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_ADDRINFO"
+                    }
+                }
+            },
+            "InetAF": {
+                "offset": 16,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_INETAF"
+                    }
+
+                }
+            },
+            "LocalPort": {
+                "offset": 112,
+                "type": {
+                    "kind": "base",
+                    "name": "unsigned be short"
+                }
+            },
+            "RemotePort": {
+                "offset": 114,
+                "type": {
+                    "kind": "base",
+                    "name": "unsigned be short"
+                }
+            },
+            "State": {
+                "offset": 108,
+                "type": {
+                    "kind": "enum",
+                    "name": "TCPStateEnum"
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 608
+    },
+    "_LOCAL_ADDRESS": {
+        "fields": {
+            "pData": {
+                "offset": 16,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_IN_ADDR"
+                        }
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 24
+    },
+    "_ADDRINFO": {
+        "fields": {
+            "Local": {
+                "offset": 0,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_LOCAL_ADDRESS"
+                    }
+                }
+            },
+            "Remote": {
+                "offset": 16,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_IN_ADDR"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 24
+    },
+    "_IN_ADDR": {
+        "fields": {
+            "addr4": {
+                "offset": 0,
+                "type": {
+                    "count": 4,
+                    "subtype": {
+                        "kind": "base",
+                        "name": "unsigned char"
+                    },
+                    "kind": "array"
+                }
+            },
+            "addr6": {
+                "offset": 0,
+                "type": {
+                    "count": 16,
+                    "subtype": {
+                        "kind": "base",
+                        "name": "unsigned char"
+                    },
+                    "kind": "array"
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 6
+    },
+    "_INETAF": {
+        "fields": {
+            "AddressFamily": {
+                "offset": 24,
+                "type": {
+                    "kind": "base",
+                    "name": "unsigned short"
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 26
+    },
+    "_SYN_OWNER": {
+        "fields": {
+            "Process": {
+                "offset": 40,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_EPROCESS"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 48
+    },
+    "_LARGE_INTEGER": {
+      "fields": {
+        "HighPart": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        },
+        "LowPart": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "QuadPart": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "long long"
+          }
+        },
+        "u": {
+          "offset": 0,
+          "type": {
+            "kind": "struct",
+            "name": "__unnamed_2"
+          }
+        }
+      },
+      "kind": "union",
+      "size": 8
+    },
+    "_INET_COMPARTMENT_SET": {
+        "fields": {
+            "InetCompartment": {
+                "offset": 328,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_INET_COMPARTMENT"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 384
+    },
+    "_INET_COMPARTMENT": {
+        "fields": {
+            "ProtocolCompartment": {
+                "offset": 32,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_PROTOCOL_COMPARTMENT"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 48
+    },
+    "_PROTOCOL_COMPARTMENT": {
+        "fields": {
+            "PortPool": {
+                "offset": 0,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                      "kind": "struct",
+                      "name": "_INET_PORT_POOL"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 16
+    },
+    "_PORT_ASSIGNMENT_ENTRY": {
+        "fields": {
+            "Entry": {
+                "offset": 8,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                      "kind": "base",
+                      "name": "void"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 24
+    },
+    "_PORT_ASSIGNMENT_LIST": {
+        "fields": {
+            "Assignments": {
+                "offset": 0,
+                "type": {
+                    "count": 256,
+                    "kind": "array",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_PORT_ASSIGNMENT_ENTRY"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 6144
+    },
+    "_PORT_ASSIGNMENT": {
+        "fields": {
+            "InPaBigPoolBase": {
+                "offset": 24,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                      "kind": "struct",
+                      "name": "_PORT_ASSIGNMENT_LIST"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 32
+    },
+    "_INET_PORT_POOL": {
+        "fields": {
+            "PortAssignments": {
+                "offset": 216,
+                "type": {
+                    "count": 256,
+                    "kind": "array",
+                    "subtype": {
+                        "kind": "pointer",
+                        "subtype": {
+                          "kind": "struct",
+                          "name": "_PORT_ASSIGNMENT"
+                        }
+                    }
+                }
+            },
+            "PortBitMap": {
+                "offset": 200,
+                "type": {
+                    "kind": "struct",
+                    "name": "nt_symbols!_RTL_BITMAP"
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 11200
+    },
+    "_PARTITION": {
+        "fields": {
+            "Endpoints" : {
+                "offset": 8,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                      "kind": "struct",
+                      "name": "nt_symbols!_RTL_DYNAMIC_HASH_TABLE"
+                    }
+                }
+            },
+            "UnknownHashTable" : {
+                "offset": 16,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                      "kind": "struct",
+                      "name": "nt_symbols!_RTL_DYNAMIC_HASH_TABLE"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 128
+    },
+    "_PARTITION_TABLE": {
+        "fields": {
+            "Partitions": {
+                "offset": 0,
+                "type": {
+                    "count": 1,
+                    "kind": "array",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_PARTITION"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 128
+    }
+  },
+  "enums": {
+    "TCPStateEnum": {
+        "base": "long",
+        "constants": {
+            "CLOSED": 0,
+            "LISTENING": 1,
+            "SYN_SENT": 2,
+            "SYN_RCVD": 3,
+            "ESTABLISHED": 4,
+            "FIN_WAIT1": 5,
+            "FIN_WAIT2": 6,
+            "CLOSE_WAIT": 7,
+            "CLOSING": 8,
+            "LAST_ACK": 9,
+            "TIME_WAIT": 12,
+            "DELETE_TCB": 13
+        },
+        "size": 4
+    }
+  },
+  "metadata": {
+    "producer": {
+      "version": "0.0.1",
+      "name": "japhlange-by-hand",
+      "datetime": "2020-06-12T14:00:00"
+    },
+    "format": "6.0.0"
+  }
+}

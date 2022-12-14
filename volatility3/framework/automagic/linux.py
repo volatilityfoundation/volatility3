@@ -3,10 +3,12 @@
 #
 
 import logging
+import os
 from typing import Optional, Tuple, Type
 
-from volatility3.framework import interfaces, constants
+from volatility3.framework import constants, interfaces
 from volatility3.framework.automagic import symbol_cache, symbol_finder
+from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, scanners
 from volatility3.framework.symbols import linux
 
@@ -23,6 +25,13 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
               layer_name: str,
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to identify linux within this layer."""
+        # Version check the SQlite cache
+        required = (1, 0, 0)
+        if not requirements.VersionRequirement.matches_required(required, symbol_cache.SqliteCache.version):
+            vollog.info(
+                f"SQLiteCache version not suitable: required {required} found {symbol_cache.SqliteCache.version}")
+            return None
+
         # Bail out by default unless we can stack properly
         layer = context.layers[layer_name]
         join = interfaces.configuration.path_join
@@ -32,7 +41,9 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         if isinstance(layer, intel.Intel):
             return None
 
-        linux_banners = LinuxBannerCache.load_banners()
+        identifiers_path = os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME)
+        linux_banners = symbol_cache.SqliteCache(identifiers_path).get_identifier_dictionary(
+            operating_system = 'linux')
         # If we have no banners, don't bother scanning
         if not linux_banners:
             vollog.info("No Linux banners found - if this is a linux plugin, please check your symbol files location")
@@ -43,9 +54,8 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
             dtb = None
             vollog.debug(f"Identified banner: {repr(banner)}")
 
-            symbol_files = linux_banners.get(banner, None)
-            if symbol_files:
-                isf_path = symbol_files[0]
+            isf_path = linux_banners.get(banner, None)
+            if isf_path:
                 table_name = context.symbol_space.free_table_name('LintelStacker')
                 table = linux.LinuxKernelIntermedSymbols(context,
                                                          'temporary.' + table_name,
@@ -141,18 +151,11 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         return addr - 0xc0000000
 
 
-class LinuxBannerCache(symbol_cache.SymbolBannerCache):
-    """Caches the banners found in the Linux symbol files."""
-
-    os = "linux"
-    symbol_name = "linux_banner"
-    banner_path = constants.LINUX_BANNERS_PATH
-
-
 class LinuxSymbolFinder(symbol_finder.SymbolFinder):
     """Linux symbol loader based on uname signature strings."""
 
     banner_config_key = "kernel_banner"
-    banner_cache = LinuxBannerCache
+    operating_system = 'linux'
     symbol_class = "volatility3.framework.symbols.linux.LinuxKernelIntermedSymbols"
     find_aslr = lambda cls, *args: LinuxIntelStacker.find_aslr(*args)[1]
+    exclusion_list = ['mac', 'windows']

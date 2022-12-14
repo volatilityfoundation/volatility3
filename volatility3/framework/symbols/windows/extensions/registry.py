@@ -1,14 +1,14 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import contextlib
 import enum
 import logging
 import struct
-from typing import Optional, Iterable, Union
+from typing import Iterable, Optional, Union
 
-from volatility3.framework import constants, exceptions, objects, interfaces
-from volatility3.framework.layers.registry import RegistryHive, RegistryInvalidIndex, RegistryFormatException
+from volatility3.framework import constants, exceptions, interfaces, objects
+from volatility3.framework.layers.registry import RegistryFormatException, RegistryHive, RegistryInvalidIndex
 
 vollog = logging.getLogger(__name__)
 
@@ -75,10 +75,10 @@ class CMHIVE(objects.StructType):
         """
 
         for attr in ["FileFullPath", "FileUserName", "HiveRootPath"]:
-            try:
-                return getattr(self, attr).get_string()
-            except (AttributeError, exceptions.InvalidAddressException):
-                pass
+            with contextlib.suppress(AttributeError, exceptions.InvalidAddressException):
+                name = getattr(self, attr)
+                if name.Length > 0:
+                    return name.get_string()
 
         return None
 
@@ -264,19 +264,22 @@ class CM_KEY_VALUE(objects.StructType):
         if self_type == RegValueTypes.REG_DWORD:
             if len(data) != struct.calcsize("<L"):
                 raise ValueError(f"Size of data does not match the type of registry value {self.get_name()}")
-            return struct.unpack("<L", data)[0]
+            res, = struct.unpack("<L", data)
+            return res
         if self_type == RegValueTypes.REG_DWORD_BIG_ENDIAN:
             if len(data) != struct.calcsize(">L"):
                 raise ValueError(f"Size of data does not match the type of registry value {self.get_name()}")
-            return struct.unpack(">L", data)[0]
+            res, = struct.unpack(">L", data)
+            return res
         if self_type == RegValueTypes.REG_QWORD:
             if len(data) != struct.calcsize("<Q"):
                 raise ValueError(f"Size of data does not match the type of registry value {self.get_name()}")
-            return struct.unpack("<Q", data)[0]
+            res, = struct.unpack("<Q", data)
+            return res
         if self_type in [
-                RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK, RegValueTypes.REG_MULTI_SZ,
-                RegValueTypes.REG_BINARY, RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR, RegValueTypes.REG_RESOURCE_LIST,
-                RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST
+            RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK, RegValueTypes.REG_MULTI_SZ,
+            RegValueTypes.REG_BINARY, RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR, RegValueTypes.REG_RESOURCE_LIST,
+            RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST
         ]:
             return data
         if self_type == RegValueTypes.REG_NONE:

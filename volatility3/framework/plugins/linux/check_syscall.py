@@ -3,11 +3,11 @@
 #
 """A module containing a collection of plugins that produce data typically
 found in Linux's /proc file system."""
+import contextlib
 import logging
 from typing import List
 
-from volatility3.framework import exceptions, interfaces
-from volatility3.framework import renderers, constants
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.renderers import format_hints
@@ -40,11 +40,9 @@ class Check_syscall(plugins.PluginInterface):
 
         symbol_list = []
         for sn in vmlinux.symbols:
-            try:
+            with contextlib.suppress(exceptions.SymbolError):
                 # When requesting the symbol from the module, a full resolve is performed
                 symbol_list.append((vmlinux.get_symbol(sn).address, sn))
-            except exceptions.SymbolError:
-                pass
         sorted_symbols = sorted(symbol_list)
 
         sym_address = 0
@@ -80,7 +78,7 @@ class Check_syscall(plugins.PluginInterface):
 
     def _get_table_info_disassembly(self, ptr_sz, vmlinux):
         """Find the size of the system call table by disassembling functions
-        that immediately reference it in their first isntruction This is in the
+        that immediately reference it in their first instruction This is in the
         form 'cmp reg,NR_syscalls'."""
         table_size = 0
 
@@ -152,7 +150,7 @@ class Check_syscall(plugins.PluginInterface):
         except exceptions.SymbolError:
             ia32_symbol = None
 
-        if ia32_symbol != None:
+        if ia32_symbol is not None:
             ia32_info = self._get_table_info(vmlinux, "ia32_sys_call_table", ptr_sz)
             tables.append(("32bit", ia32_info))
 

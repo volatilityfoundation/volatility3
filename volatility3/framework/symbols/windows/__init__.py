@@ -1,10 +1,11 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-import volatility3.framework.symbols.windows.extensions.pool
+import contextlib
+
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import extensions
-from volatility3.framework.symbols.windows.extensions import registry, pool
+from volatility3.framework.symbols.windows.extensions import pe, pool, registry
 
 
 class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
@@ -38,30 +39,24 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_SHARED_CACHE_MAP', extensions.SHARED_CACHE_MAP)
         self.set_type_class('_VACB', extensions.VACB)
         self.set_type_class('_POOL_TRACKER_BIG_PAGES', pool.POOL_TRACKER_BIG_PAGES)
+        self.set_type_class('_IMAGE_DOS_HEADER', pe.IMAGE_DOS_HEADER)
+
+        # Might not necessarily defined in every version of windows
+        self.optional_set_type_class('_IMAGE_NT_HEADERS', pe.IMAGE_NT_HEADERS)
+        self.optional_set_type_class('_IMAGE_NT_HEADERS64', pe.IMAGE_NT_HEADERS)
 
         # This doesn't exist in very specific versions of windows
-        try:
+        with contextlib.suppress(ValueError):
             if self.get_type("_POOL_TRACKER_BIG_PAGES").has_member("PoolType"):
                 self.set_type_class('_POOL_HEADER', pool.POOL_HEADER_VISTA)
             else:
                 self.set_type_class('_POOL_HEADER', pool.POOL_HEADER)
-        except ValueError:
-            pass
 
         # these don't exist in windows XP
-        try:
-            self.set_type_class('_MMADDRESS_NODE', extensions.MMVAD_SHORT)
-        except ValueError:
-            pass
+        self.optional_set_type_class('_MMADDRESS_NODE', extensions.MMVAD_SHORT)
 
         # these were introduced starting in windows 8
-        try:
-            self.set_type_class('_MM_AVL_NODE', extensions.MMVAD_SHORT)
-        except ValueError:
-            pass
+        self.optional_set_type_class('_MM_AVL_NODE', extensions.MMVAD_SHORT)
 
         # these were introduced starting in windows 7
-        try:
-            self.set_type_class('_RTL_BALANCED_NODE', extensions.MMVAD_SHORT)
-        except ValueError:
-            pass
+        self.optional_set_type_class('_RTL_BALANCED_NODE', extensions.MMVAD_SHORT)

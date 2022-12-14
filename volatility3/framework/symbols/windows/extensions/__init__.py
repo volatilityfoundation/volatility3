@@ -3,19 +3,22 @@
 #
 
 import collections.abc
+import contextlib
 import datetime
 import functools
 import logging
 import math
-from typing import Iterable, Iterator, Optional, Union, Tuple, List
+from typing import Generator, Iterable, Iterator, List, Optional, Tuple, Union
 
 from volatility3.framework import constants, exceptions, interfaces, objects, renderers, symbols
+from volatility3.framework.interfaces.objects import ObjectInterface
 from volatility3.framework.layers import intel
 from volatility3.framework.renderers import conversion
 from volatility3.framework.symbols import generic
-from volatility3.framework.symbols.windows.extensions import pool, pe, kdbg
+from volatility3.framework.symbols.windows.extensions import kdbg, pe, pool
 
 vollog = logging.getLogger(__name__)
+
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
@@ -84,7 +87,7 @@ class MMVAD_SHORT(objects.StructType):
 
         if tag in ["VadS", "VadF"]:
             target = "_MMVAD_SHORT"
-        elif tag != None and tag.startswith("Vad"):
+        elif tag is not None and tag.startswith("Vad"):
             target = "_MMVAD"
         elif depth == 0:
             # the root node at depth 0 is allowed to not have a tag
@@ -194,8 +197,8 @@ class MMVAD_SHORT(objects.StructType):
 
         raise AttributeError("Unable to find the parent member")
 
-    def get_start(self):
-        """Get the VAD's starting virtual address."""
+    def get_start(self) -> int:
+        """Get the VAD's starting virtual address. This is the first accessible byte in the range."""
 
         if self.has_member("StartingVpn"):
 
@@ -213,8 +216,8 @@ class MMVAD_SHORT(objects.StructType):
 
         raise AttributeError("Unable to find the starting VPN member")
 
-    def get_end(self):
-        """Get the VAD's ending virtual address."""
+    def get_end(self) -> int:
+        """Get the VAD's ending virtual address. This is the last accessible byte in the range."""
 
         if self.has_member("EndingVpn"):
 
@@ -230,6 +233,10 @@ class MMVAD_SHORT(objects.StructType):
                 return ((self.Core.EndingVpn + 1) << 12) - 1
 
         raise AttributeError("Unable to find the ending VPN member")
+
+    def get_size(self) -> int:
+        """Get the size of the VAD region. The OS ensures page granularity."""
+        return (self.get_end() - self.get_start()) + 1
 
     def get_commit_charge(self):
         """Get the VAD's commit charge (number of committed pages)"""
@@ -303,18 +310,18 @@ class MMVAD(MMVAD_SHORT):
 
         file_name = renderers.NotApplicableValue()
 
-        try:
+        with contextlib.suppress(exceptions.InvalidAddressException):
             # this is for xp and 2003
             if self.has_member("ControlArea"):
-                file_name = self.ControlArea.FilePointer.FileName.get_string()
+                filename_obj = self.ControlArea.FilePointer.FileName
 
             # this is for vista through windows 7
             else:
-                file_name = self.Subsection.ControlArea.FilePointer.dereference().cast(
-                    "_FILE_OBJECT").FileName.get_string()
+                filename_obj = self.Subsection.ControlArea.FilePointer.dereference().cast(
+                    "_FILE_OBJECT").FileName
 
-        except exceptions.InvalidAddressException:
-            pass
+            if filename_obj.Length > 0:
+                file_name = filename_obj.get_string()
 
         return file_name
 
@@ -348,16 +355,32 @@ class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel device objects."""
 
     def get_device_name(self) -> str:
+        """Get device's name from the object header."""
         header = self.get_object_header()
         return header.NameInfo.Name.String  # type: ignore
+
+    def get_attached_devices(self) -> Generator[ObjectInterface, None, None]:
+        """Enumerate the attached device's objects"""
+        device = self.AttachedDevice.dereference()
+        while device:
+            yield device
+            device = device.AttachedDevice.dereference()
 
 
 class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel driver objects."""
 
     def get_driver_name(self) -> str:
+        """Get driver's name from the object header."""
         header = self.get_object_header()
         return header.NameInfo.Name.String  # type: ignore
+
+    def get_devices(self) -> Generator[ObjectInterface, None, None]:
+        """Enumerate the driver's device objects"""
+        device = self.DeviceObject.dereference()
+        while device:
+            yield device
+            device = device.NextDevice.dereference()
 
     def is_valid(self) -> bool:
         """Determine if the object is valid."""
@@ -393,15 +416,11 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
         # this pointer needs to be checked against native_layer_name because the object may
         # be instantiated from a primary (virtual) layer or a memory (physical) layer.
         if self._context.layers[self.vol.native_layer_name].is_valid(self.DeviceObject):
-            try:
+            with contextlib.suppress(ValueError):
                 name = f"\\Device\\{self.DeviceObject.get_device_name()}"
-            except ValueError:
-                pass
 
-        try:
+        with contextlib.suppress(TypeError, exceptions.InvalidAddressException):
             name += self.FileName.String
-        except (TypeError, exceptions.InvalidAddressException):
-            pass
 
         return name
 
@@ -428,9 +447,17 @@ class KMUTANT(objects.StructType, pool.ExecutiveObject):
 class ETHREAD(objects.StructType):
     """A class for executive thread objects."""
 
-    def owning_process(self, kernel_layer: str = None) -> interfaces.objects.ObjectInterface:
+    def owning_process(self) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""
-        return self.ThreadsProcess.dereference(kernel_layer)
+        
+        # For Windows XPs
+        if(self.has_member("ThreadsProcess")):
+            return self.ThreadsProcess.dereference().cast("_EPROCESS")
+        # For Windows Vista and later versions
+        elif(self.has_member("Tcb") and self.Tcb.has_member("Process")):
+            return self.Tcb.Process.dereference().cast("_EPROCESS")
+        else:
+            raise AttributeError("Unable to find the owning process of ethread")
 
     def get_cross_thread_flags(self) -> str:
         dictCrossThreadFlags = {
@@ -461,10 +488,13 @@ class UNICODE_STRING(objects.StructType):
         # We explicitly do *not* catch errors here, we allow an exception to be thrown
         # (otherwise there's no way to determine anything went wrong)
         # It's up to the user of this method to catch exceptions
-        return self.Buffer.dereference().cast("string",
-                                              max_length = self.Length,
-                                              errors = "replace",
-                                              encoding = "utf16")
+
+        # We manually construct an object rather than casting a dereferenced pointer in case
+        # the buffer length is 0 and the pointer is a NULL pointer
+        return self._context.object(self.vol.type_name.split(constants.BANG)[0] + constants.BANG + 'string',
+                                    layer_name = self.Buffer.vol.native_layer_name,
+                                    offset = self.Buffer,
+                                    max_length = self.Length, errors = 'replace', encoding = 'utf16')
 
     String = property(get_string)
 
@@ -551,9 +581,9 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         proc_layer = self._context.layers[proc_layer_name]
         if not proc_layer.is_valid(self.Peb):
             raise exceptions.InvalidAddressException(proc_layer_name, self.Peb,
-                                                     f"Invalid address at {self.Peb:0x}")
+                                                     f"Invalid Peb address at {self.Peb:0x}")
 
-        sym_table = self.vol.type_name.split(constants.BANG)[0]
+        sym_table = self.get_symbol_table_name()
         peb = self._context.object(f"{sym_table}{constants.BANG}_PEB",
                                    layer_name = proc_layer_name,
                                    offset = self.Peb)
@@ -651,7 +681,10 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         except AttributeError:
             return False
 
-        return value != 0 and value != None
+        if value:
+            return True
+
+        return False
 
     def get_vad_root(self):
 
@@ -693,7 +726,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             env = envar[:split_index]
             var = envar[split_index + 1:]
 
-            # Exlude parse problem with some types of env
+            # Exclude parse problem with some types of env
             if env and var:
                 yield env, var
 
@@ -720,7 +753,10 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
         trans_layer = self._context.layers[layer]
 
         try:
-            trans_layer.is_valid(self.vol.offset)
+            is_valid = trans_layer.is_valid(self.vol.offset)
+            if not is_valid:
+                return
+
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
             return
@@ -735,9 +771,7 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
         while link.vol.offset not in seen:
             obj_offset = link.vol.offset - relative_offset
 
-            try:
-                trans_layer.is_valid(obj_offset)
-            except exceptions.InvalidAddressException:
+            if not trans_layer.is_valid(obj_offset):
                 return
 
             obj = self._context.object(symbol_type,
@@ -895,8 +929,8 @@ class CONTROL_AREA(objects.StructType):
                 return False
 
             # The first SubsectionBase should not be page aligned
-            #subsection = self.get_subsection()
-            #if subsection.SubsectionBase & self.PAGE_MASK == 0:
+            # subsection = self.get_subsection()
+            # if subsection.SubsectionBase & self.PAGE_MASK == 0:
             #    return False
         except exceptions.InvalidAddressException:
             return False
@@ -945,7 +979,7 @@ class CONTROL_AREA(objects.StructType):
             subsection_offset = starting_sector * 0x200
 
             # Similar to the check in is_valid(), make sure the SubsectionBase is not page aligned.
-            #if subsection.SubsectionBase & self.PAGE_MASK == 0:
+            # if subsection.SubsectionBase & self.PAGE_MASK == 0:
             #    break
 
             ptecount = 0
@@ -976,8 +1010,8 @@ class CONTROL_AREA(objects.StructType):
                     # Currently just a temporary workaround to deal with custom bit flag
                     # in the PFN field for pages in transition state.
                     # See https://github.com/volatilityfoundation/volatility3/pull/475
-                    physoffset = (mmpte.u.Trans.PageFrameNumber & (( 1 << 33 ) - 1 ) ) << 12
-                    
+                    physoffset = (mmpte.u.Trans.PageFrameNumber & ((1 << 33) - 1)) << 12
+
                     yield physoffset, file_offset, self.PAGE_SIZE
 
                 # Go to the next PTE entry
@@ -1087,12 +1121,10 @@ class SHARED_CACHE_MAP(objects.StructType):
         iterval = 0
         while (iterval < full_blocks) and (full_blocks <= 4):
             vacb_obj = self.InitialVacbs[iterval]
-            try:
+            with contextlib.suppress(exceptions.InvalidAddressException):
                 # Make sure that the SharedCacheMap member of the VACB points back to the parent object.
                 if vacb_obj.SharedCacheMap == self.vol.offset:
                     self.save_vacb(vacb_obj, vacb_list)
-            except exceptions.InvalidAddressException:
-                pass
             iterval += 1
 
         # We also have to account for the spill over data that is not found in the full blocks.

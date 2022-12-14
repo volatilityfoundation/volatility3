@@ -12,7 +12,7 @@ import traceback
 from typing import Generator, Iterable, List, Optional, Tuple, Type
 
 from volatility3 import framework
-from volatility3.framework import renderers, automagic, interfaces, plugins, exceptions
+from volatility3.framework import automagic, exceptions, interfaces, plugins, renderers
 from volatility3.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
@@ -74,10 +74,6 @@ class Timeliner(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.StringRequirement(name = 'plugins',
-                                           description = "Comma separated list of plugins to run",
-                                           optional = True,
-                                           default = None),
             requirements.BooleanRequirement(
                 name = 'record-config',
                 description = "Whether to record the state of all the plugins once complete",
@@ -105,14 +101,23 @@ class Timeliner(interfaces.plugins.PluginInterface):
 
         return [sortable(timestamp) for timestamp in data[2:]]
 
-    def _generator(self, runable_plugins: List[TimeLinerInterface]) -> Optional[Iterable[Tuple[int, Tuple]]]:
+    def _generator(self, runnable_plugins: List[TimeLinerInterface]) -> Optional[Iterable[Tuple[int, Tuple]]]:
         """Takes a timeline, sorts it and output the data from each relevant
         row from each plugin."""
         # Generate the results for each plugin
         data = []
-        for plugin in runable_plugins:
+
+        # Open the bodyfile now, so we can start outputting to it immediately
+        if self.config.get('create-bodyfile', True):
+            file_data = self.open("volatility.body")
+            fp = io.TextIOWrapper(file_data, write_through = True)
+        else:
+            file_data = None
+            fp = None
+
+        for plugin in runnable_plugins:
             plugin_name = plugin.__class__.__name__
-            self._progress_callback((runable_plugins.index(plugin) * 100) // len(runable_plugins),
+            self._progress_callback((runnable_plugins.index(plugin) * 100) // len(runnable_plugins),
                                     f"Running plugin {plugin_name}...")
             try:
                 vollog.log(logging.INFO, f"Running {plugin_name}")
@@ -130,27 +135,31 @@ class Timeliner(interfaces.plugins.PluginInterface):
                         times.get(TimeLinerType.ACCESSED, renderers.NotApplicableValue()),
                         times.get(TimeLinerType.CHANGED, renderers.NotApplicableValue())
                     ]))
-            except Exception:
-                vollog.log(logging.INFO, f"Exception occurred running plugin: {plugin_name}")
-                vollog.log(logging.DEBUG, traceback.format_exc())
-        for data_item in sorted(data, key = self._sort_function):
-            yield data_item
 
-        # Write out a body file if necessary
-        if self.config.get('create-bodyfile', True):
-            with self.open("volatility.body") as file_data:
-                with io.TextIOWrapper(file_data, write_through = True) as fp:
-                    for (plugin_name, item) in self.timeline:
+                    # Write each entry because the body file doesn't need to be sorted
+                    if fp:
                         times = self.timeline[(plugin_name, item)]
                         # Body format is: MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime
 
                         if self._any_time_present(times):
-                            fp.write("|{} - {}||||||{}|{}|{}|{}\n".format(
+                            fp.write("|{} - {}|0|0|0|0|0|{}|{}|{}|{}\n".format(
                                 plugin_name, self._sanitize_body_format(item),
                                 self._text_format(times.get(TimeLinerType.ACCESSED, "")),
                                 self._text_format(times.get(TimeLinerType.MODIFIED, "")),
                                 self._text_format(times.get(TimeLinerType.CHANGED, "")),
                                 self._text_format(times.get(TimeLinerType.CREATED, ""))))
+            except Exception:
+                vollog.log(logging.INFO, f"Exception occurred running plugin: {plugin_name}")
+                vollog.log(logging.DEBUG, traceback.format_exc())
+
+        for data_item in sorted(data, key = self._sort_function):
+            yield data_item
+
+        # Write out a body file if necessary
+        if self.config.get('create-bodyfile', True):
+            if fp:
+                fp.close()
+                file_data.close()
 
     def _sanitize_body_format(self, value):
         return value.replace("|", "_")
@@ -164,7 +173,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
     def _text_format(self, value):
         """Formats a value as text, in case it is an AbsentValue"""
         if isinstance(value, interfaces.renderers.BaseAbsentValue):
-            return ""
+            return "0"
         if isinstance(value, datetime.datetime):
             return int(value.timestamp())
         return value
@@ -202,7 +211,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
 
                 if isinstance(plugin, TimeLinerInterface):
                     if not len(filter_list) or any(
-                        [filter in plugin.__module__ + '.' + plugin.__class__.__name__ for filter in filter_list]):
+                            [filter in plugin.__module__ + '.' + plugin.__class__.__name__ for filter in filter_list]):
                         plugins_to_run.append(plugin)
             except exceptions.UnsatisfiedException as excp:
                 # Remove the failed plugin from the list and continue
