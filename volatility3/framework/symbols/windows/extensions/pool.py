@@ -403,7 +403,9 @@ class OBJECT_HEADER(objects.StructType):
             # http://codemachine.com/article_objectheader.html (Windows 7 and later)
             name_info_bit = 0x2
             ntkrnlmp = self._get_kernel_module()
-            ObpInfoMaskToOffset_address = ntkrnlmp.get_absolute_symbol_address("ObpInfoMaskToOffset")
+            ObpInfoMaskToOffset_address = ntkrnlmp.get_absolute_symbol_address(
+                "ObpInfoMaskToOffset"
+            )
             calculated_index = self.InfoMask & (name_info_bit | (name_info_bit - 1))
 
             header_offset = self._context.object(
@@ -435,11 +437,12 @@ class OBJECT_HEADER(objects.StructType):
             raise AttributeError(
                 f"Could not find kernel_virtual_offset for layer: {self.vol.layer_name}"
             )
-        found_module = self._context.modules.get_module_by_offset_and_layer(kvo, self.vol.layer_name)
+        found_module = self._context.modules.get_module_by_offset_and_layer(
+            kvo, self.vol.layer_name
+        )
         if found_module:
             return found_module
 
         return self._context.module(
-                self.get_symbol_table_name(), layer_name=self.vol.layer_name, offset=kvo
-            )
-
+            self.get_symbol_table_name(), layer_name=self.vol.layer_name, offset=kvo
+        )

@@ -349,10 +349,15 @@ class ModuleContainer(collections.abc.Mapping):
             if module.symbol_table_name == symbol_table:
                 yield module_name
 
-    def get_module_by_offset_and_layer(self, offset: int, layer_name: str) -> Optional[ModuleInterface]:
+    def get_module_by_offset_and_layer(
+        self, offset: int, layer_name: str
+    ) -> Optional[ModuleInterface]:
         for module_name in self._modules:
             current_module = self._modules[module_name]
-            if current_module.offset == offset and current_module.layer_name == layer_name:
+            if (
+                current_module.offset == offset
+                and current_module.layer_name == layer_name
+            ):
                 return current_module
 
         return None
