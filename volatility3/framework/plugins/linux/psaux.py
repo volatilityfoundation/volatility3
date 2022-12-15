@@ -4,14 +4,15 @@
 
 from typing import Optional
 
+from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework import symbols, exceptions, renderers, interfaces
+from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
 from volatility3.plugins.linux import pslist
-from volatility3.framework.interfaces import plugins
+
 
 class PsAux(plugins.PluginInterface):
-    """ Lists processes with their command line arguments """
+    """Lists processes with their command line arguments"""
 
     _required_framework_version = (2, 0, 0)
 
@@ -19,17 +20,25 @@ class PsAux(plugins.PluginInterface):
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
-            requirements.ListRequirement(name = 'pid',
-                                         description = 'Filter on specific process IDs',
-                                         element_type = int,
-                                         optional = True)
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                description="Filter on specific process IDs",
+                element_type=int,
+                optional=True,
+            ),
         ]
 
-    def _get_command_line_args(self, task: interfaces.objects.ObjectInterface,
-                                    name: str) -> Optional[str]:
+    def _get_command_line_args(
+        self, task: interfaces.objects.ObjectInterface, name: str
+    ) -> Optional[str]:
         """
         Reads the command line arguments of a process
         These are stored on the userland stack
@@ -68,7 +77,7 @@ class PsAux(plugins.PluginInterface):
                 return renderers.UnreadableValue()
 
             # the arguments are null byte terminated, replace the nulls with spaces
-            s = argv.decode().split('\x00')
+            s = argv.decode().split("\x00")
             args = " ".join(s)
         else:
             # kernel thread
@@ -83,7 +92,7 @@ class PsAux(plugins.PluginInterface):
         return args
 
     def _generator(self, tasks):
-        """ Generates a listing of processes along with command line arguments """
+        """Generates a listing of processes along with command line arguments"""
 
         # walk the process list and report the arguments
         for task in tasks:
@@ -101,11 +110,13 @@ class PsAux(plugins.PluginInterface):
             yield (0, (pid, ppid, name, args))
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
-        return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str), ("ARGS", str)],
-                                    self._generator(
-                                        pslist.PsList.list_tasks(self.context,
-                                                                self.config['kernel'],
-                                                                filter_func = filter_func)))
-
+        return renderers.TreeGrid(
+            [("PID", int), ("PPID", int), ("COMM", str), ("ARGS", str)],
+            self._generator(
+                pslist.PsList.list_tasks(
+                    self.context, self.config["kernel"], filter_func=filter_func
+                )
+            ),
+        )

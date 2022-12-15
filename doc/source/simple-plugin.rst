@@ -9,7 +9,7 @@ of a normal plugin, and reuses other plugins appropriately.
 .. note::
 
     This document will not include the complete code necessary for a
-    working plugin (such as imports, etc) since it's designed to focus on the necessary componets for writing a plugin.
+    working plugin (such as imports, etc) since it's designed to focus on the necessary components for writing a plugin.
     For complete and functioning plugins, the ``framework/plugins`` directory should be consulted.
 
 Inherit from PluginInterface

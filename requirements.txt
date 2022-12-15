@@ -14,9 +14,6 @@ capstone>=3.0.5
 # This is required by plugins that decrypt passwords, password hashes, etc.
 pycryptodome
 
-# This can improve error messages regarding improperly configured ISF files.
-jsonschema>=2.3.0
-
 # This is required for memory acquisition via leechcore/pcileech.
 leechcorepyc>=2.4.0
 

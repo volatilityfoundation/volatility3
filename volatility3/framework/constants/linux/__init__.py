@@ -13,4 +13,4 @@ PAGE_SHIFT = 12
 """The value hard coded from the Linux Kernel (hence not extracted from the layer itself)"""
 
 # include/linux/sched.h
-PF_KTHREAD = 0x00200000	 # I'm a kernel thread
+PF_KTHREAD = 0x00200000  # I'm a kernel thread
