@@ -395,23 +395,20 @@ class OBJECT_HEADER(objects.StructType):
                 f"Invalid symbol table name syntax (no {constants.BANG} found)"
             )
 
-        symbol_table_name = self.get_symbol_table_name()
+        ntkrnlmp = self._get_kernel_module()
 
         try:
             header_offset = self.NameInfoOffset
         except AttributeError:
             # http://codemachine.com/article_objectheader.html (Windows 7 and later)
             name_info_bit = 0x2
-            ntkrnlmp = self._get_kernel_module()
-            ObpInfoMaskToOffset_address = ntkrnlmp.get_absolute_symbol_address(
-                "ObpInfoMaskToOffset"
-            )
-            calculated_index = self.InfoMask & (name_info_bit | (name_info_bit - 1))
 
-            header_offset = self._context.object(
-                f"{symbol_table_name}{constants.BANG}unsigned char",
+            calculated_index = self.InfoMask & (name_info_bit | (name_info_bit - 1))
+            header_offset = ntkrnlmp.object(
+                f"unsigned char",
                 layer_name=self.vol.native_layer_name,
-                offset=ObpInfoMaskToOffset_address + calculated_index,
+                offset=ntkrnlmp.get_symbol("ObpInfoMaskToOffset").address
+                + calculated_index,
             )
 
         if header_offset == 0:
@@ -421,11 +418,12 @@ class OBJECT_HEADER(objects.StructType):
                 )
             )
 
-        header = self._context.object(
-            f"{symbol_table_name}{constants.BANG}_OBJECT_HEADER_NAME_INFO",
+        header = ntkrnlmp.object(
+            f"_OBJECT_HEADER_NAME_INFO",
             layer_name=self.vol.layer_name,
             offset=self.vol.offset - header_offset,
             native_layer_name=self.vol.native_layer_name,
+            absolute=True,
         )
         return header
 
