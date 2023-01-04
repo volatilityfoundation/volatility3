@@ -621,6 +621,7 @@ class LayerContainer(collections.abc.Mapping):
 
     def __init__(self) -> None:
         self._layers: Dict[str, DataLayerInterface] = {}
+        self.index: int = 0
 
     def read(self, layer: str, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads from a particular layer at offset for length bytes.
@@ -702,12 +703,8 @@ class LayerContainer(collections.abc.Mapping):
         Returns:
             A string containing a name, prefixed with prefix, not currently in use within the LayerContainer
         """
-        if prefix not in self:
-            return prefix
-        count = 1
-        while f"{prefix}_{count}" in self:
-            count += 1
-        return f"{prefix}_{count}"
+        self.index += 1
+        return f"{prefix}_{self.index - 1}"
 
     def __getitem__(self, name: str) -> DataLayerInterface:
         """Returns the layer of specified name."""

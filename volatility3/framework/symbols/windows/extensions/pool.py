@@ -435,11 +435,6 @@ class OBJECT_HEADER(objects.StructType):
             raise AttributeError(
                 f"Could not find kernel_virtual_offset for layer: {self.vol.layer_name}"
             )
-        found_module = self._context.modules.get_module_by_offset_and_layer(
-            kvo, self.vol.layer_name
-        )
-        if found_module:
-            return found_module
 
         return self._context.module(
             self.get_symbol_table_name(), layer_name=self.vol.layer_name, offset=kvo
