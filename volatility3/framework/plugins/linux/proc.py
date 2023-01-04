@@ -5,7 +5,7 @@
 found in Linux's /proc file system."""
 
 import logging
-from typing import Callable, List, Generator, Iterable, Type, Optional
+from typing import Callable, Generator, Type, Optional
 
 from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
@@ -15,6 +15,7 @@ from volatility3.framework.renderers import format_hints
 from volatility3.plugins.linux import pslist
 
 vollog = logging.getLogger(__name__)
+
 
 class Maps(plugins.PluginInterface):
     """Lists all memory maps for all processes."""
@@ -48,9 +49,9 @@ class Maps(plugins.PluginInterface):
             ),
             requirements.ListRequirement(
                 name="address",
-                description="Process virtual memory address to include "
-                "(all other address ranges are excluded). This must be "
-                "a base address, not an address within the desired range.",
+                description="Process virtual memory addresses to include "
+                "(all other VMA sections are excluded). This can be any "
+                "virtual address within the VMA section.",
                 element_type=int,
                 optional=True,
             ),
@@ -69,21 +70,25 @@ class Maps(plugins.PluginInterface):
         task: interfaces.objects.ObjectInterface,
         filter_func: Callable[
             [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: False,
+        ] = lambda _: True,
     ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Lists the Virtual Memory Areas of a specific process.
 
         Args:
             task: task object from which to list the vma
-            filter_func: Function to take a vma and return True if it should be filtered out
+            filter_func: Function to take a vma and return False if it should be filtered out
 
         Returns:
-            A list of vmas based on the task and filtered based on the filter function
+            Yields vmas based on the task and filtered based on the filter function
         """
         if task.mm:
             for vma in task.mm.get_mmap_iter():
-                if not filter_func(vma):
+                if filter_func(vma):
                     yield vma
+                else:
+                    vollog.debug(
+                        f"Excluded vma at offset {vma.vol.offset:#x} for pid {task.pid} due to filter_func"
+                    )
 
     @classmethod
     def vma_dump(
@@ -106,29 +111,28 @@ class Maps(plugins.PluginInterface):
         Returns:
             An open FileInterface object containing the complete data for the task or None in the case of failure
         """
+        pid = task.pid
         try:
             vm_start = vma.vm_start
             vm_end = vma.vm_end
         except AttributeError:
-            vollog.debug("Unable to find the vm_start and vm_end")
-            return None
-        
-        vm_size = vm_end - vm_start
-        if 0 < maxsize < vm_size:
-            vollog.debug(
-                f"Skip virtual memory dump {vm_start:#x}-{vm_end:#x} due to maxsize limit"
-            )
+            vollog.debug(f"Unable to find the vm_start and vm_end for pid {pid}")
             return None
 
-        pid = "Unknown"
         try:
-            pid = task.tgid
             proc_layer_name = task.add_process_layer()
         except exceptions.InvalidAddressException as excp:
             vollog.debug(
                 "Process {}: invalid address {} in layer {}".format(
                     pid, excp.invalid_address, excp.layer_name
                 )
+            )
+            return None
+
+        vm_size = vm_end - vm_start
+        if 0 < maxsize < vm_size:
+            vollog.warning(
+                f"Skip virtual memory dump for pid {pid} between {vm_start:#x}-{vm_end:#x} as {vm_size} is larger than maxsize limit of {maxsize}"
             )
             return None
 
@@ -141,8 +145,6 @@ class Maps(plugins.PluginInterface):
             while offset < vm_start + vm_size:
                 to_read = min(chunk_size, vm_start + vm_size - offset)
                 data = proc_layer.read(offset, to_read, pad=True)
-                if not data:
-                    break
                 file_handle.write(data)
                 offset += to_read
 
@@ -154,16 +156,24 @@ class Maps(plugins.PluginInterface):
 
     def _generator(self, tasks):
         # build filter for addresses if required
-        address_list = self.config.get("address", [])
-        if address_list == []:
+        address_list = self.config.get("address", None)
+        if not address_list:
             # do not filter as no address_list was supplied
-            filter_func = lambda _: False 
+            vma_filter_func = lambda _: True
         else:
             # filter for any vm_start that matches the supplied address config
-            def filter_function(x: interfaces.objects.ObjectInterface) -> bool:
-                return x.vm_start not in address_list
+            def vma_filter_function(x: interfaces.objects.ObjectInterface) -> bool:
+                addrs_in_vma = [
+                    addr for addr in address_list if x.vm_start <= addr <= x.vm_end
+                ]
 
-            filter_func = filter_function
+                # if any of the user supplied addresses would fall within this vma return true
+                if addrs_in_vma:
+                    return True
+                else:
+                    return False
+
+            vma_filter_func = vma_filter_function
 
         for task in tasks:
             if not task.mm:
@@ -171,7 +181,7 @@ class Maps(plugins.PluginInterface):
 
             name = utility.array_to_string(task.comm)
 
-            for vma in self.list_vmas(task, filter_func=filter_func):
+            for vma in self.list_vmas(task, filter_func=vma_filter_func):
                 flags = vma.get_protection()
                 page_offset = vma.get_page_offset()
                 major = 0
