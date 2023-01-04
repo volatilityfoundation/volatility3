@@ -64,8 +64,6 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
         ]
 
     def _generator(self):
-        kernel = self.context.modules[self.config["kernel"]]
-
         rules = yarascan.YaraScan.process_yara_options(dict(self.config))
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
