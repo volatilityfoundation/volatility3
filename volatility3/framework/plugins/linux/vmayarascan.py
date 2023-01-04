@@ -10,6 +10,7 @@ from volatility3.framework.renderers import format_hints
 from volatility3.plugins import yarascan
 from volatility3.plugins.linux import pslist
 
+
 class VmaYaraScan(interfaces.plugins.PluginInterface):
     """Scans all virtual memory areas for tasks using yara."""
 
