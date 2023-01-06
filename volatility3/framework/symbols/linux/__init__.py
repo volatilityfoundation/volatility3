@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-from typing import Iterator, List, Tuple
+from typing import Iterator, List, Tuple, Optional
 
 from volatility3 import framework
 from volatility3.framework import constants, exceptions, interfaces, objects
@@ -17,27 +17,38 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         super().__init__(*args, **kwargs)
 
         # Set-up Linux specific types
-        self.set_type_class("file", extensions.struct_file)
-        self.set_type_class("list_head", extensions.list_head)
-        self.set_type_class("mm_struct", extensions.mm_struct)
-        self.set_type_class("super_block", extensions.super_block)
-        self.set_type_class("task_struct", extensions.task_struct)
-        self.set_type_class("vm_area_struct", extensions.vm_area_struct)
-        self.set_type_class("qstr", extensions.qstr)
-        self.set_type_class("dentry", extensions.dentry)
-        self.set_type_class("fs_struct", extensions.fs_struct)
-        self.set_type_class("files_struct", extensions.files_struct)
-        self.set_type_class("vfsmount", extensions.vfsmount)
-        self.set_type_class("kobject", extensions.kobject)
+        self.set_type_class('file', extensions.struct_file)
+        self.set_type_class('list_head', extensions.list_head)
+        self.set_type_class('mm_struct', extensions.mm_struct)
+        self.set_type_class('super_block', extensions.super_block)
+        self.set_type_class('task_struct', extensions.task_struct)
+        self.set_type_class('vm_area_struct', extensions.vm_area_struct)
+        self.set_type_class('qstr', extensions.qstr)
+        self.set_type_class('dentry', extensions.dentry)
+        self.set_type_class('fs_struct', extensions.fs_struct)
+        self.set_type_class('files_struct', extensions.files_struct)
+        self.set_type_class('kobject', extensions.kobject)
+        # Might not exist in the current symbols
+        self.optional_set_type_class('module', extensions.module)
 
-        if "mnt_namespace" in self.types:
-            self.set_type_class("mnt_namespace", extensions.mnt_namespace)
+        # Mount
+        self.set_type_class('vfsmount', extensions.vfsmount)
+        # Might not exist in older kernels or the current symbols
+        self.optional_set_type_class('mount', extensions.mount)
+        self.optional_set_type_class('mnt_namespace', extensions.mnt_namespace)
 
-        if "module" in self.types:
-            self.set_type_class("module", extensions.module)
-
-        if "mount" in self.types:
-            self.set_type_class("mount", extensions.mount)
+        # Network
+        self.set_type_class('net', extensions.net)
+        self.set_type_class('socket', extensions.socket)
+        self.set_type_class('sock', extensions.sock)
+        self.set_type_class('inet_sock', extensions.inet_sock)
+        self.set_type_class('unix_sock', extensions.unix_sock)
+        # Might not exist in older kernels or the current symbols
+        self.optional_set_type_class('netlink_sock', extensions.netlink_sock)
+        self.optional_set_type_class('vsock_sock', extensions.vsock_sock)
+        self.optional_set_type_class('packet_sock', extensions.packet_sock)
+        self.optional_set_type_class('bt_sock', extensions.bt_sock)
+        self.optional_set_type_class('xdp_sock', extensions.xdp_sock)
 
 
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
@@ -194,6 +205,10 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         task: interfaces.objects.ObjectInterface,
     ):
 
+        # task.files can be null
+        if not task.files:
+            return
+
         fd_table = task.files.get_fds()
         if fd_table == 0:
             return
@@ -304,3 +319,28 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             )
             yield list_struct
             list_start = getattr(list_struct, list_member)
+
+    @classmethod
+    def container_of(
+        cls, addr: int, type_name: str, member_name: str, vmlinux: interfaces.context.ModuleInterface
+    ) -> Optional[interfaces.objects.ObjectInterface]:
+        """Cast a member of a structure out to the containing structure.
+        It mimicks the Linux kernel macro container_of() see include/linux.kernel.h
+
+        Args:
+            addr: The pointer to the member.
+            type_name: The type of the container struct this is embedded in.
+            member_name: The name of the member within the struct.
+            vmlinux: The kernel symbols object
+
+        Returns:
+            The constructed object or None
+        """
+
+        if not addr:
+            return
+
+        type_dec = vmlinux.get_type(type_name)
+        member_offset = type_dec.relative_child_offset(member_name)
+        container_addr = addr - member_offset
+        return vmlinux.object(object_type=type_name, offset=container_addr, absolute=True)
