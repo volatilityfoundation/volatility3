@@ -46,10 +46,12 @@ class Lsof(plugins.PluginInterface):
         ]
 
     @classmethod
-    def list_fds(cls,
-                 context: interfaces.context.ContextInterface,
-                 symbol_table: str,
-                 filter_func: Callable[[int], bool] = lambda _: False):
+    def list_fds(
+        cls,
+        context: interfaces.context.ContextInterface,
+        symbol_table: str,
+        filter_func: Callable[[int], bool] = lambda _: False,
+    ):
 
         linuxutils_symbol_table = None  # type: ignore
         for task in pslist.PsList.list_tasks(context, symbol_table, filter_func):
@@ -62,18 +64,17 @@ class Lsof(plugins.PluginInterface):
             pid = int(task.pid)
 
             fd_generator = linux.LinuxUtilities.files_descriptors_for_process(
-                context,
-                linuxutils_symbol_table,
-                task)
+                context, linuxutils_symbol_table, task
+            )
 
             for fd_fields in fd_generator:
                 yield pid, task_comm, task, fd_fields
 
     def _generator(self, pids, symbol_table):
         filter_func = pslist.PsList.create_pid_filter(pids)
-        fds_generator = self.list_fds(self.context,
-                                      symbol_table,
-                                      filter_func=filter_func)
+        fds_generator = self.list_fds(
+            self.context, symbol_table, filter_func=filter_func
+        )
 
         for pid, task_comm, _task, fd_fields in fds_generator:
             fd_num, _filp, full_path = fd_fields
@@ -82,8 +83,8 @@ class Lsof(plugins.PluginInterface):
             yield (0, fields)
 
     def run(self):
-        pids = self.config.get('pid', None)
-        symbol_table = self.config['kernel']
+        pids = self.config.get("pid", None)
+        symbol_table = self.config["kernel"]
 
         tree_grid_args = [("PID", int), ("Process", str), ("FD", int), ("Path", str)]
         return renderers.TreeGrid(tree_grid_args, self._generator(pids, symbol_table))

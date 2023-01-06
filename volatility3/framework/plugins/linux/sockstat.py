@@ -16,6 +16,7 @@ from volatility3.plugins.linux import lsof
 
 vollog = logging.getLogger(__name__)
 
+
 class SockHandlers(interfaces.configuration.VersionableInterface):
     """Handles several socket families extracting the sockets information."""
 
@@ -56,7 +57,9 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         nethead = self._vmlinux.object_from_symbol(symbol_name="net_namespace_list")
         net_symname = self._vmlinux.symbol_table_name + constants.BANG + "net"
         for net in nethead.to_list(net_symname, "list"):
-            net_device_symname = self._vmlinux.symbol_table_name + constants.BANG + "net_device"
+            net_device_symname = (
+                self._vmlinux.symbol_table_name + constants.BANG + "net_device"
+            )
             for net_dev in net.dev_base_head.to_list(net_device_symname, "dev_list"):
                 if net.get_inode() != netns_id:
                     continue
@@ -64,7 +67,9 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
                 netdevices_map[net_dev.ifindex] = dev_name
         return netdevices_map
 
-    def process_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str], Dict]:
+    def process_sock(
+        self, sock: objects.StructType
+    ) -> Tuple[objects.StructType, Tuple[str, str, str], Dict]:
         """Takes a kernel generic `sock` object and processes it with its respective socket family
 
         Args:
@@ -86,7 +91,12 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
                 return unix_sock, sock_stat, socket_filter
             except exceptions.SymbolError as e:
                 # Cannot finds the *_sock type in the symbols
-                vollog.log(constants.LOGLEVEL_V, "Error processing socket family '%s': %s", family, e)
+                vollog.log(
+                    constants.LOGLEVEL_V,
+                    "Error processing socket family '%s': %s",
+                    family,
+                    e,
+                )
         else:
             vollog.log(constants.LOGLEVEL_V, "Unsupported family '%s'", family)
 
@@ -100,7 +110,9 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         return sock, sock_stat, socket_filter
 
-    def _update_socket_filters_info(self, sock: objects.Pointer, socket_filter: dict) -> None:
+    def _update_socket_filters_info(
+        self, sock: objects.Pointer, socket_filter: dict
+    ) -> None:
         """Get information from the socket and reuseport filters
 
         Args:
@@ -117,7 +129,9 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             socket_filter["filter_type"] = "reuseport_filter"
             self._extract_socket_filter_info(sock_reuseport_cb, socket_filter)
 
-    def _extract_socket_filter_info(self, sock_filter: objects.Pointer, socket_filter: dict) -> None:
+    def _extract_socket_filter_info(
+        self, sock_filter: objects.Pointer, socket_filter: dict
+    ) -> None:
         """Get specific information for each type of filter
 
         Args:
@@ -146,7 +160,9 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             if bpfprog_name:
                 socket_filter["bpf_filter_name"] = bpfprog_name
 
-    def _unix_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+    def _unix_sock(
+        self, sock: objects.StructType
+    ) -> Tuple[objects.StructType, Tuple[str, str, str]]:
         """Handles the AF_UNIX socket family
 
         Args:
@@ -171,7 +187,9 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return unix_sock, sock_stat
 
-    def _inet_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+    def _inet_sock(
+        self, sock: objects.StructType
+    ) -> Tuple[objects.StructType, Tuple[str, str, str]]:
         """Handles the AF_INET/6 socket families
 
         Args:
@@ -191,7 +209,9 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return inet_sock, sock_stat
 
-    def _netlink_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+    def _netlink_sock(
+        self, sock: objects.StructType
+    ) -> Tuple[objects.StructType, Tuple[str, str, str]]:
         """Handles the AF_NETLINK socket family
 
         Args:
@@ -221,7 +241,9 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return netlink_sock, sock_stat
 
-    def _vsock_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+    def _vsock_sock(
+        self, sock: objects.StructType
+    ) -> Tuple[objects.StructType, Tuple[str, str, str]]:
         """Handles the AF_VSOCK socket family
 
         Args:
@@ -241,7 +263,9 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return vsock_sock, sock_stat
 
-    def _packet_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+    def _packet_sock(
+        self, sock: objects.StructType
+    ) -> Tuple[objects.StructType, Tuple[str, str, str]]:
         """Handles the AF_PACKET socket family
 
         Args:
@@ -262,7 +286,9 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return packet_sock, sock_stat
 
-    def _xdp_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+    def _xdp_sock(
+        self, sock: objects.StructType
+    ) -> Tuple[objects.StructType, Tuple[str, str, str]]:
         """Handles the AF_XDP socket family
 
         Args:
@@ -304,7 +330,9 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return xdp_sock, sock_stat
 
-    def _bluetooth_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+    def _bluetooth_sock(
+        self, sock: objects.StructType
+    ) -> Tuple[objects.StructType, Tuple[str, str, str]]:
         """Handles the AF_BLUETOOTH socket family
 
         Args:
@@ -324,11 +352,17 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         if bt_protocol == "HCI":
             if self._vmlinux.has_type("hci_pinfo"):
                 pinfo = bt_sock.cast("hci_pinfo")
-                if pinfo.has_member("hdev") and self._vmlinux.has_type("hci_dev") \
-                        and pinfo.hdev.has_member("dev_name"):
+                if (
+                    pinfo.has_member("hdev")
+                    and self._vmlinux.has_type("hci_dev")
+                    and pinfo.hdev.has_member("dev_name")
+                ):
                     src_addr = utility.array_to_string(pinfo.hdev.dev_name)
             else:
-                vollog.log(constants.LOGLEVEL_V, "Type definition for 'hci_pinfo' is not available in the symbols")
+                vollog.log(
+                    constants.LOGLEVEL_V,
+                    "Type definition for 'hci_pinfo' is not available in the symbols",
+                )
         elif bt_protocol == "L2CAP":
             if self._vmlinux.has_type("l2cap_pinfo"):
                 pinfo = bt_sock.cast("l2cap_pinfo")
@@ -337,7 +371,10 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
                 src_port = pinfo.chan.sport
                 dst_port = pinfo.chan.psm
             else:
-                vollog.log(constants.LOGLEVEL_V, "Type definition for 'l2cap_pinfo' is not available in the symbols")
+                vollog.log(
+                    constants.LOGLEVEL_V,
+                    "Type definition for 'l2cap_pinfo' is not available in the symbols",
+                )
         elif bt_protocol == "RFCOMM":
             if self._vmlinux.has_type("rfcomm_pinfo"):
                 pinfo = bt_sock.cast("rfcomm_pinfo")
@@ -345,21 +382,30 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
                 dst_addr = bt_addr(pinfo.dst)
                 src_port = pinfo.channel
             else:
-                vollog.log(constants.LOGLEVEL_V, "Type definition for 'rfcomm_pinfo' is not available in the symbols")
+                vollog.log(
+                    constants.LOGLEVEL_V,
+                    "Type definition for 'rfcomm_pinfo' is not available in the symbols",
+                )
         elif bt_protocol == "SCO":
             if self._vmlinux.has_type("sco_pinfo"):
                 pinfo = bt_sock.cast("sco_pinfo")
                 src_addr = bt_addr(pinfo.src)
                 dst_addr = bt_addr(pinfo.dst)
             else:
-                vollog.log(constants.LOGLEVEL_V, "Type definition for 'sco_pinfo' is not available in the symbols")
+                vollog.log(
+                    constants.LOGLEVEL_V,
+                    "Type definition for 'sco_pinfo' is not available in the symbols",
+                )
         else:
-            vollog.log(constants.LOGLEVEL_V, "Unsupported bluetooth protocol '%s'", bt_protocol)
+            vollog.log(
+                constants.LOGLEVEL_V, "Unsupported bluetooth protocol '%s'", bt_protocol
+            )
 
         state = bt_sock.get_state()
 
         sock_stat = src_addr, src_port, dst_addr, dst_port, state
         return bt_sock, sock_stat
+
 
 class Sockstat(plugins.PluginInterface):
     """Lists all network connections for all processes."""
@@ -371,31 +417,48 @@ class Sockstat(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name="kernel", description="Linux kernel",
-                                           architectures=["Intel32", "Intel64"]),
-            requirements.VersionRequirement(name="SockHandlers", component=SockHandlers, version=(1, 0, 0)),
-            requirements.PluginRequirement(name="lsof", plugin=lsof.Lsof, version=(1, 1, 0)),
-            requirements.VersionRequirement(name="linuxutils", component=linux.LinuxUtilities, version=(2, 0, 0)),
-            requirements.BooleanRequirement(name="unix",
-                                            description=("Show UNIX domain Sockets only"),
-                                            default=False,
-                                            optional=True),
-            requirements.ListRequirement(name="pids",
-                                         description="Filter results by process IDs. "
-                                                     "It takes the root PID namespace identifiers.",
-                                         element_type=int,
-                                         optional=True),
-            requirements.IntRequirement(name="netns",
-                                        description="Filter results by network namespace. "
-                                                    "Otherwise, all of them are shown.",
-                                        optional=True),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="SockHandlers", component=SockHandlers, version=(1, 0, 0)
+            ),
+            requirements.PluginRequirement(
+                name="lsof", plugin=lsof.Lsof, version=(1, 1, 0)
+            ),
+            requirements.VersionRequirement(
+                name="linuxutils", component=linux.LinuxUtilities, version=(2, 0, 0)
+            ),
+            requirements.BooleanRequirement(
+                name="unix",
+                description=("Show UNIX domain Sockets only"),
+                default=False,
+                optional=True,
+            ),
+            requirements.ListRequirement(
+                name="pids",
+                description="Filter results by process IDs. "
+                "It takes the root PID namespace identifiers.",
+                element_type=int,
+                optional=True,
+            ),
+            requirements.IntRequirement(
+                name="netns",
+                description="Filter results by network namespace. "
+                "Otherwise, all of them are shown.",
+                optional=True,
+            ),
         ]
 
     @classmethod
-    def list_sockets(cls,
-                     context: interfaces.context.ContextInterface,
-                     symbol_table: str,
-                     filter_func: Callable[[int], bool] = lambda _: False):
+    def list_sockets(
+        cls,
+        context: interfaces.context.ContextInterface,
+        symbol_table: str,
+        filter_func: Callable[[int], bool] = lambda _: False,
+    ):
         """Returns every single socket descriptor
 
         Args:
@@ -433,7 +496,9 @@ class Sockstat(plugins.PluginInterface):
             if not d_inode:
                 continue
 
-            socket_alloc = linux.LinuxUtilities.container_of(d_inode, "socket_alloc", "vfs_inode", vmlinux)
+            socket_alloc = linux.LinuxUtilities.container_of(
+                d_inode, "socket_alloc", "vfs_inode", vmlinux
+            )
             socket = socket_alloc.socket
 
             if not (socket and socket.sk):
@@ -466,7 +531,9 @@ class Sockstat(plugins.PluginInterface):
         Returns:
             `sock_stat` and `protocol` formatted.
         """
-        sock_stat = [NotAvailableValue() if field is None else str(field) for field in sock_stat]
+        sock_stat = [
+            NotAvailableValue() if field is None else str(field) for field in sock_stat
+        ]
         if protocol is None:
             protocol = NotAvailableValue()
 
@@ -494,26 +561,49 @@ class Sockstat(plugins.PluginInterface):
                    extended information such as socket filters, bpf info, etc.
         """
         filter_func = lsof.pslist.PsList.create_pid_filter(pids)
-        socket_generator = self.list_sockets(self.context, symbol_table, filter_func=filter_func)
+        socket_generator = self.list_sockets(
+            self.context, symbol_table, filter_func=filter_func
+        )
 
-        for task, netns_id, fd_num, family, sock_type, protocol, sock_fields in socket_generator:
+        for (
+            task,
+            netns_id,
+            fd_num,
+            family,
+            sock_type,
+            protocol,
+            sock_fields,
+        ) in socket_generator:
             if netns_id_arg and netns_id_arg != netns_id:
                 continue
 
             sock, sock_stat, extended = sock_fields
             sock_stat, protocol = self._format_fields(sock_stat, protocol)
 
-            socket_filter_str = ",".join(f"{k}={v}" for k, v in extended.items()) if extended else NotAvailableValue()
+            socket_filter_str = (
+                ",".join(f"{k}={v}" for k, v in extended.items())
+                if extended
+                else NotAvailableValue()
+            )
 
-            fields = (netns_id, task.pid, fd_num, format_hints.Hex(sock.vol.offset),
-                      family, sock_type, protocol, *sock_stat, socket_filter_str)
+            fields = (
+                netns_id,
+                task.pid,
+                fd_num,
+                format_hints.Hex(sock.vol.offset),
+                family,
+                sock_type,
+                protocol,
+                *sock_stat,
+                socket_filter_str,
+            )
 
             yield (0, fields)
 
     def run(self):
-        pids = self.config.get('pids')
-        netns_id = self.config['netns']
-        symbol_table = self.config['kernel']
+        pids = self.config.get("pids")
+        netns_id = self.config["netns"]
+        symbol_table = self.config["kernel"]
 
         tree_grid_args = [
             ("NetNS", int),

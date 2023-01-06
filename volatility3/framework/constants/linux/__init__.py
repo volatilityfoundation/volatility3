@@ -13,7 +13,7 @@ PAGE_SHIFT = 12
 """The value hard coded from the Linux Kernel (hence not extracted from the layer itself)"""
 
 # include/linux/sched.h
-PF_KTHREAD = 0x00200000	 # I'm a kernel thread
+PF_KTHREAD = 0x00200000  # I'm a kernel thread
 
 # Standard well-defined IP protocols.
 # ref: include/uapi/linux/in.h
@@ -139,13 +139,7 @@ SOCK_FAMILY = (
 
 # Socket states
 # ref: include/uapi/linux/net.h
-SOCKET_STATES = (
-    "FREE",
-    "UNCONNECTED",
-    "CONNECTING",
-    "CONNECTED",
-    "DISCONNECTING"
-)
+SOCKET_STATES = ("FREE", "UNCONNECTED", "CONNECTING", "CONNECTED", "DISCONNECTING")
 
 # Netlink protocols
 # ref: include/uapi/linux/netlink.h
@@ -188,17 +182,17 @@ ETH_PROTOCOLS = {
     0x0007: "ETH_P_WAN_PPP",
     0x0008: "ETH_P_PPP_MP",
     0x0009: "ETH_P_LOCALTALK",
-    0x000c: "ETH_P_CAN",
-    0x000f: "ETH_P_CANFD",
+    0x000C: "ETH_P_CAN",
+    0x000F: "ETH_P_CANFD",
     0x0010: "ETH_P_PPPTALK",
     0x0011: "ETH_P_TR_802_2",
     0x0016: "ETH_P_CONTROL",
     0x0017: "ETH_P_IRDA",
     0x0018: "ETH_P_ECONET",
     0x0019: "ETH_P_HDLC",
-    0x001a: "ETH_P_ARCNET",
-    0x001b: "ETH_P_DSA",
-    0x001c: "ETH_P_TRAILER",
+    0x001A: "ETH_P_ARCNET",
+    0x001B: "ETH_P_DSA",
+    0x001C: "ETH_P_TRAILER",
     0x0060: "ETH_P_LOOP",
     0x00F6: "ETH_P_IEEE802154",
     0x00F7: "ETH_P_CAIF",

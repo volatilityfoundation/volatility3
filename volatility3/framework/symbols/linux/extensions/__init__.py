@@ -812,6 +812,7 @@ class vfsmount(objects.StructType):
     def get_mnt_root(self):
         return self.mnt_root
 
+
 class kobject(objects.StructType):
     def reference_count(self):
         refcnt = self.kref.refcount
@@ -842,6 +843,7 @@ class mnt_namespace(objects.StructType):
         for mount in self.list.to_list(mnt_type, "mnt_list"):
             yield mount
 
+
 class net(objects.StructType):
     def get_inode(self):
         if self.has_member("proc_inum"):
@@ -851,12 +853,15 @@ class net(objects.StructType):
         else:
             raise AttributeError("Unable to find net_namespace inode")
 
+
 class socket(objects.StructType):
     def _get_vol_kernel(self):
         symbol_table_arr = self.vol.type_name.split("!", 1)
         symbol_table = symbol_table_arr[0] if len(symbol_table_arr) == 2 else None
 
-        module_names = list(self._context.modules.get_modules_by_symbol_tables(symbol_table))
+        module_names = list(
+            self._context.modules.get_modules_by_symbol_tables(symbol_table)
+        )
         if not module_names:
             raise ValueError(f"No module using the symbol table {symbol_table}")
 
@@ -870,7 +875,9 @@ class socket(objects.StructType):
         except ValueError:
             return 0
 
-        socket_alloc = linux.LinuxUtilities.container_of(self.vol.offset, "socket_alloc", "socket", kernel)
+        socket_alloc = linux.LinuxUtilities.container_of(
+            self.vol.offset, "socket_alloc", "socket", kernel
+        )
         vfs_inode = socket_alloc.vfs_inode
 
         return vfs_inode.i_ino
@@ -879,6 +886,7 @@ class socket(objects.StructType):
         socket_state_idx = self.state
         if 0 <= socket_state_idx < len(SOCKET_STATES):
             return SOCKET_STATES[socket_state_idx]
+
 
 class sock(objects.StructType):
     def get_family(self):
@@ -904,6 +912,7 @@ class sock(objects.StructType):
             return self.sk.sk_socket.get_state()
 
         return self.sk_socket.get_state()
+
 
 class unix_sock(objects.StructType):
     def get_name(self):
@@ -931,6 +940,7 @@ class unix_sock(objects.StructType):
 
     def get_inode(self):
         return self.sk.get_inode()
+
 
 class inet_sock(objects.StructType):
     def get_family(self):
@@ -966,7 +976,7 @@ class inet_sock(objects.StructType):
     def get_dst_port(self):
         sk_common = self.sk.__sk_common
         if hasattr(sk_common, "skc_portpair"):
-            dport_le = sk_common.skc_portpair & 0xffff
+            dport_le = sk_common.skc_portpair & 0xFFFF
         elif hasattr(self, "dport"):
             dport_le = self.dport
         elif hasattr(self, "inet_dport"):
@@ -999,7 +1009,9 @@ class inet_sock(objects.StructType):
         try:
             addr_bytes = parent_layer.read(saddr.vol.offset, addr_size)
         except exceptions.InvalidAddressException:
-            vollog.debug(f"Unable to read socket src address from {saddr.vol.offset:#x}")
+            vollog.debug(
+                f"Unable to read socket src address from {saddr.vol.offset:#x}"
+            )
             return
 
         return socket_module.inet_ntop(family, addr_bytes)
@@ -1028,10 +1040,13 @@ class inet_sock(objects.StructType):
         try:
             addr_bytes = parent_layer.read(daddr.vol.offset, addr_size)
         except exceptions.InvalidAddressException:
-            vollog.debug(f"Unable to read socket dst address from {daddr.vol.offset:#x}")
+            vollog.debug(
+                f"Unable to read socket dst address from {daddr.vol.offset:#x}"
+            )
             return
 
         return socket_module.inet_ntop(family, addr_bytes)
+
 
 class netlink_sock(objects.StructType):
     def get_protocol(self):
@@ -1043,6 +1058,7 @@ class netlink_sock(objects.StructType):
         # Return the generic socket state
         return self.sk.sk_socket.get_state()
 
+
 class vsock_sock(objects.StructType):
     def get_protocol(self):
         # The protocol should always be 0 for vsocks
@@ -1051,6 +1067,7 @@ class vsock_sock(objects.StructType):
     def get_state(self):
         # Return the generic socket state
         return self.sk.sk_socket.get_state()
+
 
 class packet_sock(objects.StructType):
     def get_protocol(self):
@@ -1066,6 +1083,7 @@ class packet_sock(objects.StructType):
         # Return the generic socket state
         return self.sk.sk_socket.get_state()
 
+
 class bt_sock(objects.StructType):
     def get_protocol(self):
         type_idx = self.sk.sk_protocol
@@ -1076,6 +1094,7 @@ class bt_sock(objects.StructType):
         state_idx = self.sk.__sk_common.skc_state
         if 0 <= state_idx < len(BLUETOOTH_STATES):
             return BLUETOOTH_STATES[state_idx]
+
 
 class xdp_sock(objects.StructType):
     def get_protocol(self):
