@@ -95,7 +95,8 @@ class Maps(plugins.PluginInterface):
         cls,
         context: interfaces.context.ContextInterface,
         task: interfaces.objects.ObjectInterface,
-        vma: interfaces.objects.ObjectInterface,
+        vm_start: int,
+        vm_end: int,
         open_method: Type[interfaces.plugins.FileHandlerInterface],
         maxsize: int = MAXSIZE_DEFAULT,
     ) -> Optional[interfaces.plugins.FileHandlerInterface]:
@@ -105,6 +106,8 @@ class Maps(plugins.PluginInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             task: an task_struct instance
             vma: The suspected VMA to extract (ObjectInterface)
+            vm_start: The start virtual address from the vma to dump
+            vm_end: The end virtual address from the vma to dump
             open_method: class to provide context manager for opening the file
             maxsize: Max size of VMA section (default MAXSIZE_DEFAULT)
 
@@ -112,12 +115,6 @@ class Maps(plugins.PluginInterface):
             An open FileInterface object containing the complete data for the task or None in the case of failure
         """
         pid = task.pid
-        try:
-            vm_start = vma.vm_start
-            vm_end = vma.vm_end
-        except AttributeError:
-            vollog.debug(f"Unable to find the vm_start and vm_end for pid {pid}")
-            return None
 
         try:
             proc_layer_name = task.add_process_layer()
@@ -200,13 +197,31 @@ class Maps(plugins.PluginInterface):
 
                 file_output = "Disabled"
                 if self.config["dump"]:
-                    file_handle = self.vma_dump(
-                        self.context, task, vma, self.open, self.config["maxsize"]
-                    )
                     file_output = "Error outputting file"
-                    if file_handle:
-                        file_handle.close()
-                        file_output = file_handle.preferred_filename
+                    try:
+                        vm_start = vma.vm_start
+                        vm_end = vma.vm_end
+                    except AttributeError:
+                        vollog.debug(
+                            f"Unable to find the vm_start and vm_end for vma at {vma.vol.offset:#x} for pid {pid}"
+                        )
+                        vm_start = None
+                        vm_end = None
+
+                    if vm_start and vm_end:
+                        # only attempt to dump the memory if we have vm_start and vm_end
+                        file_handle = self.vma_dump(
+                            self.context,
+                            task,
+                            vm_start,
+                            vm_end,
+                            self.open,
+                            self.config["maxsize"],
+                        )
+
+                        if file_handle:
+                            file_handle.close()
+                            file_output = file_handle.preferred_filename
 
                 yield (
                     0,
