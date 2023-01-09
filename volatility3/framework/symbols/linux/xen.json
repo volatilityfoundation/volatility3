@@ -1,0 +1,115 @@
+{
+  "symbols": {
+  },
+  "user_types": {
+    "xen_p2m": {
+      "fields":{
+        "entries": {
+          "offset": 0,
+          "type": {
+            "count": 1,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned long long"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 8
+    },
+    "xen_pfn":{
+      "fields":{
+        "entries": {
+          "offset": 0,
+          "type": {
+            "count": 1,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned long long"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 16
+    },
+    "xen_pfn_entry":{
+      "fields":{
+        "pfn":{
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "gmfn":{
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 16
+
+    }
+  },
+  "enums": {
+  },
+  "base_types": {
+    "unsigned char": {
+      "endian": "little",
+      "kind": "char",
+      "signed": false,
+      "size": 1
+    },
+    "unsigned short": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 2
+    },
+    "long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 4
+    },
+    "char": {
+      "endian": "little",
+      "kind": "char",
+      "signed": true,
+      "size": 1
+    },
+    "unsigned long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    },
+    "long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 8
+    },
+    "unsigned long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 8
+    }
+  },
+  "metadata": {
+    "producer": {
+      "version": "0.0.1",
+      "name": "ikelos-by-hand",
+      "datetime": "2023-01-09T00:51:00"
+    },
+    "format": "6.1.0"
+  }
+}
