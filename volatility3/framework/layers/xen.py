@@ -26,8 +26,22 @@ class XenCoreDumpLayer(elf.Elf64Layer):
         self._xen_table_name = intermed.IntermediateSymbolTable.create(
             context, config_path, "linux", "xen"
         )
+        self._segment_headers = {}
 
         super().__init__(context, config_path, name)
+
+    def _extract_result_array(
+        self, varname: str, segment_index: int
+    ) -> interfaces.objects.ObjectInterface:
+        hdr = self._segment_headers[segment_index]
+        result = self.context.object(
+            self._xen_table_name + constants.BANG + varname,
+            layer_name=self._base_layer,
+            offset=hdr.sh_offset,
+            size=hdr.sh_size,
+        )
+        result.entries.count = hdr.sh_size // result.entries.vol.subtype.size
+        return result
 
     def _load_segments(self) -> None:
         """Load the segments from based on the PT_LOAD segments of the Elf64 format"""
@@ -38,7 +52,7 @@ class XenCoreDumpLayer(elf.Elf64Layer):
         )
 
         segments = []
-        segment_headers = []
+        self._segment_headers = []
 
         for sindex in range(ehdr.e_shnum):
             shdr = self.context.object(
@@ -47,7 +61,7 @@ class XenCoreDumpLayer(elf.Elf64Layer):
                 offset=ehdr.e_shoff + (sindex * ehdr.e_shentsize),
             )
 
-            segment_headers.append(shdr)
+            self._segment_headers.append(shdr)
 
             if sindex == ehdr.e_shstrndx:
                 segment_names = self.context.layers[self._base_layer].read(
@@ -58,25 +72,20 @@ class XenCoreDumpLayer(elf.Elf64Layer):
         if not segment_names:
             raise elf.ElfFormatException("No segment names, not a Xen Core Dump")
 
-        p2m_data = None
-        pfn_data = None
+        try:
+            p2m_data = self._extract_result_array(
+                "xen_p2m", segment_names.index(b".xen_p2m")
+            )
+        except ValueError:
+            p2m_data = None
+        try:
+            pfn_data = self._extract_result_array(
+                "xen_pfn", segment_names.index(b".xen_pfn")
+            )
+        except ValueError:
+            pfn_data = None
 
-        for varname, pattern, outvar in [
-            ("xen_p2m", b".xen_p2m", p2m_data),
-            ("xen_pfn", b".xen_pfn", pfn_data),
-        ]:
-            if pattern in segment_names:
-                hdr = segment_headers[segment_names.index(pattern)]
-                result = self.context.object(
-                    self._xen_table_name + constants.BANG + varname,
-                    layer_name=self._base_layer,
-                    offset=hdr.sh_offset,
-                    size=hdr.sh_size,
-                )
-                result.entries.count = hdr.sh_size // result.entries.vol.subtype.size
-                outvar = result
-
-        pages_hdr = segment_headers[segment_names.index(b".xen_pages")]
+        pages_hdr = self._segment_headers[segment_names.index(b".xen_pages")]
         page_size = 0x1000
 
         if pfn_data and not p2m_data:
