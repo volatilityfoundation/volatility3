@@ -206,7 +206,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
         if self.config.get("address", None) is not None:
 
             def filter_function(x: interfaces.objects.ObjectInterface) -> bool:
-                return not (x.get_start() <= self.config['address'] <= x.get_end())
+                return not (x.get_start() <= self.config["address"] <= x.get_end())
 
             filter_func = filter_function
 
