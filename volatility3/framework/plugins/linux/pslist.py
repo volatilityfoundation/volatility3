@@ -1,12 +1,15 @@
 # This file is Copyright 2021 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-from typing import Callable, Iterable, List, Any, Tuple
+from typing import Any, Callable, Iterable, List
 
-from volatility3.framework import renderers, interfaces
+from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
+from volatility3.framework.symbols import intermed
+from volatility3.framework.symbols.linux.extensions import elf
+from volatility3.plugins.linux import elfs
 
 
 class PsList(interfaces.plugins.PluginInterface):
@@ -24,6 +27,9 @@ class PsList(interfaces.plugins.PluginInterface):
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
+            requirements.PluginRequirement(
+                name="elfs", plugin=elfs.Elfs, version=(2, 0, 0)
+            ),
             requirements.ListRequirement(
                 name="pid",
                 description="Filter on specific process IDs",
@@ -39,6 +45,12 @@ class PsList(interfaces.plugins.PluginInterface):
             requirements.BooleanRequirement(
                 name="decorate_comm",
                 description="Show `user threads` comm in curly brackets, and `kernel threads` comm in square brackets",
+                optional=True,
+                default=False,
+            ),
+            requirements.BooleanRequirement(
+                name="dump",
+                description="Extract listed processes",
                 optional=True,
                 default=False,
             ),
@@ -66,38 +78,12 @@ class PsList(interfaces.plugins.PluginInterface):
         else:
             return lambda _: False
 
-    def _get_task_fields(
-        self, task: interfaces.objects.ObjectInterface, decorate_comm: bool = False
-    ) -> Tuple[int, int, int, str]:
-        """Extract the fields needed for the final output
-
-        Args:
-            task: A task object from where to get the fields.
-            decorate_comm: If True, it decorates the comm string of
-                            - User threads: in curly brackets,
-                            - Kernel threads: in square brackets
-                           Defaults to False.
-        Returns:
-            A tuple with the fields to show in the plugin output.
-        """
-        pid = task.tgid
-        tid = task.pid
-        ppid = task.parent.tgid if task.parent else 0
-        name = utility.array_to_string(task.comm)
-        if decorate_comm:
-            if task.is_kernel_thread:
-                name = f"[{name}]"
-            elif task.is_user_thread:
-                name = f"{{{name}}}"
-
-        task_fields = (format_hints.Hex(task.vol.offset), pid, tid, ppid, name)
-        return task_fields
-
     def _generator(
         self,
         pid_filter: Callable[[Any], bool],
         include_threads: bool = False,
         decorate_comm: bool = False,
+        dump: bool = False,
     ):
         """Generates the tasks list.
 
@@ -110,14 +96,63 @@ class PsList(interfaces.plugins.PluginInterface):
                             - User threads: in curly brackets,
                             - Kernel threads: in square brackets
                            Defaults to False.
+            dump: If True, the main executable of the process is written to a file
+                  Defaults to False.
         Yields:
             Each rows
         """
         for task in self.list_tasks(
             self.context, self.config["kernel"], pid_filter, include_threads
         ):
-            row = self._get_task_fields(task, decorate_comm)
-            yield (0, row)
+            elf_table_name = intermed.IntermediateSymbolTable.create(
+                self.context,
+                self.config_path,
+                "linux",
+                "elf",
+                class_types=elf.class_types,
+            )
+            file_output = "Disabled"
+            if dump:
+                proc_layer_name = task.add_process_layer()
+                if not proc_layer_name:
+                    continue
+
+                # Find the vma that belongs to the main ELF of the process
+                file_output = "Error outputting file"
+
+                for v in task.mm.get_mmap_iter():
+                    if v.vm_start == task.mm.start_code:
+                        file_handle = elfs.Elfs.elf_dump(
+                            self.context,
+                            proc_layer_name,
+                            elf_table_name,
+                            v,
+                            task,
+                            self.open,
+                        )
+                        if file_handle:
+                            file_output = str(file_handle.preferred_filename)
+                            file_handle.close()
+                        break
+
+            pid = task.tgid
+            tid = task.pid
+            ppid = task.parent.tgid if task.parent else 0
+            name = utility.array_to_string(task.comm)
+            if decorate_comm:
+                if task.is_kernel_thread:
+                    name = f"[{name}]"
+                elif task.is_user_thread:
+                    name = f"{{{name}}}"
+
+            yield 0, (
+                format_hints.Hex(task.vol.offset),
+                pid,
+                tid,
+                ppid,
+                name,
+                file_output,
+            )
 
     @classmethod
     def list_tasks(
@@ -155,6 +190,7 @@ class PsList(interfaces.plugins.PluginInterface):
         pids = self.config.get("pid")
         include_threads = self.config.get("threads")
         decorate_comm = self.config.get("decorate_comm")
+        dump = self.config.get("dump")
         filter_func = self.create_pid_filter(pids)
 
         columns = [
@@ -163,7 +199,8 @@ class PsList(interfaces.plugins.PluginInterface):
             ("TID", int),
             ("PPID", int),
             ("COMM", str),
+            ("File output", str),
         ]
         return renderers.TreeGrid(
-            columns, self._generator(filter_func, include_threads, decorate_comm)
+            columns, self._generator(filter_func, include_threads, decorate_comm, dump)
         )
