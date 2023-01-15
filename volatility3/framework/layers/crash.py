@@ -232,12 +232,20 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         else:
             # report the segments for debugging. this is valuable for dev/troubleshooting but
             # not important enough for a dedicated plugin.
-            for idx, (start_position, mapped_offset, length, _) in enumerate(segments):
+            if len(segments) < 25:
+                for idx, (start_position, mapped_offset, length, _) in enumerate(
+                    segments
+                ):
+                    vollog.log(
+                        constants.LOGLEVEL_VVVV,
+                        "Segment {}: Position {:#x} Offset {:#x} Length {:#x}".format(
+                            idx, start_position, mapped_offset, length
+                        ),
+                    )
+            else:
                 vollog.log(
                     constants.LOGLEVEL_VVVV,
-                    "Segment {}: Position {:#x} Offset {:#x} Length {:#x}".format(
-                        idx, start_position, mapped_offset, length
-                    ),
+                    f"segments has {len(segments)} entries. Not logging for performance",
                 )
 
         self._segments = segments
