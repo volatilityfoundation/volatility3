@@ -82,7 +82,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
-            callback_table_name: The nae of the table containing the callback symbols
+            callback_table_name: The name of the table containing the callback symbols
 
         Yields:
             A name, location and optional detail string
@@ -182,7 +182,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
         layer_name: str,
         symbol_table: str,
         callback_table_name: str,
-    ) -> Iterable[Tuple[str, int, None]]:
+    ) -> Iterable[Tuple[str, int, Optional[str]]]:
         """
         Lists all registry callbacks via the CallbackListHead.
         """
@@ -215,14 +215,14 @@ class Callbacks(interfaces.plugins.PluginInterface):
         layer_name: str,
         symbol_table: str,
         callback_table_name: str,
-    ) -> Iterable[Tuple[str, int, None]]:
+    ) -> Iterable[Tuple[str, int, Optional[str]]]:
         """Lists all registry callbacks.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
-            callback_table_name: The nae of the table containing the callback symbols
+            callback_table_name: The name of the table containing the callback symbols
 
         Yields:
             A name, location and optional detail string
@@ -272,7 +272,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
-            callback_table_name: The nae of the table containing the callback symbols
+            callback_table_name: The name of the table containing the callback symbols
 
         Yields:
             A name, location and optional detail string
@@ -330,7 +330,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
-            callback_table_name: The nae of the table containing the callback symbols
+            callback_table_name: The name of the table containing the callback symbols
 
         Yields:
             A name, location and optional detail string
