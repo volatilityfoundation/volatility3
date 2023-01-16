@@ -1,7 +1,7 @@
 from typing import List, Type, Iterator, Tuple
 import random, string
 
-from volatility3.framework import interfaces, renderers, constants, exceptions
+from volatility3.framework import interfaces, renderers, constants
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import configuration, plugins
 from volatility3.framework.layers import physical, intel

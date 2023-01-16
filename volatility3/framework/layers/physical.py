@@ -220,7 +220,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         """Closes the file handle."""
         self._file.close()
 
-    def __exit__(self) -> None:
+    def __exit__(self, type, value, traceback) -> None:
         self.destroy()
 
     @classmethod

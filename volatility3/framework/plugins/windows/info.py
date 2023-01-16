@@ -224,7 +224,6 @@ class Info(plugins.PluginInterface):
         kdbg = cls.get_raw_kdbg_structure(
             context, config_path, layer_name, symbol_table
         )
-        primary = context.layers[kernel.layer_name]
         tag_value = struct.pack("I", kdbg.Header.OwnerTag)
         is_kdbg_encoded = cls.is_kdbg_encoded(context, layer_name, symbol_table)
 
