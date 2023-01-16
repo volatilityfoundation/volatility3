@@ -22,7 +22,9 @@ from volatility3.framework.configuration import requirements
 vollog = logging.getLogger(__name__)
 
 
-def available(context: interfaces.context.ContextInterface) -> List[interfaces.automagic.AutomagicInterface]:
+def available(
+    context: interfaces.context.ContextInterface,
+) -> List[interfaces.automagic.AutomagicInterface]:
     """Returns an ordered list of all subclasses of
     :class:`~volatility3.framework.interfaces.automagic.AutomagicInterface`.
 
@@ -34,21 +36,26 @@ def available(context: interfaces.context.ContextInterface) -> List[interfaces.a
     """
     import_files(sys.modules[__name__])
     config_path = constants.AUTOMAGIC_CONFIG_PATH
-    return sorted([
-        clazz(context, interfaces.configuration.path_join(config_path, clazz.__name__))
-        for clazz in class_subclasses(interfaces.automagic.AutomagicInterface)
-    ],
-        key = lambda x: x.priority)
+    return sorted(
+        [
+            clazz(
+                context, interfaces.configuration.path_join(config_path, clazz.__name__)
+            )
+            for clazz in class_subclasses(interfaces.automagic.AutomagicInterface)
+        ],
+        key=lambda x: x.priority,
+    )
 
 
 def choose_automagic(
-        automagics: List[Type[interfaces.automagic.AutomagicInterface]],
-        plugin: Type[interfaces.plugins.PluginInterface]) -> List[Type[interfaces.automagic.AutomagicInterface]]:
+    automagics: List[Type[interfaces.automagic.AutomagicInterface]],
+    plugin: Type[interfaces.plugins.PluginInterface],
+) -> List[Type[interfaces.automagic.AutomagicInterface]]:
     """Chooses which automagics to run, maintaining the order they were handed
     in."""
 
     plugin_category = "None"
-    plugin_categories = plugin.__module__.split('.')
+    plugin_categories = plugin.__module__.split(".")
     lowest_index = len(plugin_categories)
     for os in constants.OS_CATEGORIES:
         try:
@@ -73,12 +80,16 @@ def choose_automagic(
     return output
 
 
-def run(automagics: List[interfaces.automagic.AutomagicInterface],
-        context: interfaces.context.ContextInterface,
-        configurable: Union[interfaces.configuration.ConfigurableInterface,
-                            Type[interfaces.configuration.ConfigurableInterface]],
-        config_path: str,
-        progress_callback: constants.ProgressCallback = None) -> List[traceback.TracebackException]:
+def run(
+    automagics: List[interfaces.automagic.AutomagicInterface],
+    context: interfaces.context.ContextInterface,
+    configurable: Union[
+        interfaces.configuration.ConfigurableInterface,
+        Type[interfaces.configuration.ConfigurableInterface],
+    ],
+    config_path: str,
+    progress_callback: constants.ProgressCallback = None,
+) -> List[traceback.TracebackException]:
     """Runs through the list of `automagics` in order, allowing them to make
     changes to the context.
 
@@ -99,10 +110,13 @@ def run(automagics: List[interfaces.automagic.AutomagicInterface],
     """
     for automagic in automagics:
         if not isinstance(automagic, interfaces.automagic.AutomagicInterface):
-            raise TypeError("Automagics must only contain AutomagicInterface subclasses")
+            raise TypeError(
+                "Automagics must only contain AutomagicInterface subclasses"
+            )
 
-    if (not isinstance(configurable, interfaces.configuration.ConfigurableInterface)
-            and not issubclass(configurable, interfaces.configuration.ConfigurableInterface)):
+    if not isinstance(
+        configurable, interfaces.configuration.ConfigurableInterface
+    ) and not issubclass(configurable, interfaces.configuration.ConfigurableInterface):
         raise TypeError("Automagic operates on configurables only")
 
     # TODO: Fix need for top level config element just because we're using a MultiRequirement to group the
@@ -112,7 +126,7 @@ def run(automagics: List[interfaces.automagic.AutomagicInterface],
         configurable_class = configurable.__class__
     else:
         configurable_class = configurable
-    requirement = requirements.MultiRequirement(name = configurable_class.__name__)
+    requirement = requirements.MultiRequirement(name=configurable_class.__name__)
     for req in configurable.get_requirements():
         requirement.add_requirement(req)
 
