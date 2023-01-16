@@ -3,6 +3,7 @@
 #
 
 import logging
+import contextlib
 from typing import List, Iterable, Tuple, Optional, Union
 
 from volatility3.framework import constants, exceptions, renderers, interfaces, symbols
