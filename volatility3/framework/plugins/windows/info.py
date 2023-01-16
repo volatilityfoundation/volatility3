@@ -220,7 +220,6 @@ class Info(plugins.PluginInterface):
         layer_name: str,
         symbol_table: str,
     ) -> interfaces.objects.ObjectInterface:
-        kernel = cls.get_kernel_module(context, layer_name, symbol_table)
         kdbg = cls.get_raw_kdbg_structure(
             context, config_path, layer_name, symbol_table
         )
