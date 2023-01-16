@@ -54,6 +54,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         """
         result = cls.get_guid_from_mz(context, layer_name, offset)
         if result is None:
+            vollog.debug(f"Could not get GUID for {hex(offset)}")
             return None
         guid, age, pdb_name = result
         if config_path is None:
