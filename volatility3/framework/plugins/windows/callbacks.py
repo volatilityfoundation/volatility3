@@ -203,7 +203,10 @@ class Callbacks(interfaces.plugins.PluginInterface):
 
         callback_list = ntkrnlmp.object(object_type="_LIST_ENTRY", offset=symbol_offset)
         for callback in callback_list.to_list(full_type_name, "Link"):
-            yield "CmRegisterCallbackEx", callback.Function, f"Altitude: {callback.Altitude.String}"
+            altitude = None
+            with contextlib.suppress(exceptions.InvalidAddressException):
+                altitude = callback.Altitude.String
+            yield "CmRegisterCallbackEx", callback.Function, f"Altitude: {altitude}"
 
     @classmethod
     def list_registry_callbacks(
