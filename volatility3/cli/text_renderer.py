@@ -241,7 +241,9 @@ class CSVRenderer(CLIRenderer):
             # Ignore the type because namedtuples don't realize they have accessible attributes
             header_list.append(f"{column.name}")
 
-        writer = csv.DictWriter(outfd, header_list, lineterminator="\n", escapechar='\\')
+        writer = csv.DictWriter(
+            outfd, header_list, lineterminator="\n", escapechar="\\"
+        )
         writer.writeheader()
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
