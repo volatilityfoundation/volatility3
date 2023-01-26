@@ -23,9 +23,14 @@ class List_Files(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'mount', plugin = mount.Mount, version = (2, 0, 0)),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.PluginRequirement(
+                name="mount", plugin=mount.Mount, version=(2, 0, 0)
+            ),
         ]
 
     @classmethod
@@ -50,8 +55,9 @@ class List_Files(plugins.PluginInterface):
         except exceptions.InvalidAddressException:
             return None
 
-        if parent and not context.layers[vnode.vol.native_layer_name].is_valid(parent.vol.offset,
-                                                                               parent.vol.size):
+        if parent and not context.layers[vnode.vol.native_layer_name].is_valid(
+            parent.vol.offset, parent.vol.size
+        ):
             return None
 
         return parent
@@ -65,8 +71,9 @@ class List_Files(plugins.PluginInterface):
         and holds its name, parent address, and object
         """
 
-        if not context.layers[vnode.vol.native_layer_name].is_valid(vnode.vol.offset,
-                                                                    vnode.vol.size):
+        if not context.layers[vnode.vol.native_layer_name].is_valid(
+            vnode.vol.offset, vnode.vol.size
+        ):
             return False
 
         key = vnode.vol.offset
@@ -104,7 +111,7 @@ class List_Files(plugins.PluginInterface):
 
             if not cls._add_vnode(context, vnode, loop_vnodes):
                 break
- 
+
             added = True
 
             parent = cls._get_parent(context, vnode)
@@ -127,10 +134,9 @@ class List_Files(plugins.PluginInterface):
             cls._walk_vnode(context, vnode, loop_vnodes)
 
     @classmethod
-    def _walk_mounts(cls,
-                     context: interfaces.context.ContextInterface,
-                     kernel_module_name: str) -> \
-            Iterable[interfaces.objects.ObjectInterface]:
+    def _walk_mounts(
+        cls, context: interfaces.context.ContextInterface, kernel_module_name: str
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
 
         loop_vnodes = {}
 
@@ -177,10 +183,9 @@ class List_Files(plugins.PluginInterface):
         return path
 
     @classmethod
-    def list_files(cls,
-                   context: interfaces.context.ContextInterface,
-                   kernel_module_name: str) -> \
-            Iterable[interfaces.objects.ObjectInterface]:
+    def list_files(
+        cls, context: interfaces.context.ContextInterface, kernel_module_name: str
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
 
         vnodes = cls._walk_mounts(context, kernel_module_name)
 
@@ -190,9 +195,11 @@ class List_Files(plugins.PluginInterface):
             yield vnode, full_path
 
     def _generator(self):
-        for vnode, full_path in self.list_files(self.context, self.config['kernel']):
+        for vnode, full_path in self.list_files(self.context, self.config["kernel"]):
 
             yield (0, (format_hints.Hex(vnode.vol.offset), full_path))
 
     def run(self):
-        return renderers.TreeGrid([("Address", format_hints.Hex), ("File Path", str)], self._generator())
+        return renderers.TreeGrid(
+            [("Address", format_hints.Hex), ("File Path", str)], self._generator()
+        )

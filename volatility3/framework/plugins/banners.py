@@ -19,32 +19,47 @@ class Banners(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary', description = 'Memory layer to scan')]
+        return [
+            requirements.TranslationLayerRequirement(
+                name="primary", description="Memory layer to scan"
+            )
+        ]
 
     def _generator(self):
-        layer = self.context.layers[self.config['primary']]
+        layer = self.context.layers[self.config["primary"]]
         if isinstance(layer, layers.intel.Intel):
-            layer = self.context.layers[layer.config['memory_layer']]
+            layer = self.context.layers[layer.config["memory_layer"]]
         for offset, banner in self.locate_banners(self.context, layer.name):
             yield 0, (offset, banner)
 
     @classmethod
-    def locate_banners(cls, context: interfaces.context.ContextInterface, layer_name: str):
+    def locate_banners(
+        cls, context: interfaces.context.ContextInterface, layer_name: str
+    ):
         """Identifies banners from a memory image"""
         layer = context.layers[layer_name]
         for offset in layer.scan(
-                context = context,
-                scanner = scanners.RegExScanner(rb"(Linux version|Darwin Kernel Version) [0-9]+\.[0-9]+\.[0-9]+")):
-            data = layer.read(offset, 0xfff)
-            data_index = data.find(b'\x00')
+            context=context,
+            scanner=scanners.RegExScanner(
+                rb"(Linux version|Darwin Kernel Version) [0-9]+\.[0-9]+\.[0-9]+"
+            ),
+        ):
+            data = layer.read(offset, 0xFFF)
+            data_index = data.find(b"\x00")
             if data_index > 0:
                 data = data[:data_index].strip()
                 failed = [
-                    char for char in data
-                    if char not in b' #()+,;/-.0123456789:@ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~'
+                    char
+                    for char in data
+                    if char
+                    not in b" #()+,;/-.0123456789:@ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
                 ]
                 if not failed:
-                    yield format_hints.Hex(offset), str(data, encoding = 'latin-1', errors = '?')
+                    yield format_hints.Hex(offset), str(
+                        data, encoding="latin-1", errors="?"
+                    )
 
     def run(self):
-        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Banner", str)], self._generator())
+        return renderers.TreeGrid(
+            [("Offset", format_hints.Hex), ("Banner", str)], self._generator()
+        )

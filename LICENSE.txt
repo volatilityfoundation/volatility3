@@ -31,7 +31,7 @@ If you make any Additions available to others, such as by providing copies of th
 - You are responsible to ensure you have rights in Additions necessary to comply with this section.
 
 Contributing
-If you contribute (or offer to contribute) any materials to Volatility Foundation for the software, such as by submitting a pull request to the repository for the software or related content run by Volatility Foundation, you agree to contribute them under the under the BSD 2-Clause Plus Patent License (in the case of software) or the Creative Commons Zero Public Domain Dedication (in the case of content), unless you clearly mark them "Not a Contribution."
+If you contribute (or offer to contribute) any materials to Volatility Foundation for the software, such as by submitting a pull request to the repository for the software or related content run by Volatility Foundation, you agree to contribute them under the BSD 2-Clause Plus Patent License (in the case of software) or the Creative Commons Zero Public Domain Dedication (in the case of content), unless you clearly mark them "Not a Contribution."
 
 Trademarks
 This license grants you no rights to any trademarks or service marks.
