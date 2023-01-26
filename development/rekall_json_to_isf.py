@@ -3,8 +3,10 @@ import logging
 import json
 import time
 
+
 class rekall_types_translator:
     VERSION = "0.3"
+
     def __init__(self, filepath, is_64bit, endianness):
         self.filepath = filepath
         self.rekall_json = self.get_file_as_json(self.filepath)
@@ -25,84 +27,59 @@ class rekall_types_translator:
         # base_types defaults to 64bit
         base_types = {
             "unsigned char": {
-              "endian": endianness,
-              "kind": "char",
-              "signed": False,
-              "size": 1
+                "endian": endianness,
+                "kind": "char",
+                "signed": False,
+                "size": 1,
             },
-            "bool": {
-              "endian": endianness,
-              "kind": "char",
-              "signed": False,
-              "size": 1
-            },
+            "bool": {"endian": endianness, "kind": "char", "signed": False, "size": 1},
             "unsigned short": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": False,
-              "size": 2
+                "endian": endianness,
+                "kind": "int",
+                "signed": False,
+                "size": 2,
             },
-            "long": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": True,
-              "size": 4
-            },
-            "int": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": True,
-              "size": 4
-            },
-            "char": {
-              "endian": endianness,
-              "kind": "char",
-              "signed": True,
-              "size": 1
-            },
-            "Void": {
-              "endian": endianness,
-              "kind": "char",
-              "signed": True,
-              "size": 1
-            },
+            "long": {"endian": endianness, "kind": "int", "signed": True, "size": 4},
+            "int": {"endian": endianness, "kind": "int", "signed": True, "size": 4},
+            "char": {"endian": endianness, "kind": "char", "signed": True, "size": 1},
+            "Void": {"endian": endianness, "kind": "char", "signed": True, "size": 1},
             "unsigned long": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": False,
-              "size": 4
+                "endian": endianness,
+                "kind": "int",
+                "signed": False,
+                "size": 4,
             },
             "unsigned int": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": False,
-              "size": 4
+                "endian": endianness,
+                "kind": "int",
+                "signed": False,
+                "size": 4,
             },
             "long long": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": True,
-              "size": 8
+                "endian": endianness,
+                "kind": "int",
+                "signed": True,
+                "size": 8,
             },
             "unsigned long long": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": False,
-              "size": 8
+                "endian": endianness,
+                "kind": "int",
+                "signed": False,
+                "size": 8,
             },
             "pointer": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": False,
-              "size": 8
+                "endian": endianness,
+                "kind": "int",
+                "signed": False,
+                "size": 8,
             },
             "pointer32": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": False,
-              "size": 4
-            }
-          }
+                "endian": endianness,
+                "kind": "int",
+                "signed": False,
+                "size": 4,
+            },
+        }
 
         if not is_64bit:
             base_types["pointer"]["size"] = 4
@@ -116,21 +93,23 @@ class rekall_types_translator:
             # in base types or local json vtypes
             if subtype in base_types:
                 return {"kind": "base", "name": subtype}
-            
+
             return {"kind": "struct", "name": subtype}
 
-        raise RuntimeError("Type of subtype is unknown. More works needs to be done", subtype)
+        raise RuntimeError(
+            "Type of subtype is unknown. More works needs to be done", subtype
+        )
 
     def translate_subtype(self, type_stuff, base_types):
         # TODO: see rekall obj.py COMMON_CLASSES and add more
-        
+
         type_dict = {}
         type_string = type_stuff[0]
         special_types = ["Pointer", "BitField", "Array", "Enumeration"]
 
         if type_string not in special_types:
             return self.translate_subtype_string(type_stuff[0], base_types)
-        
+
         if type_string == "BitField":
             bitfield_info = type_stuff[1]
             type_dict["kind"] = "bitfield"
@@ -138,21 +117,34 @@ class rekall_types_translator:
             end_bit = bitfield_info["end_bit"]
             type_dict["bit_position"] = start_bit
             type_dict["bit_length"] = end_bit - start_bit
-            type_dict["type"] = self.translate_subtype_string(bitfield_info["target"], base_types)
+            type_dict["type"] = self.translate_subtype_string(
+                bitfield_info["target"], base_types
+            )
         elif type_string == "Pointer":
             pointer_info = type_stuff[1]
             type_dict["kind"] = "pointer"
-            type_dict["subtype"] = self.translate_subtype_string(pointer_info["target"], base_types)
+            type_dict["subtype"] = self.translate_subtype_string(
+                pointer_info["target"], base_types
+            )
         elif type_string == "Array":
             array_info = type_stuff[1]
             type_dict["kind"] = "array"
             if array_info["target"] == "Enumeration":
-                count = array_info["size"] // base_types[array_info["target_args"]["target"]]["size"]
+                count = (
+                    array_info["size"]
+                    // base_types[array_info["target_args"]["target"]]["size"]
+                )
                 type_dict["count"] = count
-                type_dict["subtype"] = self.translate_subtype((array_info["target"], array_info.get("target_args", None)), base_types)
+                type_dict["subtype"] = self.translate_subtype(
+                    (array_info["target"], array_info.get("target_args", None)),
+                    base_types,
+                )
             else:
                 type_dict["count"] = array_info["count"]
-                type_dict["subtype"] = self.translate_subtype((array_info["target"], array_info.get("target_args", None)), base_types)
+                type_dict["subtype"] = self.translate_subtype(
+                    (array_info["target"], array_info.get("target_args", None)),
+                    base_types,
+                )
         elif type_string == "Enumeration":
             enum_info = type_stuff[1]
             self.enum_info[enum_info["enum_name"]] = enum_info["target"]
@@ -170,7 +162,9 @@ class rekall_types_translator:
             field_offset, type_stuff = rekall_struct[field_name]
             fields_dict[field_name] = {}
             fields_dict[field_name]["offset"] = field_offset
-            fields_dict[field_name]["type"] = self.translate_subtype(type_stuff, base_types)
+            fields_dict[field_name]["type"] = self.translate_subtype(
+                type_stuff, base_types
+            )
 
         return fields_dict
 
@@ -209,7 +203,9 @@ class rekall_types_translator:
             isf_enums[enum_name]["constants"] = {}
             for rekall_enum_key in rekall_enums[enum_name]:
                 rekall_enum_value = rekall_enums[enum_name][rekall_enum_key]
-                isf_enums[enum_name]["constants"][rekall_enum_value] = int(rekall_enum_key, 0)
+                isf_enums[enum_name]["constants"][rekall_enum_value] = int(
+                    rekall_enum_key, 0
+                )
 
         return isf_enums
 
@@ -222,25 +218,46 @@ class rekall_types_translator:
         return isf_symbols
 
     def translate_rekall_json_to_isf(self):
-        isf_json = {"base_types" : self.get_base_types(self.is_64bit, self.endianness)}
-        isf_json["symbols"] = self.translate_symbols(self.rekall_json.get("$FUNCTIONS", {}))
-        isf_json["symbols"].update(self.translate_symbols(self.rekall_json.get("$CONSTANTS", {})))
-        isf_json["user_types"] = self.translate_rekall_structs(self.rekall_json["$STRUCTS"], isf_json["base_types"])
-        isf_json["enums"] = self.translate_rekall_enums(self.rekall_json.get("$ENUMS", {}), isf_json["base_types"])
-        isf_json["metadata"] = self.translate_rekall_metadata(self.rekall_json["$METADATA"])
+        isf_json = {"base_types": self.get_base_types(self.is_64bit, self.endianness)}
+        isf_json["symbols"] = self.translate_symbols(
+            self.rekall_json.get("$FUNCTIONS", {})
+        )
+        isf_json["symbols"].update(
+            self.translate_symbols(self.rekall_json.get("$CONSTANTS", {}))
+        )
+        isf_json["user_types"] = self.translate_rekall_structs(
+            self.rekall_json["$STRUCTS"], isf_json["base_types"]
+        )
+        isf_json["enums"] = self.translate_rekall_enums(
+            self.rekall_json.get("$ENUMS", {}), isf_json["base_types"]
+        )
+        isf_json["metadata"] = self.translate_rekall_metadata(
+            self.rekall_json["$METADATA"]
+        )
 
         return isf_json
 
+
 def main():
-    parser = argparse.ArgumentParser(description='Rekall types to ISF. Output will be written to STDOUT and filepath.isf.json')
-    parser.add_argument('--filepath', dest='filepath', type=str, help='The rekall type json path.')
-    parser.add_argument('--is-64bit', dest='is_64bit', default=True, action="store_true")
-    parser.add_argument('--is-32bit', dest='is_64bit', action="store_false")
-    parser.add_argument('--endianness', dest='endianness', type=str, default="little", nargs='?')
+    parser = argparse.ArgumentParser(
+        description="Rekall types to ISF. Output will be written to STDOUT and filepath.isf.json"
+    )
+    parser.add_argument(
+        "--filepath", dest="filepath", type=str, help="The rekall type json path."
+    )
+    parser.add_argument(
+        "--is-64bit", dest="is_64bit", default=True, action="store_true"
+    )
+    parser.add_argument("--is-32bit", dest="is_64bit", action="store_false")
+    parser.add_argument(
+        "--endianness", dest="endianness", type=str, default="little", nargs="?"
+    )
     args = parser.parse_args()
 
     filepath = args.filepath
-    rekall_translator = rekall_types_translator(filepath, args.is_64bit, args.endianness)
+    rekall_translator = rekall_types_translator(
+        filepath, args.is_64bit, args.endianness
+    )
     isf_json_dict = rekall_translator.translate_rekall_json_to_isf()
 
     with open(f"{filepath}.isf.json", "w") as f:
@@ -248,6 +265,7 @@ def main():
 
     isf_json = json.dumps(isf_json_dict, indent=4)
     print(isf_json)
+
 
 if __name__ == "__main__":
     main()

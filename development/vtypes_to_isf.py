@@ -4,8 +4,10 @@ import logging
 import json
 import time
 
+
 class vtypes_translator:
     VERSION = "0.1"
+
     def __init__(self, filepath, is_64bit, endianness):
         self.filepath = filepath
         self.vtypes_module = self.get_python_module(self.filepath)
@@ -34,96 +36,61 @@ class vtypes_translator:
         # base_types defaults to 64bit
         base_types = {
             "unsigned char": {
-              "endian": endianness,
-              "kind": "char",
-              "signed": False,
-              "size": 1
+                "endian": endianness,
+                "kind": "char",
+                "signed": False,
+                "size": 1,
             },
-            "bool": {
-              "endian": endianness,
-              "kind": "char",
-              "signed": False,
-              "size": 1
-            },
+            "bool": {"endian": endianness, "kind": "char", "signed": False, "size": 1},
             "unsigned short": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": False,
-              "size": 2
+                "endian": endianness,
+                "kind": "int",
+                "signed": False,
+                "size": 2,
             },
-            "long": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": True,
-              "size": 4
-            },
-            "int": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": True,
-              "size": 4
-            },
-            "char": {
-              "endian": endianness,
-              "kind": "char",
-              "signed": True,
-              "size": 1
-            },
-            "wchar": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": False,
-              "size": 2
-            },
-            "Void": {
-              "endian": endianness,
-              "kind": "char",
-              "signed": True,
-              "size": 1
-            },
-            "void": {
-              "endian": endianness,
-              "kind": "char",
-              "signed": True,
-              "size": 1
-            },
+            "long": {"endian": endianness, "kind": "int", "signed": True, "size": 4},
+            "int": {"endian": endianness, "kind": "int", "signed": True, "size": 4},
+            "char": {"endian": endianness, "kind": "char", "signed": True, "size": 1},
+            "wchar": {"endian": endianness, "kind": "int", "signed": False, "size": 2},
+            "Void": {"endian": endianness, "kind": "char", "signed": True, "size": 1},
+            "void": {"endian": endianness, "kind": "char", "signed": True, "size": 1},
             "unsigned long": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": False,
-              "size": 4
+                "endian": endianness,
+                "kind": "int",
+                "signed": False,
+                "size": 4,
             },
             "unsigned int": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": False,
-              "size": 4
+                "endian": endianness,
+                "kind": "int",
+                "signed": False,
+                "size": 4,
             },
             "long long": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": True,
-              "size": 8
+                "endian": endianness,
+                "kind": "int",
+                "signed": True,
+                "size": 8,
             },
             "unsigned long long": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": False,
-              "size": 8
+                "endian": endianness,
+                "kind": "int",
+                "signed": False,
+                "size": 8,
             },
             "pointer": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": False,
-              "size": 8
+                "endian": endianness,
+                "kind": "int",
+                "signed": False,
+                "size": 8,
             },
             "pointer32": {
-              "endian": endianness,
-              "kind": "int",
-              "signed": False,
-              "size": 4
-            }
-          }
+                "endian": endianness,
+                "kind": "int",
+                "signed": False,
+                "size": 4,
+            },
+        }
 
         if not is_64bit:
             base_types["pointer"]["size"] = 4
@@ -137,10 +104,12 @@ class vtypes_translator:
             # in base types or local json vtypes
             if subtype in base_types:
                 return {"kind": "base", "name": subtype}
-            
+
             return {"kind": "struct", "name": subtype}
 
-        raise RuntimeError("Type of subtype is unknown. More works needs to be done", subtype)
+        raise RuntimeError(
+            "Type of subtype is unknown. More works needs to be done", subtype
+        )
 
     def translate_subtype(self, type_stuff, base_types):
         type_dict = {}
@@ -148,7 +117,7 @@ class vtypes_translator:
         special_types = ["array", "pointer", "pointer64", "BitField", "Enumeration"]
         if type_string not in special_types:
             return self.translate_subtype_string(type_stuff[0], base_types)
-        
+
         if type_string == "BitField":
             bitfield_info = type_stuff[1]
             type_dict["kind"] = "bitfield"
@@ -156,16 +125,22 @@ class vtypes_translator:
             end_bit = bitfield_info["end_bit"]
             type_dict["bit_position"] = start_bit
             type_dict["bit_length"] = end_bit - start_bit
-            type_dict["type"] = self.translate_subtype_string(bitfield_info.get("native_type", "unsigned int"), base_types)
+            type_dict["type"] = self.translate_subtype_string(
+                bitfield_info.get("native_type", "unsigned int"), base_types
+            )
         elif type_string in ["pointer64", "pointer"]:
             pointer_info = type_stuff[1]
             type_dict["kind"] = "pointer"
-            type_dict["subtype"] = self.translate_subtype(tuple(pointer_info), base_types)
+            type_dict["subtype"] = self.translate_subtype(
+                tuple(pointer_info), base_types
+            )
         elif type_string == "array":
             array_info = type_stuff[1:]
             type_dict["kind"] = "array"
             type_dict["count"] = array_info[0]
-            type_dict["subtype"] = self.translate_subtype(tuple(array_info[1]), base_types)
+            type_dict["subtype"] = self.translate_subtype(
+                tuple(array_info[1]), base_types
+            )
         elif type_string == "Enumeration":
             enum_info = type_stuff[1]
             new_enum_name = f"ENUM_{hash(str(enum_info))}"
@@ -184,7 +159,9 @@ class vtypes_translator:
             field_offset, type_stuff = struct_fields[field_name]
             fields_dict[field_name] = {}
             fields_dict[field_name]["offset"] = field_offset
-            fields_dict[field_name]["type"] = self.translate_subtype(type_stuff, base_types)
+            fields_dict[field_name]["type"] = self.translate_subtype(
+                type_stuff, base_types
+            )
 
         return fields_dict
 
@@ -225,20 +202,29 @@ class vtypes_translator:
         return metadata
 
     def translate_to_isf(self):
-        isf_json = {"base_types" : self.get_base_types(self.is_64bit, self.endianness)}
-        isf_json["symbols"] = {} # No symbol information in vtypes
+        isf_json = {"base_types": self.get_base_types(self.is_64bit, self.endianness)}
+        isf_json["symbols"] = {}  # No symbol information in vtypes
         isf_json["user_types"] = self.translate_structs(isf_json["base_types"])
         isf_json["enums"] = self.get_enums(isf_json["base_types"])
         isf_json["metadata"] = self.get_metadata()
 
         return isf_json
 
+
 def main():
-    parser = argparse.ArgumentParser(description='volatility2 vtypes to ISF. Output will be written to STDOUT and filepath.isf.json')
-    parser.add_argument('--filepath', dest='filepath', type=str, help='The vtypes file path.')
-    parser.add_argument('--is-64bit', dest='is_64bit', default=True, action="store_true")
-    parser.add_argument('--is-32bit', dest='is_64bit', action="store_false")
-    parser.add_argument('--endianness', dest='endianness', type=str, default="little", nargs='?')
+    parser = argparse.ArgumentParser(
+        description="volatility2 vtypes to ISF. Output will be written to STDOUT and filepath.isf.json"
+    )
+    parser.add_argument(
+        "--filepath", dest="filepath", type=str, help="The vtypes file path."
+    )
+    parser.add_argument(
+        "--is-64bit", dest="is_64bit", default=True, action="store_true"
+    )
+    parser.add_argument("--is-32bit", dest="is_64bit", action="store_false")
+    parser.add_argument(
+        "--endianness", dest="endianness", type=str, default="little", nargs="?"
+    )
     args = parser.parse_args()
 
     filepath = args.filepath
@@ -250,6 +236,7 @@ def main():
 
     isf_json = json.dumps(isf_json_dict, indent=4)
     print(isf_json)
+
 
 if __name__ == "__main__":
     main()
