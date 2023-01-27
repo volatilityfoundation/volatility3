@@ -48,14 +48,31 @@ class IOMem(interfaces.plugins.PluginInterface):
         Yields:
             Each row of output
         """
-        # create the resource object
         vmlinux = context.modules[vmlinux_module_name]
-        resource = vmlinux.object("resource", resource_offset)
+
+        # create the resource object with protection against memory smear
+        try:
+            resource = vmlinux.object("resource", resource_offset)
+        except exceptions.InvalidAddressException:
+            vollog.warning(
+                f"Unable to create resource object at {resource_offset:#x}. This resource, "
+                "its sibling, and any of it's childern and will be missing from the output."
+            )
+            return None
 
         # extract the information required for this resource
-        name = utility.pointer_to_string(resource.name, 128)
         start = format_hints.Hex(resource.start)
         end = format_hints.Hex(resource.end)
+
+        # get name with protection against smear as following a pointer
+        try:
+            name = utility.pointer_to_string(resource.name, 128)
+        except exceptions.InvalidAddressException:
+            vollog.warning(
+                "Unable to follow pointer to name for resource object at {resource_offset:#x}, "
+                "replaced with UnreadableValue"
+            )
+            name = renderers.UnreadableValue()
 
         # mark this resource as seen in the seen set. Normally this should not be needed but will protect
         # against possible infinite loops. Warn the user if an infinite loop would have happened.
