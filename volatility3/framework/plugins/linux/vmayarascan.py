@@ -1,4 +1,4 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2023 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
@@ -15,68 +15,71 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
     """Scans all virtual memory areas for tasks using yara."""
 
     _required_framework_version = (2, 4, 0)
+    _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [
-            requirements.ModuleRequirement(
-                name="kernel",
-                description="Linux kernel",
-                architectures=["Intel32", "Intel64"],
-            ),
-            requirements.BooleanRequirement(
-                name="wide",
-                description="Match wide (unicode) strings",
-                default=False,
-                optional=True,
-            ),
-            requirements.StringRequirement(
-                name="yara_rules", description="Yara rules (as a string)", optional=True
-            ),
-            requirements.URIRequirement(
-                name="yara_file", description="Yara rules (as a file)", optional=True
-            ),
-            # This additional requirement is to follow suit with upstream, who feel that compiled rules could potentially be used to execute malicious code
-            # As such, there's a separate option to run compiled files, as happened with yara-3.9 and later
-            requirements.URIRequirement(
-                name="yara_compiled_file",
-                description="Yara compiled rules (as a file)",
-                optional=True,
-            ),
-            requirements.IntRequirement(
-                name="max_size",
-                default=0x40000000,
-                description="Set the maximum size (default is 1GB)",
-                optional=True,
-            ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
-            ),
-            requirements.VersionRequirement(
-                name="yarascanner", component=yarascan.YaraScanner, version=(2, 0, 0)
-            ),
+        # create a list of requirements for vmayarascan
+        vmayarascan_requirements = [
             requirements.ListRequirement(
                 name="pid",
                 element_type=int,
                 description="Process IDs to include (all other processes are excluded)",
                 optional=True,
             ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            ),
+            requirements.PluginRequirement(
+                name="yarascan", plugin=yarascan.YaraScan, version=(1, 1, 0)
+            ),
+            requirements.VersionRequirement(
+                name="yarascanner", component=yarascan.YaraScanner, version=(2, 0, 0)
+            ),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
         ]
 
+        # get base yarascan requirements
+        yarascan_requirements = yarascan.YaraScan.get_requirements()
+
+        # remove TranslationLayerRequirement from the base yarascan requirements
+        # if this is not removed automagic will not find both the TranslationLayerRequirement
+        # for YaraScan and the ModuleRequirement for VmaYaraScan
+        yarascan_requirements = [
+            requirement
+            for requirement in yarascan_requirements
+            if not isinstance(requirement, requirements.TranslationLayerRequirement)
+        ]
+
+        # return the combined requirements
+        return yarascan_requirements + vmayarascan_requirements
+
     def _generator(self):
+        # use yarascan to parse the yara options provided and create the rules
         rules = yarascan.YaraScan.process_yara_options(dict(self.config))
 
+        # filter based on the pid option if provided
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
         for task in pslist.PsList.list_tasks(
             context=self.context,
             vmlinux_module_name=self.config["kernel"],
             filter_func=filter_func,
         ):
+
+            # attempt to create a process layer for each task and skip those
+            # that cannot (e.g. kernel threads)
             proc_layer_name = task.add_process_layer()
             if not proc_layer_name:
                 continue
 
+            # get the proc_layer object from the context
             proc_layer = self.context.layers[proc_layer_name]
+
+            # scan the process layer with the yarascanner
             for offset, rule_name, name, value in proc_layer.scan(
                 context=self.context,
                 scanner=yarascan.YaraScanner(rules=rules),
