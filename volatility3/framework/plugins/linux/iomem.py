@@ -16,6 +16,7 @@ class IOMem(interfaces.plugins.PluginInterface):
     """Generates an output similar to /proc/iomem on a running system."""
 
     _required_framework_version = (2, 0, 0)
+    _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -60,10 +61,6 @@ class IOMem(interfaces.plugins.PluginInterface):
             )
             return None
 
-        # extract the information required for this resource
-        start = format_hints.Hex(resource.start)
-        end = format_hints.Hex(resource.end)
-
         # get name with protection against smear as following a pointer
         try:
             name = utility.pointer_to_string(resource.name, 128)
@@ -87,7 +84,7 @@ class IOMem(interfaces.plugins.PluginInterface):
             seen.add(resource_offset)
 
         # yield information on this resource
-        yield depth, (name, start, end)
+        yield depth, (name, resource.start, resource.end)
 
         # process child resource if this exists
         if resource.child != 0:
@@ -123,17 +120,32 @@ class IOMem(interfaces.plugins.PluginInterface):
         vmlinux_module_name = self.config["kernel"]
         vmlinux = self.context.modules[vmlinux_module_name]
 
-        # check that the iomem_resource symbol exists
-        # normally exported in /kernel/resource.c
+        # get the address for the iomem_resource
         try:
             iomem_root_offset = vmlinux.get_absolute_symbol_address("iomem_resource")
         except exceptions.SymbolError:
             iomem_root_offset = None
 
-        # error if 'iomem_resource' is not found
-        if not iomem_root_offset:
+        # only continue if iomem_root address was located
+        if iomem_root_offset is not None:
+
+            # recursively parse the resources starting from the root resource at 'iomem_resource'
+            for depth, (name, start, end) in self.parse_resource(
+                self.context, vmlinux_module_name, iomem_root_offset
+            ):
+                # use format_hints to format start and end addresses for the renderers
+                yield depth, (name, format_hints.Hex(start), format_hints.Hex(end))
+
+    def run(self):
+        # get the kernel module from the current context
+        vmlinux_module_name = self.config["kernel"]
+        vmlinux = self.context.modules[vmlinux_module_name]
+
+        # check that the iomem_resource symbol exists
+        # normally exported in /kernel/resource.c
+        if not vmlinux.has_symbol("iomem_resource"):
             raise TypeError(
-                "This plugin requires the iomem_resource structure. This structure is not present in the supplied symbol table. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
+                "This plugin requires the iomem_resource symbol. This symbol is not present in the supplied symbol table. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
             )
 
         # error if type 'resource' is not found
@@ -142,15 +154,9 @@ class IOMem(interfaces.plugins.PluginInterface):
                 "This plugin requires the resource type. This type is not present in the supplied symbol table. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
             )
 
-        # recursively parse the resources starting from the root resource at 'iomem_resource'
-        yield from self.parse_resource(
-            self.context, vmlinux_module_name, iomem_root_offset
-        )
-
-    def run(self):
         columns = [
-            ("NAME", str),
-            ("START", format_hints.Hex),
-            ("END", format_hints.Hex),
+            ("Name", str),
+            ("Start", format_hints.Hex),
+            ("End", format_hints.Hex),
         ]
         return renderers.TreeGrid(columns, self._generator())
