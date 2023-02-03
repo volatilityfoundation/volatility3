@@ -28,6 +28,7 @@ class PsScan(interfaces.plugins.PluginInterface):
     """Scans for processes present in a particular linux image."""
 
     _required_framework_version = (2, 0, 0)
+    _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -101,23 +102,19 @@ class PsScan(interfaces.plugins.PluginInterface):
             pack_format = "I"
         else:
             pack_format = "Q"
-
         # get task_struct to find the offset to the sched_class pointer
         sched_class_offset = vmlinux.get_type("task_struct").members["sched_class"][0]
         kernel_layer = context.layers[kernel_layer_name]
 
         needles = []
         for symbol in vmlinux.symbols:
-
             # find all sched_class names by searching by if they include '_sched_class', e.g. 'fair_sched_class'
             if "_sched_class" in symbol:
-
                 # use canonicalize to set the appropriate sign extension for the addr
                 addr = kernel_layer.canonicalize(vmlinux.get_symbol(symbol).address)
 
                 # append to needles list the packed hex for searching
                 needles.append(struct.pack(pack_format, addr))
-
         # scan the memory_layer for these needles
         memory_layer = context.layers["memory_layer"]
         for address, _ in memory_layer.scan(
@@ -139,14 +136,12 @@ class PsScan(interfaces.plugins.PluginInterface):
                     f"Skipping task_struct at {hex(ptask.vol.offset)} as exit_state {ptask.exit_state} is likely not valid"
                 )
                 continue
-
             # sanity check pid
             if not (0 < ptask.pid < 65535):
                 vollog.debug(
                     f"Skipping task_struct at {hex(ptask.vol.offset)} as pid {ptask.pid} is likely not valid"
                 )
                 continue
-
             yield ptask
 
     def run(self):
