@@ -68,8 +68,11 @@ class PsScan(interfaces.plugins.PluginInterface):
     def _generator(self):
         """Generates the tasks found from scanning."""
 
+        vmlinux_module_name = self.config["kernel"]
+        vmlinux = self.context.modules[vmlinux_module_name]
+
         for task in self.scan_tasks(
-            self.context, self.config["kernel"], self.config["kernel.layer_name"]
+            self.context, vmlinux_module_name, vmlinux.layer_name
         ):
             row = self._get_task_fields(task)
             yield (0, row)
