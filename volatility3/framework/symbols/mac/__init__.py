@@ -70,7 +70,6 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         kernel,  # ikelos - how to type this??
         mods_list: Iterator[Any],
     ):
-
         try:
             start_addr = kernel.object_from_symbol("vm_kernel_stext")
         except exceptions.SymbolError:
@@ -231,7 +230,6 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         next_member: str,
         max_elements: int = 4096,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
-
         for element in cls._walk_iterable(
             queue, "tqh_first", "tqe_next", next_member, max_elements
         ):
@@ -244,7 +242,6 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         next_member: str,
         max_elements: int = 4096,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
-
         for element in cls._walk_iterable(
             queue, "lh_first", "le_next", next_member, max_elements
         ):
@@ -257,7 +254,6 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         next_member: str,
         max_elements: int = 4096,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
-
         for element in cls._walk_iterable(
             queue, "slh_first", "sle_next", next_member, max_elements
         ):

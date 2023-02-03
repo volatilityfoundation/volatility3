@@ -161,7 +161,8 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         """Returns ISF statistics based on the location
 
         Returns:
-            A tuple of base_types, types, enums, symbols, or None is location not found"""
+            A tuple of base_types, types, enums, symbols, or None is location not found
+        """
 
     def get_hash(self, location: str) -> Optional[str]:
         """Returns the hash of the JSON from within a location ISF"""

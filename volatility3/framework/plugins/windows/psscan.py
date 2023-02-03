@@ -87,7 +87,6 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         for result in poolscanner.PoolScanner.generate_pool_scan(
             context, layer_name, symbol_table, constraints
         ):
-
             _constraint, mem_object, _header = result
             if not filter_func(mem_object):
                 yield mem_object
@@ -192,7 +191,6 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             kernel.symbol_table_name,
             filter_func=pslist.PsList.create_pid_filter(self.config.get("pid", None)),
         ):
-
             file_output = "Disabled"
             if self.config["dump"]:
                 # windows 10 objects (maybe others in the future) are already in virtual memory

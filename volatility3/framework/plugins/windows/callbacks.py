@@ -104,7 +104,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
         ]
 
         for symbol_name, extended_list in symbol_names:
-
             try:
                 symbol_offset = ntkrnlmp.get_symbol(symbol_name).address
             except exceptions.SymbolError:
@@ -354,7 +353,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
         )
 
         for callback in callback_record.Entry:
-
             if not context.layers[layer_name].is_valid(callback.CallbackRoutine, 64):
                 continue
 
@@ -372,7 +370,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
             yield "KeBugCheckCallbackListHead", callback.CallbackRoutine, component
 
     def _generator(self):
-
         kernel = self.context.modules[self.config["kernel"]]
 
         callback_table_name = self.create_callback_table(
@@ -397,7 +394,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
                 kernel.symbol_table_name,
                 callback_table_name,
             ):
-
                 if callback_detail is None:
                     detail = renderers.NotApplicableValue()
                 else:
@@ -451,7 +447,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
                     )
 
     def run(self):
-
         return renderers.TreeGrid(
             [
                 ("Type", str),

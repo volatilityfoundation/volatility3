@@ -46,7 +46,6 @@ class Check_creds(interfaces.plugins.PluginInterface):
         tasks = pslist.PsList.list_tasks(self.context, vmlinux.name)
 
         for task in tasks:
-
             cred_addr = task.cred.dereference().vol.offset
 
             if cred_addr not in creds:
@@ -54,7 +53,7 @@ class Check_creds(interfaces.plugins.PluginInterface):
 
             creds[cred_addr].append(task.pid)
 
-        for (_, pids) in creds.items():
+        for _, pids in creds.items():
             if len(pids) > 1:
                 pid_str = ""
                 for pid in pids:

@@ -192,7 +192,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
                         replacements.add((traverser, child))
                     elif child.children:
                         template_traverse_list.append(child)
-        for (parent, child) in replacements:
+        for parent, child in replacements:
             parent.replace_child(child, self._resolved[child.vol.type_name])
 
     def get_type(self, type_name: str) -> interfaces.objects.Template:

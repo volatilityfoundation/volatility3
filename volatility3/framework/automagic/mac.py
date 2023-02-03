@@ -251,7 +251,6 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
             context=context,
             progress_callback=progress_callback,
         ):
-
             banner = context.layers[layer_name].read(offset, 128)
 
             idx = banner.find(b"\x00")

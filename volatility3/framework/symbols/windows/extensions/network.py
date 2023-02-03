@@ -64,7 +64,6 @@ class _TCP_LISTENER(objects.StructType):
         size: int,
         members: Dict[str, Tuple[int, interfaces.objects.Template]],
     ) -> None:
-
         super().__init__(
             context=context,
             type_name=type_name,
@@ -167,7 +166,6 @@ class _TCP_LISTENER(objects.StructType):
                 yield "v6", inaddr6_any, inaddr6_any
 
     def is_valid(self):
-
         try:
             if not self.get_address_family() in (AF_INET, AF_INET6):
                 vollog.debug(
@@ -189,7 +187,6 @@ class _TCP_ENDPOINT(_TCP_LISTENER):
     """Class for objects found in TcpE pools"""
 
     def _ipv4_or_ipv6(self, inaddr):
-
         if self.get_address_family() == AF_INET:
             return inet_ntop(socket.AF_INET, inaddr.addr4)
         else:
@@ -214,7 +211,6 @@ class _TCP_ENDPOINT(_TCP_LISTENER):
             return None
 
     def is_valid(self):
-
         if self.State not in self.State.choices.values():
             vollog.debug(
                 f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid tcp state {self.State}"

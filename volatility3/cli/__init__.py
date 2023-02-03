@@ -443,7 +443,7 @@ class CommandLine:
             # Construct and run the plugin
             if constructed:
                 renderers[args.renderer]().render(constructed.run())
-        except (exceptions.VolatilityException) as excp:
+        except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
 
     @classmethod

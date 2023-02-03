@@ -73,7 +73,7 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
             )
             segments, consumed = self._read_snappy_frames(chunk_data, end - start)
             # The returned segments are accurate the chunk_data that was passed in, but needs shifting
-            for (thing, mapped_offset, size, mapped_size, compressed) in segments:
+            for thing, mapped_offset, size, mapped_size, compressed in segments:
                 self._segments.append(
                     (
                         thing + start,

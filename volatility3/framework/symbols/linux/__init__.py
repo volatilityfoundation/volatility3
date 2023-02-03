@@ -62,7 +62,6 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
     # based on __d_path from the Linux kernel
     @classmethod
     def _do_get_path(cls, rdentry, rmnt, dentry, vfsmnt) -> str:
-
         ret_path: List[str] = []
 
         while dentry != rdentry or vfsmnt != rmnt:
@@ -204,7 +203,6 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         symbol_table: str,
         task: interfaces.objects.ObjectInterface,
     ):
-
         # task.files can be null
         if not task.files:
             return
@@ -225,7 +223,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             fd_table, count=max_fds, subtype=file_type, context=context
         )
 
-        for (fd_num, filp) in enumerate(fds):
+        for fd_num, filp in enumerate(fds):
             if filp != 0:
                 full_path = LinuxUtilities.path_for_file(context, task, filp)
 

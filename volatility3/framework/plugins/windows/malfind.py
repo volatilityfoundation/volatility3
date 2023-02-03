@@ -151,7 +151,6 @@ class Malfind(interfaces.plugins.PluginInterface):
             for vad, data in self.list_injections(
                 self.context, kernel.layer_name, kernel.symbol_table_name, proc
             ):
-
                 # if we're on a 64 bit kernel, we may still need 32 bit disasm due to wow64
                 if is_32bit_arch or proc.get_is_wow64():
                     architecture = "intel"

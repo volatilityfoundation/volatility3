@@ -222,7 +222,6 @@ class VerInfo(interfaces.plugins.PluginInterface):
                 continue
 
             for entry in proc.load_order_modules():
-
                 try:
                     BaseDllName = entry.BaseDllName.get_string()
                 except exceptions.InvalidAddressException:

@@ -214,7 +214,6 @@ class VadInfo(interfaces.plugins.PluginInterface):
             process_name = utility.array_to_string(proc.ImageFileName)
 
             for vad in self.list_vads(proc, filter_func=filter_func):
-
                 file_output = "Disabled"
                 if self.config["dump"]:
                     file_handle = self.vad_dump(

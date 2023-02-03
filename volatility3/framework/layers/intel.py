@@ -173,7 +173,7 @@ class Intel(linear.LinearlyMappedLayer):
             )
 
         # Run through the offset in various chunks
-        for (name, size, large_page) in self._structure:
+        for name, size, large_page in self._structure:
             # Check we're valid
             if not self._page_is_valid(entry):
                 raise exceptions.PagedInvalidAddressException(

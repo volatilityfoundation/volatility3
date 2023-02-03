@@ -91,7 +91,6 @@ if HAS_LEECHCORE:
             chunk_size = size
             output = []
             for entry in self.handle.memmap:
-
                 if (
                     entry["base"] + entry["size"] <= chunk_start
                     or entry["base"] >= chunk_start + chunk_size

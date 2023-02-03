@@ -226,7 +226,6 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             kernel.symbol_table_name,
             filter_func=self.create_pid_filter(self.config.get("pid", None)),
         ):
-
             if not self.config.get("physical", self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset
             else:
