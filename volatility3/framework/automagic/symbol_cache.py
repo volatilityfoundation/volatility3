@@ -332,7 +332,7 @@ class SqliteCache(CacheManagerInterface):
                     if inner_url.scheme == "file":
                         pathname = inner_url.path.split("!")[0]
 
-                if pathname:
+                if pathname and os.path.exists(pathname):
                     timestamp = datetime.datetime.fromtimestamp(
                         os.stat(pathname).st_mtime
                     )
