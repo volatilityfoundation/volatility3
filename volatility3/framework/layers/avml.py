@@ -17,25 +17,23 @@ from volatility3.framework.layers import segmented
 vollog = logging.getLogger(__name__)
 
 try:
-    from ctypes import cdll
-
     # TODO: Find library for windows if needed
     try:
         # Linux/Mac
-        lib_snappy = cdll.LoadLibrary("libsnappy.so.1")
+        lib_snappy = ctypes.cdll.LoadLibrary("libsnappy.so.1")
     except OSError:
         lib_snappy = None
 
     try:
         if not lib_snappy:
             # Windows 64
-            lib_snappy = cdll.LoadLibrary("snappy64")
+            lib_snappy = ctypes.cdll.LoadLibrary("snappy64")
     except OSError:
         lib_snappy = None
 
     if lib_snappy:
         # Windows 32
-        lib_snappy = cdll.LoadLibrary("snappy32")
+        lib_snappy = ctypes.cdll.LoadLibrary("snappy32")
 
     __snappy_uncompress = lib_snappy.snappy_uncompress
     __snappy_uncompressed_length = lib_snappy.snappy_uncompressed_length
@@ -56,7 +54,7 @@ def uncompress(s):
     if cresult != 0:
         raise SnappyException(f"Error in snappy_uncompressed_length: {cresult}")
     ubuf = ctypes.create_string_buffer(ulen.value)
-    __snappy_uncompress(s, len(s), ubuf, ctypes.byref(ulen))
+    cresult = __snappy_uncompress(s, len(s), ubuf, ctypes.byref(ulen))
     if cresult != 0:
         raise SnappyException(f"Error in snappy_uncompress: {cresult}")
     return ubuf.raw
