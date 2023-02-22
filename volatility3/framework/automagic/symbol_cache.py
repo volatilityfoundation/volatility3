@@ -371,7 +371,7 @@ class SqliteCache(CacheManagerInterface):
 
                         # Get stats
                         stats_base_types = len(json_obj.get("base_types", {}))
-                        stats_types = len(json_obj.get("types", {}))
+                        stats_types = len(json_obj.get("user_types", {}))
                         stats_enums = len(json_obj.get("enums", {}))
                         stats_symbols = len(json_obj.get("symbols", {}))
 
