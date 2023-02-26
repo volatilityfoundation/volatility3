@@ -65,6 +65,11 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 description="Process IDs to include (all other processes are excluded)",
                 optional=True,
             ),
+            requirements.BooleanRequirement(
+                name="exclude",
+                description="Make filters exclusive instead of inclusive (e.g. pid filter excludes processes)",
+                optional=True,
+            ),
         ]
 
     def _generator(self):
@@ -72,7 +77,9 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
         rules = yarascan.YaraScan.process_yara_options(dict(self.config))
 
-        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
+        filter_func = pslist.PsList.create_pid_filter(
+            self.config.get("pid", None), self.config.get("exclude", False)
+        )
 
         for task in pslist.PsList.list_processes(
             context=self.context,
