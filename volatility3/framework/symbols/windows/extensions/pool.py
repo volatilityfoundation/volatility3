@@ -396,6 +396,7 @@ class OBJECT_HEADER(objects.StructType):
             )
 
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
+
         if symbol_table_name in self._context.modules:
             ntkrnlmp = self._context.modules[symbol_table_name]
         else:
@@ -411,7 +412,6 @@ class OBJECT_HEADER(objects.StructType):
             ntkrnlmp = self._context.module(
                 symbol_table_name, layer_name=self.vol.layer_name, offset=kvo
             )
-            self._context.add_module(ntkrnlmp)
 
         try:
             header_offset = self.NameInfoOffset
@@ -440,5 +440,6 @@ class OBJECT_HEADER(objects.StructType):
             layer_name=self.vol.layer_name,
             offset=self.vol.offset - header_offset,
             native_layer_name=self.vol.native_layer_name,
+            absolute=True,
         )
         return header
