@@ -39,7 +39,7 @@ try:
     __snappy_uncompressed_length = lib_snappy.snappy_uncompressed_length
 
     HAS_SNAPPY = True
-except OSError:
+except (AttributeError, OSError):
     HAS_SNAPPY = False
 
 
