@@ -111,7 +111,7 @@ class PsScan(interfaces.plugins.PluginInterface):
             # find all sched_class names by searching by if they include '_sched_class', e.g. 'fair_sched_class'
             if "_sched_class" in symbol:
                 # use canonicalize to set the appropriate sign extension for the addr
-                addr = kernel_layer.canonicalize(vmlinux.get_symbol(symbol).address)
+                addr = kernel_layer.canonicalize(vmlinux.get_symbol(symbol).address + vmlinux.offset)
 
                 # append to needles list the packed hex for searching
                 needles.append(struct.pack(pack_format, addr))
