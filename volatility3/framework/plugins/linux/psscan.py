@@ -6,7 +6,7 @@ from typing import Iterable, List, Tuple
 import struct
 from enum import Enum
 
-from volatility3.framework import renderers, interfaces, symbols, constants
+from volatility3.framework import renderers, interfaces, symbols, constants, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.layers import scanners
@@ -122,8 +122,20 @@ class PsScan(interfaces.plugins.PluginInterface):
                 # append to needles list the packed hex for searching
                 needles.append(packed_addr)
 
+        # find the memory layer to scan
+        if len(kernel_layer.dependencies) > 1:
+            vollog.warning(
+                    f"Kernel layer depends on multiple layers however only {kernel_layer.dependencies[0]} will be scanned by this plugin."
+                )
+        elif len(kernel_layer.dependencies) == 0:
+            vollog.error(
+                    f"Kernel layer has no dependencies, meaning there is no memory layer for this plugin to scan." 
+                    )
+            raise exceptions.LayerException(kernel_layer_name, f"Layer {kernel_layer_name} has no dependencies")
+        
+        memory_layer = context.layers[kernel_layer.dependencies[0]]
+        
         # scan the memory_layer for these needles
-        memory_layer = context.layers["memory_layer"]
         for address, _ in memory_layer.scan(
             context, scanners.MultiStringScanner(needles)
         ):
