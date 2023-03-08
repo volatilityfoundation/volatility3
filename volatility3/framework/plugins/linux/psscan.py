@@ -112,9 +112,16 @@ class PsScan(interfaces.plugins.PluginInterface):
             if "_sched_class" in symbol:
                 # use canonicalize to set the appropriate sign extension for the addr
                 addr = kernel_layer.canonicalize(vmlinux.get_symbol(symbol).address + vmlinux.offset)
+                packed_addr = struct.pack(pack_format, addr)
+
+                # debug message to show needles being searched for and symbol names
+                vollog.debug(
+                    f"Found a sched_class named {symbol} at offset {hex(addr)}. Will scan for these bytes: {packed_addr.hex()}"
+                )
 
                 # append to needles list the packed hex for searching
-                needles.append(struct.pack(pack_format, addr))
+                needles.append(packed_addr)
+
         # scan the memory_layer for these needles
         memory_layer = context.layers["memory_layer"]
         for address, _ in memory_layer.scan(
