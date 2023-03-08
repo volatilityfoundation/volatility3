@@ -70,7 +70,6 @@ class Envars(plugins.PluginInterface):
 
             # if mm exists attempt to get envars
             if mm:
-
                 # get process layer to read envars from
                 proc_layer_name = task.add_process_layer()
                 if proc_layer_name is None:
