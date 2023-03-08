@@ -6,7 +6,7 @@ from typing import Iterable, List, Tuple
 import struct
 from enum import Enum
 
-from volatility3.framework import renderers, interfaces, symbols, constants
+from volatility3.framework import renderers, interfaces, symbols, constants, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.layers import scanners
@@ -111,12 +111,33 @@ class PsScan(interfaces.plugins.PluginInterface):
             # find all sched_class names by searching by if they include '_sched_class', e.g. 'fair_sched_class'
             if "_sched_class" in symbol:
                 # use canonicalize to set the appropriate sign extension for the addr
-                addr = kernel_layer.canonicalize(vmlinux.get_symbol(symbol).address)
+                addr = kernel_layer.canonicalize(
+                    vmlinux.get_symbol(symbol).address + vmlinux.offset
+                )
+                packed_addr = struct.pack(pack_format, addr)
+
+                # debug message to show needles being searched for and symbol names
+                vollog.debug(
+                    f"Found a sched_class named {symbol} at offset {hex(addr)}. Will scan for these bytes: {packed_addr.hex()}"
+                )
 
                 # append to needles list the packed hex for searching
-                needles.append(struct.pack(pack_format, addr))
+                needles.append(packed_addr)
+        # find the memory layer to scan
+        if len(kernel_layer.dependencies) > 1:
+            vollog.warning(
+                f"Kernel layer depends on multiple layers however only {kernel_layer.dependencies[0]} will be scanned by this plugin."
+            )
+        elif len(kernel_layer.dependencies) == 0:
+            vollog.error(
+                f"Kernel layer has no dependencies, meaning there is no memory layer for this plugin to scan."
+            )
+            raise exceptions.LayerException(
+                kernel_layer_name, f"Layer {kernel_layer_name} has no dependencies"
+            )
+        memory_layer = context.layers[kernel_layer.dependencies[0]]
+
         # scan the memory_layer for these needles
-        memory_layer = context.layers["memory_layer"]
         for address, _ in memory_layer.scan(
             context, scanners.MultiStringScanner(needles)
         ):
