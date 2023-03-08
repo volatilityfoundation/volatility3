@@ -111,7 +111,9 @@ class PsScan(interfaces.plugins.PluginInterface):
             # find all sched_class names by searching by if they include '_sched_class', e.g. 'fair_sched_class'
             if "_sched_class" in symbol:
                 # use canonicalize to set the appropriate sign extension for the addr
-                addr = kernel_layer.canonicalize(vmlinux.get_symbol(symbol).address + vmlinux.offset)
+                addr = kernel_layer.canonicalize(
+                    vmlinux.get_symbol(symbol).address + vmlinux.offset
+                )
                 packed_addr = struct.pack(pack_format, addr)
 
                 # debug message to show needles being searched for and symbol names
@@ -121,20 +123,20 @@ class PsScan(interfaces.plugins.PluginInterface):
 
                 # append to needles list the packed hex for searching
                 needles.append(packed_addr)
-
         # find the memory layer to scan
         if len(kernel_layer.dependencies) > 1:
             vollog.warning(
-                    f"Kernel layer depends on multiple layers however only {kernel_layer.dependencies[0]} will be scanned by this plugin."
-                )
+                f"Kernel layer depends on multiple layers however only {kernel_layer.dependencies[0]} will be scanned by this plugin."
+            )
         elif len(kernel_layer.dependencies) == 0:
             vollog.error(
-                    f"Kernel layer has no dependencies, meaning there is no memory layer for this plugin to scan." 
-                    )
-            raise exceptions.LayerException(kernel_layer_name, f"Layer {kernel_layer_name} has no dependencies")
-        
+                f"Kernel layer has no dependencies, meaning there is no memory layer for this plugin to scan."
+            )
+            raise exceptions.LayerException(
+                kernel_layer_name, f"Layer {kernel_layer_name} has no dependencies"
+            )
         memory_layer = context.layers[kernel_layer.dependencies[0]]
-        
+
         # scan the memory_layer for these needles
         for address, _ in memory_layer.scan(
             context, scanners.MultiStringScanner(needles)
