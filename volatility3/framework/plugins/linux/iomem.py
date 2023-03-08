@@ -128,7 +128,6 @@ class IOMem(interfaces.plugins.PluginInterface):
 
         # only continue if iomem_root address was located
         if iomem_root_offset is not None:
-
             # recursively parse the resources starting from the root resource at 'iomem_resource'
             for depth, (name, start, end) in self.parse_resource(
                 self.context, vmlinux_module_name, iomem_root_offset
