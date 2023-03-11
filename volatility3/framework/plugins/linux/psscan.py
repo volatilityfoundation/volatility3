@@ -135,6 +135,7 @@ class PsScan(interfaces.plugins.PluginInterface):
             raise exceptions.LayerException(
                 kernel_layer_name, f"Layer {kernel_layer_name} has no dependencies"
             )
+        memory_layer_name = kernel_layer.dependencies[0]
         memory_layer = context.layers[kernel_layer.dependencies[0]]
 
         # scan the memory_layer for these needles
@@ -145,7 +146,8 @@ class PsScan(interfaces.plugins.PluginInterface):
             ptask = context.object(
                 vmlinux.symbol_table_name + constants.BANG + "task_struct",
                 offset=address - sched_class_offset,
-                layer_name="memory_layer",
+                layer_name=memory_layer_name,
+                native_layer_name=kernel_layer_name,
             )
 
             # sanity check exit_state
