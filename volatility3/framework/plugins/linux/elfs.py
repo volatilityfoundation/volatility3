@@ -75,55 +75,52 @@ class Elfs(plugins.PluginInterface):
         proc_layer = context.layers[layer_name]
         file_handle = None
 
-        try:
-            elf_object = context.object(
-                elf_table_name + constants.BANG + "Elf",
-                offset=vma.vm_start,
-                layer_name=layer_name,
-            )
+        elf_object = context.object(
+            elf_table_name + constants.BANG + "Elf",
+            offset=vma.vm_start,
+            layer_name=layer_name,
+        )
 
-            if not elf_object.is_valid():
-                return None
+        if not elf_object.is_valid():
+            return None
 
-            sections = {}
-            # TODO: Apply more effort to reconstruct ELF, e.g.: https://github.com/enbarberis/core2ELF64 ?
-            for phdr in elf_object.get_program_headers():
-                if phdr.p_type != 1:  # PT_LOAD = 1
-                    continue
+        sections = {}
+        # TODO: Apply more effort to reconstruct ELF, e.g.: https://github.com/enbarberis/core2ELF64 ?
+        for phdr in elf_object.get_program_headers():
+            if phdr.p_type != 1:  # PT_LOAD = 1
+                continue
 
-                start = phdr.p_vaddr
-                size = phdr.p_memsz
-                end = start + size
+            start = phdr.p_vaddr
+            size = phdr.p_memsz
+            end = start + size
 
-                # Use complete memory pages for dumping
-                # If start isn't a multiple of 4096, stick to the highest multiple < start
-                # If end isn't a multiple of 4096, stick to the lowest multiple > end
-                if start % 4096:
-                    start = start & ~0xFFF
+            # Use complete memory pages for dumping
+            # If start isn't a multiple of 4096, stick to the highest multiple < start
+            # If end isn't a multiple of 4096, stick to the lowest multiple > end
+            if start % 4096:
+                start = start & ~0xFFF
 
-                if end % 4096:
-                    end = (end & ~0xFFF) + 4096
+            if end % 4096:
+                end = (end & ~0xFFF) + 4096
 
-                real_size = end - start
+            real_size = end - start
 
-                if real_size < 0 or real_size > 100000000:
-                    continue
+            if real_size < 0 or real_size > 100000000:
+                continue
 
-                sections[start] = real_size
+            sections[start] = real_size
 
-            elf_data = b""
-            for section_start in sorted(sections.keys()):
-                read_size = sections[section_start]
+        elf_data = b""
+        for section_start in sorted(sections.keys()):
+            read_size = sections[section_start]
 
-                buf = proc_layer.read(vma.vm_start + section_start, read_size, pad=True)
-                elf_data = elf_data + buf
+            buf = proc_layer.read(vma.vm_start + section_start, read_size, pad=True)
+            elf_data = elf_data + buf
 
-            file_handle = open_method(
-                f"pid.{task.pid}.{utility.array_to_string(task.comm)}.{vma.vm_start:#x}.dmp"
-            )
-            file_handle.write(elf_data)
-        except Exception as e:
-            vollog.debug(f"Unable to dump ELF with pid {task.pid}: {e}")
+        file_handle = open_method(
+            f"pid.{task.pid}.{utility.array_to_string(task.comm)}.{vma.vm_start:#x}.dmp"
+        )
+        file_handle.write(elf_data)
 
         return file_handle
 
