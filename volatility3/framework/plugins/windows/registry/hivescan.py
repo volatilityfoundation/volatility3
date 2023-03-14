@@ -86,7 +86,6 @@ class HiveScan(interfaces.plugins.PluginInterface):
         for hive in self.scan_hives(
             self.context, kernel.layer_name, kernel.symbol_table_name
         ):
-
             yield (0, (format_hints.Hex(hive.vol.offset),))
 
     def run(self):

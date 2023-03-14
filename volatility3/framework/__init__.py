@@ -26,6 +26,7 @@ import importlib
 import inspect
 import logging
 import os
+import traceback
 from typing import Any, Dict, Generator, List, Tuple, Type, TypeVar
 
 from volatility3.framework import constants, interfaces
@@ -183,7 +184,11 @@ def import_file(module: str, path: str, ignore_errors: bool = False) -> List[str
         try:
             importlib.import_module(module)
         except ImportError as e:
-            vollog.debug(str(e))
+            vollog.debug(
+                "".join(
+                    traceback.TracebackException.from_exception(e).format(chain=True)
+                )
+            )
             vollog.debug(
                 "Failed to import module {} based on file: {}".format(module, path)
             )

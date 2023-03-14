@@ -52,7 +52,6 @@ class Lsof(plugins.PluginInterface):
         symbol_table: str,
         filter_func: Callable[[int], bool] = lambda _: False,
     ):
-
         linuxutils_symbol_table = None  # type: ignore
         for task in pslist.PsList.list_tasks(context, symbol_table, filter_func):
             if linuxutils_symbol_table is None:

@@ -144,7 +144,6 @@ class PoolScanner(plugins.PluginInterface):
         ]
 
     def _generator(self):
-
         kernel = self.context.modules[self.config["kernel"]]
 
         symbol_table = kernel.symbol_table_name
@@ -367,7 +366,6 @@ class PoolScanner(plugins.PluginInterface):
         for constraint, header in cls.pool_scan(
             context, scan_layer, symbol_table, constraints, alignment=alignment
         ):
-
             mem_objects = header.get_object(
                 constraint=constraint,
                 use_top_down=is_windows_8_or_later,

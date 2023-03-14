@@ -56,7 +56,6 @@ class SSDT(plugins.PluginInterface):
         context_modules = []
 
         for mod in mods:
-
             try:
                 module_name_with_ext = mod.BaseDllName.get_string()
             except exceptions.InvalidAddressException:
@@ -83,7 +82,6 @@ class SSDT(plugins.PluginInterface):
         return contexts.ModuleCollection(context_modules)
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, int, Any, Any]]]:
-
         kernel = self.context.modules[self.config["kernel"]]
 
         layer_name = kernel.layer_name
@@ -132,7 +130,6 @@ class SSDT(plugins.PluginInterface):
         )
 
         for idx, function_obj in enumerate(functions):
-
             function = find_address(function_obj)
             module_symbols = collection.get_module_symbols_by_absolute_location(
                 function

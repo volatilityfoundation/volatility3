@@ -129,12 +129,10 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             nt_major_version == 6 and nt_minor_version >= 1
         )
         for proc in procs:
-
             proc_id = proc.UniqueProcessId
             proc_layer_name = proc.add_process_layer()
 
             for entry in proc.load_order_modules():
-
                 BaseDllName = FullDllName = renderers.UnreadableValue()
                 with contextlib.suppress(exceptions.InvalidAddressException):
                     BaseDllName = entry.BaseDllName.get_string()

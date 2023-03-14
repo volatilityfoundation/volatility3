@@ -53,7 +53,6 @@ class Modules(interfaces.plugins.PluginInterface):
         for mod in self.list_modules(
             self.context, kernel.layer_name, kernel.symbol_table_name
         ):
-
             try:
                 BaseDllName = mod.BaseDllName.get_string()
             except exceptions.InvalidAddressException:

@@ -180,7 +180,7 @@ class DeviceTree(interfaces.plugins.PluginInterface):
                             ),
                         )
 
-            except (exceptions.InvalidAddressException):
+            except exceptions.InvalidAddressException:
                 vollog.log(
                     constants.LOGLEVEL_VVVV,
                     f"Invalid address identified in drivers and devices: {driver.vol.offset:x}",

@@ -595,7 +595,6 @@ class list_head(objects.StructType, collections.abc.Iterable):
 
         seen = {self.vol.offset}
         while link.vol.offset not in seen:
-
             obj = self._context.object(
                 symbol_type, layer, offset=link.vol.offset - relative_offset
             )
@@ -630,7 +629,6 @@ class files_struct(objects.StructType):
 
 
 class mount(objects.StructType):
-
     MNT_NOSUID = 0x01
     MNT_NODEV = 0x02
     MNT_NOEXEC = 0x04
@@ -755,7 +753,6 @@ class mount(objects.StructType):
             and current_mnt.has_parent()
             and current_mnt.vol.offset not in mnt_seen
         ):
-
             current_dentry = current_mnt.mnt_mountpoint
             mnt_seen.add(current_mnt.vol.offset)
             current_mnt = current_mnt.mnt_parent

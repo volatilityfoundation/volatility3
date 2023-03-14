@@ -36,7 +36,6 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
         progress_callback=None,
         optional=False,
     ) -> List[str]:
-
         # Make sure we import the layers, so they can reconstructed
         framework.import_files(sys.modules["volatility3.framework.layers"])
 

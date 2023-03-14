@@ -206,7 +206,7 @@ class vm_map_entry(objects.StructType):
         permask = "rwx"
         perms = ""
 
-        for (ctr, i) in enumerate([1, 3, 5]):
+        for ctr, i in enumerate([1, 3, 5]):
             if (self.protection & i) == i:
                 perms = perms + permask[ctr]
             else:
@@ -593,7 +593,7 @@ class sysctl_oid(objects.StructType):
         checks = [0x80000000, 0x40000000, 0x00800000]
         perms = ["R", "W", "L"]
 
-        for (i, c) in enumerate(checks):
+        for i, c in enumerate(checks):
             if c & self.oid_kind:
                 ret = ret + perms[i]
             else:

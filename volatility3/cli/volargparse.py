@@ -31,7 +31,6 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
         values: Union[str, Sequence[Any], None],
         option_string: Optional[str] = None,
     ) -> None:
-
         parser_name = ""
         arg_strings = []  # type: List[str]
         if values is not None:

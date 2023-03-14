@@ -269,7 +269,6 @@ class RegistryHive(linear.LinearlyMappedLayer):
     def mapping(
         self, offset: int, length: int, ignore_errors: bool = False
     ) -> Iterable[Tuple[int, int, int, int, str]]:
-
         if length < 0:
             raise ValueError("Mapping length of RegistryHive must be positive or zero")
 

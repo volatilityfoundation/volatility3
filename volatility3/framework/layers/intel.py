@@ -56,6 +56,11 @@ class Intel(linear.LinearlyMappedLayer):
         )
         self._entry_size = struct.calcsize(self._entry_format)
         self._entry_number = self.page_size // self._entry_size
+        self._canonical_prefix = self._mask(
+            (1 << self._bits_per_register) - 1,
+            self._bits_per_register,
+            self._maxvirtaddr,
+        )
 
         # These can vary depending on the type of space
         self._index_shift = int(
@@ -106,6 +111,23 @@ class Intel(linear.LinearlyMappedLayer):
         """Returns whether a particular page is valid based on its entry."""
         return bool(entry & 1)
 
+    def canonicalize(self, addr: int) -> int:
+        """Canonicalizes an address by performing an appropiate sign extension on the higher addresses"""
+        if self._bits_per_register <= self._maxvirtaddr:
+            return addr & self.address_mask
+        elif addr < (1 << self._maxvirtaddr - 1):
+            return addr
+        return self._mask(addr, self._maxvirtaddr, 0) + self._canonical_prefix
+
+    def decanonicalize(self, addr: int) -> int:
+        """Removes canonicalization to ensure an adress fits within the correct range if it has been canonicalized
+
+        This will produce an address outside the range if the canonicalization is incorrect
+        """
+        if addr < (1 << self._maxvirtaddr - 1):
+            return addr
+        return addr ^ self._canonical_prefix
+
     def _translate(self, offset: int) -> Tuple[int, int, str]:
         """Translates a specific offset based on paging tables.
 
@@ -151,7 +173,7 @@ class Intel(linear.LinearlyMappedLayer):
             )
 
         # Run through the offset in various chunks
-        for (name, size, large_page) in self._structure:
+        for name, size, large_page in self._structure:
             # Check we're valid
             if not self._page_is_valid(entry):
                 raise exceptions.PagedInvalidAddressException(
