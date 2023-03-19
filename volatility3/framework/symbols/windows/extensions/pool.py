@@ -397,12 +397,9 @@ class OBJECT_HEADER(objects.StructType):
 
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
 
-        try:
-            header_offset = self.NameInfoOffset
-        except AttributeError:
-            # http://codemachine.com/article_objectheader.html (Windows 7 and later)
-            name_info_bit = 0x2
-
+        if symbol_table_name in self._context.modules:
+            ntkrnlmp = self._context.modules[symbol_table_name]
+        else:
             layer = self._context.layers[self.vol.native_layer_name]
             kvo = layer.config.get("kernel_virtual_offset", None)
 
@@ -411,16 +408,24 @@ class OBJECT_HEADER(objects.StructType):
                     f"Could not find kernel_virtual_offset for layer: {self.vol.layer_name}"
                 )
 
+            # We know this symbol table name can't exist because we checked for it earlier
             ntkrnlmp = self._context.module(
                 symbol_table_name, layer_name=self.vol.layer_name, offset=kvo
             )
+
+        try:
+            header_offset = self.NameInfoOffset
+        except AttributeError:
+            # http://codemachine.com/article_objectheader.html (Windows 7 and later)
+            name_info_bit = 0x2
+
             address = ntkrnlmp.get_symbol("ObpInfoMaskToOffset").address
             calculated_index = self.InfoMask & (name_info_bit | (name_info_bit - 1))
 
-            header_offset = self._context.object(
-                symbol_table_name + constants.BANG + "unsigned char",
+            header_offset = ntkrnlmp.object(
+                "unsigned char",
                 layer_name=self.vol.native_layer_name,
-                offset=kvo + address + calculated_index,
+                offset=address + calculated_index,
             )
 
         if header_offset == 0:
@@ -430,10 +435,11 @@ class OBJECT_HEADER(objects.StructType):
                 )
             )
 
-        header = self._context.object(
-            symbol_table_name + constants.BANG + "_OBJECT_HEADER_NAME_INFO",
+        header = ntkrnlmp.object(
+            "_OBJECT_HEADER_NAME_INFO",
             layer_name=self.vol.layer_name,
             offset=self.vol.offset - header_offset,
             native_layer_name=self.vol.native_layer_name,
+            absolute=True,
         )
         return header
