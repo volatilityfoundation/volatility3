@@ -294,11 +294,128 @@ class fs_struct(objects.StructType):
 
         raise AttributeError("Unable to find the root mount")
 
+class maple_tree(objects.StructType):
+    # include/linux/maple_tree.h
+    # Mask for Maple Tree Flags
+    MT_FLAGS_HEIGHT_MASK = 0x7C
+    MT_FLAGS_HEIGHT_OFFSET = 0x02
+
+    # Shift and mask to extract information from maple tree node pointers
+    MAPLE_NODE_TYPE_SHIFT = 0x03
+    MAPLE_NODE_TYPE_MASK = 0x0F
+    MAPLE_NODE_POINTER_MASK = 0xFF
+
+    # types of Maple Tree Nodes
+    MAPLE_DENSE = 0
+    MAPLE_LEAF_64 = 1
+    MAPLE_RANGE_64 = 2
+    MAPLE_ARANGE_64 = 3
+
+    def get_slot_iter(self):
+        """Parse the Maple Tree and return every non zero slot."""
+        maple_tree_offset, _, _ = self._parse_maple_tree_entry(self.vol.offset)
+        maple_tree_depth = (
+            self.ma_flags & self.MT_FLAGS_HEIGHT_MASK
+        ) >> self.MT_FLAGS_HEIGHT_OFFSET
+        yield from self._parse_maple_tree_node(
+            self.ma_root, maple_tree_offset, maple_tree_depth
+        )
+
+    def _parse_maple_tree_node(
+        self, maple_tree_entry, parent, maple_tree_depth, seen=set(), depth=1
+    ):
+        """Recursively parse Maple Tree Nodes and yield all non empty slots"""
+
+        # protect against unlikely loop
+        if maple_tree_entry in seen:
+            vollog.warning(
+                f"The mte {hex(maple_tree_entry)} has all ready been seen, no further results will be produced for this node."
+            )
+            return
+        else:
+            seen.add(maple_tree_entry)
+        if maple_tree_depth < depth:
+            vollog.warning(
+                f"The depth for the maple tree at {hex(self.vol.offset)} is {maple_tree_depth}, however when parsing the nodes "
+                f"a depth of {depth} was reached. This is unexpected and may lead to incorrect results."
+            )
+        # parse the mte to extract the pointer value, node type, and leaf status
+        pointer, node_type, is_leaf = self._parse_maple_tree_entry(maple_tree_entry)
+
+        # create a pointer object for the node parent mte (note this will include flags in the low bits)
+        symbol_table_name = self.get_symbol_table_name()
+        node_parent_mte = self._context.object(
+            symbol_table_name + constants.BANG + "pointer",
+            layer_name=self.vol.layer_name,
+            offset=pointer,
+        )
+
+        # extract the actual pointer to the parent of this node
+        node_parent_pointer, _, _ = self._parse_maple_tree_entry(node_parent_mte)
+
+        # verify that the node_parent_pointer correctly points to the parent
+        assert node_parent_pointer == parent
+
+        # create a node object
+        node = self._context.object(
+            symbol_table_name + constants.BANG + "maple_node",
+            layer_name=self.vol.layer_name,
+            offset=pointer,
+        )
+
+        # parse the slots based on the node type
+        if node_type == self.MAPLE_DENSE:
+            assert is_leaf == True
+            for slot in node.alloc.slot:
+                if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
+                    yield slot
+        elif node_type == self.MAPLE_LEAF_64:
+            assert is_leaf == True
+            for slot in node.mr64.slot:
+                if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
+                    yield slot
+        elif node_type == self.MAPLE_RANGE_64:
+            assert is_leaf == False
+            for slot in node.mr64.slot:
+                if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
+                    yield from self._parse_maple_tree_node(
+                        slot, pointer, maple_tree_depth, seen, depth + 1
+                    )
+        elif node_type == self.MAPLE_ARANGE_64:
+            assert is_leaf == False
+            for slot in node.ma64.slot:
+                if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
+                    yield from self._parse_maple_tree_node(
+                        slot, pointer, maple_tree_depth, seen, depth + 1
+                    )
+        else:
+            # unkown maple node type
+            raise AttributeError(
+                f"Unkown Maple Tree node type {node_type} at offset {hex(pointer)}."
+            )
+
+    def _parse_maple_tree_entry(self, maple_tree_entry):
+        """Parse a Maple Tree Entry and return the pointer, node type, if the node is a leaf, if the node is the root"""
+        # Extract the node type
+        node_type = (
+            maple_tree_entry >> self.MAPLE_NODE_TYPE_SHIFT
+        ) & self.MAPLE_NODE_TYPE_MASK
+
+        # Determine if it's a leaf node or not
+        is_leaf = node_type < self.MAPLE_RANGE_64
+
+        # Clear the lower bits to get the true pointer value
+        pointer = maple_tree_entry & ~(self.MAPLE_NODE_POINTER_MASK)
+
+        return pointer, node_type, is_leaf
 
 class mm_struct(objects.StructType):
     def get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mmap list member of an mm_struct."""
 
+        if not self.has_member('mmap'): 
+            raise AttributeError("get_mmap_iter called on mm_struct where no mmap member exists.")
+        
         if not self.mmap:
             return
 
@@ -312,7 +429,32 @@ class mm_struct(objects.StructType):
             seen.add(link.vol.offset)
             link = link.vm_next
 
+    def get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns an iterator for the mm_mt member of an mm_struct."""
+    
+        if not self.has_member('mm_mt'): 
+            raise AttributeError("get_maple_tree_iter called on mm_struct where no mm_mt member exists.")
 
+        symbol_table_name = self.get_symbol_table_name()
+        for vma_pointer in self.mm_mt.get_slot_iter():
+            # convert pointer to vm_area_struct and yield
+            vma = self._context.object(
+                symbol_table_name + constants.BANG + "vm_area_struct",
+                layer_name=self.vol.layer_name,
+                offset=vma_pointer
+            )
+            yield vma
+
+    def get_vma_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns an iterator for the VMAs in an mm_struct. Automatically choosing the mmap or mm_mt as required."""
+
+        if self.has_member('mmap'): 
+            yield from self.get_mmap_iter()
+        elif self.has_member('mm_mt'): 
+            yield from self.get_maple_tree_iter()
+        else:
+            raise AttributeError("Unable to find mmap or mm_mt in mm_struct")
+        
 class super_block(objects.StructType):
     # include/linux/kdev_t.h
     MINORBITS = 20
