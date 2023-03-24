@@ -313,7 +313,7 @@ class maple_tree(objects.StructType):
 
     def get_slot_iter(self):
         """Parse the Maple Tree and return every non zero slot."""
-        maple_tree_offset, _, _ = self._parse_maple_tree_entry(self.vol.offset)
+        maple_tree_offset = self.vol.offset & ~(self.MAPLE_NODE_POINTER_MASK)
         maple_tree_depth = (
             self.ma_flags & self.MT_FLAGS_HEIGHT_MASK
         ) >> self.MT_FLAGS_HEIGHT_OFFSET
@@ -340,7 +340,11 @@ class maple_tree(objects.StructType):
                 f"a depth of {depth} was reached. This is unexpected and may lead to incorrect results."
             )
         # parse the mte to extract the pointer value, node type, and leaf status
-        pointer, node_type, is_leaf = self._parse_maple_tree_entry(maple_tree_entry)
+        pointer = maple_tree_entry & ~(self.MAPLE_NODE_POINTER_MASK)
+        node_type = (
+            maple_tree_entry >> self.MAPLE_NODE_TYPE_SHIFT
+        ) & self.MAPLE_NODE_TYPE_MASK
+        is_leaf = node_type < self.MAPLE_RANGE_64
 
         # create a pointer object for the node parent mte (note this will include flags in the low bits)
         symbol_table_name = self.get_symbol_table_name()
@@ -351,7 +355,7 @@ class maple_tree(objects.StructType):
         )
 
         # extract the actual pointer to the parent of this node
-        node_parent_pointer, _, _ = self._parse_maple_tree_entry(node_parent_mte)
+        node_parent_pointer = node_parent_mte & ~(self.MAPLE_NODE_POINTER_MASK)
 
         # verify that the node_parent_pointer correctly points to the parent
         assert node_parent_pointer == parent
@@ -393,21 +397,6 @@ class maple_tree(objects.StructType):
             raise AttributeError(
                 f"Unkown Maple Tree node type {node_type} at offset {hex(pointer)}."
             )
-
-    def _parse_maple_tree_entry(self, maple_tree_entry):
-        """Parse a Maple Tree Entry and return the pointer, node type, if the node is a leaf, if the node is the root"""
-        # Extract the node type
-        node_type = (
-            maple_tree_entry >> self.MAPLE_NODE_TYPE_SHIFT
-        ) & self.MAPLE_NODE_TYPE_MASK
-
-        # Determine if it's a leaf node or not
-        is_leaf = node_type < self.MAPLE_RANGE_64
-
-        # Clear the lower bits to get the true pointer value
-        pointer = maple_tree_entry & ~(self.MAPLE_NODE_POINTER_MASK)
-
-        return pointer, node_type, is_leaf
 
 class mm_struct(objects.StructType):
     def get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
