@@ -344,7 +344,6 @@ class maple_tree(objects.StructType):
         node_type = (
             maple_tree_entry >> self.MAPLE_NODE_TYPE_SHIFT
         ) & self.MAPLE_NODE_TYPE_MASK
-        is_leaf = node_type < self.MAPLE_RANGE_64
 
         # create a pointer object for the node parent mte (note this will include flags in the low bits)
         symbol_table_name = self.get_symbol_table_name()
@@ -369,24 +368,20 @@ class maple_tree(objects.StructType):
 
         # parse the slots based on the node type
         if node_type == self.MAPLE_DENSE:
-            assert is_leaf == True
             for slot in node.alloc.slot:
                 if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
                     yield slot
         elif node_type == self.MAPLE_LEAF_64:
-            assert is_leaf == True
             for slot in node.mr64.slot:
                 if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
                     yield slot
         elif node_type == self.MAPLE_RANGE_64:
-            assert is_leaf == False
             for slot in node.mr64.slot:
                 if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
                     yield from self._parse_maple_tree_node(
                         slot, pointer, maple_tree_depth, seen, depth + 1
                     )
         elif node_type == self.MAPLE_ARANGE_64:
-            assert is_leaf == False
             for slot in node.ma64.slot:
                 if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
                     yield from self._parse_maple_tree_node(
