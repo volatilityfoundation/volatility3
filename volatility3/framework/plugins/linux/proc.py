@@ -124,7 +124,6 @@ class Maps(plugins.PluginInterface):
                 )
             )
             return None
-
         vm_size = vm_end - vm_start
 
         # check if vm_size is negative, this should never happen.
@@ -133,14 +132,12 @@ class Maps(plugins.PluginInterface):
                 f"Skip virtual memory dump for pid {pid} between {vm_start:#x}-{vm_end:#x} as {vm_size} is negative."
             )
             return None
-        
         # check if vm_size is larger than the maxsize limit, and therefore is not saved out.
         if maxsize <= vm_size:
             vollog.warning(
                 f"Skip virtual memory dump for pid {pid} between {vm_start:#x}-{vm_end:#x} as {vm_size} is larger than maxsize limit of {maxsize}"
             )
             return None
-
         proc_layer = context.layers[proc_layer_name]
         file_name = f"pid.{pid}.vma.{vm_start:#x}-{vm_end:#x}.dmp"
         try:
@@ -152,11 +149,9 @@ class Maps(plugins.PluginInterface):
                 data = proc_layer.read(offset, to_read, pad=True)
                 file_handle.write(data)
                 offset += to_read
-
         except Exception as excp:
             vollog.debug(f"Unable to dump virtual memory {file_name}: {excp}")
             return None
-
         return file_handle
 
     def _generator(self, tasks):
@@ -179,11 +174,9 @@ class Maps(plugins.PluginInterface):
                     return False
 
             vma_filter_func = vma_filter_function
-
         for task in tasks:
             if not task.mm:
                 continue
-
             name = utility.array_to_string(task.comm)
 
             for vma in self.list_vmas(task, filter_func=vma_filter_func):
@@ -200,7 +193,6 @@ class Maps(plugins.PluginInterface):
                         major = inode_object.i_sb.major
                         minor = inode_object.i_sb.minor
                         inode = inode_object.i_ino
-
                 path = vma.get_name(self.context, task)
 
                 file_output = "Disabled"
@@ -215,7 +207,6 @@ class Maps(plugins.PluginInterface):
                         )
                         vm_start = None
                         vm_end = None
-
                     if vm_start and vm_end:
                         # only attempt to dump the memory if we have vm_start and vm_end
                         file_handle = self.vma_dump(
@@ -230,7 +221,6 @@ class Maps(plugins.PluginInterface):
                         if file_handle:
                             file_handle.close()
                             file_output = file_handle.preferred_filename
-
                 yield (
                     0,
                     (
