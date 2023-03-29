@@ -105,7 +105,6 @@ class Maps(plugins.PluginInterface):
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             task: an task_struct instance
-            vma: The suspected VMA to extract (ObjectInterface)
             vm_start: The start virtual address from the vma to dump
             vm_end: The end virtual address from the vma to dump
             open_method: class to provide context manager for opening the file
@@ -127,7 +126,16 @@ class Maps(plugins.PluginInterface):
             return None
 
         vm_size = vm_end - vm_start
-        if 0 < maxsize < vm_size:
+
+        # check if vm_size is negative, this should never happen.
+        if vm_size < 0:
+            vollog.warning(
+                f"Skip virtual memory dump for pid {pid} between {vm_start:#x}-{vm_end:#x} as {vm_size} is negative."
+            )
+            return None
+        
+        # check if vm_size is larger than the maxsize limit, and therefore is not saved out.
+        if maxsize <= vm_size:
             vollog.warning(
                 f"Skip virtual memory dump for pid {pid} between {vm_start:#x}-{vm_end:#x} as {vm_size} is larger than maxsize limit of {maxsize}"
             )
