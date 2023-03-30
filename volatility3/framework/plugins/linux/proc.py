@@ -90,6 +90,10 @@ class Maps(plugins.PluginInterface):
                     vollog.debug(
                         f"Excluded vma at offset {vma.vol.offset:#x} for pid {task.pid} due to filter_func"
                     )
+        else:
+            vollog.debug(
+                f"Excluded pid {task.pid} as there is no mm member. It is likely a kernel thread."
+            )
 
     @classmethod
     def vma_dump(
