@@ -21,6 +21,7 @@ class Maps(plugins.PluginInterface):
     """Lists all memory maps for all processes."""
 
     _required_framework_version = (2, 0, 0)
+    _version = (1, 0, 0)
     MAXSIZE_DEFAULT = 1024 * 1024 * 1024  # 1 Gb
 
     @classmethod
@@ -203,7 +204,7 @@ class Maps(plugins.PluginInterface):
                         vm_end = vma.vm_end
                     except AttributeError:
                         vollog.debug(
-                            f"Unable to find the vm_start and vm_end for vma at {vma.vol.offset:#x} for pid {pid}"
+                            f"Unable to find the vm_start and vm_end for vma at {vma.vol.offset:#x} for pid {task.pid}"
                         )
                         vm_start = None
                         vm_end = None
