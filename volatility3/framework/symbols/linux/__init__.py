@@ -65,7 +65,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         ret_path: List[str] = []
 
         while dentry != rdentry or vfsmnt != rmnt:
-            dname = dentry.path()
+            dname = dentry.d_name.name_as_str()
             if dname == "":
                 break
 
