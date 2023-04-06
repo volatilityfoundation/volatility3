@@ -224,8 +224,4 @@ def list_plugins() -> Dict[str, Type[interfaces.plugins.PluginInterface]]:
 
 
 def clear_cache(complete=False):
-    glob_pattern = "*.cache"
-    if not complete:
-        glob_pattern = "data_" + glob_pattern
-    for cache_filename in glob.glob(os.path.join(constants.CACHE_PATH, glob_pattern)):
-        os.unlink(cache_filename)
+    os.unlink(os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME))
