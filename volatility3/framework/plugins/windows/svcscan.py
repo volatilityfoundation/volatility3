@@ -180,7 +180,6 @@ class SvcScan(interfaces.plugins.PluginInterface):
             symbol_table=kernel.symbol_table_name,
             filter_func=filter_func,
         ):
-
             proc_id = "Unknown"
             try:
                 proc_id = task.UniqueProcessId
@@ -200,7 +199,6 @@ class SvcScan(interfaces.plugins.PluginInterface):
                 scanner=scanners.BytesScanner(needle=service_tag),
                 sections=vadyarascan.VadYaraScan.get_vad_maps(task),
             ):
-
                 if not is_vista_or_later:
                     service_record = self.context.object(
                         service_table_name + constants.BANG + "_SERVICE_RECORD",

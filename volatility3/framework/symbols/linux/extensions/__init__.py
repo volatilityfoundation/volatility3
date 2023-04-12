@@ -4,14 +4,19 @@
 
 import collections.abc
 import logging
+import socket as socket_module
 from typing import Generator, Iterable, Iterator, Optional, Tuple
 
 from volatility3.framework import constants
+from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
+from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
+from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
+from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
+from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
 from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
-from volatility3.framework.symbols import generic, linux
-from volatility3.framework.symbols import intermed
+from volatility3.framework.symbols import generic, linux, intermed
 from volatility3.framework.symbols.linux.extensions import elf
 
 vollog = logging.getLogger(__name__)
@@ -590,7 +595,6 @@ class list_head(objects.StructType, collections.abc.Iterable):
 
         seen = {self.vol.offset}
         while link.vol.offset not in seen:
-
             obj = self._context.object(
                 symbol_type, layer, offset=link.vol.offset - relative_offset
             )
@@ -625,7 +629,6 @@ class files_struct(objects.StructType):
 
 
 class mount(objects.StructType):
-
     MNT_NOSUID = 0x01
     MNT_NODEV = 0x02
     MNT_NOEXEC = 0x04
@@ -750,7 +753,6 @@ class mount(objects.StructType):
             and current_mnt.has_parent()
             and current_mnt.vol.offset not in mnt_seen
         ):
-
             current_dentry = current_mnt.mnt_mountpoint
             mnt_seen.add(current_mnt.vol.offset)
             current_mnt = current_mnt.mnt_parent
@@ -837,3 +839,265 @@ class mnt_namespace(objects.StructType):
 
         for mount in self.list.to_list(mnt_type, "mnt_list"):
             yield mount
+
+
+class net(objects.StructType):
+    def get_inode(self):
+        if self.has_member("proc_inum"):
+            return self.proc_inum
+        elif self.ns.has_member("inum"):
+            return self.ns.inum
+        else:
+            raise AttributeError("Unable to find net_namespace inode")
+
+
+class socket(objects.StructType):
+    def _get_vol_kernel(self):
+        symbol_table_arr = self.vol.type_name.split("!", 1)
+        symbol_table = symbol_table_arr[0] if len(symbol_table_arr) == 2 else None
+
+        module_names = list(
+            self._context.modules.get_modules_by_symbol_tables(symbol_table)
+        )
+        if not module_names:
+            raise ValueError(f"No module using the symbol table {symbol_table}")
+
+        kernel_module_name = module_names[0]
+        kernel = self._context.modules[kernel_module_name]
+        return kernel
+
+    def get_inode(self):
+        try:
+            kernel = self._get_vol_kernel()
+        except ValueError:
+            return 0
+
+        socket_alloc = linux.LinuxUtilities.container_of(
+            self.vol.offset, "socket_alloc", "socket", kernel
+        )
+        vfs_inode = socket_alloc.vfs_inode
+
+        return vfs_inode.i_ino
+
+    def get_state(self):
+        socket_state_idx = self.state
+        if 0 <= socket_state_idx < len(SOCKET_STATES):
+            return SOCKET_STATES[socket_state_idx]
+
+
+class sock(objects.StructType):
+    def get_family(self):
+        family_idx = self.__sk_common.skc_family
+        if 0 <= family_idx < len(SOCK_FAMILY):
+            return SOCK_FAMILY[family_idx]
+
+    def get_type(self):
+        return SOCK_TYPES.get(self.sk_type, "")
+
+    def get_inode(self):
+        if not self.sk_socket:
+            return 0
+
+        return self.sk_socket.get_inode()
+
+    def get_protocol(self):
+        return
+
+    def get_state(self):
+        # Return the generic socket state
+        if self.has_member("sk"):
+            return self.sk.sk_socket.get_state()
+
+        return self.sk_socket.get_state()
+
+
+class unix_sock(objects.StructType):
+    def get_name(self):
+        if not self.addr:
+            return
+
+        sockaddr_un = self.addr.name.cast("sockaddr_un")
+        saddr = str(utility.array_to_string(sockaddr_un.sun_path))
+        return saddr
+
+    def get_protocol(self):
+        return
+
+    def get_state(self):
+        """Return a string representing the sock state."""
+
+        # Unix socket states reuse (a subset) of the inet_sock states contants
+        if self.sk.get_type() == "STREAM":
+            state_idx = self.sk.__sk_common.skc_state
+            if 0 <= state_idx < len(TCP_STATES):
+                return TCP_STATES[state_idx]
+        else:
+            # Return the generic socket state
+            return self.sk.sk_socket.get_state()
+
+    def get_inode(self):
+        return self.sk.get_inode()
+
+
+class inet_sock(objects.StructType):
+    def get_family(self):
+        family_idx = self.sk.__sk_common.skc_family
+        if 0 <= family_idx < len(SOCK_FAMILY):
+            return SOCK_FAMILY[family_idx]
+
+    def get_protocol(self):
+        # If INET6 family and a proto is defined, we use that specific IPv6 protocol.
+        # Otherwise, we use the standard IP protocol.
+        protocol = IP_PROTOCOLS.get(self.sk.sk_protocol)
+        if self.get_family() == "AF_INET6":
+            protocol = IPV6_PROTOCOLS.get(self.sk.sk_protocol, protocol)
+
+        return protocol
+
+    def get_state(self):
+        """Return a string representing the sock state."""
+
+        if self.sk.get_type() == "STREAM":
+            state_idx = self.sk.__sk_common.skc_state
+            if 0 <= state_idx < len(TCP_STATES):
+                return TCP_STATES[state_idx]
+        else:
+            # Return the generic socket state
+            return self.sk.sk_socket.get_state()
+
+    def get_src_port(self):
+        sport_le = getattr(self, "sport", getattr(self, "inet_sport", None))
+        if sport_le is not None:
+            return socket_module.htons(sport_le)
+
+    def get_dst_port(self):
+        sk_common = self.sk.__sk_common
+        if hasattr(sk_common, "skc_portpair"):
+            dport_le = sk_common.skc_portpair & 0xFFFF
+        elif hasattr(self, "dport"):
+            dport_le = self.dport
+        elif hasattr(self, "inet_dport"):
+            dport_le = self.inet_dport
+        elif hasattr(sk_common, "skc_dport"):
+            dport_le = sk_common.skc_dport
+        else:
+            return
+
+        return socket_module.htons(dport_le)
+
+    def get_src_addr(self):
+        sk_common = self.sk.__sk_common
+        family = sk_common.skc_family
+        if family == socket_module.AF_INET:
+            addr_size = 4
+            if hasattr(self, "rcv_saddr"):
+                saddr = self.rcv_saddr
+            elif hasattr(self, "inet_rcv_saddr"):
+                saddr = self.inet_rcv_saddr
+            else:
+                saddr = sk_common.skc_rcv_saddr
+        elif family == socket_module.AF_INET6:
+            addr_size = 16
+            saddr = self.pinet6.saddr
+        else:
+            return
+
+        parent_layer = self._context.layers[self.vol.layer_name]
+        try:
+            addr_bytes = parent_layer.read(saddr.vol.offset, addr_size)
+        except exceptions.InvalidAddressException:
+            vollog.debug(
+                f"Unable to read socket src address from {saddr.vol.offset:#x}"
+            )
+            return
+
+        return socket_module.inet_ntop(family, addr_bytes)
+
+    def get_dst_addr(self):
+        sk_common = self.sk.__sk_common
+        family = sk_common.skc_family
+        if family == socket_module.AF_INET:
+            if hasattr(self, "daddr") and self.daddr:
+                daddr = self.daddr
+            elif hasattr(self, "inet_daddr") and self.inet_daddr:
+                daddr = self.inet_daddr
+            else:
+                daddr = sk_common.skc_daddr
+            addr_size = 4
+        elif family == socket_module.AF_INET6:
+            if hasattr(self.pinet6, "daddr"):
+                daddr = self.pinet6.daddr
+            else:
+                daddr = sk_common.skc_v6_daddr
+            addr_size = 16
+        else:
+            return
+
+        parent_layer = self._context.layers[self.vol.layer_name]
+        try:
+            addr_bytes = parent_layer.read(daddr.vol.offset, addr_size)
+        except exceptions.InvalidAddressException:
+            vollog.debug(
+                f"Unable to read socket dst address from {daddr.vol.offset:#x}"
+            )
+            return
+
+        return socket_module.inet_ntop(family, addr_bytes)
+
+
+class netlink_sock(objects.StructType):
+    def get_protocol(self):
+        protocol_idx = self.sk.sk_protocol
+        if 0 <= protocol_idx < len(NETLINK_PROTOCOLS):
+            return NETLINK_PROTOCOLS[protocol_idx]
+
+    def get_state(self):
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()
+
+
+class vsock_sock(objects.StructType):
+    def get_protocol(self):
+        # The protocol should always be 0 for vsocks
+        return
+
+    def get_state(self):
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()
+
+
+class packet_sock(objects.StructType):
+    def get_protocol(self):
+        eth_proto = socket_module.htons(self.num)
+        if eth_proto == 0:
+            return
+        elif eth_proto in ETH_PROTOCOLS:
+            return ETH_PROTOCOLS[eth_proto]
+        else:
+            return f"0x{eth_proto:x}"
+
+    def get_state(self):
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()
+
+
+class bt_sock(objects.StructType):
+    def get_protocol(self):
+        type_idx = self.sk.sk_protocol
+        if 0 <= type_idx < len(BLUETOOTH_PROTOCOLS):
+            return BLUETOOTH_PROTOCOLS[type_idx]
+
+    def get_state(self):
+        state_idx = self.sk.__sk_common.skc_state
+        if 0 <= state_idx < len(BLUETOOTH_STATES):
+            return BLUETOOTH_STATES[state_idx]
+
+
+class xdp_sock(objects.StructType):
+    def get_protocol(self):
+        # The protocol should always be 0 for xdp_sock
+        return
+
+    def get_state(self):
+        # xdp_sock.state is an enum
+        return self.state.lookup()

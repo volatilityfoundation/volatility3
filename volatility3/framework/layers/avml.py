@@ -6,6 +6,7 @@
 
 The user of the file doesn't have to worry about the compression,
 but random access is not allowed."""
+import ctypes
 import logging
 import struct
 from typing import Tuple, List, Optional
@@ -16,11 +17,47 @@ from volatility3.framework.layers import segmented
 vollog = logging.getLogger(__name__)
 
 try:
-    import snappy
+    # TODO: Find library for windows if needed
+    try:
+        # Linux/Mac
+        lib_snappy = ctypes.cdll.LoadLibrary("libsnappy.so.1")
+    except OSError:
+        lib_snappy = None
+
+    try:
+        if not lib_snappy:
+            # Windows 64
+            lib_snappy = ctypes.cdll.LoadLibrary("snappy64")
+    except OSError:
+        lib_snappy = None
+
+    if lib_snappy:
+        # Windows 32
+        lib_snappy = ctypes.cdll.LoadLibrary("snappy32")
+
+    __snappy_uncompress = lib_snappy.snappy_uncompress
+    __snappy_uncompressed_length = lib_snappy.snappy_uncompressed_length
 
     HAS_SNAPPY = True
-except ImportError:
+except (AttributeError, OSError):
     HAS_SNAPPY = False
+
+
+class SnappyException(exceptions.VolatilityException):
+    pass
+
+
+def uncompress(s):
+    """Uncompress a snappy compressed string."""
+    ulen = ctypes.c_int(0)
+    cresult = __snappy_uncompressed_length(s, len(s), ctypes.byref(ulen))
+    if cresult != 0:
+        raise SnappyException(f"Error in snappy_uncompressed_length: {cresult}")
+    ubuf = ctypes.create_string_buffer(ulen.value)
+    cresult = __snappy_uncompress(s, len(s), ubuf, ctypes.byref(ulen))
+    if cresult != 0:
+        raise SnappyException(f"Error in snappy_uncompress: {cresult}")
+    return ubuf.raw
 
 
 class AVMLLayer(segmented.NonLinearlySegmentedLayer):
@@ -42,10 +79,11 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
             layer.read(layer.minimum_address, struct.calcsize(header_structure)),
         )
         if magic not in [0x4C4D5641] or version != 2:
-            raise exceptions.LayerException("File not completely in AVML format")
+            raise exceptions.LayerException("File not in AVML format")
         if not HAS_SNAPPY:
             vollog.warning(
-                "AVML file detected, but snappy python library not installed"
+                "AVML file detected, but snappy library could not be found\n"
+                "Please install the snappy from your distribution or https://google.github.io/snappy/."
             )
             raise exceptions.LayerException(
                 "AVML format dependencies not satisfied (snappy)"
@@ -73,7 +111,7 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
             )
             segments, consumed = self._read_snappy_frames(chunk_data, end - start)
             # The returned segments are accurate the chunk_data that was passed in, but needs shifting
-            for (thing, mapped_offset, size, mapped_size, compressed) in segments:
+            for thing, mapped_offset, size, mapped_size, compressed in segments:
                 self._segments.append(
                     (
                         thing + start,
@@ -131,7 +169,7 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
                     ]
                     if frame_type == 0x00:
                         # Compressed data
-                        frame_data = snappy.decompress(frame_data)
+                        frame_data = uncompress(frame_data)
                     # TODO: Verify CRC
                     segments.append(
                         (
@@ -156,7 +194,7 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
     ) -> bytes:
         start_offset, _, _, _ = self._find_segment(offset)
         if self._compressed[mapped_offset]:
-            decoded_data = snappy.decompress(data)
+            decoded_data = uncompress(data)
         else:
             decoded_data = data
         decoded_data = decoded_data[offset - start_offset :]

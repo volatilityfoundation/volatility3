@@ -110,7 +110,7 @@ class Check_syscall(plugins.PluginInterface):
         vmlinux = self.context.modules[self.config["kernel"]]
         data = self.context.layers.read(vmlinux.layer_name, func_addr, 6)
 
-        for (address, size, mnemonic, op_str) in md.disasm_lite(data, func_addr):
+        for address, size, mnemonic, op_str in md.disasm_lite(data, func_addr):
             if mnemonic == "CMP":
                 table_size = int(op_str.split(",")[1].strip()) & 0xFFFF
                 break
@@ -161,7 +161,7 @@ class Check_syscall(plugins.PluginInterface):
             ia32_info = self._get_table_info(vmlinux, "ia32_sys_call_table", ptr_sz)
             tables.append(("32bit", ia32_info))
 
-        for (table_name, (tableaddr, tblsz)) in tables:
+        for table_name, (tableaddr, tblsz) in tables:
             table = vmlinux.object(
                 object_type="array",
                 subtype=vmlinux.get_type("pointer"),
@@ -169,7 +169,7 @@ class Check_syscall(plugins.PluginInterface):
                 count=tblsz,
             )
 
-            for (i, call_addr) in enumerate(table):
+            for i, call_addr in enumerate(table):
                 if not call_addr:
                     continue
 
@@ -196,7 +196,6 @@ class Check_syscall(plugins.PluginInterface):
                 )
 
     def run(self):
-
         return renderers.TreeGrid(
             [
                 ("Table Address", format_hints.Hex),

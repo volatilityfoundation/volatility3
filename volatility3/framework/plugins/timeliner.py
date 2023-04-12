@@ -136,7 +136,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
             )
             try:
                 vollog.log(logging.INFO, f"Running {plugin_name}")
-                for (item, timestamp_type, timestamp) in plugin.generate_timeline():
+                for item, timestamp_type, timestamp in plugin.generate_timeline():
                     times = self.timeline.get((plugin_name, item), {})
                     if times.get(timestamp_type, None) is not None:
                         vollog.debug(

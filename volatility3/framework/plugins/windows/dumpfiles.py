@@ -229,7 +229,6 @@ class DumpFiles(interfaces.plugins.PluginInterface):
             )
 
             for proc in procs:
-
                 try:
                     object_table = proc.ObjectTable
                 except exceptions.InvalidAddressException:

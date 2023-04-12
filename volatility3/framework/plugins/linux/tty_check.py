@@ -61,7 +61,6 @@ class tty_check(plugins.PluginInterface):
         for tty in tty_drivers.to_list(
             vmlinux.symbol_table_name + constants.BANG + "tty_driver", "tty_drivers"
         ):
-
             try:
                 ttys = utility.array_of_pointers(
                     tty.ttys.dereference(),
@@ -73,7 +72,6 @@ class tty_check(plugins.PluginInterface):
                 continue
 
             for tty_dev in ttys:
-
                 if tty_dev == 0:
                     continue
 

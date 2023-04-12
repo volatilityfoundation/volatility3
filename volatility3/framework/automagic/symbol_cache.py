@@ -161,7 +161,8 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         """Returns ISF statistics based on the location
 
         Returns:
-            A tuple of base_types, types, enums, symbols, or None is location not found"""
+            A tuple of base_types, types, enums, symbols, or None is location not found
+        """
 
     def get_hash(self, location: str) -> Optional[str]:
         """Returns the hash of the JSON from within a location ISF"""
@@ -331,7 +332,7 @@ class SqliteCache(CacheManagerInterface):
                     if inner_url.scheme == "file":
                         pathname = inner_url.path.split("!")[0]
 
-                if pathname:
+                if pathname and os.path.exists(pathname):
                     timestamp = datetime.datetime.fromtimestamp(
                         os.stat(pathname).st_mtime
                     )
@@ -370,7 +371,7 @@ class SqliteCache(CacheManagerInterface):
 
                         # Get stats
                         stats_base_types = len(json_obj.get("base_types", {}))
-                        stats_types = len(json_obj.get("types", {}))
+                        stats_types = len(json_obj.get("user_types", {}))
                         stats_enums = len(json_obj.get("enums", {}))
                         stats_symbols = len(json_obj.get("symbols", {}))
 

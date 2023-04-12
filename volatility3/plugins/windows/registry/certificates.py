@@ -77,7 +77,6 @@ class Certificates(interfaces.plugins.PluginInterface):
             layer_name=kernel.layer_name,
             symbol_table=kernel.symbol_table_name,
         ):
-
             for top_key in [
                 "Microsoft\\SystemCertificates",
                 "Software\\Microsoft\\SystemCertificates",

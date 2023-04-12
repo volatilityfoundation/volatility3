@@ -241,7 +241,9 @@ class CSVRenderer(CLIRenderer):
             # Ignore the type because namedtuples don't realize they have accessible attributes
             header_list.append(f"{column.name}")
 
-        writer = csv.DictWriter(outfd, header_list, lineterminator="\n")
+        writer = csv.DictWriter(
+            outfd, header_list, lineterminator="\n", escapechar="\\"
+        )
         writer.writeheader()
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
@@ -346,7 +348,7 @@ class PrettyTextRenderer(CLIRenderer):
 
         column_titles = [""] + [column.name for column in grid.columns]
         outfd.write(format_string.format(*column_titles))
-        for (depth, line) in final_output:
+        for depth, line in final_output:
             nums_line = max([len(line[column]) for column in line])
             for column in line:
                 line[column] = line[column] + ([""] * (nums_line - len(line[column])))

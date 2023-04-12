@@ -103,7 +103,7 @@ class JobLinks(interfaces.plugins.PluginInterface):
                         ),
                     )
 
-            except (exceptions.InvalidAddressException):
+            except exceptions.InvalidAddressException:
                 continue
 
     def run(self) -> renderers.TreeGrid:

@@ -33,7 +33,6 @@ class LdrModules(interfaces.plugins.PluginInterface):
         ]
 
     def _generator(self, procs):
-
         pe_table_name = intermed.IntermediateSymbolTable.create(
             self.context, self.config_path, "windows", "pe", class_types=pe.class_types
         )

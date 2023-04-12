@@ -203,7 +203,6 @@ class MountInfo(plugins.PluginInterface):
         mount_format: bool,
         per_namespace: bool,
     ) -> Iterable[Tuple[int, Tuple]]:
-
         for task, mnt, mnt_ns_id in self._get_tasks_mountpoints(tasks, per_namespace):
             if mnt_ns_ids and mnt_ns_id not in mnt_ns_ids:
                 continue

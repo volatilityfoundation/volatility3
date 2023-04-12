@@ -119,4 +119,8 @@ class Elf64Stacker(interfaces.automagic.StackerLayerInterface):
             interfaces.configuration.path_join(new_name, "base_layer")
         ] = layer_name
 
-        return Elf64Layer(context, new_name, new_name)
+        try:
+            return Elf64Layer(context, new_name, new_name)
+        except ElfFormatException as excp:
+            vollog.log(constants.LOGLEVEL_VVVV, f"Exception: {excp}")
+            return None
