@@ -401,7 +401,17 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
                     # Fill in the config
                     if swap_location:
                         context.config[current_layer_path] = current_layer_name
-                        context.config[layer_loc_path] = swap_location
+                        try:
+                            context.config[
+                                layer_loc_path
+                            ] = requirements.URIRequirement.location_from_file(
+                                swap_location
+                            )
+                        except ValueError:
+                            vollog.warning(
+                                f"Volatility swap_location {swap_location} could not be validated - swap layer disabled"
+                            )
+                            continue
                         context.config[
                             layer_class_path
                         ] = "volatility3.framework.layers.physical.FileLayer"
