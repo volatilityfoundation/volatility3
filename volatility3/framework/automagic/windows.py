@@ -367,6 +367,7 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
         progress_callback: constants.ProgressCallback = None,
     ) -> None:
         """Finds translation layers that can have swap layers added."""
+
         path_join = interfaces.configuration.path_join
         self._translation_requirement = self.find_requirements(
             context,
@@ -382,11 +383,13 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
             swap_sub_config, swap_req = self.find_swap_requirement(
                 trans_sub_config, trans_req
             )
+
             counter = 0
             swap_config = interfaces.configuration.parent_path(swap_sub_config)
 
             if swap_req and swap_req.unsatisfied(context, swap_config):
                 # See if any of them need constructing
+
                 for swap_location in self.config.get("single_swap_locations", []):
                     # Setup config locations/paths
                     current_layer_name = swap_req.name + str(counter)
