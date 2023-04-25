@@ -75,7 +75,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
                     break
 
                 if vfsmnt.get_mnt_mountpoint() == dentry:
-                     break
+                    break
 
                 dentry = vfsmnt.get_mnt_mountpoint()
                 vfsmnt = vfsmnt.get_mnt_parent()
