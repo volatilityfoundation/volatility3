@@ -9,6 +9,7 @@ from typing import Tuple, List, Iterable, Union
 from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
+from volatility3.framework.symbols import linux
 from volatility3.plugins.linux import pslist
 
 vollog = logging.getLogger(__name__)
@@ -72,39 +73,8 @@ class MountInfo(plugins.PluginInterface):
         ]
 
     @classmethod
-    def _do_get_path(cls, mnt, fs_root) -> Union[None, str]:
-        """It mimics the Linux kernel prepend_path function."""
-        vfsmnt = mnt.mnt
-        dentry = vfsmnt.get_mnt_root()
-
-        path_reversed = []
-        while dentry != fs_root.dentry or vfsmnt.vol.offset != fs_root.mnt:
-            if dentry == vfsmnt.get_mnt_root() or dentry.is_root():
-                parent = mnt.get_mnt_parent().dereference()
-                # Escaped?
-                if dentry != vfsmnt.get_mnt_root():
-                    return None
-
-                # Global root?
-                if mnt.vol.offset != parent.vol.offset:
-                    dentry = mnt.get_mnt_mountpoint()
-                    mnt = parent
-                    vfsmnt = mnt.mnt
-                    continue
-
-                return None
-
-            parent = dentry.d_parent
-            dname = dentry.d_name.name_as_str()
-            path_reversed.append(dname.strip("/"))
-            dentry = parent
-
-        path = "/" + "/".join(reversed(path_reversed))
-        return path
-
-    @classmethod
     def get_mountinfo(
-        cls, mnt, task
+        cls, mnt, task, context
     ) -> Union[
         None, Tuple[int, int, str, str, str, List[str], List[str], str, str, List[str]]
     ]:
@@ -115,8 +85,8 @@ class MountInfo(plugins.PluginInterface):
         if not mnt_root:
             return None
 
-        path_root = cls._do_get_path(mnt, task.fs.root)
-        if path_root is None:
+        path_root = linux.LinuxUtilities._get_path_root(context, mnt, task.fs.root)
+        if not path_root:
             return None
 
         mnt_root_path = mnt_root.path()
@@ -207,7 +177,7 @@ class MountInfo(plugins.PluginInterface):
             if mnt_ns_ids and mnt_ns_id not in mnt_ns_ids:
                 continue
 
-            mnt_info = self.get_mountinfo(mnt, task)
+            mnt_info = MountInfo.get_mountinfo(mnt, task, self.context)
             if mnt_info is None:
                 continue
 

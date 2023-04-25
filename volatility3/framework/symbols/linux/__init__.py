@@ -1,11 +1,11 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-from typing import Iterator, List, Tuple, Optional
+from typing import Iterator, List, Tuple, Optional, Union
 
 from volatility3 import framework
 from volatility3.framework import constants, exceptions, interfaces, objects
-from volatility3.framework.objects import utility
+from volatility3.framework.objects import utility, Pointer
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux import extensions
 
@@ -59,83 +59,92 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
 
     framework.require_interface_version(*_required_framework_version)
 
-    # based on __d_path from the Linux kernel
     @classmethod
-    def _do_get_path(cls, rdentry, rmnt, dentry, vfsmnt) -> str:
-        ret_path: List[str] = []
-
-        while dentry != rdentry or vfsmnt != rmnt:
-            dname = dentry.path()
-            if dname == "":
-                break
-
-            ret_path.insert(0, dname.strip("/"))
-            if dentry == vfsmnt.get_mnt_root() or dentry == dentry.d_parent:
-                if vfsmnt.get_mnt_parent() == vfsmnt:
-                    break
-
-                dentry = vfsmnt.get_mnt_mountpoint()
-                vfsmnt = vfsmnt.get_mnt_parent()
-
-                continue
-
-            parent = dentry.d_parent
-            dentry = parent
-
-        # if we did not gather any valid dentrys in the path, then the entire file is
-        # either 1) smeared out of memory or 2) de-allocated and corresponding structures overwritten
-        # we return an empty string in this case to avoid confusion with something like a handle to the root
-        # directory (e.g., "/")
-        if not ret_path:
-            return ""
-
-        ret_val = "/".join([str(p) for p in ret_path if p != ""])
-
-        if ret_val.startswith(("socket:", "pipe:")):
-            if ret_val.find("]") == -1:
-                try:
-                    inode = dentry.d_inode
-                    ino = inode.i_ino
-                except exceptions.InvalidAddressException:
-                    ino = 0
-
-                ret_val = ret_val[:-1] + f":[{ino}]"
-            else:
-                ret_val = ret_val.replace("/", "")
-
-        elif ret_val != "inotify":
-            ret_val = "/" + ret_val
-
-        return ret_val
-
-    # method used by 'older' kernels
-    # TODO: lookup when dentry_operations->d_name was merged into the mainline kernel for exact version
-    @classmethod
-    def _get_path_file(cls, task, filp) -> str:
+    def _get_path_file(cls, context, task, filp) -> str:
         rdentry = task.fs.get_root_dentry()
         rmnt = task.fs.get_root_mnt()
-        dentry = filp.get_dentry()
         vfsmnt = filp.get_vfsmnt()
+        dentry = filp.get_dentry()
 
-        return LinuxUtilities._do_get_path(rdentry, rmnt, dentry, vfsmnt)
+        return cls.do_get_path(rdentry, rmnt, dentry, vfsmnt, context)
+
+    @classmethod
+    def _get_path_root(cls, context, mnt, fs_root) -> str:
+        rdentry = fs_root.dentry
+        rmnt = fs_root.mnt
+        vfsmnt = mnt.mnt
+        dentry = vfsmnt.mnt_root
+
+        return cls.do_get_path(rdentry, rmnt, dentry, vfsmnt, context)
+
+    @classmethod
+    def _get_vmlinux_from_volobj(cls, volobj, context):
+        symbol_table_arr = volobj.vol.type_name.split("!", 1)
+        symbol_table = symbol_table_arr[0] if len(symbol_table_arr) == 2 else None
+
+        module_names = context.modules.get_modules_by_symbol_tables(symbol_table)
+        module_names = list(module_names)
+
+        if not module_names:
+            raise ValueError(f"No module using the symbol table '{symbol_table}'")
+
+        kernel_module_name = module_names[0]
+        kernel = context.modules[kernel_module_name]
+
+        return kernel
+
+    @classmethod
+    def _get_mnt_from_vfsmnt(cls, vfsmnt, dentry, context):
+        vmlinux = cls._get_vmlinux_from_volobj(dentry, context)
+
+        # When it's called from _get_path_file(), 'vfsmnt' is a Pointer
+        # struct file->f_path->mnt is "struct vfsmount *".
+        # However, when called from _get_path_root()
+        # struct mount -> mnt is "struct vfsmount"
+        vfsmnt_ptr = vfsmnt if type(vfsmnt) == Pointer else vfsmnt.vol.offset
+
+        mnt = cls.container_of(vfsmnt_ptr, "mount", "mnt", vmlinux)
+
+        return mnt
+
+    @classmethod
+    def do_get_path(cls, rdentry, rmnt, dentry, vfsmnt, context) -> Union[None, str]:
+        """It mimics the Linux kernel prepend_path function."""
+
+        mnt = cls._get_mnt_from_vfsmnt(vfsmnt, dentry, context)
+
+        path_reversed = []
+        while dentry != rdentry or vfsmnt.vol.offset != rmnt:
+            if dentry == vfsmnt.get_mnt_root() or dentry.is_root():
+                parent = mnt.get_mnt_parent().dereference()
+                # Escaped?
+                if dentry != vfsmnt.get_mnt_root():
+                    break
+
+                # Global root?
+                if mnt.vol.offset != parent.vol.offset:
+                    dentry = mnt.get_mnt_mountpoint()
+                    mnt = parent
+                    vfsmnt = mnt.mnt
+                    continue
+
+                break
+
+            parent = dentry.d_parent
+            dname = dentry.d_name.name_as_str()
+            path_reversed.append(dname.strip("/"))
+            dentry = parent
+
+        path = "/" + "/".join(reversed(path_reversed))
+        return path
 
     @classmethod
     def _get_new_sock_pipe_path(cls, context, task, filp) -> str:
         dentry = filp.get_dentry()
 
+        kernel_module = cls._get_vmlinux_from_volobj(dentry, context)
+
         sym_addr = dentry.d_op.d_dname
-
-        symbol_table_arr = sym_addr.vol.type_name.split("!")
-        symbol_table = None
-        if len(symbol_table_arr) == 2:
-            symbol_table = symbol_table_arr[0]
-
-        for module_name in context.modules.get_modules_by_symbol_tables(symbol_table):
-            kernel_module = context.modules[module_name]
-            break
-        else:
-            raise ValueError(f"No module using the symbol table {symbol_table}")
-
         symbs = list(kernel_module.get_symbols_by_absolute_location(sym_addr))
 
         if len(symbs) == 1:
@@ -151,7 +160,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
                 pre_name = "pipe"
 
             elif sym == "simple_dname":
-                pre_name = cls._get_path_file(task, filp)
+                pre_name = cls._get_path_file(context, task, filp)
 
             else:
                 pre_name = f"<unsupported d_op symbol: {sym}>"
@@ -192,7 +201,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         if dname_is_valid:
             ret = LinuxUtilities._get_new_sock_pipe_path(context, task, filp)
         else:
-            ret = LinuxUtilities._get_path_file(task, filp)
+            ret = LinuxUtilities._get_path_file(context, task, filp)
 
         return ret
 
