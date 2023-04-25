@@ -825,7 +825,7 @@ class mnt_namespace(objects.StructType):
     def get_inode(self):
         if self.has_member("proc_inum"):
             return self.proc_inum
-        elif self.ns.has_member("inum"):
+        elif self.has_member("ns") and self.ns.has_member("inum"):
             return self.ns.inum
         else:
             raise AttributeError("Unable to find mnt_namespace inode")
