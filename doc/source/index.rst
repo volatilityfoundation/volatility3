@@ -26,7 +26,6 @@ There is also some information to get you started quickly:
 
     getting-started-linux-tutorial
     getting-started-windows-tutorial
-    getting-started-macos-tutorial
 
 
 .. toctree::
