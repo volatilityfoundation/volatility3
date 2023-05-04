@@ -42,7 +42,12 @@ class Modules(interfaces.plugins.PluginInterface):
                 default=False,
                 optional=True,
             ),
-            requirements.StringRequirement(name="name", description="module name/sub string", optional=True, default=""),
+            requirements.StringRequirement(
+                name="name",
+                description="module name/sub string",
+                optional=True,
+                default="",
+            ),
         ]
 
     def _generator(self):
@@ -66,7 +71,7 @@ class Modules(interfaces.plugins.PluginInterface):
                 FullDllName = ""
 
             if self.config['name'] and self.config['name'] not in BaseDllName:
-                    continue
+                continue
 
             file_output = "Disabled"
             if self.config["dump"]:
