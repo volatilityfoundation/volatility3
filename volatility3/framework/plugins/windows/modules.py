@@ -70,7 +70,7 @@ class Modules(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 FullDllName = ""
 
-            if self.config['name'] and self.config['name'] not in BaseDllName:
+            if self.config["name"] and self.config["name"] not in BaseDllName:
                 continue
 
             file_output = "Disabled"
