@@ -353,7 +353,7 @@ class CommandLine:
         ###
         if args.file:
             try:
-                single_location = requirements.URLRequirement.location_from_file(
+                single_location = requirements.URIRequirement.location_from_file(
                     args.file
                 )
                 ctx.config["automagic.LayerStacker.single_location"] = single_location
