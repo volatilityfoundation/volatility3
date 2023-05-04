@@ -23,14 +23,20 @@ class Check_modules(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0))
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.PluginRequirement(
+                name="lsmod", plugin=lsmod.Lsmod, version=(2, 0, 0)
+            ),
         ]
 
     @classmethod
-    def get_kset_modules(cls, context: interfaces.context.ContextInterface, vmlinux_name: str):
-
+    def get_kset_modules(
+        cls, context: interfaces.context.ContextInterface, vmlinux_name: str
+    ):
         vmlinux = context.modules[vmlinux_name]
 
         try:
@@ -45,12 +51,16 @@ class Check_modules(plugins.PluginInterface):
 
         ret = {}
 
-        kobj_off = vmlinux.get_type('module_kobject').relative_child_offset('kobj')
+        kobj_off = vmlinux.get_type("module_kobject").relative_child_offset("kobj")
 
-        for kobj in module_kset.list.to_list(vmlinux.symbol_table_name + constants.BANG + "kobject", "entry"):
-
-            mod_kobj = vmlinux.object(object_type = "module_kobject", offset = kobj.vol.offset - kobj_off,
-                                      absolute = True)
+        for kobj in module_kset.list.to_list(
+            vmlinux.symbol_table_name + constants.BANG + "kobject", "entry"
+        ):
+            mod_kobj = vmlinux.object(
+                object_type="module_kobject",
+                offset=kobj.vol.offset - kobj_off,
+                absolute=True,
+            )
 
             mod = mod_kobj.mod
 
@@ -61,14 +71,18 @@ class Check_modules(plugins.PluginInterface):
         return ret
 
     def _generator(self):
-        kset_modules = self.get_kset_modules(self.context, self.config['kernel'])
+        kset_modules = self.get_kset_modules(self.context, self.config["kernel"])
 
         lsmod_modules = set(
             str(utility.array_to_string(modules.name))
-            for modules in lsmod.Lsmod.list_modules(self.context, self.config['kernel']))
+            for modules in lsmod.Lsmod.list_modules(self.context, self.config["kernel"])
+        )
 
         for mod_name in set(kset_modules.keys()).difference(lsmod_modules):
             yield (0, (format_hints.Hex(kset_modules[mod_name]), str(mod_name)))
 
     def run(self):
-        return renderers.TreeGrid([("Module Address", format_hints.Hex), ("Module Name", str)], self._generator())
+        return renderers.TreeGrid(
+            [("Module Address", format_hints.Hex), ("Module Name", str)],
+            self._generator(),
+        )

@@ -20,19 +20,19 @@ class FrameworkInfo(plugins.PluginInterface):
 
     def _generator(self):
         categories = {
-            'Automagic': interfaces.automagic.AutomagicInterface,
-            'Requirement': interfaces.configuration.RequirementInterface,
-            'Layer': interfaces.layers.DataLayerInterface,
-            'LayerStacker': interfaces.automagic.StackerLayerInterface,
-            'Object': interfaces.objects.ObjectInterface,
-            'Plugin': interfaces.plugins.PluginInterface,
-            'Renderer': interfaces.renderers.Renderer
+            "Automagic": interfaces.automagic.AutomagicInterface,
+            "Requirement": interfaces.configuration.RequirementInterface,
+            "Layer": interfaces.layers.DataLayerInterface,
+            "LayerStacker": interfaces.automagic.StackerLayerInterface,
+            "Object": interfaces.objects.ObjectInterface,
+            "Plugin": interfaces.plugins.PluginInterface,
+            "Renderer": interfaces.renderers.Renderer,
         }
 
         for category, module_interface in categories.items():
-            yield (0, (category, ))
+            yield (0, (category,))
             for clazz in framework.class_subclasses(module_interface):
-                yield (1, (clazz.__name__, ))
+                yield (1, (clazz.__name__,))
 
     def run(self):
         return renderers.TreeGrid([("Data", str)], self._generator())

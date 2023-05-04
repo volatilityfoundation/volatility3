@@ -10,7 +10,14 @@ import logging
 import math
 from typing import Generator, Iterable, Iterator, List, Optional, Tuple, Union
 
-from volatility3.framework import constants, exceptions, interfaces, objects, renderers, symbols
+from volatility3.framework import (
+    constants,
+    exceptions,
+    interfaces,
+    objects,
+    renderers,
+    symbols,
+)
 from volatility3.framework.interfaces.objects import ObjectInterface
 from volatility3.framework.layers import intel
 from volatility3.framework.renderers import conversion
@@ -38,7 +45,7 @@ class MMVAD_SHORT(objects.StructType):
     by VadRoot.
     """
 
-    @functools.lru_cache(maxsize = None)
+    @functools.lru_cache(maxsize=None)
     def get_tag(self):
         vad_address = self.vol.offset
 
@@ -51,11 +58,13 @@ class MMVAD_SHORT(objects.StructType):
 
         try:
             # TODO: instantiate a _POOL_HEADER and return PoolTag
-            bytesobj = self._context.object(symbol_table_name + constants.BANG + "bytes",
-                                            layer_name = self.vol.layer_name,
-                                            offset = vad_address,
-                                            native_layer_name = self.vol.native_layer_name,
-                                            length = 4)
+            bytesobj = self._context.object(
+                symbol_table_name + constants.BANG + "bytes",
+                layer_name=self.vol.layer_name,
+                offset=vad_address,
+                native_layer_name=self.vol.native_layer_name,
+                length=4,
+            )
 
             return bytesobj.decode()
         except exceptions.InvalidAddressException:
@@ -63,14 +72,16 @@ class MMVAD_SHORT(objects.StructType):
         except UnicodeDecodeError:
             return None
 
-    def traverse(self, visited = None, depth = 0):
+    def traverse(self, visited=None, depth=0):
         """Traverse the VAD tree, determining each underlying VAD node type by
         looking up the pool tag for the structure and then casting into a new
         object."""
 
         # TODO: this is an arbitrary limit chosen based on past observations
         if depth > 100:
-            vollog.log(constants.LOGLEVEL_VVV, "Vad tree is too deep, something went wrong!")
+            vollog.log(
+                constants.LOGLEVEL_VVV, "Vad tree is too deep, something went wrong!"
+            )
             raise RuntimeError("Vad tree is too deep")
 
         if visited is None:
@@ -96,8 +107,10 @@ class MMVAD_SHORT(objects.StructType):
         else:
             # any node other than the root that doesn't have a recognized tag
             # is just garbage and we skip the node entirely
-            vollog.log(constants.LOGLEVEL_VVV,
-                       f"Skipping VAD at {self.vol.offset} depth {depth} with tag {tag}")
+            vollog.log(
+                constants.LOGLEVEL_VVV,
+                f"Skipping VAD at {self.vol.offset} depth {depth} with tag {tag}",
+            )
             return
 
         if target:
@@ -105,16 +118,26 @@ class MMVAD_SHORT(objects.StructType):
             yield vad_object
 
         try:
-            for vad_node in self.get_left_child().dereference().traverse(visited, depth + 1):
+            for vad_node in (
+                self.get_left_child().dereference().traverse(visited, depth + 1)
+            ):
                 yield vad_node
         except exceptions.InvalidAddressException as excp:
-            vollog.log(constants.LOGLEVEL_VVV, f"Invalid address on LeftChild: {excp.invalid_address:#x}")
+            vollog.log(
+                constants.LOGLEVEL_VVV,
+                f"Invalid address on LeftChild: {excp.invalid_address:#x}",
+            )
 
         try:
-            for vad_node in self.get_right_child().dereference().traverse(visited, depth + 1):
+            for vad_node in (
+                self.get_right_child().dereference().traverse(visited, depth + 1)
+            ):
                 yield vad_node
         except exceptions.InvalidAddressException as excp:
-            vollog.log(constants.LOGLEVEL_VVV, f"Invalid address on RightChild: {excp.invalid_address:#x}")
+            vollog.log(
+                constants.LOGLEVEL_VVV,
+                f"Invalid address on RightChild: {excp.invalid_address:#x}",
+            )
 
     def get_right_child(self):
         """Get the right child member."""
@@ -179,7 +202,6 @@ class MMVAD_SHORT(objects.StructType):
 
         # this is for windows 8 and 10
         elif self.has_member("VadNode"):
-
             if self.VadNode.has_member("u1"):
                 return self.VadNode.u1.Parent & ~0x3
 
@@ -188,7 +210,6 @@ class MMVAD_SHORT(objects.StructType):
 
         # also for windows 8 and 10
         elif self.has_member("Core"):
-
             if self.Core.VadNode.has_member("u1"):
                 return self.Core.VadNode.u1.Parent & ~0x3
 
@@ -201,14 +222,12 @@ class MMVAD_SHORT(objects.StructType):
         """Get the VAD's starting virtual address. This is the first accessible byte in the range."""
 
         if self.has_member("StartingVpn"):
-
             if self.has_member("StartingVpnHigh"):
                 return (self.StartingVpn << 12) | (self.StartingVpnHigh << 44)
             else:
                 return self.StartingVpn << 12
 
         elif self.has_member("Core"):
-
             if self.Core.has_member("StartingVpnHigh"):
                 return (self.Core.StartingVpn << 12) | (self.Core.StartingVpnHigh << 44)
             else:
@@ -220,7 +239,6 @@ class MMVAD_SHORT(objects.StructType):
         """Get the VAD's ending virtual address. This is the last accessible byte in the range."""
 
         if self.has_member("EndingVpn"):
-
             if self.has_member("EndingVpnHigh"):
                 return (((self.EndingVpn + 1) << 12) | (self.EndingVpnHigh << 44)) - 1
             else:
@@ -228,7 +246,9 @@ class MMVAD_SHORT(objects.StructType):
 
         elif self.has_member("Core"):
             if self.Core.has_member("EndingVpnHigh"):
-                return (((self.Core.EndingVpn + 1) << 12) | (self.Core.EndingVpnHigh << 44)) - 1
+                return (
+                    ((self.Core.EndingVpn + 1) << 12) | (self.Core.EndingVpnHigh << 44)
+                ) - 1
             else:
                 return ((self.Core.EndingVpn + 1) << 12) - 1
 
@@ -255,19 +275,33 @@ class MMVAD_SHORT(objects.StructType):
     def get_private_memory(self):
         """Get the VAD's private memory setting."""
 
-        if self.has_member("u1") and self.u1.has_member("VadFlags1") and self.u1.VadFlags1.has_member("PrivateMemory"):
+        if (
+            self.has_member("u1")
+            and self.u1.has_member("VadFlags1")
+            and self.u1.VadFlags1.has_member("PrivateMemory")
+        ):
             return self.u1.VadFlags1.PrivateMemory
 
-        elif self.has_member("u") and self.u.has_member("VadFlags") and self.u.VadFlags.has_member("PrivateMemory"):
+        elif (
+            self.has_member("u")
+            and self.u.has_member("VadFlags")
+            and self.u.VadFlags.has_member("PrivateMemory")
+        ):
             return self.u.VadFlags.PrivateMemory
 
         elif self.has_member("Core"):
-            if (self.Core.has_member("u1") and self.Core.u1.has_member("VadFlags1")
-                    and self.Core.u1.VadFlags1.has_member("PrivateMemory")):
+            if (
+                self.Core.has_member("u1")
+                and self.Core.u1.has_member("VadFlags1")
+                and self.Core.u1.VadFlags1.has_member("PrivateMemory")
+            ):
                 return self.Core.u1.VadFlags1.PrivateMemory
 
-            elif (self.Core.has_member("u") and self.Core.u.has_member("VadFlags")
-                  and self.Core.u.VadFlags.has_member("PrivateMemory")):
+            elif (
+                self.Core.has_member("u")
+                and self.Core.u.has_member("VadFlags")
+                and self.Core.u.VadFlags.has_member("PrivateMemory")
+            ):
                 return self.Core.u.VadFlags.PrivateMemory
 
         raise AttributeError("Unable to find the private memory member")
@@ -317,8 +351,11 @@ class MMVAD(MMVAD_SHORT):
 
             # this is for vista through windows 7
             else:
-                filename_obj = self.Subsection.ControlArea.FilePointer.dereference().cast(
-                    "_FILE_OBJECT").FileName
+                filename_obj = (
+                    self.Subsection.ControlArea.FilePointer.dereference()
+                    .cast("_FILE_OBJECT")
+                    .FileName
+                )
 
             if filename_obj.Length > 0:
                 file_name = filename_obj.get_string()
@@ -334,9 +371,10 @@ class EX_FAST_REF(objects.StructType):
     """
 
     def dereference(self) -> interfaces.objects.ObjectInterface:
-
         if constants.BANG not in self.vol.type_name:
-            raise ValueError(f"Invalid symbol table name syntax (no {constants.BANG} found)")
+            raise ValueError(
+                f"Invalid symbol table name syntax (no {constants.BANG} found)"
+            )
 
         # the mask value is different on 32 and 64 bits
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
@@ -345,10 +383,12 @@ class EX_FAST_REF(objects.StructType):
         else:
             max_fast_ref = 15
 
-        return self._context.object(symbol_table_name + constants.BANG + "pointer",
-                                    layer_name = self.vol.layer_name,
-                                    offset = self.Object & ~max_fast_ref,
-                                    native_layer_name = self.vol.native_layer_name)
+        return self._context.object(
+            symbol_table_name + constants.BANG + "pointer",
+            layer_name=self.vol.layer_name,
+            offset=self.Object & ~max_fast_ref,
+            native_layer_name=self.vol.native_layer_name,
+        )
 
 
 class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
@@ -407,11 +447,14 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
 
     def is_valid(self) -> bool:
         """Determine if the object is valid."""
-        return self.FileName.Length > 0 and self._context.layers[self.FileName.Buffer.vol.native_layer_name].is_valid(
-            self.FileName.Buffer)
+        return self.FileName.Length > 0 and self._context.layers[
+            self.FileName.Buffer.vol.native_layer_name
+        ].is_valid(self.FileName.Buffer)
 
     def file_name_with_device(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
-        name: Union[str, interfaces.renderers.BaseAbsentValue] = renderers.UnreadableValue()
+        name: Union[
+            str, interfaces.renderers.BaseAbsentValue
+        ] = renderers.UnreadableValue()
 
         # this pointer needs to be checked against native_layer_name because the object may
         # be instantiated from a primary (virtual) layer or a memory (physical) layer.
@@ -426,9 +469,14 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
 
     def access_string(self):
         ## Make a nicely formatted ACL string
-        return (('R' if self.ReadAccess else '-') + ('W' if self.WriteAccess else '-') +
-                ('D' if self.DeleteAccess else '-') + ('r' if self.SharedRead else '-') +
-                ('w' if self.SharedWrite else '-') + ('d' if self.SharedDelete else '-'))
+        return (
+            ("R" if self.ReadAccess else "-")
+            + ("W" if self.WriteAccess else "-")
+            + ("D" if self.DeleteAccess else "-")
+            + ("r" if self.SharedRead else "-")
+            + ("w" if self.SharedWrite else "-")
+            + ("d" if self.SharedDelete else "-")
+        )
 
 
 class KMUTANT(objects.StructType, pool.ExecutiveObject):
@@ -449,36 +497,40 @@ class ETHREAD(objects.StructType):
 
     def owning_process(self) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""
-        
+
         # For Windows XPs
-        if(self.has_member("ThreadsProcess")):
+        if self.has_member("ThreadsProcess"):
             return self.ThreadsProcess.dereference().cast("_EPROCESS")
         # For Windows Vista and later versions
-        elif(self.has_member("Tcb") and self.Tcb.has_member("Process")):
+        elif self.has_member("Tcb") and self.Tcb.has_member("Process"):
             return self.Tcb.Process.dereference().cast("_EPROCESS")
         else:
             raise AttributeError("Unable to find the owning process of ethread")
 
     def get_cross_thread_flags(self) -> str:
         dictCrossThreadFlags = {
-            'PS_CROSS_THREAD_FLAGS_TERMINATED': 0,
-            'PS_CROSS_THREAD_FLAGS_DEADTHREAD': 1,
-            'PS_CROSS_THREAD_FLAGS_HIDEFROMDBG': 2,
-            'PS_CROSS_THREAD_FLAGS_IMPERSONATING': 3,
-            'PS_CROSS_THREAD_FLAGS_SYSTEM': 4,
-            'PS_CROSS_THREAD_FLAGS_HARD_ERRORS_DISABLED': 5,
-            'PS_CROSS_THREAD_FLAGS_BREAK_ON_TERMINATION': 6,
-            'PS_CROSS_THREAD_FLAGS_SKIP_CREATION_MSG': 7,
-            'PS_CROSS_THREAD_FLAGS_SKIP_TERMINATION_MSG': 8
+            "PS_CROSS_THREAD_FLAGS_TERMINATED": 0,
+            "PS_CROSS_THREAD_FLAGS_DEADTHREAD": 1,
+            "PS_CROSS_THREAD_FLAGS_HIDEFROMDBG": 2,
+            "PS_CROSS_THREAD_FLAGS_IMPERSONATING": 3,
+            "PS_CROSS_THREAD_FLAGS_SYSTEM": 4,
+            "PS_CROSS_THREAD_FLAGS_HARD_ERRORS_DISABLED": 5,
+            "PS_CROSS_THREAD_FLAGS_BREAK_ON_TERMINATION": 6,
+            "PS_CROSS_THREAD_FLAGS_SKIP_CREATION_MSG": 7,
+            "PS_CROSS_THREAD_FLAGS_SKIP_TERMINATION_MSG": 8,
         }
 
         flags = self.CrossThreadFlags
-        stringCrossThreadFlags = ''
+        stringCrossThreadFlags = ""
         for flag in dictCrossThreadFlags:
             if flags & 2 ** dictCrossThreadFlags[flag]:
-                stringCrossThreadFlags += f'{flag} '
+                stringCrossThreadFlags += f"{flag} "
 
-        return stringCrossThreadFlags[:-1] if stringCrossThreadFlags else stringCrossThreadFlags
+        return (
+            stringCrossThreadFlags[:-1]
+            if stringCrossThreadFlags
+            else stringCrossThreadFlags
+        )
 
 
 class UNICODE_STRING(objects.StructType):
@@ -491,10 +543,14 @@ class UNICODE_STRING(objects.StructType):
 
         # We manually construct an object rather than casting a dereferenced pointer in case
         # the buffer length is 0 and the pointer is a NULL pointer
-        return self._context.object(self.vol.type_name.split(constants.BANG)[0] + constants.BANG + 'string',
-                                    layer_name = self.Buffer.vol.native_layer_name,
-                                    offset = self.Buffer,
-                                    max_length = self.Length, errors = 'replace', encoding = 'utf16')
+        return self._context.object(
+            self.vol.type_name.split(constants.BANG)[0] + constants.BANG + "string",
+            layer_name=self.Buffer.vol.native_layer_name,
+            offset=self.Buffer,
+            max_length=self.Length,
+            errors="replace",
+            encoding="utf16",
+        )
 
     String = property(get_string)
 
@@ -536,7 +592,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
                 return False
 
             # check for all 0s besides the PCID entries
-            if dtb & ~0xfff == 0:
+            if dtb & ~0xFFF == 0:
                 return False
 
             ## TODO: we can also add the thread Flink and Blink tests if necessary
@@ -553,7 +609,9 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
         if not isinstance(parent_layer, intel.Intel):
             # We can't get bits_per_register unless we're an intel space (since that's not defined at the higher layer)
-            raise TypeError("Parent layer is not a translation layer, unable to construct process layer")
+            raise TypeError(
+                "Parent layer is not a translation layer, unable to construct process layer"
+            )
 
         # Presumably for 64-bit systems, the DTB is defined as an array, rather than an unsigned long long
         dtb: int = 0
@@ -567,12 +625,16 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             preferred_name = self.vol.layer_name + f"_Process{self.UniqueProcessId}"
 
         # Add the constructed layer and return the name
-        return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
+        return self._add_process_layer(
+            self._context, dtb, config_prefix, preferred_name
+        )
 
     def get_peb(self) -> interfaces.objects.ObjectInterface:
         """Constructs a PEB object"""
         if constants.BANG not in self.vol.type_name:
-            raise ValueError(f"Invalid symbol table name syntax (no {constants.BANG} found)")
+            raise ValueError(
+                f"Invalid symbol table name syntax (no {constants.BANG} found)"
+            )
 
         # add_process_layer can raise InvalidAddressException.
         # if that happens, we let the exception propagate upwards
@@ -580,13 +642,16 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
         proc_layer = self._context.layers[proc_layer_name]
         if not proc_layer.is_valid(self.Peb):
-            raise exceptions.InvalidAddressException(proc_layer_name, self.Peb,
-                                                     f"Invalid Peb address at {self.Peb:0x}")
+            raise exceptions.InvalidAddressException(
+                proc_layer_name, self.Peb, f"Invalid Peb address at {self.Peb:0x}"
+            )
 
         sym_table = self.get_symbol_table_name()
-        peb = self._context.object(f"{sym_table}{constants.BANG}_PEB",
-                                   layer_name = proc_layer_name,
-                                   offset = self.Peb)
+        peb = self._context.object(
+            f"{sym_table}{constants.BANG}_PEB",
+            layer_name=proc_layer_name,
+            offset=self.Peb,
+        )
         return peb
 
     def load_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
@@ -595,8 +660,9 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         try:
             peb = self.get_peb()
             for entry in peb.Ldr.InLoadOrderModuleList.to_list(
-                    f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
-                    "InLoadOrderLinks"):
+                f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
+                "InLoadOrderLinks",
+            ):
                 yield entry
         except exceptions.InvalidAddressException:
             return
@@ -607,8 +673,9 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         try:
             peb = self.get_peb()
             for entry in peb.Ldr.InInitializationOrderModuleList.to_list(
-                    f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
-                    "InInitializationOrderLinks"):
+                f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
+                "InInitializationOrderLinks",
+            ):
                 yield entry
         except exceptions.InvalidAddressException:
             return
@@ -619,8 +686,9 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         try:
             peb = self.get_peb()
             for entry in peb.Ldr.InMemoryOrderModuleList.to_list(
-                    f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
-                    "InMemoryOrderLinks"):
+                f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
+                "InMemoryOrderLinks",
+            ):
                 yield entry
         except exceptions.InvalidAddressException:
             return
@@ -632,8 +700,10 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
                     return self.ObjectTable.HandleCount
 
         except exceptions.InvalidAddressException:
-            vollog.log(constants.LOGLEVEL_VVV,
-                       f"Cannot access _EPROCESS.ObjectTable.HandleCount at {self.vol.offset:#x}")
+            vollog.log(
+                constants.LOGLEVEL_VVV,
+                f"Cannot access _EPROCESS.ObjectTable.HandleCount at {self.vol.offset:#x}",
+            )
 
         return renderers.UnreadableValue()
 
@@ -644,19 +714,27 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
                     return renderers.NotApplicableValue()
 
                 symbol_table_name = self.get_symbol_table_name()
-                kvo = self._context.layers[self.vol.native_layer_name].config['kernel_virtual_offset']
-                ntkrnlmp = self._context.module(symbol_table_name,
-                                                layer_name = self.vol.native_layer_name,
-                                                offset = kvo,
-                                                native_layer_name = self.vol.native_layer_name)
-                session = ntkrnlmp.object(object_type = "_MM_SESSION_SPACE", offset = self.Session, absolute = True)
+                kvo = self._context.layers[self.vol.native_layer_name].config[
+                    "kernel_virtual_offset"
+                ]
+                ntkrnlmp = self._context.module(
+                    symbol_table_name,
+                    layer_name=self.vol.native_layer_name,
+                    offset=kvo,
+                    native_layer_name=self.vol.native_layer_name,
+                )
+                session = ntkrnlmp.object(
+                    object_type="_MM_SESSION_SPACE", offset=self.Session, absolute=True
+                )
 
                 if session.has_member("SessionId"):
                     return session.SessionId
 
         except exceptions.InvalidAddressException:
-            vollog.log(constants.LOGLEVEL_VVV,
-                       f"Cannot access _EPROCESS.Session.SessionId at {self.vol.offset:#x}")
+            vollog.log(
+                constants.LOGLEVEL_VVV,
+                f"Cannot access _EPROCESS.Session.SessionId at {self.vol.offset:#x}",
+            )
 
         return renderers.UnreadableValue()
 
@@ -687,7 +765,6 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         return False
 
     def get_vad_root(self):
-
         # windows 8 and 2012 (_MM_AVL_TABLE)
         if self.VadRoot.has_member("BalancedRoot"):
             return self.VadRoot.BalancedRoot
@@ -716,40 +793,48 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
                 block_size = self.get_peb().ProcessParameters.EnvironmentSize
             except AttributeError:  # Windows XP
                 block_size = self.get_peb().ProcessParameters.Length
-            envars = context.layers[process_space].read(block, block_size).decode("utf-16-le",
-                                                                                  errors = 'replace').split('\x00')[:-1]
+            envars = (
+                context.layers[process_space]
+                .read(block, block_size)
+                .decode("utf-16-le", errors="replace")
+                .split("\x00")[:-1]
+            )
         except exceptions.InvalidAddressException:
-            return # Generation finished
+            return  # Generation finished
 
         for envar in envars:
-            split_index = envar.find('=')
+            split_index = envar.find("=")
             env = envar[:split_index]
-            var = envar[split_index + 1:]
+            var = envar[split_index + 1 :]
 
             # Exclude parse problem with some types of env
             if env and var:
                 yield env, var
-        return # Generation finished
+        return  # Generation finished
 
 
 class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
     """A class for double-linked lists on Windows."""
 
-    def to_list(self,
-                symbol_type: str,
-                member: str,
-                forward: bool = True,
-                sentinel: bool = True,
-                layer: Optional[str] = None) -> Iterator[interfaces.objects.ObjectInterface]:
+    def to_list(
+        self,
+        symbol_type: str,
+        member: str,
+        forward: bool = True,
+        sentinel: bool = True,
+        layer: Optional[str] = None,
+    ) -> Iterator[interfaces.objects.ObjectInterface]:
         """Returns an iterator of the entries in the list."""
 
         layer = layer or self.vol.layer_name
 
-        relative_offset = self._context.symbol_space.get_type(symbol_type).relative_child_offset(member)
+        relative_offset = self._context.symbol_space.get_type(
+            symbol_type
+        ).relative_child_offset(member)
 
-        direction = 'Blink'
+        direction = "Blink"
         if forward:
-            direction = 'Flink'
+            direction = "Flink"
 
         trans_layer = self._context.layers[layer]
 
@@ -763,10 +848,12 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
             return
 
         if not sentinel:
-            yield self._context.object(symbol_type,
-                                       layer,
-                                       offset = self.vol.offset - relative_offset,
-                                       native_layer_name = layer or self.vol.native_layer_name)
+            yield self._context.object(
+                symbol_type,
+                layer,
+                offset=self.vol.offset - relative_offset,
+                native_layer_name=layer or self.vol.native_layer_name,
+            )
 
         seen = {self.vol.offset}
         while link.vol.offset not in seen:
@@ -775,10 +862,12 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
             if not trans_layer.is_valid(obj_offset):
                 return
 
-            obj = self._context.object(symbol_type,
-                                       layer,
-                                       offset = obj_offset,
-                                       native_layer_name = layer or self.vol.native_layer_name)
+            obj = self._context.object(
+                symbol_type,
+                layer,
+                offset=obj_offset,
+                native_layer_name=layer or self.vol.native_layer_name,
+            )
             yield obj
 
             seen.add(link.vol.offset)
@@ -802,11 +891,15 @@ class TOKEN(objects.StructType):
             layer_name = self.vol.layer_name
             kvo = self._context.layers[layer_name].config["kernel_virtual_offset"]
             symbol_table = self.get_symbol_table_name()
-            ntkrnlmp = self._context.module(symbol_table, layer_name = layer_name, offset = kvo)
-            UserAndGroups = ntkrnlmp.object(object_type = "array",
-                                            offset = self.UserAndGroups.dereference().vol.get("offset") - kvo,
-                                            subtype = ntkrnlmp.get_type("_SID_AND_ATTRIBUTES"),
-                                            count = self.UserAndGroupCount)
+            ntkrnlmp = self._context.module(
+                symbol_table, layer_name=layer_name, offset=kvo
+            )
+            UserAndGroups = ntkrnlmp.object(
+                object_type="array",
+                offset=self.UserAndGroups.dereference().vol.get("offset") - kvo,
+                subtype=ntkrnlmp.get_type("_SID_AND_ATTRIBUTES"),
+                count=self.UserAndGroupCount,
+            )
             for sid_and_attr in UserAndGroups:
                 try:
                     sid = sid_and_attr.Sid.dereference().cast("_SID")
@@ -819,30 +912,42 @@ class TOKEN(objects.StructType):
                     id_auth = ""
                     for i in sid.IdentifierAuthority.Value:
                         id_auth = i
-                    SubAuthority = ntkrnlmp.object(object_type = "array",
-                                                   offset = sid.SubAuthority.vol.offset - kvo,
-                                                   subtype = ntkrnlmp.get_type("unsigned long"),
-                                                   count = int(sid.SubAuthorityCount))
-                    yield "S-" + "-".join(str(i) for i in (sid.Revision, id_auth) + tuple(SubAuthority))
+                    SubAuthority = ntkrnlmp.object(
+                        object_type="array",
+                        offset=sid.SubAuthority.vol.offset - kvo,
+                        subtype=ntkrnlmp.get_type("unsigned long"),
+                        count=int(sid.SubAuthorityCount),
+                    )
+                    yield "S-" + "-".join(
+                        str(i) for i in (sid.Revision, id_auth) + tuple(SubAuthority)
+                    )
                 except exceptions.InvalidAddressException:
-                    vollog.log(constants.LOGLEVEL_VVVV, "InvalidAddressException while parsing for token sid")
+                    vollog.log(
+                        constants.LOGLEVEL_VVVV,
+                        "InvalidAddressException while parsing for token sid",
+                    )
 
     def privileges(self):
         """Return a list of privileges for the current token object."""
 
         try:
             for priv_index in range(64):
-                yield (priv_index, bool(self.Privileges.Present & (2 ** priv_index)),
-                       bool(self.Privileges.Enabled & (2 ** priv_index)),
-                       bool(self.Privileges.EnabledByDefault & (2 ** priv_index)))
+                yield (
+                    priv_index,
+                    bool(self.Privileges.Present & (2**priv_index)),
+                    bool(self.Privileges.Enabled & (2**priv_index)),
+                    bool(self.Privileges.EnabledByDefault & (2**priv_index)),
+                )
         except AttributeError:  # Windows XP
             if self.PrivilegeCount < 1024:
                 # This is a pointer to an array of _LUID_AND_ATTRIBUTES
                 for luid in self.Privileges.dereference().cast(
-                        "array",
-                        count = self.PrivilegeCount,
-                        subtype = self._context.symbol_space[self.get_symbol_table_name()].get_type(
-                            "_LUID_AND_ATTRIBUTES")):
+                    "array",
+                    count=self.PrivilegeCount,
+                    subtype=self._context.symbol_space[
+                        self.get_symbol_table_name()
+                    ].get_type("_LUID_AND_ATTRIBUTES"),
+                ):
                     # The Attributes member is a flag
                     enabled = luid.Attributes & 2 != 0
                     default = luid.Attributes & 1 != 0
@@ -856,58 +961,58 @@ class KTHREAD(objects.StructType):
 
     def get_state(self) -> str:
         dictState = {
-            0: 'Initialized',
-            1: 'Ready',
-            2: 'Running',
-            3: 'Standby',
-            4: 'Terminated',
-            5: 'Waiting',
-            6: 'Transition',
-            7: 'DeferredReady',
-            8: 'GateWait'
+            0: "Initialized",
+            1: "Ready",
+            2: "Running",
+            3: "Standby",
+            4: "Terminated",
+            5: "Waiting",
+            6: "Transition",
+            7: "DeferredReady",
+            8: "GateWait",
         }
         return dictState.get(self.State, renderers.NotApplicableValue())
 
     def get_wait_reason(self) -> str:
         dictWaitReason = {
-            0: 'Executive',
-            1: 'FreePage',
-            2: 'PageIn',
-            3: 'PoolAllocation',
-            4: 'DelayExecution',
-            5: 'Suspended',
-            6: 'UserRequest',
-            7: 'WrExecutive',
-            8: 'WrFreePage',
-            9: 'WrPageIn',
-            10: 'WrPoolAllocation',
-            11: 'WrDelayExecution',
-            12: 'WrSuspended',
-            13: 'WrUserRequest',
-            14: 'WrEventPair',
-            15: 'WrQueue',
-            16: 'WrLpcReceive',
-            17: 'WrLpcReply',
-            18: 'WrVirtualMemory',
-            19: 'WrPageOut',
-            20: 'WrRendezvous',
-            21: 'Spare2',
-            22: 'Spare3',
-            23: 'Spare4',
-            24: 'Spare5',
-            25: 'Spare6',
-            26: 'WrKernel',
-            27: 'WrResource',
-            28: 'WrPushLock',
-            29: 'WrMutex',
-            30: 'WrQuantumEnd',
-            31: 'WrDispatchInt',
-            32: 'WrPreempted',
-            33: 'WrYieldExecution',
-            34: 'WrFastMutex',
-            35: 'WrGuardedMutex',
-            36: 'WrRundown',
-            37: 'MaximumWaitReason'
+            0: "Executive",
+            1: "FreePage",
+            2: "PageIn",
+            3: "PoolAllocation",
+            4: "DelayExecution",
+            5: "Suspended",
+            6: "UserRequest",
+            7: "WrExecutive",
+            8: "WrFreePage",
+            9: "WrPageIn",
+            10: "WrPoolAllocation",
+            11: "WrDelayExecution",
+            12: "WrSuspended",
+            13: "WrUserRequest",
+            14: "WrEventPair",
+            15: "WrQueue",
+            16: "WrLpcReceive",
+            17: "WrLpcReply",
+            18: "WrVirtualMemory",
+            19: "WrPageOut",
+            20: "WrRendezvous",
+            21: "Spare2",
+            22: "Spare3",
+            23: "Spare4",
+            24: "Spare5",
+            25: "Spare6",
+            26: "WrKernel",
+            27: "WrResource",
+            28: "WrPushLock",
+            29: "WrMutex",
+            30: "WrQuantumEnd",
+            31: "WrDispatchInt",
+            32: "WrPreempted",
+            33: "WrYieldExecution",
+            34: "WrFastMutex",
+            35: "WrGuardedMutex",
+            36: "WrRundown",
+            37: "MaximumWaitReason",
         }
         return dictWaitReason.get(self.WaitReason, renderers.NotApplicableValue())
 
@@ -926,7 +1031,9 @@ class CONTROL_AREA(objects.StructType):
                 return False
 
             # The SizeOfSegment should match the total PTEs multiplied by a default page size
-            if self.Segment.SizeOfSegment != (self.Segment.TotalNumberOfPtes * self.PAGE_SIZE):
+            if self.Segment.SizeOfSegment != (
+                self.Segment.TotalNumberOfPtes * self.PAGE_SIZE
+            ):
                 return False
 
             # The first SubsectionBase should not be page aligned
@@ -942,18 +1049,22 @@ class CONTROL_AREA(objects.StructType):
     def get_subsection(self) -> interfaces.objects.ObjectInterface:
         """Get the Subsection object, which is found immediately after the _CONTROL_AREA."""
 
-        return self._context.object(self.get_symbol_table_name() + constants.BANG + "_SUBSECTION",
-                                    layer_name = self.vol.layer_name,
-                                    offset = self.vol.offset + self.vol.size,
-                                    native_layer_name = self.vol.native_layer_name)
+        return self._context.object(
+            self.get_symbol_table_name() + constants.BANG + "_SUBSECTION",
+            layer_name=self.vol.layer_name,
+            offset=self.vol.offset + self.vol.size,
+            native_layer_name=self.vol.native_layer_name,
+        )
 
     def get_pte(self, offset: int) -> interfaces.objects.ObjectInterface:
         """Get a PTE object at the requested offset"""
 
-        return self._context.object(self.get_symbol_table_name() + constants.BANG + "_MMPTE",
-                                    layer_name = self.vol.layer_name,
-                                    offset = offset,
-                                    native_layer_name = self.vol.native_layer_name)
+        return self._context.object(
+            self.get_symbol_table_name() + constants.BANG + "_MMPTE",
+            layer_name=self.vol.layer_name,
+            offset=offset,
+            native_layer_name=self.vol.native_layer_name,
+        )
 
     def get_available_pages(self) -> Iterable[Tuple[int, int, int]]:
         """Get the available pages that correspond to a cached file.
@@ -961,7 +1072,9 @@ class CONTROL_AREA(objects.StructType):
         The tuples generated are (physical_offset, file_offset, page_size).
         """
         symbol_table_name = self.get_symbol_table_name()
-        mmpte_type = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "_MMPTE")
+        mmpte_type = self._context.symbol_space.get_type(
+            symbol_table_name + constants.BANG + "_MMPTE"
+        )
         mmpte_size = mmpte_type.size
         subsection = self.get_subsection()
         is_64bit = symbols.symbol_table_is_64bit(self._context, symbol_table_name)
@@ -1002,8 +1115,9 @@ class CONTROL_AREA(objects.StructType):
 
                 elif mmpte.u.Soft.Prototype == 1:
                     if not is_64bit and not is_pae:
-                        subsection_offset = ((mmpte.u.Subsect.SubsectionAddressHigh << 7) |
-                                             (mmpte.u.Subsect.SubsectionAddressLow << 3))
+                        subsection_offset = (
+                            mmpte.u.Subsect.SubsectionAddressHigh << 7
+                        ) | (mmpte.u.Subsect.SubsectionAddressLow << 3)
 
                 # If the entry is not a valid physical address then see if it is in transition.
                 elif mmpte.u.Trans.Transition == 1:
@@ -1049,17 +1163,21 @@ class SHARED_CACHE_MAP(objects.StructType):
         if self.FileSize.QuadPart <= 0 or self.ValidDataLength.QuadPart <= 0:
             return False
 
-        if self.SectionSize.QuadPart < 0 or ((self.FileSize.QuadPart < self.ValidDataLength.QuadPart) and
-                                             (self.ValidDataLength.QuadPart != 0x7fffffffffffffff)):
+        if self.SectionSize.QuadPart < 0 or (
+            (self.FileSize.QuadPart < self.ValidDataLength.QuadPart)
+            and (self.ValidDataLength.QuadPart != 0x7FFFFFFFFFFFFFFF)
+        ):
             return False
 
         return True
 
-    def process_index_array(self,
-                            array_pointer: interfaces.objects.ObjectInterface,
-                            level: int,
-                            limit: int,
-                            vacb_list: Optional[List] = None) -> List:
+    def process_index_array(
+        self,
+        array_pointer: interfaces.objects.ObjectInterface,
+        level: int,
+        limit: int,
+        vacb_list: Optional[List] = None,
+    ) -> List:
         """Recursively process the sparse multilevel VACB index array.
 
         :param array_pointer: The address of a possible index array
@@ -1075,14 +1193,18 @@ class SHARED_CACHE_MAP(objects.StructType):
             return []
 
         symbol_table_name = self.get_symbol_table_name()
-        pointer_type = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer")
+        pointer_type = self._context.symbol_space.get_type(
+            symbol_table_name + constants.BANG + "pointer"
+        )
 
         # Create an array of 128 entries for the VACB index array
-        vacb_array = self._context.object(object_type = symbol_table_name + constants.BANG + "array",
-                                          layer_name = self.vol.layer_name,
-                                          offset = array_pointer,
-                                          count = self.VACB_ARRAY,
-                                          subtype = pointer_type)
+        vacb_array = self._context.object(
+            object_type=symbol_table_name + constants.BANG + "array",
+            layer_name=self.vol.layer_name,
+            offset=array_pointer,
+            count=self.VACB_ARRAY,
+            subtype=pointer_type,
+        )
 
         # Iterate through the entries
         for counter in range(0, self.VACB_ARRAY):
@@ -1090,16 +1212,26 @@ class SHARED_CACHE_MAP(objects.StructType):
             if not vacb_array[counter]:
                 continue
 
-            vacb_obj = vacb_array[counter].dereference().cast(symbol_table_name + constants.BANG + "_VACB")
+            vacb_obj = (
+                vacb_array[counter]
+                .dereference()
+                .cast(symbol_table_name + constants.BANG + "_VACB")
+            )
             if vacb_obj.SharedCacheMap == self.vol.offset:
                 self.save_vacb(vacb_obj, vacb_list)
             else:
                 # Process the next level of the multi-level array
-                vacb_list = self.process_index_array(vacb_array[counter], level + 1, limit, vacb_list)
+                vacb_list = self.process_index_array(
+                    vacb_array[counter], level + 1, limit, vacb_list
+                )
         return vacb_list
 
     def save_vacb(self, vacb_obj: interfaces.objects.ObjectInterface, vacb_list: List):
-        data = (int(vacb_obj.BaseAddress), int(vacb_obj.get_file_offset()), self.VACB_BLOCK)
+        data = (
+            int(vacb_obj.BaseAddress),
+            int(vacb_obj.get_file_offset()),
+            self.VACB_BLOCK,
+        )
         vacb_list.append(data)
 
     def get_available_pages(self) -> List:
@@ -1152,15 +1284,19 @@ class SHARED_CACHE_MAP(objects.StructType):
 
         # If the file is less than 32 MB than it can be found in a single level VACB index array.
         symbol_table_name = self.get_symbol_table_name()
-        pointer_type = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer")
+        pointer_type = self._context.symbol_space.get_type(
+            symbol_table_name + constants.BANG + "pointer"
+        )
         size_of_pointer = pointer_type.size
 
         if not section_size > self.VACB_SIZE_OF_FIRST_LEVEL:
             array_head = vacb_obj
             for counter in range(0, full_blocks):
-                vacb_entry = self._context.object(symbol_table_name + constants.BANG + "pointer",
-                                                  layer_name = self.vol.layer_name,
-                                                  offset = array_head + (counter * size_of_pointer))
+                vacb_entry = self._context.object(
+                    symbol_table_name + constants.BANG + "pointer",
+                    layer_name=self.vol.layer_name,
+                    offset=array_head + (counter * size_of_pointer),
+                )
 
                 # If we find a zero entry, then we proceed to the next one. If the entry is zero,
                 # then the view is not mapped and we skip. We do not pad because we use the
@@ -1168,19 +1304,25 @@ class SHARED_CACHE_MAP(objects.StructType):
                 if not vacb_entry:
                     continue
 
-                vacb = vacb_entry.dereference().cast(symbol_table_name + constants.BANG + "_VACB")
+                vacb = vacb_entry.dereference().cast(
+                    symbol_table_name + constants.BANG + "_VACB"
+                )
                 if vacb.SharedCacheMap == self.vol.offset:
                     self.save_vacb(vacb, vacb_list)
 
             if left_over > 0:
-                vacb_entry = self._context.object(symbol_table_name + constants.BANG + "pointer",
-                                                  layer_name = self.vol.layer_name,
-                                                  offset = array_head + ((counter + 1) * size_of_pointer))
+                vacb_entry = self._context.object(
+                    symbol_table_name + constants.BANG + "pointer",
+                    layer_name=self.vol.layer_name,
+                    offset=array_head + ((counter + 1) * size_of_pointer),
+                )
 
                 if not vacb_entry:
                     return vacb_list
 
-                vacb = vacb_entry.dereference().cast(symbol_table_name + constants.BANG + "_VACB")
+                vacb = vacb_entry.dereference().cast(
+                    symbol_table_name + constants.BANG + "_VACB"
+                )
                 if vacb.SharedCacheMap == self.vol.offset:
                     self.save_vacb(vacb, vacb_list)
 
@@ -1197,13 +1339,14 @@ class SHARED_CACHE_MAP(objects.StructType):
         limit_depth = level_depth
 
         if section_size > self.VACB_SIZE_OF_FIRST_LEVEL:
-
             # Create an array of 128 entries for the VACB index array.
-            vacb_array = self._context.object(object_type = symbol_table_name + constants.BANG + "array",
-                                              layer_name = self.vol.layer_name,
-                                              offset = vacb_obj,
-                                              count = self.VACB_ARRAY,
-                                              subtype = pointer_type)
+            vacb_array = self._context.object(
+                object_type=symbol_table_name + constants.BANG + "array",
+                layer_name=self.vol.layer_name,
+                offset=vacb_obj,
+                count=self.VACB_ARRAY,
+                subtype=pointer_type,
+            )
 
             # Walk the array and if any entry points to the shared cache map object then we extract it.
             # Otherwise, if it is non-zero, then traverse to the next level.
@@ -1211,13 +1354,19 @@ class SHARED_CACHE_MAP(objects.StructType):
                 if not vacb_array[counter]:
                     continue
 
-                vacb = vacb_array[counter].dereference().cast(symbol_table_name + constants.BANG + "_VACB")
+                vacb = (
+                    vacb_array[counter]
+                    .dereference()
+                    .cast(symbol_table_name + constants.BANG + "_VACB")
+                )
                 if vacb.SharedCacheMap == self.vol.offset:
                     self.save_vacb(vacb, vacb_list)
                 else:
                     # Process the next level of the multi-level array. We set the limit_depth to be
                     # the depth of the tree as determined from the size and we initialize the
                     # current level to 2.
-                    vacb_list = self.process_index_array(vacb_array[counter], 2, limit_depth, vacb_list)
+                    vacb_list = self.process_index_array(
+                        vacb_array[counter], 2, limit_depth, vacb_list
+                    )
 
         return vacb_list

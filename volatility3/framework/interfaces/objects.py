@@ -28,11 +28,13 @@ class ReadOnlyMapping(collections.abc.Mapping):
 
     def __getattr__(self, attr: str) -> Any:
         """Returns the item as an attribute."""
-        if attr == '_dict':
+        if attr == "_dict":
             return super().__getattribute__(attr)
         if attr in self._dict:
             return self._dict[attr]
-        raise AttributeError(f"Object has no attribute: {self.__class__.__name__}.{attr}")
+        raise AttributeError(
+            f"Object has no attribute: {self.__class__.__name__}.{attr}"
+        )
 
     def __getitem__(self, name: str) -> Any:
         """Returns the item requested."""
@@ -61,13 +63,15 @@ class ObjectInformation(ReadOnlyMapping):
     in a single place.  These values are based on the :class:`ReadOnlyMapping` class, to prevent their modification.
     """
 
-    def __init__(self,
-                 layer_name: str,
-                 offset: int,
-                 member_name: Optional[str] = None,
-                 parent: Optional['ObjectInterface'] = None,
-                 native_layer_name: Optional[str] = None,
-                 size: Optional[int] = None):
+    def __init__(
+        self,
+        layer_name: str,
+        offset: int,
+        member_name: Optional[str] = None,
+        parent: Optional["ObjectInterface"] = None,
+        native_layer_name: Optional[str] = None,
+        size: Optional[int] = None,
+    ):
         """Constructs a container for basic information about an object.
 
         Args:
@@ -78,22 +82,29 @@ class ObjectInformation(ReadOnlyMapping):
             native_layer_name: If this object references other objects (such as a pointer), what layer those objects live in
             size: The size that the whole structure consumes in bytes
         """
-        super().__init__({
-            'layer_name': layer_name,
-            'offset': offset,
-            'member_name': member_name,
-            'parent': parent,
-            'native_layer_name': native_layer_name or layer_name,
-            'size': size
-        })
+        super().__init__(
+            {
+                "layer_name": layer_name,
+                "offset": offset,
+                "member_name": member_name,
+                "parent": parent,
+                "native_layer_name": native_layer_name or layer_name,
+                "size": size,
+            }
+        )
 
 
-class ObjectInterface(metaclass = abc.ABCMeta):
+class ObjectInterface(metaclass=abc.ABCMeta):
     """A base object required to be the ancestor of every object used in
     volatility."""
 
-    def __init__(self, context: 'interfaces.context.ContextInterface', type_name: str, object_info: 'ObjectInformation',
-                 **kwargs) -> None:
+    def __init__(
+        self,
+        context: "interfaces.context.ContextInterface",
+        type_name: str,
+        object_info: "ObjectInformation",
+        **kwargs,
+    ) -> None:
         """Constructs an Object adhering to the ObjectInterface.
 
         Args:
@@ -116,7 +127,7 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         mask = context.layers[object_info.layer_name].address_mask
         normalized_offset = object_info.offset & mask
 
-        vol_info_dict = {'type_name': type_name, 'offset': normalized_offset}
+        vol_info_dict = {"type_name": type_name, "offset": normalized_offset}
         self._vol = collections.ChainMap({}, vol_info_dict, object_info, kwargs)
         self._context = context
 
@@ -143,13 +154,17 @@ class ObjectInterface(metaclass = abc.ABCMeta):
             KeyError: If the table_name is not valid within the object's context
         """
         if constants.BANG not in self.vol.type_name:
-            raise ValueError(f"Unable to determine table for symbol: {self.vol.type_name}")
-        table_name = self.vol.type_name[:self.vol.type_name.index(constants.BANG)]
+            raise ValueError(
+                f"Unable to determine table for symbol: {self.vol.type_name}"
+            )
+        table_name = self.vol.type_name[: self.vol.type_name.index(constants.BANG)]
         if table_name not in self._context.symbol_space:
-            raise KeyError(f"Symbol table not found in context's symbol_space for symbol: {self.vol.type_name}")
+            raise KeyError(
+                f"Symbol table not found in context's symbol_space for symbol: {self.vol.type_name}"
+            )
         return table_name
 
-    def cast(self, new_type_name: str, **additional) -> 'ObjectInterface':
+    def cast(self, new_type_name: str, **additional) -> "ObjectInterface":
         """Returns a new object at the offset and from the layer that the
         current object inhabits.
 
@@ -163,13 +178,15 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         object_template = self._context.symbol_space.get_type(new_type_name)
         object_template = object_template.clone()
         object_template.update_vol(**additional)
-        object_info = ObjectInformation(layer_name = self.vol.layer_name,
-                                        offset = self.vol.offset,
-                                        member_name = self.vol.member_name,
-                                        parent = self.vol.parent,
-                                        native_layer_name = self.vol.native_layer_name,
-                                        size = object_template.size)
-        return object_template(context = self._context, object_info = object_info)
+        object_info = ObjectInformation(
+            layer_name=self.vol.layer_name,
+            offset=self.vol.offset,
+            member_name=self.vol.member_name,
+            parent=self.vol.parent,
+            native_layer_name=self.vol.native_layer_name,
+            size=object_template.size,
+        )
+        return object_template(context=self._context, object_info=object_info)
 
     def has_member(self, member_name: str) -> bool:
         """Returns whether the object would contain a member called
@@ -201,7 +218,7 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         """
         return all([self.has_valid_member(member_name) for member_name in member_names])
 
-    class VolTemplateProxy(metaclass = abc.ABCMeta):
+    class VolTemplateProxy(metaclass=abc.ABCMeta):
         """A container for proxied methods that the ObjectTemplate of this
         object will call.  This is primarily to keep methods together for easy
         organization/management, there is no significant need for it to be a
@@ -214,41 +231,52 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         to control how their templates respond without needing to write
         new templates for each and every potential object type.
         """
+
         _methods: List[str] = []
 
         @classmethod
         @abc.abstractmethod
-        def size(cls, template: 'Template') -> int:
+        def size(cls, template: "Template") -> int:
             """Returns the size of the template object."""
 
         @classmethod
         @abc.abstractmethod
-        def children(cls, template: 'Template') -> List['Template']:
+        def children(cls, template: "Template") -> List["Template"]:
             """Returns the children of the template."""
             return []
 
         @classmethod
         @abc.abstractmethod
-        def replace_child(cls, template: 'Template', old_child: 'Template', new_child: 'Template') -> None:
+        def replace_child(
+            cls, template: "Template", old_child: "Template", new_child: "Template"
+        ) -> None:
             """Substitutes the old_child for the new_child."""
-            raise KeyError(f"Template does not contain any children to replace: {template.vol.type_name}")
+            raise KeyError(
+                f"Template does not contain any children to replace: {template.vol.type_name}"
+            )
 
         @classmethod
         @abc.abstractmethod
-        def relative_child_offset(cls, template: 'Template', child: str) -> int:
+        def relative_child_offset(cls, template: "Template", child: str) -> int:
             """Returns the relative offset from the head of the parent data to
             the child member."""
-            raise KeyError(f"Template does not contain any children: {template.vol.type_name}")
+            raise KeyError(
+                f"Template does not contain any children: {template.vol.type_name}"
+            )
 
         @classmethod
         @abc.abstractmethod
-        def child_template(cls, template: 'Template', child: str) -> 'interfaces.objects.Template':
+        def child_template(
+            cls, template: "Template", child: str
+        ) -> "interfaces.objects.Template":
             """Returns the template of the child member from the parent."""
-            raise KeyError(f"Template does not contain any children: {template.vol.type_name}")
+            raise KeyError(
+                f"Template does not contain any children: {template.vol.type_name}"
+            )
 
         @classmethod
         @abc.abstractmethod
-        def has_member(cls, template: 'Template', member_name: str) -> bool:
+        def has_member(cls, template: "Template", member_name: str) -> bool:
             """Returns whether the object would contain a member called
             member_name."""
             return False
@@ -282,7 +310,9 @@ class Template:
         # Allow the updating of template arguments whilst still in template form
         super().__init__()
         empty_dict: Dict[str, Any] = {}
-        self._vol = collections.ChainMap(empty_dict, arguments, {'type_name': type_name})
+        self._vol = collections.ChainMap(
+            empty_dict, arguments, {"type_name": type_name}
+        )
 
     @property
     def vol(self) -> ReadOnlyMapping:
@@ -292,7 +322,7 @@ class Template:
         return ReadOnlyMapping(self._vol)
 
     @property
-    def children(self) -> List['Template']:
+    def children(self) -> List["Template"]:
         """The children of this template (such as member types, sub-types and
         base-types where they are relevant).
 
@@ -311,11 +341,11 @@ class Template:
         offset."""
 
     @abc.abstractmethod
-    def child_template(self, child: str) -> 'interfaces.objects.Template':
+    def child_template(self, child: str) -> "interfaces.objects.Template":
         """Returns the `child` member template from its parent."""
 
     @abc.abstractmethod
-    def replace_child(self, old_child: 'Template', new_child: 'Template') -> None:
+    def replace_child(self, old_child: "Template", new_child: "Template") -> None:
         """Replaces `old_child` with `new_child` in the list of children."""
 
     @abc.abstractmethod
@@ -323,7 +353,7 @@ class Template:
         """Returns whether the object would contain a member called
         `member_name`"""
 
-    def clone(self) -> 'Template':
+    def clone(self) -> "Template":
         """Returns a copy of the original Template as constructed (without
         `update_vol` additions having been made)"""
         clone = self.__class__(**self._vol.parents.new_child())
@@ -337,11 +367,16 @@ class Template:
     def __getattr__(self, attr: str) -> Any:
         """Exposes any other values stored in ._vol as attributes (for example,
         enumeration choices)"""
-        if attr != '_vol':
+        if attr != "_vol":
             if attr in self._vol:
                 return self._vol[attr]
-        raise AttributeError(f"{self.__class__.__name__} object has no attribute {attr}")
+        raise AttributeError(
+            f"{self.__class__.__name__} object has no attribute {attr}"
+        )
 
-    def __call__(self, context: 'interfaces.context.ContextInterface',
-                 object_info: ObjectInformation) -> ObjectInterface:
+    def __call__(
+        self,
+        context: "interfaces.context.ContextInterface",
+        object_info: ObjectInformation,
+    ) -> ObjectInterface:
         """Constructs the object."""

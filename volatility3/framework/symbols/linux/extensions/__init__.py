@@ -4,14 +4,19 @@
 
 import collections.abc
 import logging
+import socket as socket_module
 from typing import Generator, Iterable, Iterator, Optional, Tuple
 
 from volatility3.framework import constants
+from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
+from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
+from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
+from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
+from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
 from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
-from volatility3.framework.symbols import generic, linux
-from volatility3.framework.symbols import intermed
+from volatility3.framework.symbols import generic, linux, intermed
 from volatility3.framework.symbols.linux.extensions import elf
 
 vollog = logging.getLogger(__name__)
@@ -20,7 +25,6 @@ vollog = logging.getLogger(__name__)
 
 
 class module(generic.GenericIntelProcess):
-
     def get_module_base(self):
         if self.has_member("core_layout"):
             return self.core_layout.base
@@ -34,7 +38,9 @@ class module(generic.GenericIntelProcess):
         elif self.has_member("init_size"):
             return self.init_size
 
-        raise AttributeError("module -> get_init_size: Unable to determine .init section size of module")
+        raise AttributeError(
+            "module -> get_init_size: Unable to determine .init section size of module"
+        )
 
     def get_core_size(self):
         if self.has_member("core_layout"):
@@ -43,7 +49,9 @@ class module(generic.GenericIntelProcess):
         elif self.has_member("core_size"):
             return self.core_size
 
-        raise AttributeError("module -> get_core_size: Unable to determine core size of module")
+        raise AttributeError(
+            "module -> get_core_size: Unable to determine core size of module"
+        )
 
     def get_module_core(self):
         if self.has_member("core_layout"):
@@ -62,17 +70,20 @@ class module(generic.GenericIntelProcess):
         raise AttributeError("module -> get_module_core: Unable to get module init")
 
     def get_name(self):
-        """ Get the name of the module as a string """
+        """Get the name of the module as a string"""
         return utility.array_to_string(self.name)
 
     def _get_sect_count(self, grp):
-        """ Try to determine the number of valid sections """
+        """Try to determine the number of valid sections"""
         arr = self._context.object(
             self.get_symbol_table().name + constants.BANG + "array",
-            layer_name = self.vol.layer_name,
-            offset = grp.attrs,
-            subtype = self._context.symbol_space.get_type(self.get_symbol_table().name + constants.BANG + "pointer"),
-            count = 25)
+            layer_name=self.vol.layer_name,
+            offset=grp.attrs,
+            subtype=self._context.symbol_space.get_type(
+                self.get_symbol_table().name + constants.BANG + "pointer"
+            ),
+            count=25,
+        )
 
         idx = 0
         while arr[idx]:
@@ -81,18 +92,21 @@ class module(generic.GenericIntelProcess):
         return idx
 
     def get_sections(self):
-        """ Get sections of the module """
+        """Get sections of the module"""
         if self.sect_attrs.has_member("nsections"):
             num_sects = self.sect_attrs.nsections
         else:
             num_sects = self._get_sect_count(self.sect_attrs.grp)
 
-        arr = self._context.object(self.get_symbol_table().name + constants.BANG + "array",
-                                   layer_name = self.vol.layer_name,
-                                   offset = self.sect_attrs.attrs.vol.offset,
-                                   subtype = self._context.symbol_space.get_type(self.get_symbol_table().name +
-                                                                                 constants.BANG + 'module_sect_attr'),
-                                   count = num_sects)
+        arr = self._context.object(
+            self.get_symbol_table().name + constants.BANG + "array",
+            layer_name=self.vol.layer_name,
+            offset=self.sect_attrs.attrs.vol.offset,
+            subtype=self._context.symbol_space.get_type(
+                self.get_symbol_table().name + constants.BANG + "module_sect_attr"
+            ),
+            count=num_sects,
+        )
 
         for attr in arr:
             yield attr
@@ -103,26 +117,31 @@ class module(generic.GenericIntelProcess):
         else:
             prefix = "Elf32_"
 
-        elf_table_name = intermed.IntermediateSymbolTable.create(self.context,
-                                                                 self.config_path,
-                                                                 "linux",
-                                                                 "elf",
-                                                                 native_types = None,
-                                                                 class_types = elf.class_types)
+        elf_table_name = intermed.IntermediateSymbolTable.create(
+            self.context,
+            self.config_path,
+            "linux",
+            "elf",
+            native_types=None,
+            class_types=elf.class_types,
+        )
 
         syms = self._context.object(
             self.get_symbol_table().name + constants.BANG + "array",
-            layer_name = self.vol.layer_name,
-            offset = self.section_symtab,
-            subtype = self._context.symbol_space.get_type(elf_table_name + constants.BANG + prefix + "Sym"),
-            count = self.num_symtab + 1)
+            layer_name=self.vol.layer_name,
+            offset=self.section_symtab,
+            subtype=self._context.symbol_space.get_type(
+                elf_table_name + constants.BANG + prefix + "Sym"
+            ),
+            count=self.num_symtab + 1,
+        )
         if self.section_strtab:
             for sym in syms:
                 sym.set_cached_strtab(self.section_strtab)
                 yield sym
 
     def get_symbol(self, wanted_sym_name):
-        """ Get value for a given symbol name """
+        """Get value for a given symbol name"""
         for sym in self.get_symbols():
             sym_name = sym.get_name()
             sym_addr = sym.st_value
@@ -146,7 +165,9 @@ class module(generic.GenericIntelProcess):
         elif self.has_member("num_symtab"):
             return int(self.num_symtab)
 
-        raise AttributeError("module -> num_symtab: Unable to determine number of symbols")
+        raise AttributeError(
+            "module -> num_symtab: Unable to determine number of symbols"
+        )
 
     @property
     def section_strtab(self):
@@ -161,8 +182,9 @@ class module(generic.GenericIntelProcess):
 
 
 class task_struct(generic.GenericIntelProcess):
-
-    def add_process_layer(self, config_prefix: str = None, preferred_name: str = None) -> Optional[str]:
+    def add_process_layer(
+        self, config_prefix: str = None, preferred_name: str = None
+    ) -> Optional[str]:
         """Constructs a new layer based on the process's DTB.
 
         Returns the name of the Layer or None.
@@ -175,7 +197,9 @@ class task_struct(generic.GenericIntelProcess):
             return None
 
         if not isinstance(parent_layer, linear.LinearlyMappedLayer):
-            raise TypeError("Parent layer is not a translation layer, unable to construct process layer")
+            raise TypeError(
+                "Parent layer is not a translation layer, unable to construct process layer"
+            )
 
         dtb, layer_name = parent_layer.translate(pgd)
         if not dtb:
@@ -185,9 +209,13 @@ class task_struct(generic.GenericIntelProcess):
             preferred_name = self.vol.layer_name + f"_Process{self.pid}"
 
         # Add the constructed layer and return the name
-        return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
+        return self._add_process_layer(
+            self._context, dtb, config_prefix, preferred_name
+        )
 
-    def get_process_memory_sections(self, heap_only: bool = False) -> Generator[Tuple[int, int], None, None]:
+    def get_process_memory_sections(
+        self, heap_only: bool = False
+    ) -> Generator[Tuple[int, int], None, None]:
         """Returns a list of sections based on the memory manager's view of
         this task's virtual memory."""
         for vma in self.mm.get_mmap_iter():
@@ -198,7 +226,9 @@ class task_struct(generic.GenericIntelProcess):
                 continue
             else:
                 # FIXME: Check if this actually needs to be printed out or not
-                vollog.info(f"adding vma: {start:x} {self.mm.brk:x} | {end:x} {self.mm.start_brk:x}")
+                vollog.info(
+                    f"adding vma: {start:x} {self.mm.brk:x} | {end:x} {self.mm.start_brk:x}"
+                )
 
             yield (start, end - start)
 
@@ -240,13 +270,12 @@ class task_struct(generic.GenericIntelProcess):
         # threads and using the thread_group offset to get the
         # corresponding task_struct
         for task in self.thread_group.to_list(
-            f"{task_symbol_table_name}{constants.BANG}task_struct",
-            "thread_group"
+            f"{task_symbol_table_name}{constants.BANG}task_struct", "thread_group"
         ):
             yield task
 
-class fs_struct(objects.StructType):
 
+class fs_struct(objects.StructType):
     def get_root_dentry(self):
         # < 2.6.26
         if self.has_member("rootmnt"):
@@ -267,7 +296,6 @@ class fs_struct(objects.StructType):
 
 
 class mm_struct(objects.StructType):
-
     def get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mmap list member of an mm_struct."""
 
@@ -290,26 +318,26 @@ class super_block(objects.StructType):
     MINORBITS = 20
 
     # Superblock flags
-    SB_RDONLY = 1            # Mount read-only
-    SB_NOSUID = 2            # Ignore suid and sgid bits
-    SB_NODEV = 4             # Disallow access to device special files
-    SB_NOEXEC = 8            # Disallow program execution
-    SB_SYNCHRONOUS = 16      # Writes are synced at once
-    SB_MANDLOCK = 64         # Allow mandatory locks on an FS
-    SB_DIRSYNC = 128         # Directory modifications are synchronous
-    SB_NOATIME = 1024        # Do not update access times
-    SB_NODIRATIME = 2048     # Do not update directory access times
+    SB_RDONLY = 1  # Mount read-only
+    SB_NOSUID = 2  # Ignore suid and sgid bits
+    SB_NODEV = 4  # Disallow access to device special files
+    SB_NOEXEC = 8  # Disallow program execution
+    SB_SYNCHRONOUS = 16  # Writes are synced at once
+    SB_MANDLOCK = 64  # Allow mandatory locks on an FS
+    SB_DIRSYNC = 128  # Directory modifications are synchronous
+    SB_NOATIME = 1024  # Do not update access times
+    SB_NODIRATIME = 2048  # Do not update directory access times
     SB_SILENT = 32768
-    SB_POSIXACL = (1 << 16)   # VFS does not apply the umask
-    SB_KERNMOUNT = (1 << 22)  # this is a kern_mount call
-    SB_I_VERSION = (1 << 23)  # Update inode I_version field
-    SB_LAZYTIME = (1 << 25)   # Update the on-disk [acm]times lazily
+    SB_POSIXACL = 1 << 16  # VFS does not apply the umask
+    SB_KERNMOUNT = 1 << 22  # this is a kern_mount call
+    SB_I_VERSION = 1 << 23  # Update inode I_version field
+    SB_LAZYTIME = 1 << 25  # Update the on-disk [acm]times lazily
 
     SB_OPTS = {
         SB_SYNCHRONOUS: "sync",
         SB_DIRSYNC: "dirsync",
         SB_MANDLOCK: "mand",
-        SB_LAZYTIME: "lazytime"
+        SB_LAZYTIME: "lazytime",
     }
 
     @property
@@ -321,10 +349,12 @@ class super_block(objects.StructType):
         return self.s_dev & ((1 << self.MINORBITS) - 1)
 
     def get_flags_access(self) -> str:
-        return 'ro' if self.s_flags & self.SB_RDONLY else 'rw'
+        return "ro" if self.s_flags & self.SB_RDONLY else "rw"
 
     def get_flags_opts(self) -> Iterable[str]:
-        sb_opts = [self.SB_OPTS[sb_opt] for sb_opt in self.SB_OPTS if sb_opt & self.s_flags]
+        sb_opts = [
+            self.SB_OPTS[sb_opt] for sb_opt in self.SB_OPTS if sb_opt & self.s_flags
+        ]
         return sb_opts
 
     def get_type(self):
@@ -387,7 +417,7 @@ class vm_area_struct(objects.StructType):
             if (vm_flags & mask) == mask:
                 retval = retval + char
             else:
-                retval = retval + '-'
+                retval = retval + "-"
 
         return retval
 
@@ -412,7 +442,10 @@ class vm_area_struct(objects.StructType):
             fname = "[heap]"
         elif self.vm_start <= task.mm.start_stack <= self.vm_end:
             fname = "[stack]"
-        elif self.vm_mm.context.has_member("vdso") and self.vm_start == self.vm_mm.context.vdso:
+        elif (
+            self.vm_mm.context.has_member("vdso")
+            and self.vm_start == self.vm_mm.context.vdso
+        ):
             fname = "[vdso]"
         else:
             fname = "Anonymous Mapping"
@@ -435,7 +468,6 @@ class vm_area_struct(objects.StructType):
 
 
 class qstr(objects.StructType):
-
     def name_as_str(self) -> str:
         if self.has_member("len"):
             str_length = self.len + 1  # Maximum length should include null terminator
@@ -451,14 +483,15 @@ class qstr(objects.StructType):
 
 
 class dentry(objects.StructType):
-
     def path(self) -> str:
         """Based on __dentry_path Linux kernel function"""
         reversed_path = []
         dentry_seen = set()
         current_dentry = self
-        while (not current_dentry.is_root() and
-               current_dentry.vol.offset not in dentry_seen):
+        while (
+            not current_dentry.is_root()
+            and current_dentry.vol.offset not in dentry_seen
+        ):
             parent = current_dentry.d_parent
             reversed_path.append(current_dentry.d_name.name_as_str())
             dentry_seen.add(current_dentry.vol.offset)
@@ -488,8 +521,10 @@ class dentry(objects.StructType):
 
         dentry_seen = set()
         current_dentry = self
-        while (not current_dentry.is_root() and
-               current_dentry.vol.offset not in dentry_seen):
+        while (
+            not current_dentry.is_root()
+            and current_dentry.vol.offset not in dentry_seen
+        ):
             if current_dentry.d_parent == ancestor_dentry.vol.offset:
                 return current_dentry
 
@@ -500,7 +535,6 @@ class dentry(objects.StructType):
 
 
 class struct_file(objects.StructType):
-
     def get_dentry(self) -> interfaces.objects.ObjectInterface:
         if self.has_member("f_dentry"):
             return self.f_dentry
@@ -519,13 +553,14 @@ class struct_file(objects.StructType):
 
 
 class list_head(objects.StructType, collections.abc.Iterable):
-
-    def to_list(self,
-                symbol_type: str,
-                member: str,
-                forward: bool = True,
-                sentinel: bool = True,
-                layer: Optional[str] = None) -> Iterator[interfaces.objects.ObjectInterface]:
+    def to_list(
+        self,
+        symbol_type: str,
+        member: str,
+        forward: bool = True,
+        sentinel: bool = True,
+        layer: Optional[str] = None,
+    ) -> Iterator[interfaces.objects.ObjectInterface]:
         """Returns an iterator of the entries in the list.
 
         Args:
@@ -541,23 +576,28 @@ class list_head(objects.StructType, collections.abc.Iterable):
         """
         layer = layer or self.vol.layer_name
 
-        relative_offset = self._context.symbol_space.get_type(symbol_type).relative_child_offset(member)
+        relative_offset = self._context.symbol_space.get_type(
+            symbol_type
+        ).relative_child_offset(member)
 
-        direction = 'prev'
+        direction = "prev"
         if forward:
-            direction = 'next'
+            direction = "next"
         try:
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
             return
 
         if not sentinel:
-            yield self._context.object(symbol_type, layer, offset = self.vol.offset - relative_offset)
+            yield self._context.object(
+                symbol_type, layer, offset=self.vol.offset - relative_offset
+            )
 
         seen = {self.vol.offset}
         while link.vol.offset not in seen:
-
-            obj = self._context.object(symbol_type, layer, offset = link.vol.offset - relative_offset)
+            obj = self._context.object(
+                symbol_type, layer, offset=link.vol.offset - relative_offset
+            )
             yield obj
 
             seen.add(link.vol.offset)
@@ -571,7 +611,6 @@ class list_head(objects.StructType, collections.abc.Iterable):
 
 
 class files_struct(objects.StructType):
-
     def get_fds(self) -> interfaces.objects.ObjectInterface:
         if self.has_member("fdt"):
             return self.fdt.fd.dereference()
@@ -590,7 +629,6 @@ class files_struct(objects.StructType):
 
 
 class mount(objects.StructType):
-
     MNT_NOSUID = 0x01
     MNT_NODEV = 0x02
     MNT_NOEXEC = 0x04
@@ -646,7 +684,11 @@ class mount(objects.StructType):
         return "ro" if self.get_mnt_flags() & self.MNT_READONLY else "rw"
 
     def get_flags_opts(self) -> Iterable[str]:
-        flags = [self.MNT_FLAGS[mntflag] for mntflag in self.MNT_FLAGS if mntflag & self.get_mnt_flags()]
+        flags = [
+            self.MNT_FLAGS[mntflag]
+            for mntflag in self.MNT_FLAGS
+            if mntflag & self.get_mnt_flags()
+        ]
         return flags
 
     def is_shared(self) -> bool:
@@ -668,9 +710,11 @@ class mount(objects.StructType):
         """Get ID of closest dominating peer group having a representative under the given root."""
         mnt_seen = set()
         current_mnt = self.mnt_master
-        while (current_mnt and
-               current_mnt.vol.offset != 0 and
-               current_mnt.vol.offset not in mnt_seen):
+        while (
+            current_mnt
+            and current_mnt.vol.offset != 0
+            and current_mnt.vol.offset not in mnt_seen
+        ):
             peer = current_mnt.get_peer_under_root(self.mnt_ns, root)
             if peer and peer.vol.offset != 0:
                 return peer.mnt_group_id
@@ -686,7 +730,9 @@ class mount(objects.StructType):
         mnt_seen = set()
         current_mnt = self
         while current_mnt.vol.offset not in mnt_seen:
-            if current_mnt.mnt_ns == ns and current_mnt.is_path_reachable(current_mnt.mnt.mnt_root, root):
+            if current_mnt.mnt_ns == ns and current_mnt.is_path_reachable(
+                current_mnt.mnt.mnt_root, root
+            ):
                 return current_mnt
 
             mnt_seen.add(current_mnt.vol.offset)
@@ -702,36 +748,51 @@ class mount(objects.StructType):
         """
         mnt_seen = set()
         current_mnt = self
-        while (current_mnt.mnt.vol.offset != root.mnt and
-               current_mnt.has_parent() and
-               current_mnt.vol.offset not in mnt_seen):
-
+        while (
+            current_mnt.mnt.vol.offset != root.mnt
+            and current_mnt.has_parent()
+            and current_mnt.vol.offset not in mnt_seen
+        ):
             current_dentry = current_mnt.mnt_mountpoint
             mnt_seen.add(current_mnt.vol.offset)
             current_mnt = current_mnt.mnt_parent
 
-        return current_mnt.mnt.vol.offset == root.mnt and current_dentry.is_subdir(root.dentry)
+        return current_mnt.mnt.vol.offset == root.mnt and current_dentry.is_subdir(
+            root.dentry
+        )
 
     def next_peer(self):
         table_name = self.vol.type_name.split(constants.BANG)[0]
         mount_struct = "{0}{1}mount".format(table_name, constants.BANG)
-        offset = self._context.symbol_space.get_type(mount_struct).relative_child_offset("mnt_share")
+        offset = self._context.symbol_space.get_type(
+            mount_struct
+        ).relative_child_offset("mnt_share")
 
-        return self._context.object(mount_struct, self.vol.layer_name, offset=self.mnt_share.next.vol.offset - offset)
+        return self._context.object(
+            mount_struct,
+            self.vol.layer_name,
+            offset=self.mnt_share.next.vol.offset - offset,
+        )
+
 
 class vfsmount(objects.StructType):
-
     def is_valid(self):
-        return self.get_mnt_sb() != 0 and \
-               self.get_mnt_root() != 0 and \
-               self.get_mnt_parent() != 0
+        return (
+            self.get_mnt_sb() != 0
+            and self.get_mnt_root() != 0
+            and self.get_mnt_parent() != 0
+        )
 
     def _get_real_mnt(self):
         table_name = self.vol.type_name.split(constants.BANG)[0]
         mount_struct = f"{table_name}{constants.BANG}mount"
-        offset = self._context.symbol_space.get_type(mount_struct).relative_child_offset("mnt")
+        offset = self._context.symbol_space.get_type(
+            mount_struct
+        ).relative_child_offset("mnt")
 
-        return self._context.object(mount_struct, self.vol.layer_name, offset = self.vol.offset - offset)
+        return self._context.object(
+            mount_struct, self.vol.layer_name, offset=self.vol.offset - offset
+        )
 
     def get_mnt_parent(self):
         if self.has_member("mnt_parent"):
@@ -750,7 +811,6 @@ class vfsmount(objects.StructType):
 
 
 class kobject(objects.StructType):
-
     def reference_count(self):
         refcnt = self.kref.refcount
         if self.has_member("counter"):
@@ -759,6 +819,7 @@ class kobject(objects.StructType):
             ret = refcnt.refs.counter
 
         return ret
+
 
 class mnt_namespace(objects.StructType):
     def get_inode(self):
@@ -778,3 +839,265 @@ class mnt_namespace(objects.StructType):
 
         for mount in self.list.to_list(mnt_type, "mnt_list"):
             yield mount
+
+
+class net(objects.StructType):
+    def get_inode(self):
+        if self.has_member("proc_inum"):
+            return self.proc_inum
+        elif self.ns.has_member("inum"):
+            return self.ns.inum
+        else:
+            raise AttributeError("Unable to find net_namespace inode")
+
+
+class socket(objects.StructType):
+    def _get_vol_kernel(self):
+        symbol_table_arr = self.vol.type_name.split("!", 1)
+        symbol_table = symbol_table_arr[0] if len(symbol_table_arr) == 2 else None
+
+        module_names = list(
+            self._context.modules.get_modules_by_symbol_tables(symbol_table)
+        )
+        if not module_names:
+            raise ValueError(f"No module using the symbol table {symbol_table}")
+
+        kernel_module_name = module_names[0]
+        kernel = self._context.modules[kernel_module_name]
+        return kernel
+
+    def get_inode(self):
+        try:
+            kernel = self._get_vol_kernel()
+        except ValueError:
+            return 0
+
+        socket_alloc = linux.LinuxUtilities.container_of(
+            self.vol.offset, "socket_alloc", "socket", kernel
+        )
+        vfs_inode = socket_alloc.vfs_inode
+
+        return vfs_inode.i_ino
+
+    def get_state(self):
+        socket_state_idx = self.state
+        if 0 <= socket_state_idx < len(SOCKET_STATES):
+            return SOCKET_STATES[socket_state_idx]
+
+
+class sock(objects.StructType):
+    def get_family(self):
+        family_idx = self.__sk_common.skc_family
+        if 0 <= family_idx < len(SOCK_FAMILY):
+            return SOCK_FAMILY[family_idx]
+
+    def get_type(self):
+        return SOCK_TYPES.get(self.sk_type, "")
+
+    def get_inode(self):
+        if not self.sk_socket:
+            return 0
+
+        return self.sk_socket.get_inode()
+
+    def get_protocol(self):
+        return
+
+    def get_state(self):
+        # Return the generic socket state
+        if self.has_member("sk"):
+            return self.sk.sk_socket.get_state()
+
+        return self.sk_socket.get_state()
+
+
+class unix_sock(objects.StructType):
+    def get_name(self):
+        if not self.addr:
+            return
+
+        sockaddr_un = self.addr.name.cast("sockaddr_un")
+        saddr = str(utility.array_to_string(sockaddr_un.sun_path))
+        return saddr
+
+    def get_protocol(self):
+        return
+
+    def get_state(self):
+        """Return a string representing the sock state."""
+
+        # Unix socket states reuse (a subset) of the inet_sock states contants
+        if self.sk.get_type() == "STREAM":
+            state_idx = self.sk.__sk_common.skc_state
+            if 0 <= state_idx < len(TCP_STATES):
+                return TCP_STATES[state_idx]
+        else:
+            # Return the generic socket state
+            return self.sk.sk_socket.get_state()
+
+    def get_inode(self):
+        return self.sk.get_inode()
+
+
+class inet_sock(objects.StructType):
+    def get_family(self):
+        family_idx = self.sk.__sk_common.skc_family
+        if 0 <= family_idx < len(SOCK_FAMILY):
+            return SOCK_FAMILY[family_idx]
+
+    def get_protocol(self):
+        # If INET6 family and a proto is defined, we use that specific IPv6 protocol.
+        # Otherwise, we use the standard IP protocol.
+        protocol = IP_PROTOCOLS.get(self.sk.sk_protocol)
+        if self.get_family() == "AF_INET6":
+            protocol = IPV6_PROTOCOLS.get(self.sk.sk_protocol, protocol)
+
+        return protocol
+
+    def get_state(self):
+        """Return a string representing the sock state."""
+
+        if self.sk.get_type() == "STREAM":
+            state_idx = self.sk.__sk_common.skc_state
+            if 0 <= state_idx < len(TCP_STATES):
+                return TCP_STATES[state_idx]
+        else:
+            # Return the generic socket state
+            return self.sk.sk_socket.get_state()
+
+    def get_src_port(self):
+        sport_le = getattr(self, "sport", getattr(self, "inet_sport", None))
+        if sport_le is not None:
+            return socket_module.htons(sport_le)
+
+    def get_dst_port(self):
+        sk_common = self.sk.__sk_common
+        if hasattr(sk_common, "skc_portpair"):
+            dport_le = sk_common.skc_portpair & 0xFFFF
+        elif hasattr(self, "dport"):
+            dport_le = self.dport
+        elif hasattr(self, "inet_dport"):
+            dport_le = self.inet_dport
+        elif hasattr(sk_common, "skc_dport"):
+            dport_le = sk_common.skc_dport
+        else:
+            return
+
+        return socket_module.htons(dport_le)
+
+    def get_src_addr(self):
+        sk_common = self.sk.__sk_common
+        family = sk_common.skc_family
+        if family == socket_module.AF_INET:
+            addr_size = 4
+            if hasattr(self, "rcv_saddr"):
+                saddr = self.rcv_saddr
+            elif hasattr(self, "inet_rcv_saddr"):
+                saddr = self.inet_rcv_saddr
+            else:
+                saddr = sk_common.skc_rcv_saddr
+        elif family == socket_module.AF_INET6:
+            addr_size = 16
+            saddr = self.pinet6.saddr
+        else:
+            return
+
+        parent_layer = self._context.layers[self.vol.layer_name]
+        try:
+            addr_bytes = parent_layer.read(saddr.vol.offset, addr_size)
+        except exceptions.InvalidAddressException:
+            vollog.debug(
+                f"Unable to read socket src address from {saddr.vol.offset:#x}"
+            )
+            return
+
+        return socket_module.inet_ntop(family, addr_bytes)
+
+    def get_dst_addr(self):
+        sk_common = self.sk.__sk_common
+        family = sk_common.skc_family
+        if family == socket_module.AF_INET:
+            if hasattr(self, "daddr") and self.daddr:
+                daddr = self.daddr
+            elif hasattr(self, "inet_daddr") and self.inet_daddr:
+                daddr = self.inet_daddr
+            else:
+                daddr = sk_common.skc_daddr
+            addr_size = 4
+        elif family == socket_module.AF_INET6:
+            if hasattr(self.pinet6, "daddr"):
+                daddr = self.pinet6.daddr
+            else:
+                daddr = sk_common.skc_v6_daddr
+            addr_size = 16
+        else:
+            return
+
+        parent_layer = self._context.layers[self.vol.layer_name]
+        try:
+            addr_bytes = parent_layer.read(daddr.vol.offset, addr_size)
+        except exceptions.InvalidAddressException:
+            vollog.debug(
+                f"Unable to read socket dst address from {daddr.vol.offset:#x}"
+            )
+            return
+
+        return socket_module.inet_ntop(family, addr_bytes)
+
+
+class netlink_sock(objects.StructType):
+    def get_protocol(self):
+        protocol_idx = self.sk.sk_protocol
+        if 0 <= protocol_idx < len(NETLINK_PROTOCOLS):
+            return NETLINK_PROTOCOLS[protocol_idx]
+
+    def get_state(self):
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()
+
+
+class vsock_sock(objects.StructType):
+    def get_protocol(self):
+        # The protocol should always be 0 for vsocks
+        return
+
+    def get_state(self):
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()
+
+
+class packet_sock(objects.StructType):
+    def get_protocol(self):
+        eth_proto = socket_module.htons(self.num)
+        if eth_proto == 0:
+            return
+        elif eth_proto in ETH_PROTOCOLS:
+            return ETH_PROTOCOLS[eth_proto]
+        else:
+            return f"0x{eth_proto:x}"
+
+    def get_state(self):
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()
+
+
+class bt_sock(objects.StructType):
+    def get_protocol(self):
+        type_idx = self.sk.sk_protocol
+        if 0 <= type_idx < len(BLUETOOTH_PROTOCOLS):
+            return BLUETOOTH_PROTOCOLS[type_idx]
+
+    def get_state(self):
+        state_idx = self.sk.__sk_common.skc_state
+        if 0 <= state_idx < len(BLUETOOTH_STATES):
+            return BLUETOOTH_STATES[state_idx]
+
+
+class xdp_sock(objects.StructType):
+    def get_protocol(self):
+        # The protocol should always be 0 for xdp_sock
+        return
+
+    def get_state(self):
+        # xdp_sock.state is an enum
+        return self.state.lookup()

@@ -20,7 +20,7 @@ more details.
 
 ## Requirements
 
-Volatility 3 requires Python 3.6.0 or later. To install the most minimal set of dependencies (some plugins will not work) use a command such as:
+Volatility 3 requires Python 3.7.0 or later. To install the most minimal set of dependencies (some plugins will not work) use a command such as:
 
 ```shell
 pip3 install -r requirements-minimal.txt
@@ -107,7 +107,7 @@ The latest generated copy of the documentation can be found at: <https://volatil
 
 ## Licensing and Copyright
 
-Copyright (C) 2007-2022 Volatility Foundation
+Copyright (C) 2007-2023 Volatility Foundation
 
 All Rights Reserved
 

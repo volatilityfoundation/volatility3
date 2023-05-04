@@ -15,11 +15,14 @@ from volatility3.framework import interfaces, automagic, exceptions, constants
 vollog = logging.getLogger(__name__)
 
 
-def construct_plugin(context: interfaces.context.ContextInterface,
-                     automagics: List[interfaces.automagic.AutomagicInterface],
-                     plugin: Type[interfaces.plugins.PluginInterface], base_config_path: str,
-                     progress_callback: constants.ProgressCallback,
-                     open_method: Type[interfaces.plugins.FileHandlerInterface]) -> interfaces.plugins.PluginInterface:
+def construct_plugin(
+    context: interfaces.context.ContextInterface,
+    automagics: List[interfaces.automagic.AutomagicInterface],
+    plugin: Type[interfaces.plugins.PluginInterface],
+    base_config_path: str,
+    progress_callback: constants.ProgressCallback,
+    open_method: Type[interfaces.plugins.FileHandlerInterface],
+) -> interfaces.plugins.PluginInterface:
     """Constructs a plugin object based on the parameters.
 
     Clever magic figures out how to fulfill each requirement that might not be fulfilled
@@ -35,9 +38,17 @@ def construct_plugin(context: interfaces.context.ContextInterface,
     Returns:
         The constructed plugin object
     """
-    errors = automagic.run(automagics, context, plugin, base_config_path, progress_callback = progress_callback)
+    errors = automagic.run(
+        automagics,
+        context,
+        plugin,
+        base_config_path,
+        progress_callback=progress_callback,
+    )
     # Plugins always get their configuration stored under their plugin name
-    plugin_config_path = interfaces.configuration.path_join(base_config_path, plugin.__name__)
+    plugin_config_path = interfaces.configuration.path_join(
+        base_config_path, plugin.__name__
+    )
 
     # Check all the requirements and/or go back to the automagic step
     unsatisfied = plugin.unsatisfied(context, plugin_config_path)
@@ -45,10 +56,12 @@ def construct_plugin(context: interfaces.context.ContextInterface,
         for error in errors:
             error_string = [x for x in error.format_exception_only()][-1]
             vollog.warning(f"Automagic exception occurred: {error_string[:-1]}")
-            vollog.log(constants.LOGLEVEL_V, "".join(error.format(chain = True)))
+            vollog.log(constants.LOGLEVEL_V, "".join(error.format(chain=True)))
         raise exceptions.UnsatisfiedException(unsatisfied)
 
-    constructed = plugin(context, plugin_config_path, progress_callback = progress_callback)
+    constructed = plugin(
+        context, plugin_config_path, progress_callback=progress_callback
+    )
     if open_method:
         constructed.set_open_method(open_method)
     return constructed

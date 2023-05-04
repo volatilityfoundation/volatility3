@@ -25,13 +25,17 @@ class Lsmod(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
         ]
 
     @classmethod
-    def list_modules(cls, context: interfaces.context.ContextInterface, vmlinux_module_name: str) -> Iterable[
-        interfaces.objects.ObjectInterface]:
+    def list_modules(
+        cls, context: interfaces.context.ContextInterface, vmlinux_module_name: str
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the modules in the primary layer.
 
         Args:
@@ -46,7 +50,7 @@ class Lsmod(plugins.PluginInterface):
         """
         vmlinux = context.modules[vmlinux_module_name]
 
-        modules = vmlinux.object_from_symbol(symbol_name = "modules").cast("list_head")
+        modules = vmlinux.object_from_symbol(symbol_name="modules").cast("list_head")
 
         table_name = modules.vol.type_name.split(constants.BANG)[0]
 
@@ -55,8 +59,7 @@ class Lsmod(plugins.PluginInterface):
 
     def _generator(self):
         try:
-            for module in self.list_modules(self.context, self.config['kernel']):
-
+            for module in self.list_modules(self.context, self.config["kernel"]):
                 mod_size = module.get_init_size() + module.get_core_size()
 
                 mod_name = utility.array_to_string(module.name)
@@ -69,4 +72,7 @@ class Lsmod(plugins.PluginInterface):
             )
 
     def run(self):
-        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Name", str), ("Size", int)], self._generator())
+        return renderers.TreeGrid(
+            [("Offset", format_hints.Hex), ("Name", str), ("Size", int)],
+            self._generator(),
+        )

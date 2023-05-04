@@ -25,24 +25,37 @@ class Trustedbsd(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 3, 0)),
-            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0))
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="macutils", component=mac.MacUtilities, version=(1, 3, 0)
+            ),
+            requirements.PluginRequirement(
+                name="lsmod", plugin=lsmod.Lsmod, version=(2, 0, 0)
+            ),
         ]
 
     def _generator(self, mods: Iterator[Any]):
-        kernel = self.context.modules[self.config['kernel']]
+        kernel = self.context.modules[self.config["kernel"]]
 
-        handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, kernel.layer_name, kernel, mods)
+        handlers = mac.MacUtilities.generate_kernel_handler_info(
+            self.context, kernel.layer_name, kernel, mods
+        )
 
-        policy_list = kernel.object_from_symbol(symbol_name = "mac_policy_list").cast("mac_policy_list")
+        policy_list = kernel.object_from_symbol(symbol_name="mac_policy_list").cast(
+            "mac_policy_list"
+        )
 
-        entries = kernel.object(object_type = "array",
-                                offset = policy_list.entries.dereference().vol.offset,
-                                subtype = kernel.get_type('mac_policy_list_element'),
-                                absolute = True,
-                                count = policy_list.staticmax + 1)
+        entries = kernel.object(
+            object_type="array",
+            offset=policy_list.entries.dereference().vol.offset,
+            subtype=kernel.get_type("mac_policy_list_element"),
+            absolute=True,
+            count=policy_list.staticmax + 1,
+        )
 
         for i, ent in enumerate(entries):
             # I don't know how this can happen, but the kernel makes this check all over the place
@@ -64,13 +77,31 @@ class Trustedbsd(plugins.PluginInterface):
                 if call_addr is None or call_addr == 0:
                     continue
 
-                module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, call_addr,
-                                                                                  self.config['kernel'])
+                module_name, symbol_name = mac.MacUtilities.lookup_module_address(
+                    self.context, handlers, call_addr, self.config["kernel"]
+                )
 
-                yield (0, (check, ent_name, format_hints.Hex(call_addr), module_name, symbol_name))
+                yield (
+                    0,
+                    (
+                        check,
+                        ent_name,
+                        format_hints.Hex(call_addr),
+                        module_name,
+                        symbol_name,
+                    ),
+                )
 
     def run(self):
-        return renderers.TreeGrid([("Member", str), ("Policy Name", str), ("Handler Address", format_hints.Hex),
-                                   ("Handler Module", str), ("Handler Symbol", str)],
-                                  self._generator(
-                                      lsmod.Lsmod.list_modules(self.context, self.config['kernel'])))
+        return renderers.TreeGrid(
+            [
+                ("Member", str),
+                ("Policy Name", str),
+                ("Handler Address", format_hints.Hex),
+                ("Handler Module", str),
+                ("Handler Symbol", str),
+            ],
+            self._generator(
+                lsmod.Lsmod.list_modules(self.context, self.config["kernel"])
+            ),
+        )

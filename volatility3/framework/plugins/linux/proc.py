@@ -21,13 +21,20 @@ class Maps(plugins.PluginInterface):
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
-            requirements.ListRequirement(name = 'pid',
-                                         description = 'Filter on specific process IDs',
-                                         element_type = int,
-                                         optional = True)
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                description="Filter on specific process IDs",
+                element_type=int,
+                optional=True,
+            ),
         ]
 
     def _generator(self, tasks):
@@ -54,17 +61,41 @@ class Maps(plugins.PluginInterface):
 
                 path = vma.get_name(self.context, task)
 
-                yield (0, (task.pid, name, format_hints.Hex(vma.vm_start), format_hints.Hex(vma.vm_end), flags,
-                           format_hints.Hex(page_offset), major, minor, inode, path))
+                yield (
+                    0,
+                    (
+                        task.pid,
+                        name,
+                        format_hints.Hex(vma.vm_start),
+                        format_hints.Hex(vma.vm_end),
+                        flags,
+                        format_hints.Hex(page_offset),
+                        major,
+                        minor,
+                        inode,
+                        path,
+                    ),
+                )
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
-        return renderers.TreeGrid([("PID", int), ("Process", str),
-                                   ("Start", format_hints.Hex), ("End", format_hints.Hex), ("Flags", str),
-                                   ("PgOff", format_hints.Hex), ("Major", int), ("Minor", int), ("Inode", int),
-                                   ("File Path", str)],
-                                  self._generator(
-                                      pslist.PsList.list_tasks(self.context,
-                                                               self.config['kernel'],
-                                                               filter_func = filter_func)))
+        return renderers.TreeGrid(
+            [
+                ("PID", int),
+                ("Process", str),
+                ("Start", format_hints.Hex),
+                ("End", format_hints.Hex),
+                ("Flags", str),
+                ("PgOff", format_hints.Hex),
+                ("Major", int),
+                ("Minor", int),
+                ("Inode", int),
+                ("File Path", str),
+            ],
+            self._generator(
+                pslist.PsList.list_tasks(
+                    self.context, self.config["kernel"], filter_func=filter_func
+                )
+            ),
+        )

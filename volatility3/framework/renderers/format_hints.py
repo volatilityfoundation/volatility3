@@ -29,23 +29,26 @@ class HexBytes(bytes):
 class MultiTypeData(bytes):
     """The contents are supposed to be a string, but may contain binary data."""
 
-    def __new__(cls: Type['MultiTypeData'],
-                original: Union[int, bytes],
-                encoding: str = 'utf-16-le',
-                split_nulls: bool = False,
-                show_hex: bool = False) -> 'MultiTypeData':
-
+    def __new__(
+        cls: Type["MultiTypeData"],
+        original: Union[int, bytes],
+        encoding: str = "utf-16-le",
+        split_nulls: bool = False,
+        show_hex: bool = False,
+    ) -> "MultiTypeData":
         if isinstance(original, int):
             data = str(original).encode(encoding)
         else:
             data = original
         return super().__new__(cls, data)
 
-    def __init__(self,
-                 original: bytes,
-                 encoding: str = 'utf-16-le',
-                 split_nulls: bool = False,
-                 show_hex: bool = False) -> None:
+    def __init__(
+        self,
+        original: bytes,
+        encoding: str = "utf-16-le",
+        split_nulls: bool = False,
+        show_hex: bool = False,
+    ) -> None:
         self.converted_int: bool = False
         if isinstance(original, int):
             self.converted_int = True
@@ -55,8 +58,10 @@ class MultiTypeData(bytes):
         bytes.__init__(original)
 
     def __eq__(self, other):
-        return super(self) == super(other) and \
-               self.converted_int == other.converted_int and \
-               self.encoding == other.encoding and \
-               self.split_nulls == other.split_nulls and \
-               self.show_hex == other.show_hex
+        return (
+            super(self) == super(other)
+            and self.converted_int == other.converted_int
+            and self.encoding == other.encoding
+            and self.split_nulls == other.split_nulls
+            and self.show_hex == other.show_hex
+        )

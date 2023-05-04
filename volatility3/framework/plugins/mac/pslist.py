@@ -18,30 +18,41 @@ class PsList(interfaces.plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
     _version = (3, 0, 0)
-    pslist_methods = ['tasks', 'allproc', 'process_group', 'sessions', 'pid_hash_table']
+    pslist_methods = ["tasks", "allproc", "process_group", "sessions", "pid_hash_table"]
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 1, 0)),
-            requirements.ChoiceRequirement(name = 'pslist_method',
-                                           description = 'Method to determine for processes',
-                                           choices = cls.pslist_methods,
-                                           default = cls.pslist_methods[0],
-                                           optional = True),
-            requirements.ListRequirement(name = 'pid',
-                                         description = 'Filter on specific process IDs',
-                                         element_type = int,
-                                         optional = True)
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="macutils", component=mac.MacUtilities, version=(1, 1, 0)
+            ),
+            requirements.ChoiceRequirement(
+                name="pslist_method",
+                description="Method to determine for processes",
+                choices=cls.pslist_methods,
+                default=cls.pslist_methods[0],
+                optional=True,
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                description="Filter on specific process IDs",
+                element_type=int,
+                optional=True,
+            ),
         ]
 
     @classmethod
     def get_list_tasks(
-            cls, method: str
-    ) -> Callable[[interfaces.context.ContextInterface, str, Callable[[int], bool]],
-                  Iterable[interfaces.objects.ObjectInterface]]:
+        cls, method: str
+    ) -> Callable[
+        [interfaces.context.ContextInterface, str, Callable[[int], bool]],
+        Iterable[interfaces.objects.ObjectInterface],
+    ]:
         """Returns the list_tasks method based on the selector
 
         Args:
@@ -49,20 +60,20 @@ class PsList(interfaces.plugins.PluginInterface):
 
         Returns:
             list_tasks method for listing tasks
-            """
+        """
         # Ensure method is one of the suitable choices
         if method not in cls.pslist_methods:
             method = cls.pslist_methods[0]
 
-        if method == 'allproc':
+        if method == "allproc":
             list_tasks = cls.list_tasks_allproc
-        elif method == 'tasks':
+        elif method == "tasks":
             list_tasks = cls.list_tasks_tasks
-        elif method == 'process_group':
+        elif method == "process_group":
             list_tasks = cls.list_tasks_process_group
-        elif method == 'sessions':
+        elif method == "sessions":
             list_tasks = cls.list_tasks_sessions
-        elif method == 'pid_hash_table':
+        elif method == "pid_hash_table":
             list_tasks = cls.list_tasks_pid_hash_table
         else:
             raise ValueError("Impossible method choice chosen")
@@ -72,7 +83,6 @@ class PsList(interfaces.plugins.PluginInterface):
 
     @classmethod
     def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
-
         filter_func = lambda _: False
         # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
@@ -86,22 +96,27 @@ class PsList(interfaces.plugins.PluginInterface):
         return filter_func
 
     def _generator(self):
-        list_tasks = self.get_list_tasks(self.config.get('pslist_method', self.pslist_methods[0]))
+        list_tasks = self.get_list_tasks(
+            self.config.get("pslist_method", self.pslist_methods[0])
+        )
 
-        for task in list_tasks(self.context,
-                               self.config['kernel'],
-                               filter_func = self.create_pid_filter(self.config.get('pid', None))):
+        for task in list_tasks(
+            self.context,
+            self.config["kernel"],
+            filter_func=self.create_pid_filter(self.config.get("pid", None)),
+        ):
             pid = task.p_pid
             ppid = task.p_ppid
             name = utility.array_to_string(task.p_comm)
             yield (0, (pid, ppid, name))
 
     @classmethod
-    def list_tasks_allproc(cls,
-                           context: interfaces.context.ContextInterface,
-                           kernel_module_name: str,
-                           filter_func: Callable[[int], bool] = lambda _: False) -> \
-            Iterable[interfaces.objects.ObjectInterface]:
+    def list_tasks_allproc(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        filter_func: Callable[[int], bool] = lambda _: False,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the processes in the primary layer based on the allproc method
 
         Args:
@@ -117,17 +132,22 @@ class PsList(interfaces.plugins.PluginInterface):
 
         kernel_layer = context.layers[kernel.layer_name]
 
-        proc = kernel.object_from_symbol(symbol_name = "allproc").lh_first
+        proc = kernel.object_from_symbol(symbol_name="allproc").lh_first
 
         seen: Dict[int, int] = {}
         while proc is not None and proc.vol.offset != 0:
             if proc.vol.offset in seen:
-                vollog.log(logging.INFO, "Recursive process list detected (a result of non-atomic acquisition).")
+                vollog.log(
+                    logging.INFO,
+                    "Recursive process list detected (a result of non-atomic acquisition).",
+                )
                 break
             else:
                 seen[proc.vol.offset] = 1
 
-            if kernel_layer.is_valid(proc.vol.offset, proc.vol.size) and not filter_func(proc):
+            if kernel_layer.is_valid(
+                proc.vol.offset, proc.vol.size
+            ) and not filter_func(proc):
                 yield proc
 
             try:
@@ -136,11 +156,12 @@ class PsList(interfaces.plugins.PluginInterface):
                 break
 
     @classmethod
-    def list_tasks_tasks(cls,
-                         context: interfaces.context.ContextInterface,
-                         kernel_module_name: str,
-                         filter_func: Callable[[int], bool] = lambda _: False) -> \
-            Iterable[interfaces.objects.ObjectInterface]:
+    def list_tasks_tasks(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        filter_func: Callable[[int], bool] = lambda _: False,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer based on the tasks queue
 
         Args:
@@ -155,12 +176,15 @@ class PsList(interfaces.plugins.PluginInterface):
 
         kernel_layer = context.layers[kernel.layer_name]
 
-        queue_entry = kernel.object_from_symbol(symbol_name = "tasks")
+        queue_entry = kernel.object_from_symbol(symbol_name="tasks")
 
         seen: Dict[int, int] = {}
         for task in queue_entry.walk_list(queue_entry, "tasks", "task"):
             if task.vol.offset in seen:
-                vollog.log(logging.INFO, "Recursive process list detected (a result of non-atomic acquisition).")
+                vollog.log(
+                    logging.INFO,
+                    "Recursive process list detected (a result of non-atomic acquisition).",
+                )
                 break
             else:
                 seen[task.vol.offset] = 1
@@ -170,15 +194,18 @@ class PsList(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 continue
 
-            if kernel_layer.is_valid(proc.vol.offset, proc.vol.size) and not filter_func(proc):
+            if kernel_layer.is_valid(
+                proc.vol.offset, proc.vol.size
+            ) and not filter_func(proc):
                 yield proc
 
     @classmethod
-    def list_tasks_sessions(cls,
-                            context: interfaces.context.ContextInterface,
-                            kernel_module_name: str,
-                            filter_func: Callable[[int], bool] = lambda _: False) -> \
-            Iterable[interfaces.objects.ObjectInterface]:
+    def list_tasks_sessions(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        filter_func: Callable[[int], bool] = lambda _: False,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer using sessions
 
         Args:
@@ -191,14 +218,16 @@ class PsList(interfaces.plugins.PluginInterface):
         """
         kernel = context.modules[kernel_module_name]
 
-        table_size = kernel.object_from_symbol(symbol_name = "sesshash")
+        table_size = kernel.object_from_symbol(symbol_name="sesshash")
 
-        sesshashtbl = kernel.object_from_symbol(symbol_name = "sesshashtbl")
+        sesshashtbl = kernel.object_from_symbol(symbol_name="sesshashtbl")
 
-        proc_array = kernel.object(object_type = "array",
-                                   offset = sesshashtbl,
-                                   count = table_size + 1,
-                                   subtype = kernel.get_type("sesshashhead"))
+        proc_array = kernel.object(
+            object_type="array",
+            offset=sesshashtbl,
+            count=table_size + 1,
+            subtype=kernel.get_type("sesshashhead"),
+        )
 
         for proc_list in proc_array:
             for proc in mac.MacUtilities.walk_list_head(proc_list, "s_hash"):
@@ -206,11 +235,12 @@ class PsList(interfaces.plugins.PluginInterface):
                     yield proc.s_leader
 
     @classmethod
-    def list_tasks_process_group(cls,
-                                 context: interfaces.context.ContextInterface,
-                                 kernel_module_name: str,
-                                 filter_func: Callable[[int], bool] = lambda _: False) -> \
-            Iterable[interfaces.objects.ObjectInterface]:
+    def list_tasks_process_group(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        filter_func: Callable[[int], bool] = lambda _: False,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer using process groups
 
         Args:
@@ -223,27 +253,32 @@ class PsList(interfaces.plugins.PluginInterface):
         """
         kernel = context.modules[kernel_module_name]
 
-        table_size = kernel.object_from_symbol(symbol_name = "pgrphash")
+        table_size = kernel.object_from_symbol(symbol_name="pgrphash")
 
-        pgrphashtbl = kernel.object_from_symbol(symbol_name = "pgrphashtbl")
+        pgrphashtbl = kernel.object_from_symbol(symbol_name="pgrphashtbl")
 
-        proc_array = kernel.object(object_type = "array",
-                                   offset = pgrphashtbl,
-                                   count = table_size + 1,
-                                   subtype = kernel.get_type("pgrphashhead"))
+        proc_array = kernel.object(
+            object_type="array",
+            offset=pgrphashtbl,
+            count=table_size + 1,
+            subtype=kernel.get_type("pgrphashhead"),
+        )
 
         for proc_list in proc_array:
             for pgrp in mac.MacUtilities.walk_list_head(proc_list, "pg_hash"):
-                for proc in mac.MacUtilities.walk_list_head(pgrp.pg_members, "p_pglist"):
+                for proc in mac.MacUtilities.walk_list_head(
+                    pgrp.pg_members, "p_pglist"
+                ):
                     if not filter_func(proc):
                         yield proc
 
     @classmethod
-    def list_tasks_pid_hash_table(cls,
-                                  context: interfaces.context.ContextInterface,
-                                  kernel_module_name: str,
-                                  filter_func: Callable[[int], bool] = lambda _: False) -> \
-            Iterable[interfaces.objects.ObjectInterface]:
+    def list_tasks_pid_hash_table(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        filter_func: Callable[[int], bool] = lambda _: False,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer using the pid hash table
 
         Args:
@@ -257,14 +292,16 @@ class PsList(interfaces.plugins.PluginInterface):
 
         kernel = context.modules[kernel_module_name]
 
-        table_size = kernel.object_from_symbol(symbol_name = "pidhash")
+        table_size = kernel.object_from_symbol(symbol_name="pidhash")
 
-        pidhashtbl = kernel.object_from_symbol(symbol_name = "pidhashtbl")
+        pidhashtbl = kernel.object_from_symbol(symbol_name="pidhashtbl")
 
-        proc_array = kernel.object(object_type = "array",
-                                   offset = pidhashtbl,
-                                   count = table_size + 1,
-                                   subtype = kernel.get_type("pidhashhead"))
+        proc_array = kernel.object(
+            object_type="array",
+            offset=pidhashtbl,
+            count=table_size + 1,
+            subtype=kernel.get_type("pidhashhead"),
+        )
 
         for proc_list in proc_array:
             for proc in mac.MacUtilities.walk_list_head(proc_list, "p_hash"):
@@ -272,4 +309,6 @@ class PsList(interfaces.plugins.PluginInterface):
                     yield proc
 
     def run(self):
-        return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str)], self._generator())
+        return renderers.TreeGrid(
+            [("PID", int), ("PPID", int), ("COMM", str)], self._generator()
+        )

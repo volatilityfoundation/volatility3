@@ -19,7 +19,7 @@ from typing import Optional, Union, Dict, List, Iterable
 from volatility3.framework import interfaces, exceptions
 
 
-class ContextInterface(metaclass = ABCMeta):
+class ContextInterface(metaclass=ABCMeta):
     """All context-like objects must adhere to the following interface.
 
     This interface is present to avoid import dependency cycles.
@@ -32,12 +32,12 @@ class ContextInterface(metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def config(self) -> 'interfaces.configuration.HierarchicalDict':
+    def config(self) -> "interfaces.configuration.HierarchicalDict":
         """Returns the configuration object for this context."""
 
     @property
     @abstractmethod
-    def symbol_space(self) -> 'interfaces.symbols.SymbolSpaceInterface':
+    def symbol_space(self) -> "interfaces.symbols.SymbolSpaceInterface":
         """Returns the symbol_space for the context.
 
         This object must support the :class:`~volatility3.framework.interfaces.symbols.SymbolSpaceInterface`
@@ -47,11 +47,11 @@ class ContextInterface(metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def modules(self) -> 'ModuleContainer':
+    def modules(self) -> "ModuleContainer":
         """Returns the memory object for the context."""
         raise NotImplementedError("ModuleContainer has not been implemented.")
 
-    def add_module(self, module: 'interfaces.context.ModuleInterface'):
+    def add_module(self, module: "interfaces.context.ModuleInterface"):
         """Adds a named module to the context.
 
         Args:
@@ -65,11 +65,11 @@ class ContextInterface(metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def layers(self) -> 'interfaces.layers.LayerContainer':
+    def layers(self) -> "interfaces.layers.LayerContainer":
         """Returns the memory object for the context."""
         raise NotImplementedError("LayerContainer has not been implemented.")
 
-    def add_layer(self, layer: 'interfaces.layers.DataLayerInterface'):
+    def add_layer(self, layer: "interfaces.layers.DataLayerInterface"):
         """Adds a named translation layer to the context memory.
 
         Args:
@@ -80,12 +80,14 @@ class ContextInterface(metaclass = ABCMeta):
     # ## Object Factory Functions
 
     @abstractmethod
-    def object(self,
-               object_type: Union[str, 'interfaces.objects.Template'],
-               layer_name: str,
-               offset: int,
-               native_layer_name: str = None,
-               **arguments):
+    def object(
+        self,
+        object_type: Union[str, "interfaces.objects.Template"],
+        layer_name: str,
+        offset: int,
+        native_layer_name: str = None,
+        **arguments,
+    ):
         """Object factory, takes a context, symbol, offset and optional
         layer_name.
 
@@ -102,7 +104,7 @@ class ContextInterface(metaclass = ABCMeta):
              A fully constructed object
         """
 
-    def clone(self) -> 'ContextInterface':
+    def clone(self) -> "ContextInterface":
         """Produce a clone of the context (and configuration), allowing
         modifications to be made without affecting any mutable objects in the
         original.
@@ -112,12 +114,14 @@ class ContextInterface(metaclass = ABCMeta):
         """
         return copy.deepcopy(self)
 
-    def module(self,
-               module_name: str,
-               layer_name: str,
-               offset: int,
-               native_layer_name: Optional[str] = None,
-               size: Optional[int] = None) -> 'ModuleInterface':
+    def module(
+        self,
+        module_name: str,
+        layer_name: str,
+        offset: int,
+        native_layer_name: Optional[str] = None,
+        size: Optional[int] = None,
+    ) -> "ModuleInterface":
         """Create a module object.
 
         A module object is associated with a symbol table, and acts like a context, but offsets locations by a known value
@@ -142,10 +146,7 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
     This object is OS-independent.
     """
 
-    def __init__(self,
-                 context: ContextInterface,
-                 config_path: str,
-                 name: str) -> None:
+    def __init__(self, context: ContextInterface, config_path: str, name: str) -> None:
         """Constructs a new os-independent module.
 
         Args:
@@ -158,35 +159,43 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
 
     @property
     def _layer_name(self) -> str:
-        return self.config['layer_name']
+        return self.config["layer_name"]
 
     @property
     def _offset(self) -> int:
-        return self.config['offset']
+        return self.config["offset"]
 
     @property
     def _native_layer_name(self) -> str:
-        return self.config.get('native_layer_name', self._layer_name)
+        return self.config.get("native_layer_name", self._layer_name)
 
     @property
     def _symbol_table_name(self) -> str:
-        return self.config.get('symbol_table_name', self._module_name)
+        return self.config.get("symbol_table_name", self._module_name)
 
-    def build_configuration(self) -> 'interfaces.configuration.HierarchicalDict':
+    def build_configuration(self) -> "interfaces.configuration.HierarchicalDict":
         """Builds the configuration dictionary for this specific Module"""
 
         config = super().build_configuration()
 
-        config['offset'] = self.config['offset']
-        subconfigs = {'symbol_table_name': self.context.symbol_space[self.symbol_table_name].build_configuration(),
-                      'layer_name': self.context.layers[self.layer_name].build_configuration()}
+        config["offset"] = self.config["offset"]
+        subconfigs = {
+            "symbol_table_name": self.context.symbol_space[
+                self.symbol_table_name
+            ].build_configuration(),
+            "layer_name": self.context.layers[self.layer_name].build_configuration(),
+        }
 
         if self.layer_name != self._native_layer_name:
-            subconfigs['native_layer_name'] = self.context.layers[self._native_layer_name].build_configuration()
+            subconfigs["native_layer_name"] = self.context.layers[
+                self._native_layer_name
+            ].build_configuration()
 
         for subconfig in subconfigs:
             for req in subconfigs[subconfig]:
-                config[interfaces.configuration.path_join(subconfig, req)] = subconfigs[subconfig][req]
+                config[interfaces.configuration.path_join(subconfig, req)] = subconfigs[
+                    subconfig
+                ][req]
 
         return config
 
@@ -217,12 +226,14 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
         return self._symbol_table_name
 
     @abstractmethod
-    def object(self,
-               object_type: str,
-               offset: int = None,
-               native_layer_name: Optional[str] = None,
-               absolute: bool = False,
-               **kwargs) -> 'interfaces.objects.ObjectInterface':
+    def object(
+        self,
+        object_type: str,
+        offset: int = None,
+        native_layer_name: Optional[str] = None,
+        absolute: bool = False,
+        **kwargs,
+    ) -> "interfaces.objects.ObjectInterface":
         """Returns an object created using the symbol_table_name and layer_name
         of the Module.
 
@@ -237,11 +248,13 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
         """
 
     @abstractmethod
-    def object_from_symbol(self,
-                           symbol_name: str,
-                           native_layer_name: Optional[str] = None,
-                           absolute: bool = False,
-                           **kwargs) -> 'interfaces.objects.ObjectInterface':
+    def object_from_symbol(
+        self,
+        symbol_name: str,
+        native_layer_name: Optional[str] = None,
+        absolute: bool = False,
+        **kwargs,
+    ) -> "interfaces.objects.ObjectInterface":
         """Returns an object created using the symbol_table_name and layer_name
         of the Module.
 
@@ -259,13 +272,13 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
         symbol = self.get_symbol(name)
         return self.offset + symbol.address
 
-    def get_type(self, name: str) -> 'interfaces.objects.Template':
+    def get_type(self, name: str) -> "interfaces.objects.Template":
         """Returns a type from the module's symbol table."""
 
-    def get_symbol(self, name: str) -> 'interfaces.symbols.SymbolInterface':
+    def get_symbol(self, name: str) -> "interfaces.symbols.SymbolInterface":
         """Returns a symbol object from the module's symbol table."""
 
-    def get_enumeration(self, name: str) -> 'interfaces.objects.Template':
+    def get_enumeration(self, name: str) -> "interfaces.objects.Template":
         """Returns an enumeration from the module's symbol table."""
 
     def has_type(self, name: str) -> bool:
@@ -306,7 +319,9 @@ class ModuleContainer(collections.abc.Mapping):
             module: the module to add to the list of modules (based on module.name)
         """
         if module.name in self._modules:
-            raise exceptions.VolatilityException(f"Module already exists: {module.name}")
+            raise exceptions.VolatilityException(
+                f"Module already exists: {module.name}"
+            )
         self._modules[module.name] = module
 
     def __delitem__(self, name: str) -> None:

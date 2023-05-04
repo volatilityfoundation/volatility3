@@ -20,16 +20,20 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Windows kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
         ]
 
     @classmethod
-    def scan_symlinks(cls,
-                      context: interfaces.context.ContextInterface,
-                      layer_name: str,
-                      symbol_table: str) -> \
-            Iterable[interfaces.objects.ObjectInterface]:
+    def scan_symlinks(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        symbol_table: str,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Scans for links using the poolscanner module and constraints.
 
         Args:
@@ -41,18 +45,22 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
             A list of symlink objects found by scanning memory for the Symlink pool signatures
         """
 
-        constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Sym\xe2', b'Symb'])
+        constraints = poolscanner.PoolScanner.builtin_constraints(
+            symbol_table, [b"Sym\xe2", b"Symb"]
+        )
 
-        for result in poolscanner.PoolScanner.generate_pool_scan(context, layer_name, symbol_table, constraints):
-
+        for result in poolscanner.PoolScanner.generate_pool_scan(
+            context, layer_name, symbol_table, constraints
+        ):
             _constraint, mem_object, _header = result
             yield mem_object
 
     def _generator(self):
-        kernel = self.context.modules[self.config['kernel']]
+        kernel = self.context.modules[self.config["kernel"]]
 
-        for link in self.scan_symlinks(self.context, kernel.layer_name, kernel.symbol_table_name):
-
+        for link in self.scan_symlinks(
+            self.context, kernel.layer_name, kernel.symbol_table_name
+        ):
             try:
                 from_name = link.get_link_name()
             except (ValueError, exceptions.InvalidAddressException):
@@ -63,7 +71,15 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
             except exceptions.InvalidAddressException:
                 continue
 
-            yield (0, (format_hints.Hex(link.vol.offset), link.get_create_time(), from_name, to_name))
+            yield (
+                0,
+                (
+                    format_hints.Hex(link.vol.offset),
+                    link.get_create_time(),
+                    from_name,
+                    to_name,
+                ),
+            )
 
     def generate_timeline(self):
         for row in self._generator():
@@ -72,9 +88,12 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
             yield (description, timeliner.TimeLinerType.CREATED, row_data[1])
 
     def run(self):
-        return renderers.TreeGrid([
-            ("Offset", format_hints.Hex),
-            ("CreateTime", datetime.datetime),
-            ("From Name", str),
-            ("To Name", str),
-        ], self._generator())
+        return renderers.TreeGrid(
+            [
+                ("Offset", format_hints.Hex),
+                ("CreateTime", datetime.datetime),
+                ("From Name", str),
+                ("To Name", str),
+            ],
+            self._generator(),
+        )

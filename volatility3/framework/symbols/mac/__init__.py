@@ -14,23 +14,24 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        self.set_type_class('proc', extensions.proc)
-        self.set_type_class('fileglob', extensions.fileglob)
-        self.set_type_class('vnode', extensions.vnode)
-        self.set_type_class('vm_map_entry', extensions.vm_map_entry)
-        self.set_type_class('vm_map_object', extensions.vm_map_object)
-        self.set_type_class('socket', extensions.socket)
-        self.set_type_class('inpcb', extensions.inpcb)
-        self.set_type_class('queue_entry', extensions.queue_entry)
-        self.set_type_class('ifnet', extensions.ifnet)
-        self.set_type_class('sockaddr_dl', extensions.sockaddr_dl)
-        self.set_type_class('sockaddr', extensions.sockaddr)
-        self.set_type_class('sysctl_oid', extensions.sysctl_oid)
-        self.set_type_class('kauth_scope', extensions.kauth_scope)
+        self.set_type_class("proc", extensions.proc)
+        self.set_type_class("fileglob", extensions.fileglob)
+        self.set_type_class("vnode", extensions.vnode)
+        self.set_type_class("vm_map_entry", extensions.vm_map_entry)
+        self.set_type_class("vm_map_object", extensions.vm_map_object)
+        self.set_type_class("socket", extensions.socket)
+        self.set_type_class("inpcb", extensions.inpcb)
+        self.set_type_class("queue_entry", extensions.queue_entry)
+        self.set_type_class("ifnet", extensions.ifnet)
+        self.set_type_class("sockaddr_dl", extensions.sockaddr_dl)
+        self.set_type_class("sockaddr", extensions.sockaddr)
+        self.set_type_class("sysctl_oid", extensions.sysctl_oid)
+        self.set_type_class("kauth_scope", extensions.kauth_scope)
 
 
 class MacUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful mac functions."""
+
     """
     Version History:
     1.1.0 -> added walk_list_head API
@@ -41,24 +42,34 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
     _required_framework_version = (2, 0, 0)
 
     @classmethod
-    def mask_mods_list(cls, context: interfaces.context.ContextInterface, layer_name: str,
-                       mods: Iterator[Any]) -> List[Tuple[interfaces.objects.ObjectInterface, Any, Any]]:
+    def mask_mods_list(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        mods: Iterator[Any],
+    ) -> List[Tuple[interfaces.objects.ObjectInterface, Any, Any]]:
         """
         A helper function to mask the starting and end address of kernel modules
         """
         mask = context.layers[layer_name].address_mask
 
-        return [(objects.utility.array_to_string(mod.name), mod.address & mask, (mod.address & mask) + mod.size)
-                for mod in mods]
+        return [
+            (
+                objects.utility.array_to_string(mod.name),
+                mod.address & mask,
+                (mod.address & mask) + mod.size,
+            )
+            for mod in mods
+        ]
 
     @classmethod
     def generate_kernel_handler_info(
-            cls,
-            context: interfaces.context.ContextInterface,
-            layer_name: str,
-            kernel,  # ikelos - how to type this??
-            mods_list: Iterator[Any]):
-
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        kernel,  # ikelos - how to type this??
+        mods_list: Iterator[Any],
+    ):
         try:
             start_addr = kernel.object_from_symbol("vm_kernel_stext")
         except exceptions.SymbolError:
@@ -74,12 +85,18 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         start_addr = start_addr & mask
         end_addr = end_addr & mask
 
-        return [("__kernel__", start_addr, end_addr)] + \
-               MacUtilities.mask_mods_list(context, layer_name, mods_list)
+        return [("__kernel__", start_addr, end_addr)] + MacUtilities.mask_mods_list(
+            context, layer_name, mods_list
+        )
 
     @classmethod
-    def lookup_module_address(cls, context: interfaces.context.ContextInterface, handlers: Iterator[Any],
-                              target_address, kernel_module_name: str = None):
+    def lookup_module_address(
+        cls,
+        context: interfaces.context.ContextInterface,
+        handlers: Iterator[Any],
+        target_address,
+        kernel_module_name: str = None,
+    ):
         mod_name = "UNKNOWN"
         symbol_name = "N/A"
 
@@ -92,19 +109,30 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
             if start <= target_address <= end:
                 mod_name = name
                 if name == "__kernel__":
-                    symbols = list(context.symbol_space.get_symbols_by_location(target_address - module_shift))
+                    symbols = list(
+                        context.symbol_space.get_symbols_by_location(
+                            target_address - module_shift
+                        )
+                    )
 
                     if len(symbols) > 0:
-                        symbol_name = str(symbols[0].split(constants.BANG)[1]) if constants.BANG in symbols[0] else \
-                            str(symbols[0])
+                        symbol_name = (
+                            str(symbols[0].split(constants.BANG)[1])
+                            if constants.BANG in symbols[0]
+                            else str(symbols[0])
+                        )
 
                 break
 
         return mod_name, symbol_name
 
     @classmethod
-    def files_descriptors_for_process(cls, context: interfaces.context.ContextInterface, symbol_table_name: str,
-                                      task: interfaces.objects.ObjectInterface):
+    def files_descriptors_for_process(
+        cls,
+        context: interfaces.context.ContextInterface,
+        symbol_table_name: str,
+        task: interfaces.objects.ObjectInterface,
+    ):
         """Creates a generator for the file descriptors of a process
 
         Args:
@@ -136,14 +164,16 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         if num_fds > 4096:
             num_fds = 1024
 
-        file_type = symbol_table_name + constants.BANG + 'fileproc'
+        file_type = symbol_table_name + constants.BANG + "fileproc"
 
         try:
             table_addr = task.p_fd.fd_ofiles.dereference()
         except exceptions.InvalidAddressException:
             return
 
-        fds = objects.utility.array_of_pointers(table_addr, count = num_fds, subtype = file_type, context = context)
+        fds = objects.utility.array_of_pointers(
+            table_addr, count=num_fds, subtype=file_type, context=context
+        )
 
         for fd_num, f in enumerate(fds):
             if f != 0:
@@ -152,7 +182,7 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
                 except exceptions.InvalidAddressException:
                     continue
 
-                if ftype == 'VNODE':
+                if ftype == "VNODE":
                     vnode = f.f_fglob.fg_data.dereference().cast("vnode")
                     path = vnode.full_path()
                 elif ftype:
@@ -161,16 +191,18 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
                 yield f, path, fd_num
 
     @classmethod
-    def _walk_iterable(cls,
-                       queue: interfaces.objects.ObjectInterface,
-                       list_head_member: str,
-                       list_next_member: str,
-                       next_member: str,
-                       max_elements: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
+    def _walk_iterable(
+        cls,
+        queue: interfaces.objects.ObjectInterface,
+        list_head_member: str,
+        list_next_member: str,
+        next_member: str,
+        max_elements: int = 4096,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
         seen: Set[int] = set()
 
         try:
-            current = queue.member(attr = list_head_member)
+            current = queue.member(attr=list_head_member)
         except exceptions.InvalidAddressException:
             return
 
@@ -187,33 +219,42 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
                 yield current
 
             try:
-                current = current.member(attr = next_member).member(attr = list_next_member)
+                current = current.member(attr=next_member).member(attr=list_next_member)
             except exceptions.InvalidAddressException:
                 break
 
     @classmethod
-    def walk_tailq(cls,
-                   queue: interfaces.objects.ObjectInterface,
-                   next_member: str,
-                   max_elements: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
-
-        for element in cls._walk_iterable(queue, "tqh_first", "tqe_next", next_member, max_elements):
+    def walk_tailq(
+        cls,
+        queue: interfaces.objects.ObjectInterface,
+        next_member: str,
+        max_elements: int = 4096,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
+        for element in cls._walk_iterable(
+            queue, "tqh_first", "tqe_next", next_member, max_elements
+        ):
             yield element
 
     @classmethod
-    def walk_list_head(cls,
-                       queue: interfaces.objects.ObjectInterface,
-                       next_member: str,
-                       max_elements: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
-
-        for element in cls._walk_iterable(queue, "lh_first", "le_next", next_member, max_elements):
+    def walk_list_head(
+        cls,
+        queue: interfaces.objects.ObjectInterface,
+        next_member: str,
+        max_elements: int = 4096,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
+        for element in cls._walk_iterable(
+            queue, "lh_first", "le_next", next_member, max_elements
+        ):
             yield element
 
     @classmethod
-    def walk_slist(cls,
-                   queue: interfaces.objects.ObjectInterface,
-                   next_member: str,
-                   max_elements: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
-
-        for element in cls._walk_iterable(queue, "slh_first", "sle_next", next_member, max_elements):
+    def walk_slist(
+        cls,
+        queue: interfaces.objects.ObjectInterface,
+        next_member: str,
+        max_elements: int = 4096,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
+        for element in cls._walk_iterable(
+            queue, "slh_first", "sle_next", next_member, max_elements
+        ):
             yield element
