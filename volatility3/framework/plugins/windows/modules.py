@@ -42,6 +42,7 @@ class Modules(interfaces.plugins.PluginInterface):
                 default=False,
                 optional=True,
             ),
+            requirements.StringRequirement(name="name", description="module name/sub string", optional=True, default=""),
         ]
 
     def _generator(self):
@@ -63,6 +64,9 @@ class Modules(interfaces.plugins.PluginInterface):
                 FullDllName = mod.FullDllName.get_string()
             except exceptions.InvalidAddressException:
                 FullDllName = ""
+
+            if self.config['name'] and self.config['name'] not in BaseDllName:
+                    continue
 
             file_output = "Disabled"
             if self.config["dump"]:
