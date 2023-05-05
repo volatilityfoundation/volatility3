@@ -25,6 +25,7 @@ There is also some information to get you started quickly:
     :caption: Getting Started
 
     getting-started-linux-tutorial
+    getting-started-mac-tutorial
     getting-started-windows-tutorial
 
 
