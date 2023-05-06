@@ -74,7 +74,7 @@ class MountInfo(plugins.PluginInterface):
 
     @classmethod
     def get_mountinfo(
-        cls, mnt, task, context
+        cls, mnt, task
     ) -> Union[
         None, Tuple[int, int, str, str, str, List[str], List[str], str, str, List[str]]
     ]:
@@ -85,7 +85,7 @@ class MountInfo(plugins.PluginInterface):
         if not mnt_root:
             return None
 
-        path_root = linux.LinuxUtilities._get_path_root(context, mnt, task.fs.root)
+        path_root = linux.LinuxUtilities._get_path_mnt(task, mnt)
         if not path_root:
             return None
 

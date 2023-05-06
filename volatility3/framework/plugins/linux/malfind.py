@@ -47,7 +47,7 @@ class Malfind(interfaces.plugins.PluginInterface):
         proc_layer = self.context.layers[proc_layer_name]
 
         for vma in task.mm.get_mmap_iter():
-            if vma.is_suspicious() and vma.get_name(self.context, task) != "[vdso]":
+            if vma.is_suspicious() and vma.get_name(task) != "[vdso]":
                 data = proc_layer.read(vma.vm_start, 64, pad=True)
                 yield vma, data
 

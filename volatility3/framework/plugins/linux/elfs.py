@@ -58,7 +58,7 @@ class Elfs(plugins.PluginInterface):
                 ):
                     continue
 
-                path = vma.get_name(self.context, task)
+                path = vma.get_name(task)
 
                 yield (
                     0,
