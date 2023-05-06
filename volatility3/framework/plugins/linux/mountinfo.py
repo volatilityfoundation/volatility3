@@ -12,6 +12,7 @@ from volatility3.framework.interfaces import plugins
 from volatility3.framework.symbols import linux
 from volatility3.plugins.linux import pslist
 
+
 vollog = logging.getLogger(__name__)
 
 MountInfoData = namedtuple(
@@ -140,30 +141,38 @@ class MountInfo(plugins.PluginInterface):
         )
 
     def _get_tasks_mountpoints(
-        self, tasks: Iterable[interfaces.objects.ObjectInterface], per_namespace: bool
+        self, tasks: Iterable[interfaces.objects.ObjectInterface], filtered_by_pids: bool
     ):
-        seen_namespaces = set()
+        seen_mountpoints = set()
         for task in tasks:
             if not (
-                task
-                and task.fs
-                and task.fs.root
-                and task.nsproxy
-                and task.nsproxy.mnt_ns
+                task and
+                task.fs and
+                task.fs.root and
+                task.nsproxy and
+                task.nsproxy.mnt_ns
             ):
-                # This task doesn't have all the information required
+                # This task doesn't have all the information required.
+                # It should be a kernel < 2.6.30
                 continue
 
             mnt_namespace = task.nsproxy.mnt_ns
-            mnt_ns_id = mnt_namespace.get_inode()
-
-            if per_namespace:
-                if mnt_ns_id in seen_namespaces:
-                    continue
-                else:
-                    seen_namespaces.add(mnt_ns_id)
+            try:
+                mnt_ns_id = str(mnt_namespace.get_inode())
+            except AttributeError:
+                mnt_ns_id = renderers.NotAvailableValue()
 
             for mount in mnt_namespace.get_mount_points():
+                # When PIDs are filtered, it makes sense that the user want to
+                # see each of those processes mount points. So we don't filter
+                # by mount id in this case.
+                if not filtered_by_pids:
+                    mnt_id = int(mount.mnt_id)
+                    if mnt_id in seen_mountpoints:
+                        continue
+                    else:
+                        seen_mountpoints.add(mnt_id)
+
                 yield task, mount, mnt_ns_id
 
     def _generator(
@@ -171,13 +180,26 @@ class MountInfo(plugins.PluginInterface):
         tasks: Iterable[interfaces.objects.ObjectInterface],
         mnt_ns_ids: List[int],
         mount_format: bool,
-        per_namespace: bool,
+        filtered_by_pids: bool,
     ) -> Iterable[Tuple[int, Tuple]]:
-        for task, mnt, mnt_ns_id in self._get_tasks_mountpoints(tasks, per_namespace):
-            if mnt_ns_ids and mnt_ns_id not in mnt_ns_ids:
+        warning_shown = False
+        for task, mnt, mnt_ns_id in self._get_tasks_mountpoints(tasks, filtered_by_pids):
+            if (
+                not warning_shown and
+                mnt_ns_ids and
+                isinstance(mnt_ns_id, renderers.NotAvailableValue)
+            ):
+                vollog.warning("Cannot filter by namespace id, it is not available in this kernel.")
+                warning_shown = True
+
+            if (
+                not isinstance(mnt_ns_id, renderers.NotAvailableValue) and
+                mnt_ns_ids and
+                mnt_ns_id not in mnt_ns_ids
+            ):
                 continue
 
-            mnt_info = MountInfo.get_mountinfo(mnt, task, self.context)
+            mnt_info = self.get_mountinfo(mnt, task)
             if mnt_info is None:
                 continue
 
@@ -212,7 +234,7 @@ class MountInfo(plugins.PluginInterface):
                 ]
 
             fields_values = [mnt_ns_id]
-            if not per_namespace:
+            if filtered_by_pids:
                 fields_values.append(task.pid)
             fields_values.extend(extra_fields_values)
 
@@ -228,14 +250,14 @@ class MountInfo(plugins.PluginInterface):
             self.context, self.config["kernel"], filter_func=pid_filter
         )
 
-        columns = [("MNT_NS_ID", int)]
+        columns = [("MNT_NS_ID", str)]
         # The PID column does not make sense when a PID filter is not specified. In that case, the default behavior is
         # to displays the mountpoints per namespace.
         if pids:
             columns.append(("PID", int))
-            per_namespace = False
+            filtered_by_pids = True
         else:
-            per_namespace = True
+            filtered_by_pids = False
 
         if self.config.get("mount-format"):
             extra_columns = [
@@ -262,5 +284,5 @@ class MountInfo(plugins.PluginInterface):
         columns.extend(extra_columns)
 
         return renderers.TreeGrid(
-            columns, self._generator(tasks, mount_ns_ids, mount_format, per_namespace)
+            columns, self._generator(tasks, mount_ns_ids, mount_format, filtered_by_pids)
         )
