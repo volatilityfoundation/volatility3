@@ -28,7 +28,11 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         self._vmlinux = vmlinux
         self._task = task
 
-        netns_id = task.nsproxy.net_ns.get_inode()
+        try:
+            netns_id = task.nsproxy.net_ns.get_inode()
+        except AttributeError:
+            netns_id = NotAvailableValue()
+
         self._netdevices = self._build_network_devices_map(netns_id)
 
         self._sock_family_handlers = {
@@ -61,7 +65,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
                 self._vmlinux.symbol_table_name + constants.BANG + "net_device"
             )
             for net_dev in net.dev_base_head.to_list(net_device_symname, "dev_list"):
-                if net.get_inode() != netns_id:
+                if isinstance(netns_id, NotAvailableValue) or net.get_inode() != netns_id:
                     continue
                 dev_name = utility.array_to_string(net_dev.name)
                 netdevices_map[net_dev.ifindex] = dev_name
@@ -227,14 +231,22 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         if netlink_sock.groups:
             groups_bitmap = netlink_sock.groups.dereference()
             src_addr = f"groups:0x{groups_bitmap:08x}"
-        src_port = netlink_sock.portid
+
+        try:
+            # Kernel >= 3.7.10
+            src_port = netlink_sock.get_portid()
+        except AttributeError:
+            src_port = NotAvailableValue()
 
         dst_addr = f"group:0x{netlink_sock.dst_group:08x}"
         module = netlink_sock.module
         if module and module.name:
             module_name_str = utility.array_to_string(module.name)
             dst_addr = f"{dst_addr},lkm:{module_name_str}"
-        dst_port = netlink_sock.dst_portid
+        try:
+            dst_port = netlink_sock.get_dst_portid()
+        except AttributeError:
+            dst_port = NotAvailableValue()
 
         state = netlink_sock.get_state()
 
@@ -518,7 +530,11 @@ class Sockstat(plugins.PluginInterface):
             protocol = child_sock.get_protocol()
 
             net = task.nsproxy.net_ns
-            netns_id = net.get_inode()
+            try:
+                netns_id = net.get_inode()
+            except AttributeError:
+                netns_id = NotAvailableValue()
+
             yield task, netns_id, fd_num, family, sock_type, protocol, sock_fields
 
     def _format_fields(self, sock_stat, protocol):

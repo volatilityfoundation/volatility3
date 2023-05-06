@@ -1028,10 +1028,13 @@ class mnt_namespace(objects.StructType):
 class net(objects.StructType):
     def get_inode(self):
         if self.has_member("proc_inum"):
+            # 3.8.13 <= kernel < 3.19.8
             return self.proc_inum
-        elif self.ns.has_member("inum"):
+        elif self.has_member("ns") and self.ns.has_member("inum"):
+            # kernel >= 3.19.8
             return self.ns.inum
         else:
+            # kernel < 3.8.13
             raise AttributeError("Unable to find net_namespace inode")
 
 
@@ -1239,6 +1242,25 @@ class netlink_sock(objects.StructType):
         # Return the generic socket state
         return self.sk.sk_socket.get_state()
 
+    def get_portid(self):
+        if self.has_member("pid"):
+            # kernel < 3.7.10
+            return self.pid
+        if self.has_member("portid"):
+            # kernel >= 3.7.10
+            return self.portid
+        else:
+            raise AttributeError("Unable to find a source port id")
+
+    def get_dst_portid(self):
+        if self.has_member("dst_pid"):
+            # kernel < 3.7.10
+            return self.dst_pid
+        if self.has_member("dst_portid"):
+            # kernel >= 3.7.10
+            return self.dst_portid
+        else:
+            raise AttributeError("Unable to find a destination port id")
 
 class vsock_sock(objects.StructType):
     def get_protocol(self):
