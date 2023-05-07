@@ -40,7 +40,7 @@ setuptools.setup(
     include_package_data=True,
     exclude_package_data={"": ["development", "development.*"], "development": ["*"]},
     packages=setuptools.find_namespace_packages(
-        exclude=["development", "development.*"]
+        exclude=["development", "development.*", "tests*"]
     ),
     entry_points={
         "console_scripts": [
