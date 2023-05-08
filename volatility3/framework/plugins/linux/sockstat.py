@@ -150,19 +150,32 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             return
 
         bpfprog = sock_filter.prog
-        if bpfprog.type == 0:
-            # BPF_PROG_TYPE_UNSPEC = 0
+
+        BPF_PROG_TYPE_UNSPEC = 0  # cBPF filter
+        try:
+            bpfprog_type = bpfprog.get_type()
+            if bpfprog_type == BPF_PROG_TYPE_UNSPEC:
+                return  # cBPF filter
+        except AttributeError:
+            # kernel < 3.18.140, it's a cBPF filter
+            return
+
+        BPF_PROG_TYPE_SOCKET_FILTER = 1  # eBPF filter
+        if bpfprog_type != BPF_PROG_TYPE_SOCKET_FILTER:
+            socket_filter["bpf_filter_type"] = f"UNK({bpfprog_type})"
+            vollog.warning(f"Unexpected BPF type {bpfprog_type} for a socket")
             return
 
         socket_filter["bpf_filter_type"] = "eBPF"
         if not bpfprog.has_member("aux") or not bpfprog.aux:
-            return
+            return  # kernel < 3.18.140
         bpfprog_aux = bpfprog.aux
+
         if bpfprog_aux.has_member("id"):
-            # `id` member was added to `bpf_prog_aux` in kernels 4.13
+            # `id` member was added to `bpf_prog_aux` in kernels 4.13.16
             socket_filter["bpf_filter_id"] = str(bpfprog_aux.id)
         if bpfprog_aux.has_member("name"):
-            # `name` was added to `bpf_prog_aux` in kernels 4.15
+            # `name` was added to `bpf_prog_aux` in kernels 4.15.18
             bpfprog_name = utility.array_to_string(bpfprog_aux.name)
             if bpfprog_name:
                 socket_filter["bpf_filter_name"] = bpfprog_name

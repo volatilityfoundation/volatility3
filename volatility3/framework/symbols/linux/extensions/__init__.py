@@ -1313,3 +1313,20 @@ class xdp_sock(objects.StructType):
     def get_state(self):
         # xdp_sock.state is an enum
         return self.state.lookup()
+
+
+class bpf_prog(objects.StructType):
+    def get_type(self):
+        # The program type was in `bpf_prog_aux::prog_type` from 3.18.140 to
+        # 4.1.52 before it was moved to `bpf_prog::type`
+        if self.has_member("type"):
+            # kernel >= 4.1.52
+            return self.type
+
+        if self.has_member("aux") and self.aux:
+            if self.aux.has_member("prog_type"):
+                # 3.18.140 <= kernel < 4.1.52
+                return self.aux.prog_type
+
+        # kernel < 3.18.140
+        raise AttributeError("Unable to find the BPF type")

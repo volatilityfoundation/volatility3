@@ -30,6 +30,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("kobject", extensions.kobject)
         # Might not exist in the current symbols
         self.optional_set_type_class("module", extensions.module)
+        self.optional_set_type_class("bpf_prog", extensions.bpf_prog)
 
         # Mount
         self.set_type_class("vfsmount", extensions.vfsmount)
