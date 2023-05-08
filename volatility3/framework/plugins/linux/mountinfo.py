@@ -141,16 +141,18 @@ class MountInfo(plugins.PluginInterface):
         )
 
     def _get_tasks_mountpoints(
-        self, tasks: Iterable[interfaces.objects.ObjectInterface], filtered_by_pids: bool
+        self,
+        tasks: Iterable[interfaces.objects.ObjectInterface],
+        filtered_by_pids: bool,
     ):
         seen_mountpoints = set()
         for task in tasks:
             if not (
-                task and
-                task.fs and
-                task.fs.root and
-                task.nsproxy and
-                task.nsproxy.mnt_ns
+                task
+                and task.fs
+                and task.fs.root
+                and task.nsproxy
+                and task.nsproxy.mnt_ns
             ):
                 # This task doesn't have all the information required.
                 # It should be a kernel < 2.6.30
@@ -183,19 +185,23 @@ class MountInfo(plugins.PluginInterface):
         filtered_by_pids: bool,
     ) -> Iterable[Tuple[int, Tuple]]:
         warning_shown = False
-        for task, mnt, mnt_ns_id in self._get_tasks_mountpoints(tasks, filtered_by_pids):
+        for task, mnt, mnt_ns_id in self._get_tasks_mountpoints(
+            tasks, filtered_by_pids
+        ):
             if (
-                not warning_shown and
-                mnt_ns_ids and
-                isinstance(mnt_ns_id, renderers.NotAvailableValue)
+                not warning_shown
+                and mnt_ns_ids
+                and isinstance(mnt_ns_id, renderers.NotAvailableValue)
             ):
-                vollog.warning("Cannot filter by namespace id, it is not available in this kernel.")
+                vollog.warning(
+                    "Cannot filter by namespace id, it is not available in this kernel."
+                )
                 warning_shown = True
 
             if (
-                not isinstance(mnt_ns_id, renderers.NotAvailableValue) and
-                mnt_ns_ids and
-                mnt_ns_id not in mnt_ns_ids
+                not isinstance(mnt_ns_id, renderers.NotAvailableValue)
+                and mnt_ns_ids
+                and mnt_ns_id not in mnt_ns_ids
             ):
                 continue
 
@@ -284,5 +290,6 @@ class MountInfo(plugins.PluginInterface):
         columns.extend(extra_columns)
 
         return renderers.TreeGrid(
-            columns, self._generator(tasks, mount_ns_ids, mount_format, filtered_by_pids)
+            columns,
+            self._generator(tasks, mount_ns_ids, mount_format, filtered_by_pids),
         )

@@ -878,7 +878,9 @@ class vfsmount(objects.StructType):
         if type(vfsmount_ptr) == objects.Pointer:
             return self.vol.offset == vfsmount_ptr
         else:
-            raise exceptions.VolatilityException("Unexpected argument type. It has to be a 'vfsmount *'")
+            raise exceptions.VolatilityException(
+                "Unexpected argument type. It has to be a 'vfsmount *'"
+            )
 
     def _get_real_mnt(self):
         """Gets the struct 'mount' containing this 'vfsmount'.
@@ -889,7 +891,9 @@ class vfsmount(objects.StructType):
             mount: the struct 'mount' containing this 'vfsmount'.
         """
         vmlinux = linux.LinuxUtilities.get_vmlinux_from_volobj(self)
-        return linux.LinuxUtilities.container_of(self.vol.offset, "mount", "mnt", vmlinux)
+        return linux.LinuxUtilities.container_of(
+            self.vol.offset, "mount", "mnt", vmlinux
+        )
 
     def get_vfsmnt_current(self):
         """Returns the current fs where we are mounted on
@@ -993,6 +997,7 @@ class vfsmount(objects.StructType):
 
     def get_devname(self) -> str:
         return utility.pointer_to_string(self.mnt_devname, count=255)
+
 
 class kobject(objects.StructType):
     def reference_count(self):
@@ -1261,6 +1266,7 @@ class netlink_sock(objects.StructType):
             return self.dst_portid
         else:
             raise AttributeError("Unable to find a destination port id")
+
 
 class vsock_sock(objects.StructType):
     def get_protocol(self):

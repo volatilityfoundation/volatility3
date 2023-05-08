@@ -392,7 +392,9 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         symbol_table_arr = volobj.vol.type_name.split("!", 1)
         symbol_table = symbol_table_arr[0] if len(symbol_table_arr) == 2 else None
 
-        module_names = volobj._context.modules.get_modules_by_symbol_tables(symbol_table)
+        module_names = volobj._context.modules.get_modules_by_symbol_tables(
+            symbol_table
+        )
         module_names = list(module_names)
 
         if not module_names:
