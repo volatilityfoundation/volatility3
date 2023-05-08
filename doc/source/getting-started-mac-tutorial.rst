@@ -17,6 +17,10 @@ Procedure to create symbol tables for macOS
 
 To create a symbol table please refer to :ref:`symbol-tables:Mac or Linux symbol tables`.
 
+.. tip:: It may be possible to locate pre-made ISF files from the `download link <https://downloads.volatilityfoundation.org/volatility3/symbols/mac.zip>`_ ,
+    which is built and maintained by `volatilityfoundation <https://www.volatilityfoundation.org/>`_.
+    After creating the file or downloading it from the link, place the file under the directory ``volatility3/symbols/``.
+
 
 Listing plugins
 ---------------
