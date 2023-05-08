@@ -46,7 +46,7 @@ class Modules(interfaces.plugins.PluginInterface):
                 name="name",
                 description="module name/sub string",
                 optional=True,
-                default="",
+                default=None,
             ),
         ]
 
