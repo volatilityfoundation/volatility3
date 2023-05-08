@@ -435,9 +435,9 @@ class vm_area_struct(objects.StructType):
 
         return self.vm_pgoff << constants.linux.PAGE_SHIFT
 
-    def get_name(self, task):
+    def get_name(self, context, task):
         if self.vm_file != 0:
-            fname = linux.LinuxUtilities.path_for_file(task, self.vm_file)
+            fname = linux.LinuxUtilities.path_for_file(context, task, self.vm_file)
         elif self.vm_start <= task.mm.start_brk and self.vm_end >= task.mm.brk:
             fname = "[heap]"
         elif self.vm_start <= task.mm.start_stack <= self.vm_end:
@@ -890,7 +890,7 @@ class vfsmount(objects.StructType):
         Returns:
             mount: the struct 'mount' containing this 'vfsmount'.
         """
-        vmlinux = linux.LinuxUtilities.get_vmlinux_from_volobj(self)
+        vmlinux = linux.LinuxUtilities.get_vmlinux_from_volobj(self._context, self)
         return linux.LinuxUtilities.container_of(
             self.vol.offset, "mount", "mnt", vmlinux
         )

@@ -139,10 +139,11 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         return path
 
     @classmethod
-    def _get_new_sock_pipe_path(cls, task, filp) -> str:
+    def _get_new_sock_pipe_path(cls, context, task, filp) -> str:
         """Returns the sock pipe pathname relative to the task's root directory.
 
         Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
             task (task_struct): A reference task
             filp (file *): A pointer to a sock pipe open file
 
@@ -151,7 +152,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         """
         dentry = filp.get_dentry()
 
-        kernel_module = cls.get_vmlinux_from_volobj(dentry)
+        kernel_module = cls.get_vmlinux_from_volobj(context, dentry)
 
         sym_addr = dentry.d_op.d_dname
         symbs = list(kernel_module.get_symbols_by_absolute_location(sym_addr))
@@ -182,13 +183,14 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         return ret
 
     @classmethod
-    def path_for_file(cls, task, filp) -> str:
+    def path_for_file(cls, context, task, filp) -> str:
         """Returns a file (or sock pipe) pathname relative to the task's root directory.
 
         A 'file' structure doesn't have enough information to properly restore its
         full path we need the root mount information from task_struct to determine this
 
         Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
             task (task_struct): A reference task
             filp (file *): A pointer to an open file
 
@@ -218,7 +220,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             dname_is_valid = False
 
         if dname_is_valid:
-            ret = LinuxUtilities._get_new_sock_pipe_path(task, filp)
+            ret = LinuxUtilities._get_new_sock_pipe_path(context, task, filp)
         else:
             ret = LinuxUtilities._get_path_file(task, filp)
 
@@ -253,7 +255,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
 
         for fd_num, filp in enumerate(fds):
             if filp != 0:
-                full_path = LinuxUtilities.path_for_file(task, filp)
+                full_path = LinuxUtilities.path_for_file(context, task, filp)
 
                 yield fd_num, filp, full_path
 
@@ -378,30 +380,33 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         )
 
     @classmethod
-    def get_vmlinux_from_volobj(cls, volobj):
+    def get_vmlinux_from_volobj(
+        cls,
+        context: interfaces.context.ContextInterface,
+        volobj: interfaces.objects.ObjectInterface,
+    ) -> interfaces.context.ModuleInterface:
         """Get the vmlinux from a vol obj
 
         Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
             volobj (vol object): A vol object
 
         Raises:
             ValueError: If it cannot obtain any module from the symbol table
 
         Returns:
-            volatility3.framework.contexts.Module: A kernel object (vmlinux)
+            A kernel object (vmlinux)
         """
         symbol_table_arr = volobj.vol.type_name.split("!", 1)
         symbol_table = symbol_table_arr[0] if len(symbol_table_arr) == 2 else None
 
-        module_names = volobj._context.modules.get_modules_by_symbol_tables(
-            symbol_table
-        )
+        module_names = context.modules.get_modules_by_symbol_tables(symbol_table)
         module_names = list(module_names)
 
         if not module_names:
             raise ValueError(f"No module using the symbol table '{symbol_table}'")
 
         kernel_module_name = module_names[0]
-        kernel = volobj._context.modules[kernel_module_name]
+        kernel = context.modules[kernel_module_name]
 
         return kernel
