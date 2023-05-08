@@ -17,16 +17,11 @@ Procedure to create symbol tables for macOS
 
 To create a symbol table please refer to :ref:`symbol-tables:Mac or Linux symbol tables`.
 
-.. tip:: It may be possible to locate pre-made ISF files from the `download link <https://downloads.volatilityfoundation.org/volatility3/symbols/mac.zip>`_ ,
-    which is built and maintained by `volatilityfoundation <https://www.volatilityfoundation.org/>`_.
-    After creating the file or downloading it from the link, place the file under the directory ``volatility3/symbols/mac``.
-    If necessary create a mac directory under the symbols directory (this will become unnecessary in future versions).
-
 
 Listing plugins
 ---------------
 
-The following is a sample of the macOS plugins available for volatility3, it is not complete and more more plugins may
+The following is a sample of the macOS plugins available for volatility3, it is not complete and more plugins may
 be added.  For a complete reference, please see the volatility 3 :doc:`list of plugins <volatility3.plugins>`.
 For plugin requests, please create an issue with a description of the requested plugin.
 
@@ -79,7 +74,7 @@ Thanks go to `stuxnet <https://github.com/stuxnet999/>`_ for providing this memo
         
 
 The above command helps us to find the memory dump's Darwin kernel version. Now using the above banner we can search for the needed ISF file.
-If ISF file cannot be found then, follow the instructions on :ref:`getting-started-macos-tutorial:Procedure to create symbol tables for macOS`. After that, place the ISF file under the ``volatility3/symbols/mac`` directory.
+If ISF file cannot be found then, follow the instructions on :ref:`getting-started-macos-tutorial:Procedure to create symbol tables for macOS`. After that, place the ISF file under the ``volatility3/symbols`` directory.
 
 mac.pslist
 ~~~~~~~~~~~~
@@ -131,9 +126,6 @@ mac.pstree
 mac.ifconfig
 ~~~~~~~~~~
 
-we can use the ``mac.ifconfig`` plugin to get information about the configuration of the network interfaces of the host under investigation.
-
-
 .. code-block:: shell-session
 
     $ python3 vol.py -f contact_me mac.ifconfig.Ifconfig
@@ -153,3 +145,5 @@ we can use the ``mac.ifconfig`` plugin to get information about the configuratio
         en0     192.168.140.128 00:0C:29:89:8B:F0       False
         utun0                   False
         utun0   fe80:5::2a95:bb15:87e3:977c             False
+        
+        we can use the ``mac.ifconfig`` plugin to get information about the configuration of the network interfaces of the host under investigation.
