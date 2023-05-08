@@ -150,4 +150,4 @@ mac.ifconfig
         utun0                   False
         utun0   fe80:5::2a95:bb15:87e3:977c             False
         
-        we can use the ``mac.ifconfig`` plugin to get information about the configuration of the network interfaces of the host under investigation.
+we can use the ``mac.ifconfig`` plugin to get information about the configuration of the network interfaces of the host under investigation.
