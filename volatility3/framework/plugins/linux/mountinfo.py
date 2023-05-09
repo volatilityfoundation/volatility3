@@ -160,7 +160,7 @@ class MountInfo(plugins.PluginInterface):
 
             mnt_namespace = task.nsproxy.mnt_ns
             try:
-                mnt_ns_id = str(mnt_namespace.get_inode())
+                mnt_ns_id = mnt_namespace.get_inode()
             except AttributeError:
                 mnt_ns_id = renderers.NotAvailableValue()
 
@@ -256,7 +256,7 @@ class MountInfo(plugins.PluginInterface):
             self.context, self.config["kernel"], filter_func=pid_filter
         )
 
-        columns = [("MNT_NS_ID", str)]
+        columns = [("MNT_NS_ID", int)]
         # The PID column does not make sense when a PID filter is not specified. In that case, the default behavior is
         # to displays the mountpoints per namespace.
         if pids:
