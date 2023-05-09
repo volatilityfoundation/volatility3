@@ -314,15 +314,15 @@ class maple_tree(objects.StructType):
     def get_slot_iter(self):
         """Parse the Maple Tree and return every non zero slot."""
         maple_tree_offset = self.vol.offset & ~(self.MAPLE_NODE_POINTER_MASK)
-        maple_tree_depth = (
+        expected_maple_tree_depth = (
             self.ma_flags & self.MT_FLAGS_HEIGHT_MASK
         ) >> self.MT_FLAGS_HEIGHT_OFFSET
         yield from self._parse_maple_tree_node(
-            self.ma_root, maple_tree_offset, maple_tree_depth
+            self.ma_root, maple_tree_offset, expected_maple_tree_depth
         )
 
     def _parse_maple_tree_node(
-        self, maple_tree_entry, parent, maple_tree_depth, seen=set(), depth=1
+        self, maple_tree_entry, parent, expected_maple_tree_depth, seen=set(), current_depth=1
     ):
         """Recursively parse Maple Tree Nodes and yield all non empty slots"""
 
@@ -334,11 +334,16 @@ class maple_tree(objects.StructType):
             return
         else:
             seen.add(maple_tree_entry)
-        if maple_tree_depth < depth:
+
+        # check if we have exceeded the expected depth of this maple tree.
+        # e.g. when current_depth is larger than expected_maple_tree_depth there may be an issue.
+        # it is normal that expected_maple_tree_depth is equal to current_depth.
+        if expected_maple_tree_depth < current_depth:
             vollog.warning(
-                f"The depth for the maple tree at {hex(self.vol.offset)} is {maple_tree_depth}, however when parsing the nodes "
-                f"a depth of {depth} was reached. This is unexpected and may lead to incorrect results."
+                f"The depth for the maple tree at {hex(self.vol.offset)} is {expected_maple_tree_depth}, however when parsing the nodes "
+                f"a depth of {current_depth} was reached. This is unexpected and may lead to incorrect results."
             )
+
         # parse the mte to extract the pointer value, node type, and leaf status
         pointer = maple_tree_entry & ~(self.MAPLE_NODE_POINTER_MASK)
         node_type = (
@@ -379,13 +384,13 @@ class maple_tree(objects.StructType):
             for slot in node.mr64.slot:
                 if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
                     yield from self._parse_maple_tree_node(
-                        slot, pointer, maple_tree_depth, seen, depth + 1
+                        slot, pointer, expected_maple_tree_depth, seen, current_depth + 1
                     )
         elif node_type == self.MAPLE_ARANGE_64:
             for slot in node.ma64.slot:
                 if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
                     yield from self._parse_maple_tree_node(
-                        slot, pointer, maple_tree_depth, seen, depth + 1
+                        slot, pointer, expected_maple_tree_depth, seen, current_depth + 1
                     )
         else:
             # unkown maple node type
