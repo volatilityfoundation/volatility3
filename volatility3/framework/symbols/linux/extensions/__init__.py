@@ -890,7 +890,7 @@ class vfsmount(objects.StructType):
         Returns:
             mount: the struct 'mount' containing this 'vfsmount'.
         """
-        vmlinux = linux.LinuxUtilities.get_vmlinux_from_volobj(self._context, self)
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         return linux.LinuxUtilities.container_of(
             self.vol.offset, "mount", "mnt", vmlinux
         )

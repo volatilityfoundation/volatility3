@@ -152,7 +152,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         """
         dentry = filp.get_dentry()
 
-        kernel_module = cls.get_vmlinux_from_volobj(context, dentry)
+        kernel_module = cls.get_module_from_volobj_type(context, dentry)
 
         sym_addr = dentry.d_op.d_dname
         symbs = list(kernel_module.get_symbols_by_absolute_location(sym_addr))
@@ -380,7 +380,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         )
 
     @classmethod
-    def get_vmlinux_from_volobj(
+    def get_module_from_volobj_type(
         cls,
         context: interfaces.context.ContextInterface,
         volobj: interfaces.objects.ObjectInterface,
