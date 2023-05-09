@@ -184,19 +184,12 @@ class MountInfo(plugins.PluginInterface):
         mount_format: bool,
         filtered_by_pids: bool,
     ) -> Iterable[Tuple[int, Tuple]]:
-        warning_shown = False
+        show_filter_warning = False
         for task, mnt, mnt_ns_id in self._get_tasks_mountpoints(
             tasks, filtered_by_pids
         ):
-            if (
-                not warning_shown
-                and mnt_ns_ids
-                and isinstance(mnt_ns_id, renderers.NotAvailableValue)
-            ):
-                vollog.warning(
-                    "Cannot filter by namespace id, it is not available in this kernel."
-                )
-                warning_shown = True
+            if mnt_ns_ids and isinstance(mnt_ns_id, renderers.NotAvailableValue):
+                show_filter_warning = True
 
             if (
                 not isinstance(mnt_ns_id, renderers.NotAvailableValue)
@@ -245,6 +238,11 @@ class MountInfo(plugins.PluginInterface):
             fields_values.extend(extra_fields_values)
 
             yield (0, fields_values)
+
+        if show_filter_warning:
+            vollog.warning(
+                "Could not filter by mount namespace id. This field is not available in this kernel."
+            )
 
     def run(self):
         pids = self.config.get("pids")
