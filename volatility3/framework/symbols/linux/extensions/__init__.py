@@ -349,7 +349,7 @@ class maple_tree(objects.StructType):
         symbol_table_name = self.get_symbol_table_name()
         node_parent_mte = self._context.object(
             symbol_table_name + constants.BANG + "pointer",
-            layer_name=self.vol.layer_name,
+            layer_name=self.vol.native_layer_name,
             offset=pointer,
         )
 
@@ -424,7 +424,7 @@ class mm_struct(objects.StructType):
             # convert pointer to vm_area_struct and yield
             vma = self._context.object(
                 symbol_table_name + constants.BANG + "vm_area_struct",
-                layer_name=self.vol.layer_name,
+                layer_name=self.vol.native_layer_name,
                 offset=vma_pointer
             )
             yield vma
