@@ -34,10 +34,8 @@ class module(generic.GenericIntelProcess):
     def get_init_size(self):
         if self.has_member("init_layout"):
             return self.init_layout.size
-
         elif self.has_member("init_size"):
             return self.init_size
-
         raise AttributeError(
             "module -> get_init_size: Unable to determine .init section size of module"
         )
@@ -45,10 +43,8 @@ class module(generic.GenericIntelProcess):
     def get_core_size(self):
         if self.has_member("core_layout"):
             return self.core_layout.size
-
         elif self.has_member("core_size"):
             return self.core_size
-
         raise AttributeError(
             "module -> get_core_size: Unable to determine core size of module"
         )
@@ -58,7 +54,6 @@ class module(generic.GenericIntelProcess):
             return self.core_layout.base
         elif self.has_member("module_core"):
             return self.module_core
-
         raise AttributeError("module -> get_module_core: Unable to get module core")
 
     def get_module_init(self):
@@ -66,7 +61,6 @@ class module(generic.GenericIntelProcess):
             return self.init_layout.base
         elif self.has_member("module_init"):
             return self.module_init
-
         raise AttributeError("module -> get_module_core: Unable to get module init")
 
     def get_name(self):
@@ -88,7 +82,6 @@ class module(generic.GenericIntelProcess):
         idx = 0
         while arr[idx]:
             idx = idx + 1
-
         return idx
 
     def get_sections(self):
@@ -97,7 +90,6 @@ class module(generic.GenericIntelProcess):
             num_sects = self.sect_attrs.nsections
         else:
             num_sects = self._get_sect_count(self.sect_attrs.grp)
-
         arr = self._context.object(
             self.get_symbol_table().name + constants.BANG + "array",
             layer_name=self.vol.layer_name,
@@ -116,7 +108,6 @@ class module(generic.GenericIntelProcess):
             prefix = "Elf64_"
         else:
             prefix = "Elf32_"
-
         elf_table_name = intermed.IntermediateSymbolTable.create(
             self.context,
             self.config_path,
@@ -155,7 +146,6 @@ class module(generic.GenericIntelProcess):
             return self.kallsyms.symtab
         elif self.has_member("symtab"):
             return self.symtab
-
         raise AttributeError("module -> symtab: Unable to get symtab")
 
     @property
@@ -164,7 +154,6 @@ class module(generic.GenericIntelProcess):
             return int(self.kallsyms.num_symtab)
         elif self.has_member("num_symtab"):
             return int(self.num_symtab)
-
         raise AttributeError(
             "module -> num_symtab: Unable to determine number of symbols"
         )
@@ -177,7 +166,6 @@ class module(generic.GenericIntelProcess):
         # Older kernels
         elif self.has_member("strtab"):
             return self.strtab
-
         raise AttributeError("module -> strtab: Unable to get strtab")
 
 
@@ -195,19 +183,15 @@ class task_struct(generic.GenericIntelProcess):
             pgd = self.mm.pgd
         except exceptions.InvalidAddressException:
             return None
-
         if not isinstance(parent_layer, linear.LinearlyMappedLayer):
             raise TypeError(
                 "Parent layer is not a translation layer, unable to construct process layer"
             )
-
         dtb, layer_name = parent_layer.translate(pgd)
         if not dtb:
             return None
-
         if preferred_name is None:
             preferred_name = self.vol.layer_name + f"_Process{self.pid}"
-
         # Add the constructed layer and return the name
         return self._add_process_layer(
             self._context, dtb, config_prefix, preferred_name
@@ -229,7 +213,6 @@ class task_struct(generic.GenericIntelProcess):
                 vollog.info(
                     f"adding vma: {start:x} {self.mm.brk:x} | {end:x} {self.mm.start_brk:x}"
                 )
-
             yield (start, end - start)
 
     @property
@@ -282,7 +265,6 @@ class fs_struct(objects.StructType):
             return self.root
         elif self.root.has_member("dentry"):
             return self.root.dentry
-
         raise AttributeError("Unable to find the root dentry")
 
     def get_root_mnt(self):
@@ -291,7 +273,6 @@ class fs_struct(objects.StructType):
             return self.rootmnt
         elif self.root.has_member("mnt"):
             return self.root.mnt
-
         raise AttributeError("Unable to find the root mount")
 
 
@@ -340,7 +321,6 @@ class maple_tree(objects.StructType):
             return
         else:
             seen.add(maple_tree_entry)
-
         # check if we have exceeded the expected depth of this maple tree.
         # e.g. when current_depth is larger than expected_maple_tree_depth there may be an issue.
         # it is normal that expected_maple_tree_depth is equal to current_depth.
@@ -349,7 +329,6 @@ class maple_tree(objects.StructType):
                 f"The depth for the maple tree at {hex(self.vol.offset)} is {expected_maple_tree_depth}, however when parsing the nodes "
                 f"a depth of {current_depth} was reached. This is unexpected and may lead to incorrect results."
             )
-
         # parse the mte to extract the pointer value, node type, and leaf status
         pointer = maple_tree_entry & ~(self.MAPLE_NODE_POINTER_MASK)
         node_type = (
@@ -421,10 +400,8 @@ class mm_struct(objects.StructType):
             raise AttributeError(
                 "get_mmap_iter called on mm_struct where no mmap member exists."
             )
-
         if not self.mmap:
             return
-
         yield self.mmap
 
         seen = {self.mmap.vol.offset}
@@ -442,7 +419,6 @@ class mm_struct(objects.StructType):
             raise AttributeError(
                 "get_maple_tree_iter called on mm_struct where no mm_mt member exists."
             )
-
         symbol_table_name = self.get_symbol_table_name()
         for vma_pointer in self.mm_mt.get_slot_iter():
             # convert pointer to vm_area_struct and yield
@@ -569,7 +545,6 @@ class vm_area_struct(objects.StructType):
                 retval = retval + char
             else:
                 retval = retval + "-"
-
         return retval
 
     # only parse the rwx bits
@@ -583,7 +558,6 @@ class vm_area_struct(objects.StructType):
     def get_page_offset(self) -> int:
         if self.vm_file == 0:
             return 0
-
         return self.vm_pgoff << constants.linux.PAGE_SHIFT
 
     def get_name(self, context, task):
@@ -600,7 +574,6 @@ class vm_area_struct(objects.StructType):
             fname = "[vdso]"
         else:
             fname = "Anonymous Mapping"
-
         return fname
 
     # used by malfind
@@ -611,10 +584,8 @@ class vm_area_struct(objects.StructType):
 
         if flags_str == "rwx":
             ret = True
-
         elif flags_str == "r-x" and self.vm_file.dereference().vol.offset == 0:
             ret = True
-
         return ret
 
 
@@ -624,12 +595,10 @@ class qstr(objects.StructType):
             str_length = self.len + 1  # Maximum length should include null terminator
         else:
             str_length = 255
-
         try:
             ret = objects.utility.pointer_to_string(self.name, str_length)
         except (exceptions.InvalidAddressException, ValueError):
             ret = ""
-
         return ret
 
 
@@ -660,7 +629,6 @@ class dentry(objects.StructType):
         """
         if self.vol.offset == old_dentry:
             return True
-
         return self.d_ancestor(old_dentry)
 
     def d_ancestor(self, ancestor_dentry):
@@ -678,10 +646,8 @@ class dentry(objects.StructType):
         ):
             if current_dentry.d_parent == ancestor_dentry.vol.offset:
                 return current_dentry
-
             dentry_seen.add(current_dentry.vol.offset)
             current_dentry = current_dentry.d_parent
-
         return None
 
 
@@ -738,12 +704,10 @@ class list_head(objects.StructType, collections.abc.Iterable):
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
             return
-
         if not sentinel:
             yield self._context.object(
                 symbol_type, layer, offset=self.vol.offset - relative_offset
             )
-
         seen = {self.vol.offset}
         while link.vol.offset not in seen:
             obj = self._context.object(
@@ -869,7 +833,6 @@ class mount(objects.StructType):
             peer = current_mnt.get_peer_under_root(self.mnt_ns, root)
             if peer and peer.vol.offset != 0:
                 return peer.mnt_group_id
-
             mnt_seen.add(current_mnt.vol.offset)
             current_mnt = current_mnt.mnt_master
         return 0
@@ -885,12 +848,10 @@ class mount(objects.StructType):
                 current_mnt.mnt.mnt_root, root
             ):
                 return current_mnt
-
             mnt_seen.add(current_mnt.vol.offset)
             current_mnt = current_mnt.next_peer()
             if current_mnt.vol.offset == self.vol.offset:
                 break
-
         return None
 
     def is_path_reachable(self, current_dentry, root):
@@ -907,7 +868,6 @@ class mount(objects.StructType):
             current_dentry = current_mnt.mnt_mountpoint
             mnt_seen.add(current_mnt.vol.offset)
             current_mnt = current_mnt.mnt_parent
-
         return current_mnt.mnt.vol.offset == root.mnt and current_dentry.is_subdir(
             root.dentry
         )
@@ -968,7 +928,6 @@ class kobject(objects.StructType):
             ret = refcnt.counter
         else:
             ret = refcnt.refs.counter
-
         return ret
 
 
@@ -987,7 +946,6 @@ class mnt_namespace(objects.StructType):
         if not self._context.symbol_space.has_type(mnt_type):
             # Old kernels ~ 2.6
             mnt_type = table_name + constants.BANG + "vfsmount"
-
         for mount in self.list.to_list(mnt_type, "mnt_list"):
             yield mount
 
@@ -1012,7 +970,6 @@ class socket(objects.StructType):
         )
         if not module_names:
             raise ValueError(f"No module using the symbol table {symbol_table}")
-
         kernel_module_name = module_names[0]
         kernel = self._context.modules[kernel_module_name]
         return kernel
@@ -1022,7 +979,6 @@ class socket(objects.StructType):
             kernel = self._get_vol_kernel()
         except ValueError:
             return 0
-
         socket_alloc = linux.LinuxUtilities.container_of(
             self.vol.offset, "socket_alloc", "socket", kernel
         )
@@ -1048,7 +1004,6 @@ class sock(objects.StructType):
     def get_inode(self):
         if not self.sk_socket:
             return 0
-
         return self.sk_socket.get_inode()
 
     def get_protocol(self):
@@ -1058,7 +1013,6 @@ class sock(objects.StructType):
         # Return the generic socket state
         if self.has_member("sk"):
             return self.sk.sk_socket.get_state()
-
         return self.sk_socket.get_state()
 
 
@@ -1066,7 +1020,6 @@ class unix_sock(objects.StructType):
     def get_name(self):
         if not self.addr:
             return
-
         sockaddr_un = self.addr.name.cast("sockaddr_un")
         saddr = str(utility.array_to_string(sockaddr_un.sun_path))
         return saddr
@@ -1102,7 +1055,6 @@ class inet_sock(objects.StructType):
         protocol = IP_PROTOCOLS.get(self.sk.sk_protocol)
         if self.get_family() == "AF_INET6":
             protocol = IPV6_PROTOCOLS.get(self.sk.sk_protocol, protocol)
-
         return protocol
 
     def get_state(self):
@@ -1133,7 +1085,6 @@ class inet_sock(objects.StructType):
             dport_le = sk_common.skc_dport
         else:
             return
-
         return socket_module.htons(dport_le)
 
     def get_src_addr(self):
@@ -1152,7 +1103,6 @@ class inet_sock(objects.StructType):
             saddr = self.pinet6.saddr
         else:
             return
-
         parent_layer = self._context.layers[self.vol.layer_name]
         try:
             addr_bytes = parent_layer.read(saddr.vol.offset, addr_size)
@@ -1161,7 +1111,6 @@ class inet_sock(objects.StructType):
                 f"Unable to read socket src address from {saddr.vol.offset:#x}"
             )
             return
-
         return socket_module.inet_ntop(family, addr_bytes)
 
     def get_dst_addr(self):
@@ -1183,7 +1132,6 @@ class inet_sock(objects.StructType):
             addr_size = 16
         else:
             return
-
         parent_layer = self._context.layers[self.vol.layer_name]
         try:
             addr_bytes = parent_layer.read(daddr.vol.offset, addr_size)
@@ -1192,7 +1140,6 @@ class inet_sock(objects.StructType):
                 f"Unable to read socket dst address from {daddr.vol.offset:#x}"
             )
             return
-
         return socket_module.inet_ntop(family, addr_bytes)
 
 
