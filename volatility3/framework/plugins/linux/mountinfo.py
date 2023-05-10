@@ -50,6 +50,9 @@ class MountInfo(plugins.PluginInterface):
             requirements.PluginRequirement(
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
+            requirements.VersionRequirement(
+                name="linuxutils", component=linux.LinuxUtilities, version=(2, 1, 0)
+            ),
             requirements.ListRequirement(
                 name="pids",
                 description="Filter on specific process IDs.",
@@ -86,7 +89,7 @@ class MountInfo(plugins.PluginInterface):
         if not mnt_root:
             return None
 
-        path_root = linux.LinuxUtilities._get_path_mnt(task, mnt)
+        path_root = linux.LinuxUtilities.get_path_mnt(task, mnt)
         if not path_root:
             return None
 

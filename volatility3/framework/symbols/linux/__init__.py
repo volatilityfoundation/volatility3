@@ -55,7 +55,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""
 
-    _version = (2, 0, 0)
+    _version = (2, 1, 0)
     _required_framework_version = (2, 0, 0)
 
     framework.require_interface_version(*_required_framework_version)
@@ -79,7 +79,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         return cls.do_get_path(rdentry, rmnt, dentry, vfsmnt)
 
     @classmethod
-    def _get_path_mnt(cls, task, mnt) -> str:
+    def get_path_mnt(cls, task, mnt) -> str:
         """Returns the mount point pathname relative to the task's root directory.
 
         Args:
