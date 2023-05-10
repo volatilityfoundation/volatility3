@@ -544,6 +544,7 @@ class struct_file(objects.StructType):
             raise AttributeError("Unable to find file -> dentry")
 
     def get_vfsmnt(self) -> interfaces.objects.ObjectInterface:
+        """Returns the fs (vfsmount) where this file is mounted"""
         if self.has_member("f_vfsmnt"):
             return self.f_vfsmnt
         elif self.has_member("f_path"):
@@ -675,10 +676,69 @@ class mount(objects.StructType):
             raise AttributeError("Unable to find mount -> mount flags")
 
     def get_mnt_parent(self):
+        """Gets the fs where we are mounted on
+
+        Returns:
+            A 'mount *'
+        """
         return self.mnt_parent
 
     def get_mnt_mountpoint(self):
+        """Gets the dentry of the mountpoint
+
+        Returns:
+            A 'dentry *'
+        """
+
         return self.mnt_mountpoint
+
+    def get_parent_mount(self):
+        return self.mnt.get_parent_mount()
+
+    def has_parent(self) -> bool:
+        """Checks if this mount has a parent
+
+        Returns:
+            bool: 'True' if this mount has a parent
+        """
+        return self.mnt_parent != self.vol.offset
+
+    def get_vfsmnt_current(self):
+        """Returns the fs where we are mounted on
+
+        Returns:
+            A 'vfsmount'
+        """
+        return self.mnt
+
+    def get_vfsmnt_parent(self):
+        """Gets the parent fs (vfsmount) to where it's mounted on
+
+        Returns:
+            A 'vfsmount'
+        """
+
+        return self.get_mnt_parent().get_vfsmnt_current()
+
+    def get_dentry_current(self):
+        """Returns the root of the mounted tree
+
+        Returns:
+            A 'dentry *'
+        """
+        vfsmnt = self.get_vfsmnt_current()
+        dentry = vfsmnt.mnt_root
+
+        return dentry
+
+    def get_dentry_parent(self):
+        """Returns the parent root of the mounted tree
+
+        Returns:
+            A 'dentry *'
+        """
+
+        return self.get_mnt_parent().get_dentry_current()
 
     def get_flags_access(self) -> str:
         return "ro" if self.get_mnt_flags() & self.MNT_READONLY else "rw"
@@ -702,9 +762,6 @@ class mount(objects.StructType):
 
     def get_devname(self) -> str:
         return utility.pointer_to_string(self.mnt_devname, count=255)
-
-    def has_parent(self) -> bool:
-        return self.vol.offset != self.mnt_parent
 
     def get_dominating_id(self, root) -> int:
         """Get ID of closest dominating peer group having a representative under the given root."""
@@ -783,24 +840,121 @@ class vfsmount(objects.StructType):
             and self.get_mnt_parent() != 0
         )
 
-    def _get_real_mnt(self):
-        table_name = self.vol.type_name.split(constants.BANG)[0]
-        mount_struct = f"{table_name}{constants.BANG}mount"
-        offset = self._context.symbol_space.get_type(
-            mount_struct
-        ).relative_child_offset("mnt")
+    def _is_kernel_prior_to_struct_mount(self) -> bool:
+        """Helper to distinguish between kernels prior to version 3.3.8 that
+        lacked the 'mount' structure and later versions that have it.
 
-        return self._context.object(
-            mount_struct, self.vol.layer_name, offset=self.vol.offset - offset
+        The 'mnt_parent' member was moved from struct 'vfsmount' to struct
+        'mount' when the latter was introduced.
+
+        Alternatively, vmlinux.has_type('mount') can be used here but it is faster.
+
+        Returns:
+            bool: 'True' if the kernel
+        """
+
+        return self.has_member("mnt_parent")
+
+    def is_equal(self, vfsmount_ptr) -> bool:
+        """Helper to make sure it is comparing two pointers to 'vfsmount'.
+
+        Depending on the kernel version, the calling object (self) could be
+        a 'vfsmount *' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
+        in the framework "auto" dereferencing ability to assure that when we
+        reach this point 'self' will be a 'vfsmount' already and self.vol.offset
+        a 'vfsmount *' and not a 'vfsmount **'. The argument must be a 'vfsmount *'.
+        Typically, it's called from do_get_path().
+
+        Args:
+            vfsmount_ptr (vfsmount *): A pointer to a 'vfsmount'
+
+        Raises:
+            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount *'
+
+        Returns:
+            bool: 'True' if the given argument points to the the same 'vfsmount'
+            as 'self'.
+        """
+        if type(vfsmount_ptr) == objects.Pointer:
+            return self.vol.offset == vfsmount_ptr
+        else:
+            raise exceptions.VolatilityException(
+                "Unexpected argument type. It has to be a 'vfsmount *'"
+            )
+
+    def _get_real_mnt(self):
+        """Gets the struct 'mount' containing this 'vfsmount'.
+
+        It should be only called from kernels >= 3.3.8 when 'struct mount' was introduced.
+
+        Returns:
+            mount: the struct 'mount' containing this 'vfsmount'.
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        return linux.LinuxUtilities.container_of(
+            self.vol.offset, "mount", "mnt", vmlinux
         )
 
+    def get_vfsmnt_current(self):
+        """Returns the current fs where we are mounted on
+
+        Returns:
+            A 'vfsmount *'
+        """
+        return self.get_mnt_parent()
+
+    def get_vfsmnt_parent(self):
+        """Gets the parent fs (vfsmount) to where it's mounted on
+
+        Returns:
+            For kernels <  3.3.8: A 'vfsmount *'
+            For kernels >= 3.3.8: A 'vfsmount'
+        """
+        if self._is_kernel_prior_to_struct_mount():
+            return self.get_mnt_parent()
+        else:
+            return self._get_real_mnt().get_vfsmnt_parent()
+
+    def get_dentry_current(self):
+        """Returns the root of the mounted tree
+
+        Returns:
+            A 'dentry *'
+        """
+        if self._is_kernel_prior_to_struct_mount():
+            return self.get_mnt_mountpoint()
+        else:
+            return self._get_real_mnt().get_dentry_current()
+
+    def get_dentry_parent(self):
+        """Returns the parent root of the mounted tree
+
+        Returns:
+            A 'dentry *'
+        """
+        if self._is_kernel_prior_to_struct_mount():
+            return self.get_mnt_mountpoint()
+        else:
+            return self._get_real_mnt().get_mnt_mountpoint()
+
     def get_mnt_parent(self):
-        if self.has_member("mnt_parent"):
+        """Gets the mnt_parent member.
+
+        Returns:
+            For kernels <  3.3.8: A 'vfsmount *'
+            For kernels >= 3.3.8: A 'mount *'
+        """
+        if self._is_kernel_prior_to_struct_mount():
             return self.mnt_parent
         else:
-            return self._get_real_mnt().mnt_parent
+            return self._get_real_mnt().get_mnt_parent()
 
     def get_mnt_mountpoint(self):
+        """Gets the dentry of the mountpoint
+
+        Returns:
+            A 'dentry *'
+        """
         if self.has_member("mnt_mountpoint"):
             return self.mnt_mountpoint
         else:
@@ -808,6 +962,41 @@ class vfsmount(objects.StructType):
 
     def get_mnt_root(self):
         return self.mnt_root
+
+    def has_parent(self) -> bool:
+        if self._is_kernel_prior_to_struct_mount():
+            return self.mnt_parent != self.vol.offset
+        else:
+            return self._get_real_mnt().has_parent()
+
+    def get_mnt_sb(self):
+        return self.mnt_sb
+
+    def get_flags_access(self) -> str:
+        return "ro" if self.mnt_flags & mount.MNT_READONLY else "rw"
+
+    def get_flags_opts(self) -> Iterable[str]:
+        flags = [
+            mntflagtxt
+            for mntflag, mntflagtxt in mount.MNT_FLAGS.items()
+            if mntflag & self.mnt_flags != 0
+        ]
+        return flags
+
+    def get_mnt_flags(self):
+        return self.mnt_flags
+
+    def is_shared(self) -> bool:
+        return self.get_mnt_flags() & mount.MNT_SHARED
+
+    def is_unbindable(self) -> bool:
+        return self.get_mnt_flags() & mount.MNT_UNBINDABLE
+
+    def is_slave(self) -> bool:
+        return self.mnt_master and self.mnt_master.vol.offset != 0
+
+    def get_devname(self) -> str:
+        return utility.pointer_to_string(self.mnt_devname, count=255)
 
 
 class kobject(objects.StructType):
@@ -825,7 +1014,7 @@ class mnt_namespace(objects.StructType):
     def get_inode(self):
         if self.has_member("proc_inum"):
             return self.proc_inum
-        elif self.ns.has_member("inum"):
+        elif self.has_member("ns") and self.ns.has_member("inum"):
             return self.ns.inum
         else:
             raise AttributeError("Unable to find mnt_namespace inode")
@@ -844,10 +1033,13 @@ class mnt_namespace(objects.StructType):
 class net(objects.StructType):
     def get_inode(self):
         if self.has_member("proc_inum"):
+            # 3.8.13 <= kernel < 3.19.8
             return self.proc_inum
-        elif self.ns.has_member("inum"):
+        elif self.has_member("ns") and self.ns.has_member("inum"):
+            # kernel >= 3.19.8
             return self.ns.inum
         else:
+            # kernel < 3.8.13
             raise AttributeError("Unable to find net_namespace inode")
 
 
@@ -1055,6 +1247,26 @@ class netlink_sock(objects.StructType):
         # Return the generic socket state
         return self.sk.sk_socket.get_state()
 
+    def get_portid(self):
+        if self.has_member("pid"):
+            # kernel < 3.7.10
+            return self.pid
+        if self.has_member("portid"):
+            # kernel >= 3.7.10
+            return self.portid
+        else:
+            raise AttributeError("Unable to find a source port id")
+
+    def get_dst_portid(self):
+        if self.has_member("dst_pid"):
+            # kernel < 3.7.10
+            return self.dst_pid
+        if self.has_member("dst_portid"):
+            # kernel >= 3.7.10
+            return self.dst_portid
+        else:
+            raise AttributeError("Unable to find a destination port id")
+
 
 class vsock_sock(objects.StructType):
     def get_protocol(self):
@@ -1101,3 +1313,20 @@ class xdp_sock(objects.StructType):
     def get_state(self):
         # xdp_sock.state is an enum
         return self.state.lookup()
+
+
+class bpf_prog(objects.StructType):
+    def get_type(self):
+        # The program type was in `bpf_prog_aux::prog_type` from 3.18.140 to
+        # 4.1.52 before it was moved to `bpf_prog::type`
+        if self.has_member("type"):
+            # kernel >= 4.1.52
+            return self.type
+
+        if self.has_member("aux") and self.aux:
+            if self.aux.has_member("prog_type"):
+                # 3.18.140 <= kernel < 4.1.52
+                return self.aux.prog_type
+
+        # kernel < 3.18.140
+        raise AttributeError("Unable to find the BPF type")
