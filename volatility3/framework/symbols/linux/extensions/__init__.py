@@ -294,6 +294,7 @@ class fs_struct(objects.StructType):
 
         raise AttributeError("Unable to find the root mount")
 
+
 class maple_tree(objects.StructType):
     # include/linux/maple_tree.h
     # Mask for Maple Tree Flags
@@ -322,7 +323,12 @@ class maple_tree(objects.StructType):
         )
 
     def _parse_maple_tree_node(
-        self, maple_tree_entry, parent, expected_maple_tree_depth, seen=set(), current_depth=1
+        self,
+        maple_tree_entry,
+        parent,
+        expected_maple_tree_depth,
+        seen=set(),
+        current_depth=1,
     ):
         """Recursively parse Maple Tree Nodes and yield all non empty slots"""
 
@@ -384,13 +390,21 @@ class maple_tree(objects.StructType):
             for slot in node.mr64.slot:
                 if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
                     yield from self._parse_maple_tree_node(
-                        slot, pointer, expected_maple_tree_depth, seen, current_depth + 1
+                        slot,
+                        pointer,
+                        expected_maple_tree_depth,
+                        seen,
+                        current_depth + 1,
                     )
         elif node_type == self.MAPLE_ARANGE_64:
             for slot in node.ma64.slot:
                 if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
                     yield from self._parse_maple_tree_node(
-                        slot, pointer, expected_maple_tree_depth, seen, current_depth + 1
+                        slot,
+                        pointer,
+                        expected_maple_tree_depth,
+                        seen,
+                        current_depth + 1,
                     )
         else:
             # unkown maple node type
@@ -398,13 +412,16 @@ class maple_tree(objects.StructType):
                 f"Unkown Maple Tree node type {node_type} at offset {hex(pointer)}."
             )
 
+
 class mm_struct(objects.StructType):
     def get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mmap list member of an mm_struct."""
 
-        if not self.has_member('mmap'): 
-            raise AttributeError("get_mmap_iter called on mm_struct where no mmap member exists.")
-        
+        if not self.has_member("mmap"):
+            raise AttributeError(
+                "get_mmap_iter called on mm_struct where no mmap member exists."
+            )
+
         if not self.mmap:
             return
 
@@ -420,9 +437,11 @@ class mm_struct(objects.StructType):
 
     def get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mm_mt member of an mm_struct."""
-    
-        if not self.has_member('mm_mt'): 
-            raise AttributeError("get_maple_tree_iter called on mm_struct where no mm_mt member exists.")
+
+        if not self.has_member("mm_mt"):
+            raise AttributeError(
+                "get_maple_tree_iter called on mm_struct where no mm_mt member exists."
+            )
 
         symbol_table_name = self.get_symbol_table_name()
         for vma_pointer in self.mm_mt.get_slot_iter():
@@ -430,20 +449,21 @@ class mm_struct(objects.StructType):
             vma = self._context.object(
                 symbol_table_name + constants.BANG + "vm_area_struct",
                 layer_name=self.vol.native_layer_name,
-                offset=vma_pointer
+                offset=vma_pointer,
             )
             yield vma
 
     def get_vma_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the VMAs in an mm_struct. Automatically choosing the mmap or mm_mt as required."""
 
-        if self.has_member('mmap'): 
+        if self.has_member("mmap"):
             yield from self.get_mmap_iter()
-        elif self.has_member('mm_mt'): 
+        elif self.has_member("mm_mt"):
             yield from self.get_maple_tree_iter()
         else:
             raise AttributeError("Unable to find mmap or mm_mt in mm_struct")
-        
+
+
 class super_block(objects.StructType):
     # include/linux/kdev_t.h
     MINORBITS = 20
