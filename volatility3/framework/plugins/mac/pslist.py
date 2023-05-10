@@ -114,11 +114,12 @@ class PsList(interfaces.plugins.PluginInterface):
             gid = task.p_gid
             start_time_seconds = task.p_start.tv_sec
             start_time_microseconds = task.p_start.tv_usec
-            start_time = datetime.datetime.fromtimestamp(start_time_seconds + start_time_microseconds / 1e6)
-
+            start_time = datetime.datetime.fromtimestamp(
+                start_time_seconds + start_time_microseconds / 1e6
+            )
 
             ppid = task.p_ppid
-    
+
             yield (0, (offset, name, pid, uid, gid, start_time, ppid))
 
     @classmethod
@@ -321,5 +322,14 @@ class PsList(interfaces.plugins.PluginInterface):
 
     def run(self):
         return renderers.TreeGrid(
-            [("OFFSET", format_hints.Hex), ("NAME", str), ("PID", int), ("UID", int), ("GID", int), ("Start Time", datetime.datetime), ("PPID", int)], self._generator()
+            [
+                ("OFFSET", format_hints.Hex),
+                ("NAME", str),
+                ("PID", int),
+                ("UID", int),
+                ("GID", int),
+                ("Start Time", datetime.datetime),
+                ("PPID", int),
+            ],
+            self._generator(),
         )
