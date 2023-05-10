@@ -51,6 +51,9 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.optional_set_type_class("bt_sock", extensions.bt_sock)
         self.optional_set_type_class("xdp_sock", extensions.xdp_sock)
 
+        # Only found in 6.1+ kernels
+        self.optional_set_type_class("maple_tree", extensions.maple_tree)
+
 
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""

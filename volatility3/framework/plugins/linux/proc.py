@@ -44,7 +44,7 @@ class Maps(plugins.PluginInterface):
 
             name = utility.array_to_string(task.comm)
 
-            for vma in task.mm.get_mmap_iter():
+            for vma in task.mm.get_vma_iter():
                 flags = vma.get_protection()
                 page_offset = vma.get_page_offset()
                 major = 0
