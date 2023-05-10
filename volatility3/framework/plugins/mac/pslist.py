@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
+import datetime
 import logging
 from typing import Callable, Iterable, List, Dict
 
@@ -9,6 +10,7 @@ from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import mac
+from volatility3.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
 
@@ -105,10 +107,19 @@ class PsList(interfaces.plugins.PluginInterface):
             self.config["kernel"],
             filter_func=self.create_pid_filter(self.config.get("pid", None)),
         ):
-            pid = task.p_pid
-            ppid = task.p_ppid
+            offset = format_hints.Hex(task.vol.offset)
             name = utility.array_to_string(task.p_comm)
-            yield (0, (pid, ppid, name))
+            pid = task.p_pid
+            uid = task.p_uid
+            gid = task.p_gid
+            start_time_seconds = task.p_start.tv_sec
+            start_time_microseconds = task.p_start.tv_usec
+            start_time = datetime.datetime.fromtimestamp(start_time_seconds + start_time_microseconds / 1e6)
+
+
+            ppid = task.p_ppid
+    
+            yield (0, (offset, name, pid, uid, gid, start_time, ppid))
 
     @classmethod
     def list_tasks_allproc(
@@ -310,5 +321,5 @@ class PsList(interfaces.plugins.PluginInterface):
 
     def run(self):
         return renderers.TreeGrid(
-            [("PID", int), ("PPID", int), ("COMM", str)], self._generator()
+            [("OFFSET", format_hints.Hex), ("NAME", str), ("PID", int), ("UID", int), ("GID", int), ("Start Time", datetime.datetime), ("PPID", int)], self._generator()
         )
