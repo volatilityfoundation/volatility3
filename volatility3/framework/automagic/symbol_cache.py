@@ -310,6 +310,14 @@ class SqliteCache(CacheManagerInterface):
         new_locations = on_disk_locations.difference(cached_locations)
         missing_locations = cached_locations.difference(on_disk_locations)
 
+        # Missing entries
+        if missing_locations:
+            self._database.cursor().execute(
+                f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})",
+                [x for x in missing_locations],
+            )
+            self._database.commit()
+
         cache_update = set()
         files_to_timestamp = on_disk_locations.intersection(cached_locations)
         if files_to_timestamp:
@@ -435,15 +443,6 @@ class SqliteCache(CacheManagerInterface):
                         (location, identifier, operating_system, False),
                     )
             progress_callback(100, "Reading remote ISF list")
-            self._database.commit()
-
-        # Missing entries
-
-        if missing_locations:
-            self._database.cursor().execute(
-                f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})",
-                [x for x in missing_locations],
-            )
             self._database.commit()
 
     def get_identifier_dictionary(

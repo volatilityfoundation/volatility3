@@ -34,13 +34,27 @@ class YaraScanner(interfaces.layers.ScannerInterface):
         if rules is None:
             raise ValueError("No rules provided to YaraScanner")
         self._rules = rules
+        self.st_object = not tuple([int(x) for x in yara.__version__.split(".")]) < (
+            4,
+            3,
+        )
 
     def __call__(
         self, data: bytes, data_offset: int
     ) -> Iterable[Tuple[int, str, str, bytes]]:
         for match in self._rules.match(data=data):
-            for offset, name, value in match.strings:
-                yield (offset + data_offset, match.rule, name, value)
+            if self.st_object:
+                for match_string in match.strings:
+                    for instance in match_string.instances:
+                        yield (
+                            instance.offset + data_offset,
+                            match.rule,
+                            match_string.identifier,
+                            instance.matched_data,
+                        )
+            else:
+                for offset, name, value in match.strings:
+                    yield (offset + data_offset, match.rule, name, value)
 
 
 class YaraScan(plugins.PluginInterface):
