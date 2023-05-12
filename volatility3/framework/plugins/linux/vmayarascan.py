@@ -96,7 +96,7 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
             An iterable of tuples containing start and end addresses for each descriptor
         """
         if task.mm:
-            for vma in task.mm.get_mmap_iter():
+            for vma in task.mm.get_vma_iter():
                 vm_size = vma.vm_end - vma.vm_start
                 yield (vma.vm_start, vm_size)
 
