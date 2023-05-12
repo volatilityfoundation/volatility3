@@ -31,7 +31,7 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
             requirements.PluginRequirement(
-                name="yarascan", plugin=yarascan.YaraScan, version=(1, 1, 0)
+                name="yarascan", plugin=yarascan.YaraScan, version=(1, 2, 0)
             ),
             requirements.VersionRequirement(
                 name="yarascanner", component=yarascan.YaraScanner, version=(2, 0, 0)
@@ -43,17 +43,8 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
             ),
         ]
 
-        # get base yarascan requirements
-        yarascan_requirements = yarascan.YaraScan.get_requirements()
-
-        # remove TranslationLayerRequirement from the base yarascan requirements
-        # if this is not removed automagic will not find both the TranslationLayerRequirement
-        # for YaraScan and the ModuleRequirement for VmaYaraScan
-        yarascan_requirements = [
-            requirement
-            for requirement in yarascan_requirements
-            if not isinstance(requirement, requirements.TranslationLayerRequirement)
-        ]
+        # get base yarascan requirements for command line options
+        yarascan_requirements = yarascan.YaraScan.get_yarascan_option_requirements()
 
         # return the combined requirements
         return yarascan_requirements + vmayarascan_requirements
@@ -69,7 +60,6 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
             vmlinux_module_name=self.config["kernel"],
             filter_func=filter_func,
         ):
-
             # attempt to create a process layer for each task and skip those
             # that cannot (e.g. kernel threads)
             proc_layer_name = task.add_process_layer()
