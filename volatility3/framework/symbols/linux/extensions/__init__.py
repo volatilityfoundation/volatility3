@@ -4,14 +4,19 @@
 
 import collections.abc
 import logging
+import socket as socket_module
 from typing import Generator, Iterable, Iterator, Optional, Tuple
 
 from volatility3.framework import constants
+from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
+from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
+from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
+from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
+from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
 from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
-from volatility3.framework.symbols import generic, linux
-from volatility3.framework.symbols import intermed
+from volatility3.framework.symbols import generic, linux, intermed
 from volatility3.framework.symbols.linux.extensions import elf
 
 vollog = logging.getLogger(__name__)
@@ -29,10 +34,8 @@ class module(generic.GenericIntelProcess):
     def get_init_size(self):
         if self.has_member("init_layout"):
             return self.init_layout.size
-
         elif self.has_member("init_size"):
             return self.init_size
-
         raise AttributeError(
             "module -> get_init_size: Unable to determine .init section size of module"
         )
@@ -40,10 +43,8 @@ class module(generic.GenericIntelProcess):
     def get_core_size(self):
         if self.has_member("core_layout"):
             return self.core_layout.size
-
         elif self.has_member("core_size"):
             return self.core_size
-
         raise AttributeError(
             "module -> get_core_size: Unable to determine core size of module"
         )
@@ -53,7 +54,6 @@ class module(generic.GenericIntelProcess):
             return self.core_layout.base
         elif self.has_member("module_core"):
             return self.module_core
-
         raise AttributeError("module -> get_module_core: Unable to get module core")
 
     def get_module_init(self):
@@ -61,7 +61,6 @@ class module(generic.GenericIntelProcess):
             return self.init_layout.base
         elif self.has_member("module_init"):
             return self.module_init
-
         raise AttributeError("module -> get_module_core: Unable to get module init")
 
     def get_name(self):
@@ -83,7 +82,6 @@ class module(generic.GenericIntelProcess):
         idx = 0
         while arr[idx]:
             idx = idx + 1
-
         return idx
 
     def get_sections(self):
@@ -92,7 +90,6 @@ class module(generic.GenericIntelProcess):
             num_sects = self.sect_attrs.nsections
         else:
             num_sects = self._get_sect_count(self.sect_attrs.grp)
-
         arr = self._context.object(
             self.get_symbol_table().name + constants.BANG + "array",
             layer_name=self.vol.layer_name,
@@ -111,7 +108,6 @@ class module(generic.GenericIntelProcess):
             prefix = "Elf64_"
         else:
             prefix = "Elf32_"
-
         elf_table_name = intermed.IntermediateSymbolTable.create(
             self.context,
             self.config_path,
@@ -150,7 +146,6 @@ class module(generic.GenericIntelProcess):
             return self.kallsyms.symtab
         elif self.has_member("symtab"):
             return self.symtab
-
         raise AttributeError("module -> symtab: Unable to get symtab")
 
     @property
@@ -159,7 +154,6 @@ class module(generic.GenericIntelProcess):
             return int(self.kallsyms.num_symtab)
         elif self.has_member("num_symtab"):
             return int(self.num_symtab)
-
         raise AttributeError(
             "module -> num_symtab: Unable to determine number of symbols"
         )
@@ -172,7 +166,6 @@ class module(generic.GenericIntelProcess):
         # Older kernels
         elif self.has_member("strtab"):
             return self.strtab
-
         raise AttributeError("module -> strtab: Unable to get strtab")
 
 
@@ -190,19 +183,15 @@ class task_struct(generic.GenericIntelProcess):
             pgd = self.mm.pgd
         except exceptions.InvalidAddressException:
             return None
-
         if not isinstance(parent_layer, linear.LinearlyMappedLayer):
             raise TypeError(
                 "Parent layer is not a translation layer, unable to construct process layer"
             )
-
         dtb, layer_name = parent_layer.translate(pgd)
         if not dtb:
             return None
-
         if preferred_name is None:
             preferred_name = self.vol.layer_name + f"_Process{self.pid}"
-
         # Add the constructed layer and return the name
         return self._add_process_layer(
             self._context, dtb, config_prefix, preferred_name
@@ -224,7 +213,6 @@ class task_struct(generic.GenericIntelProcess):
                 vollog.info(
                     f"adding vma: {start:x} {self.mm.brk:x} | {end:x} {self.mm.start_brk:x}"
                 )
-
             yield (start, end - start)
 
     @property
@@ -277,7 +265,6 @@ class fs_struct(objects.StructType):
             return self.root
         elif self.root.has_member("dentry"):
             return self.root.dentry
-
         raise AttributeError("Unable to find the root dentry")
 
     def get_root_mnt(self):
@@ -286,17 +273,135 @@ class fs_struct(objects.StructType):
             return self.rootmnt
         elif self.root.has_member("mnt"):
             return self.root.mnt
-
         raise AttributeError("Unable to find the root mount")
+
+
+class maple_tree(objects.StructType):
+    # include/linux/maple_tree.h
+    # Mask for Maple Tree Flags
+    MT_FLAGS_HEIGHT_MASK = 0x7C
+    MT_FLAGS_HEIGHT_OFFSET = 0x02
+
+    # Shift and mask to extract information from maple tree node pointers
+    MAPLE_NODE_TYPE_SHIFT = 0x03
+    MAPLE_NODE_TYPE_MASK = 0x0F
+    MAPLE_NODE_POINTER_MASK = 0xFF
+
+    # types of Maple Tree Nodes
+    MAPLE_DENSE = 0
+    MAPLE_LEAF_64 = 1
+    MAPLE_RANGE_64 = 2
+    MAPLE_ARANGE_64 = 3
+
+    def get_slot_iter(self):
+        """Parse the Maple Tree and return every non zero slot."""
+        maple_tree_offset = self.vol.offset & ~(self.MAPLE_NODE_POINTER_MASK)
+        expected_maple_tree_depth = (
+            self.ma_flags & self.MT_FLAGS_HEIGHT_MASK
+        ) >> self.MT_FLAGS_HEIGHT_OFFSET
+        yield from self._parse_maple_tree_node(
+            self.ma_root, maple_tree_offset, expected_maple_tree_depth
+        )
+
+    def _parse_maple_tree_node(
+        self,
+        maple_tree_entry,
+        parent,
+        expected_maple_tree_depth,
+        seen=set(),
+        current_depth=1,
+    ):
+        """Recursively parse Maple Tree Nodes and yield all non empty slots"""
+
+        # protect against unlikely loop
+        if maple_tree_entry in seen:
+            vollog.warning(
+                f"The mte {hex(maple_tree_entry)} has all ready been seen, no further results will be produced for this node."
+            )
+            return
+        else:
+            seen.add(maple_tree_entry)
+        # check if we have exceeded the expected depth of this maple tree.
+        # e.g. when current_depth is larger than expected_maple_tree_depth there may be an issue.
+        # it is normal that expected_maple_tree_depth is equal to current_depth.
+        if expected_maple_tree_depth < current_depth:
+            vollog.warning(
+                f"The depth for the maple tree at {hex(self.vol.offset)} is {expected_maple_tree_depth}, however when parsing the nodes "
+                f"a depth of {current_depth} was reached. This is unexpected and may lead to incorrect results."
+            )
+        # parse the mte to extract the pointer value, node type, and leaf status
+        pointer = maple_tree_entry & ~(self.MAPLE_NODE_POINTER_MASK)
+        node_type = (
+            maple_tree_entry >> self.MAPLE_NODE_TYPE_SHIFT
+        ) & self.MAPLE_NODE_TYPE_MASK
+
+        # create a pointer object for the node parent mte (note this will include flags in the low bits)
+        symbol_table_name = self.get_symbol_table_name()
+        node_parent_mte = self._context.object(
+            symbol_table_name + constants.BANG + "pointer",
+            layer_name=self.vol.native_layer_name,
+            offset=pointer,
+        )
+
+        # extract the actual pointer to the parent of this node
+        node_parent_pointer = node_parent_mte & ~(self.MAPLE_NODE_POINTER_MASK)
+
+        # verify that the node_parent_pointer correctly points to the parent
+        assert node_parent_pointer == parent
+
+        # create a node object
+        node = self._context.object(
+            symbol_table_name + constants.BANG + "maple_node",
+            layer_name=self.vol.layer_name,
+            offset=pointer,
+        )
+
+        # parse the slots based on the node type
+        if node_type == self.MAPLE_DENSE:
+            for slot in node.alloc.slot:
+                if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
+                    yield slot
+        elif node_type == self.MAPLE_LEAF_64:
+            for slot in node.mr64.slot:
+                if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
+                    yield slot
+        elif node_type == self.MAPLE_RANGE_64:
+            for slot in node.mr64.slot:
+                if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
+                    yield from self._parse_maple_tree_node(
+                        slot,
+                        pointer,
+                        expected_maple_tree_depth,
+                        seen,
+                        current_depth + 1,
+                    )
+        elif node_type == self.MAPLE_ARANGE_64:
+            for slot in node.ma64.slot:
+                if (slot & ~(self.MAPLE_NODE_TYPE_MASK)) != 0:
+                    yield from self._parse_maple_tree_node(
+                        slot,
+                        pointer,
+                        expected_maple_tree_depth,
+                        seen,
+                        current_depth + 1,
+                    )
+        else:
+            # unkown maple node type
+            raise AttributeError(
+                f"Unkown Maple Tree node type {node_type} at offset {hex(pointer)}."
+            )
 
 
 class mm_struct(objects.StructType):
     def get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mmap list member of an mm_struct."""
 
+        if not self.has_member("mmap"):
+            raise AttributeError(
+                "get_mmap_iter called on mm_struct where no mmap member exists."
+            )
         if not self.mmap:
             return
-
         yield self.mmap
 
         seen = {self.mmap.vol.offset}
@@ -306,6 +411,33 @@ class mm_struct(objects.StructType):
             yield link
             seen.add(link.vol.offset)
             link = link.vm_next
+
+    def get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns an iterator for the mm_mt member of an mm_struct."""
+
+        if not self.has_member("mm_mt"):
+            raise AttributeError(
+                "get_maple_tree_iter called on mm_struct where no mm_mt member exists."
+            )
+        symbol_table_name = self.get_symbol_table_name()
+        for vma_pointer in self.mm_mt.get_slot_iter():
+            # convert pointer to vm_area_struct and yield
+            vma = self._context.object(
+                symbol_table_name + constants.BANG + "vm_area_struct",
+                layer_name=self.vol.native_layer_name,
+                offset=vma_pointer,
+            )
+            yield vma
+
+    def get_vma_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns an iterator for the VMAs in an mm_struct. Automatically choosing the mmap or mm_mt as required."""
+
+        if self.has_member("mmap"):
+            yield from self.get_mmap_iter()
+        elif self.has_member("mm_mt"):
+            yield from self.get_maple_tree_iter()
+        else:
+            raise AttributeError("Unable to find mmap or mm_mt in mm_struct")
 
 
 class super_block(objects.StructType):
@@ -413,7 +545,6 @@ class vm_area_struct(objects.StructType):
                 retval = retval + char
             else:
                 retval = retval + "-"
-
         return retval
 
     # only parse the rwx bits
@@ -427,7 +558,6 @@ class vm_area_struct(objects.StructType):
     def get_page_offset(self) -> int:
         if self.vm_file == 0:
             return 0
-
         return self.vm_pgoff << constants.linux.PAGE_SHIFT
 
     def get_name(self, context, task):
@@ -444,7 +574,6 @@ class vm_area_struct(objects.StructType):
             fname = "[vdso]"
         else:
             fname = "Anonymous Mapping"
-
         return fname
 
     # used by malfind
@@ -455,10 +584,8 @@ class vm_area_struct(objects.StructType):
 
         if flags_str == "rwx":
             ret = True
-
         elif flags_str == "r-x" and self.vm_file.dereference().vol.offset == 0:
             ret = True
-
         return ret
 
 
@@ -468,12 +595,10 @@ class qstr(objects.StructType):
             str_length = self.len + 1  # Maximum length should include null terminator
         else:
             str_length = 255
-
         try:
             ret = objects.utility.pointer_to_string(self.name, str_length)
         except (exceptions.InvalidAddressException, ValueError):
             ret = ""
-
         return ret
 
 
@@ -504,7 +629,6 @@ class dentry(objects.StructType):
         """
         if self.vol.offset == old_dentry:
             return True
-
         return self.d_ancestor(old_dentry)
 
     def d_ancestor(self, ancestor_dentry):
@@ -522,10 +646,8 @@ class dentry(objects.StructType):
         ):
             if current_dentry.d_parent == ancestor_dentry.vol.offset:
                 return current_dentry
-
             dentry_seen.add(current_dentry.vol.offset)
             current_dentry = current_dentry.d_parent
-
         return None
 
 
@@ -539,6 +661,7 @@ class struct_file(objects.StructType):
             raise AttributeError("Unable to find file -> dentry")
 
     def get_vfsmnt(self) -> interfaces.objects.ObjectInterface:
+        """Returns the fs (vfsmount) where this file is mounted"""
         if self.has_member("f_vfsmnt"):
             return self.f_vfsmnt
         elif self.has_member("f_path"):
@@ -582,15 +705,12 @@ class list_head(objects.StructType, collections.abc.Iterable):
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
             return
-
         if not sentinel:
             yield self._context.object(
                 symbol_type, layer, offset=self.vol.offset - relative_offset
             )
-
         seen = {self.vol.offset}
         while link.vol.offset not in seen:
-
             obj = self._context.object(
                 symbol_type, layer, offset=link.vol.offset - relative_offset
             )
@@ -625,7 +745,6 @@ class files_struct(objects.StructType):
 
 
 class mount(objects.StructType):
-
     MNT_NOSUID = 0x01
     MNT_NODEV = 0x02
     MNT_NOEXEC = 0x04
@@ -672,10 +791,69 @@ class mount(objects.StructType):
             raise AttributeError("Unable to find mount -> mount flags")
 
     def get_mnt_parent(self):
+        """Gets the fs where we are mounted on
+
+        Returns:
+            A 'mount *'
+        """
         return self.mnt_parent
 
     def get_mnt_mountpoint(self):
+        """Gets the dentry of the mountpoint
+
+        Returns:
+            A 'dentry *'
+        """
+
         return self.mnt_mountpoint
+
+    def get_parent_mount(self):
+        return self.mnt.get_parent_mount()
+
+    def has_parent(self) -> bool:
+        """Checks if this mount has a parent
+
+        Returns:
+            bool: 'True' if this mount has a parent
+        """
+        return self.mnt_parent != self.vol.offset
+
+    def get_vfsmnt_current(self):
+        """Returns the fs where we are mounted on
+
+        Returns:
+            A 'vfsmount'
+        """
+        return self.mnt
+
+    def get_vfsmnt_parent(self):
+        """Gets the parent fs (vfsmount) to where it's mounted on
+
+        Returns:
+            A 'vfsmount'
+        """
+
+        return self.get_mnt_parent().get_vfsmnt_current()
+
+    def get_dentry_current(self):
+        """Returns the root of the mounted tree
+
+        Returns:
+            A 'dentry *'
+        """
+        vfsmnt = self.get_vfsmnt_current()
+        dentry = vfsmnt.mnt_root
+
+        return dentry
+
+    def get_dentry_parent(self):
+        """Returns the parent root of the mounted tree
+
+        Returns:
+            A 'dentry *'
+        """
+
+        return self.get_mnt_parent().get_dentry_current()
 
     def get_flags_access(self) -> str:
         return "ro" if self.get_mnt_flags() & self.MNT_READONLY else "rw"
@@ -700,9 +878,6 @@ class mount(objects.StructType):
     def get_devname(self) -> str:
         return utility.pointer_to_string(self.mnt_devname, count=255)
 
-    def has_parent(self) -> bool:
-        return self.vol.offset != self.mnt_parent
-
     def get_dominating_id(self, root) -> int:
         """Get ID of closest dominating peer group having a representative under the given root."""
         mnt_seen = set()
@@ -715,7 +890,6 @@ class mount(objects.StructType):
             peer = current_mnt.get_peer_under_root(self.mnt_ns, root)
             if peer and peer.vol.offset != 0:
                 return peer.mnt_group_id
-
             mnt_seen.add(current_mnt.vol.offset)
             current_mnt = current_mnt.mnt_master
         return 0
@@ -731,12 +905,10 @@ class mount(objects.StructType):
                 current_mnt.mnt.mnt_root, root
             ):
                 return current_mnt
-
             mnt_seen.add(current_mnt.vol.offset)
             current_mnt = current_mnt.next_peer()
             if current_mnt.vol.offset == self.vol.offset:
                 break
-
         return None
 
     def is_path_reachable(self, current_dentry, root):
@@ -750,11 +922,9 @@ class mount(objects.StructType):
             and current_mnt.has_parent()
             and current_mnt.vol.offset not in mnt_seen
         ):
-
             current_dentry = current_mnt.mnt_mountpoint
             mnt_seen.add(current_mnt.vol.offset)
             current_mnt = current_mnt.mnt_parent
-
         return current_mnt.mnt.vol.offset == root.mnt and current_dentry.is_subdir(
             root.dentry
         )
@@ -781,24 +951,121 @@ class vfsmount(objects.StructType):
             and self.get_mnt_parent() != 0
         )
 
-    def _get_real_mnt(self):
-        table_name = self.vol.type_name.split(constants.BANG)[0]
-        mount_struct = f"{table_name}{constants.BANG}mount"
-        offset = self._context.symbol_space.get_type(
-            mount_struct
-        ).relative_child_offset("mnt")
+    def _is_kernel_prior_to_struct_mount(self) -> bool:
+        """Helper to distinguish between kernels prior to version 3.3.8 that
+        lacked the 'mount' structure and later versions that have it.
 
-        return self._context.object(
-            mount_struct, self.vol.layer_name, offset=self.vol.offset - offset
+        The 'mnt_parent' member was moved from struct 'vfsmount' to struct
+        'mount' when the latter was introduced.
+
+        Alternatively, vmlinux.has_type('mount') can be used here but it is faster.
+
+        Returns:
+            bool: 'True' if the kernel
+        """
+
+        return self.has_member("mnt_parent")
+
+    def is_equal(self, vfsmount_ptr) -> bool:
+        """Helper to make sure it is comparing two pointers to 'vfsmount'.
+
+        Depending on the kernel version, the calling object (self) could be
+        a 'vfsmount *' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
+        in the framework "auto" dereferencing ability to assure that when we
+        reach this point 'self' will be a 'vfsmount' already and self.vol.offset
+        a 'vfsmount *' and not a 'vfsmount **'. The argument must be a 'vfsmount *'.
+        Typically, it's called from do_get_path().
+
+        Args:
+            vfsmount_ptr (vfsmount *): A pointer to a 'vfsmount'
+
+        Raises:
+            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount *'
+
+        Returns:
+            bool: 'True' if the given argument points to the the same 'vfsmount'
+            as 'self'.
+        """
+        if type(vfsmount_ptr) == objects.Pointer:
+            return self.vol.offset == vfsmount_ptr
+        else:
+            raise exceptions.VolatilityException(
+                "Unexpected argument type. It has to be a 'vfsmount *'"
+            )
+
+    def _get_real_mnt(self):
+        """Gets the struct 'mount' containing this 'vfsmount'.
+
+        It should be only called from kernels >= 3.3.8 when 'struct mount' was introduced.
+
+        Returns:
+            mount: the struct 'mount' containing this 'vfsmount'.
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        return linux.LinuxUtilities.container_of(
+            self.vol.offset, "mount", "mnt", vmlinux
         )
 
+    def get_vfsmnt_current(self):
+        """Returns the current fs where we are mounted on
+
+        Returns:
+            A 'vfsmount *'
+        """
+        return self.get_mnt_parent()
+
+    def get_vfsmnt_parent(self):
+        """Gets the parent fs (vfsmount) to where it's mounted on
+
+        Returns:
+            For kernels <  3.3.8: A 'vfsmount *'
+            For kernels >= 3.3.8: A 'vfsmount'
+        """
+        if self._is_kernel_prior_to_struct_mount():
+            return self.get_mnt_parent()
+        else:
+            return self._get_real_mnt().get_vfsmnt_parent()
+
+    def get_dentry_current(self):
+        """Returns the root of the mounted tree
+
+        Returns:
+            A 'dentry *'
+        """
+        if self._is_kernel_prior_to_struct_mount():
+            return self.get_mnt_mountpoint()
+        else:
+            return self._get_real_mnt().get_dentry_current()
+
+    def get_dentry_parent(self):
+        """Returns the parent root of the mounted tree
+
+        Returns:
+            A 'dentry *'
+        """
+        if self._is_kernel_prior_to_struct_mount():
+            return self.get_mnt_mountpoint()
+        else:
+            return self._get_real_mnt().get_mnt_mountpoint()
+
     def get_mnt_parent(self):
-        if self.has_member("mnt_parent"):
+        """Gets the mnt_parent member.
+
+        Returns:
+            For kernels <  3.3.8: A 'vfsmount *'
+            For kernels >= 3.3.8: A 'mount *'
+        """
+        if self._is_kernel_prior_to_struct_mount():
             return self.mnt_parent
         else:
-            return self._get_real_mnt().mnt_parent
+            return self._get_real_mnt().get_mnt_parent()
 
     def get_mnt_mountpoint(self):
+        """Gets the dentry of the mountpoint
+
+        Returns:
+            A 'dentry *'
+        """
         if self.has_member("mnt_mountpoint"):
             return self.mnt_mountpoint
         else:
@@ -806,6 +1073,41 @@ class vfsmount(objects.StructType):
 
     def get_mnt_root(self):
         return self.mnt_root
+
+    def has_parent(self) -> bool:
+        if self._is_kernel_prior_to_struct_mount():
+            return self.mnt_parent != self.vol.offset
+        else:
+            return self._get_real_mnt().has_parent()
+
+    def get_mnt_sb(self):
+        return self.mnt_sb
+
+    def get_flags_access(self) -> str:
+        return "ro" if self.mnt_flags & mount.MNT_READONLY else "rw"
+
+    def get_flags_opts(self) -> Iterable[str]:
+        flags = [
+            mntflagtxt
+            for mntflag, mntflagtxt in mount.MNT_FLAGS.items()
+            if mntflag & self.mnt_flags != 0
+        ]
+        return flags
+
+    def get_mnt_flags(self):
+        return self.mnt_flags
+
+    def is_shared(self) -> bool:
+        return self.get_mnt_flags() & mount.MNT_SHARED
+
+    def is_unbindable(self) -> bool:
+        return self.get_mnt_flags() & mount.MNT_UNBINDABLE
+
+    def is_slave(self) -> bool:
+        return self.mnt_master and self.mnt_master.vol.offset != 0
+
+    def get_devname(self) -> str:
+        return utility.pointer_to_string(self.mnt_devname, count=255)
 
 
 class kobject(objects.StructType):
@@ -815,7 +1117,6 @@ class kobject(objects.StructType):
             ret = refcnt.counter
         else:
             ret = refcnt.refs.counter
-
         return ret
 
 
@@ -823,7 +1124,7 @@ class mnt_namespace(objects.StructType):
     def get_inode(self):
         if self.has_member("proc_inum"):
             return self.proc_inum
-        elif self.ns.has_member("inum"):
+        elif self.has_member("ns") and self.ns.has_member("inum"):
             return self.ns.inum
         else:
             raise AttributeError("Unable to find mnt_namespace inode")
@@ -834,6 +1135,296 @@ class mnt_namespace(objects.StructType):
         if not self._context.symbol_space.has_type(mnt_type):
             # Old kernels ~ 2.6
             mnt_type = table_name + constants.BANG + "vfsmount"
-
         for mount in self.list.to_list(mnt_type, "mnt_list"):
             yield mount
+
+
+class net(objects.StructType):
+    def get_inode(self):
+        if self.has_member("proc_inum"):
+            # 3.8.13 <= kernel < 3.19.8
+            return self.proc_inum
+        elif self.has_member("ns") and self.ns.has_member("inum"):
+            # kernel >= 3.19.8
+            return self.ns.inum
+        else:
+            # kernel < 3.8.13
+            raise AttributeError("Unable to find net_namespace inode")
+
+
+class socket(objects.StructType):
+    def _get_vol_kernel(self):
+        symbol_table_arr = self.vol.type_name.split("!", 1)
+        symbol_table = symbol_table_arr[0] if len(symbol_table_arr) == 2 else None
+
+        module_names = list(
+            self._context.modules.get_modules_by_symbol_tables(symbol_table)
+        )
+        if not module_names:
+            raise ValueError(f"No module using the symbol table {symbol_table}")
+        kernel_module_name = module_names[0]
+        kernel = self._context.modules[kernel_module_name]
+        return kernel
+
+    def get_inode(self):
+        try:
+            kernel = self._get_vol_kernel()
+        except ValueError:
+            return 0
+        socket_alloc = linux.LinuxUtilities.container_of(
+            self.vol.offset, "socket_alloc", "socket", kernel
+        )
+        vfs_inode = socket_alloc.vfs_inode
+
+        return vfs_inode.i_ino
+
+    def get_state(self):
+        socket_state_idx = self.state
+        if 0 <= socket_state_idx < len(SOCKET_STATES):
+            return SOCKET_STATES[socket_state_idx]
+
+
+class sock(objects.StructType):
+    def get_family(self):
+        family_idx = self.__sk_common.skc_family
+        if 0 <= family_idx < len(SOCK_FAMILY):
+            return SOCK_FAMILY[family_idx]
+
+    def get_type(self):
+        return SOCK_TYPES.get(self.sk_type, "")
+
+    def get_inode(self):
+        if not self.sk_socket:
+            return 0
+        return self.sk_socket.get_inode()
+
+    def get_protocol(self):
+        return
+
+    def get_state(self):
+        # Return the generic socket state
+        if self.has_member("sk"):
+            return self.sk.sk_socket.get_state()
+        return self.sk_socket.get_state()
+
+
+class unix_sock(objects.StructType):
+    def get_name(self):
+        if not self.addr:
+            return
+        sockaddr_un = self.addr.name.cast("sockaddr_un")
+        saddr = str(utility.array_to_string(sockaddr_un.sun_path))
+        return saddr
+
+    def get_protocol(self):
+        return
+
+    def get_state(self):
+        """Return a string representing the sock state."""
+
+        # Unix socket states reuse (a subset) of the inet_sock states contants
+        if self.sk.get_type() == "STREAM":
+            state_idx = self.sk.__sk_common.skc_state
+            if 0 <= state_idx < len(TCP_STATES):
+                return TCP_STATES[state_idx]
+        else:
+            # Return the generic socket state
+            return self.sk.sk_socket.get_state()
+
+    def get_inode(self):
+        return self.sk.get_inode()
+
+
+class inet_sock(objects.StructType):
+    def get_family(self):
+        family_idx = self.sk.__sk_common.skc_family
+        if 0 <= family_idx < len(SOCK_FAMILY):
+            return SOCK_FAMILY[family_idx]
+
+    def get_protocol(self):
+        # If INET6 family and a proto is defined, we use that specific IPv6 protocol.
+        # Otherwise, we use the standard IP protocol.
+        protocol = IP_PROTOCOLS.get(self.sk.sk_protocol)
+        if self.get_family() == "AF_INET6":
+            protocol = IPV6_PROTOCOLS.get(self.sk.sk_protocol, protocol)
+        return protocol
+
+    def get_state(self):
+        """Return a string representing the sock state."""
+
+        if self.sk.get_type() == "STREAM":
+            state_idx = self.sk.__sk_common.skc_state
+            if 0 <= state_idx < len(TCP_STATES):
+                return TCP_STATES[state_idx]
+        else:
+            # Return the generic socket state
+            return self.sk.sk_socket.get_state()
+
+    def get_src_port(self):
+        sport_le = getattr(self, "sport", getattr(self, "inet_sport", None))
+        if sport_le is not None:
+            return socket_module.htons(sport_le)
+
+    def get_dst_port(self):
+        sk_common = self.sk.__sk_common
+        if hasattr(sk_common, "skc_portpair"):
+            dport_le = sk_common.skc_portpair & 0xFFFF
+        elif hasattr(self, "dport"):
+            dport_le = self.dport
+        elif hasattr(self, "inet_dport"):
+            dport_le = self.inet_dport
+        elif hasattr(sk_common, "skc_dport"):
+            dport_le = sk_common.skc_dport
+        else:
+            return
+        return socket_module.htons(dport_le)
+
+    def get_src_addr(self):
+        sk_common = self.sk.__sk_common
+        family = sk_common.skc_family
+        if family == socket_module.AF_INET:
+            addr_size = 4
+            if hasattr(self, "rcv_saddr"):
+                saddr = self.rcv_saddr
+            elif hasattr(self, "inet_rcv_saddr"):
+                saddr = self.inet_rcv_saddr
+            else:
+                saddr = sk_common.skc_rcv_saddr
+        elif family == socket_module.AF_INET6:
+            addr_size = 16
+            saddr = self.pinet6.saddr
+        else:
+            return
+        parent_layer = self._context.layers[self.vol.layer_name]
+        try:
+            addr_bytes = parent_layer.read(saddr.vol.offset, addr_size)
+        except exceptions.InvalidAddressException:
+            vollog.debug(
+                f"Unable to read socket src address from {saddr.vol.offset:#x}"
+            )
+            return
+        return socket_module.inet_ntop(family, addr_bytes)
+
+    def get_dst_addr(self):
+        sk_common = self.sk.__sk_common
+        family = sk_common.skc_family
+        if family == socket_module.AF_INET:
+            if hasattr(self, "daddr") and self.daddr:
+                daddr = self.daddr
+            elif hasattr(self, "inet_daddr") and self.inet_daddr:
+                daddr = self.inet_daddr
+            else:
+                daddr = sk_common.skc_daddr
+            addr_size = 4
+        elif family == socket_module.AF_INET6:
+            if hasattr(self.pinet6, "daddr"):
+                daddr = self.pinet6.daddr
+            else:
+                daddr = sk_common.skc_v6_daddr
+            addr_size = 16
+        else:
+            return
+        parent_layer = self._context.layers[self.vol.layer_name]
+        try:
+            addr_bytes = parent_layer.read(daddr.vol.offset, addr_size)
+        except exceptions.InvalidAddressException:
+            vollog.debug(
+                f"Unable to read socket dst address from {daddr.vol.offset:#x}"
+            )
+            return
+        return socket_module.inet_ntop(family, addr_bytes)
+
+
+class netlink_sock(objects.StructType):
+    def get_protocol(self):
+        protocol_idx = self.sk.sk_protocol
+        if 0 <= protocol_idx < len(NETLINK_PROTOCOLS):
+            return NETLINK_PROTOCOLS[protocol_idx]
+
+    def get_state(self):
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()
+
+    def get_portid(self):
+        if self.has_member("pid"):
+            # kernel < 3.7.10
+            return self.pid
+        if self.has_member("portid"):
+            # kernel >= 3.7.10
+            return self.portid
+        else:
+            raise AttributeError("Unable to find a source port id")
+
+    def get_dst_portid(self):
+        if self.has_member("dst_pid"):
+            # kernel < 3.7.10
+            return self.dst_pid
+        if self.has_member("dst_portid"):
+            # kernel >= 3.7.10
+            return self.dst_portid
+        else:
+            raise AttributeError("Unable to find a destination port id")
+
+
+class vsock_sock(objects.StructType):
+    def get_protocol(self):
+        # The protocol should always be 0 for vsocks
+        return
+
+    def get_state(self):
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()
+
+
+class packet_sock(objects.StructType):
+    def get_protocol(self):
+        eth_proto = socket_module.htons(self.num)
+        if eth_proto == 0:
+            return
+        elif eth_proto in ETH_PROTOCOLS:
+            return ETH_PROTOCOLS[eth_proto]
+        else:
+            return f"0x{eth_proto:x}"
+
+    def get_state(self):
+        # Return the generic socket state
+        return self.sk.sk_socket.get_state()
+
+
+class bt_sock(objects.StructType):
+    def get_protocol(self):
+        type_idx = self.sk.sk_protocol
+        if 0 <= type_idx < len(BLUETOOTH_PROTOCOLS):
+            return BLUETOOTH_PROTOCOLS[type_idx]
+
+    def get_state(self):
+        state_idx = self.sk.__sk_common.skc_state
+        if 0 <= state_idx < len(BLUETOOTH_STATES):
+            return BLUETOOTH_STATES[state_idx]
+
+
+class xdp_sock(objects.StructType):
+    def get_protocol(self):
+        # The protocol should always be 0 for xdp_sock
+        return
+
+    def get_state(self):
+        # xdp_sock.state is an enum
+        return self.state.lookup()
+
+
+class bpf_prog(objects.StructType):
+    def get_type(self):
+        # The program type was in `bpf_prog_aux::prog_type` from 3.18.140 to
+        # 4.1.52 before it was moved to `bpf_prog::type`
+        if self.has_member("type"):
+            # kernel >= 4.1.52
+            return self.type
+
+        if self.has_member("aux") and self.aux:
+            if self.aux.has_member("prog_type"):
+                # 3.18.140 <= kernel < 4.1.52
+                return self.aux.prog_type
+
+        # kernel < 3.18.140
+        raise AttributeError("Unable to find the BPF type")

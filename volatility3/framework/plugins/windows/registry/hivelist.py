@@ -88,7 +88,6 @@ class HiveList(interfaces.plugins.PluginInterface):
             symbol_table=kernel.symbol_table_name,
             filter_string=self.config.get("filter", None),
         ):
-
             file_output = "Disabled"
             if self.config["dump"]:
                 # Construct the hive

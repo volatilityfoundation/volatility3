@@ -179,20 +179,18 @@ class ResourceAccessor(object):
                     except AttributeError:
                         # If our fp doesn't have an info member, carry on gracefully
                         content_length = -1
-                    cache_file = open(temp_filename, "wb")
-
-                    count = 0
-                    block = fp.read(block_size)
-                    while block:
-                        count += len(block)
-                        if self._progress_callback:
-                            self._progress_callback(
-                                count * 100 / max(count, int(content_length)),
-                                f"Reading file {url}",
-                            )
-                        cache_file.write(block)
+                    with open(temp_filename, "wb") as cache_file:
+                        count = 0
                         block = fp.read(block_size)
-                    cache_file.close()
+                        while block:
+                            count += len(block)
+                            if self._progress_callback:
+                                self._progress_callback(
+                                    count * 100 / max(count, int(content_length)),
+                                    f"Reading file {url}",
+                                )
+                            cache_file.write(block)
+                            block = fp.read(block_size)
                 else:
                     vollog.debug(f"Using already cached file at: {temp_filename}")
                 # Re-open the cache with a different mode

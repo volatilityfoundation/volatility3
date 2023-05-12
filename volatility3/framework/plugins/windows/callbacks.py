@@ -3,6 +3,7 @@
 #
 
 import logging
+import contextlib
 from typing import List, Iterable, Tuple, Optional, Union
 
 from volatility3.framework import constants, exceptions, renderers, interfaces, symbols
@@ -82,7 +83,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
-            callback_table_name: The nae of the table containing the callback symbols
+            callback_table_name: The name of the table containing the callback symbols
 
         Yields:
             A name, location and optional detail string
@@ -103,7 +104,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
         ]
 
         for symbol_name, extended_list in symbol_names:
-
             try:
                 symbol_offset = ntkrnlmp.get_symbol(symbol_name).address
             except exceptions.SymbolError:
@@ -182,7 +182,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
         layer_name: str,
         symbol_table: str,
         callback_table_name: str,
-    ) -> Iterable[Tuple[str, int, None]]:
+    ) -> Iterable[Tuple[str, int, Optional[str]]]:
         """
         Lists all registry callbacks via the CallbackListHead.
         """
@@ -203,7 +203,10 @@ class Callbacks(interfaces.plugins.PluginInterface):
 
         callback_list = ntkrnlmp.object(object_type="_LIST_ENTRY", offset=symbol_offset)
         for callback in callback_list.to_list(full_type_name, "Link"):
-            yield "CmRegisterCallbackEx", callback.Function, f"Altitude: {callback.Altitude.String}"
+            altitude = None
+            with contextlib.suppress(exceptions.InvalidAddressException):
+                altitude = callback.Altitude.String
+            yield "CmRegisterCallbackEx", callback.Function, f"Altitude: {altitude}"
 
     @classmethod
     def list_registry_callbacks(
@@ -212,14 +215,14 @@ class Callbacks(interfaces.plugins.PluginInterface):
         layer_name: str,
         symbol_table: str,
         callback_table_name: str,
-    ) -> Iterable[Tuple[str, int, None]]:
+    ) -> Iterable[Tuple[str, int, Optional[str]]]:
         """Lists all registry callbacks.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
-            callback_table_name: The nae of the table containing the callback symbols
+            callback_table_name: The name of the table containing the callback symbols
 
         Yields:
             A name, location and optional detail string
@@ -269,7 +272,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
-            callback_table_name: The nae of the table containing the callback symbols
+            callback_table_name: The name of the table containing the callback symbols
 
         Yields:
             A name, location and optional detail string
@@ -327,7 +330,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
-            callback_table_name: The nae of the table containing the callback symbols
+            callback_table_name: The name of the table containing the callback symbols
 
         Yields:
             A name, location and optional detail string
@@ -350,7 +353,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
         )
 
         for callback in callback_record.Entry:
-
             if not context.layers[layer_name].is_valid(callback.CallbackRoutine, 64):
                 continue
 
@@ -368,7 +370,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
             yield "KeBugCheckCallbackListHead", callback.CallbackRoutine, component
 
     def _generator(self):
-
         kernel = self.context.modules[self.config["kernel"]]
 
         callback_table_name = self.create_callback_table(
@@ -393,7 +394,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
                 kernel.symbol_table_name,
                 callback_table_name,
             ):
-
                 if callback_detail is None:
                     detail = renderers.NotApplicableValue()
                 else:
@@ -447,7 +447,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
                     )
 
     def run(self):
-
         return renderers.TreeGrid(
             [
                 ("Type", str),

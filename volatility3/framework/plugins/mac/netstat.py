@@ -68,7 +68,6 @@ class Netstat(plugins.PluginInterface):
         # This is hardcoded, since a change in the default method would change the expected results
         list_tasks = pslist.PsList.get_list_tasks(pslist.PsList.pslist_methods[0])
         for task in list_tasks(context, kernel_module_name, filter_func):
-
             task_name = utility.array_to_string(task.p_comm)
             pid = task.p_pid
 
@@ -101,7 +100,6 @@ class Netstat(plugins.PluginInterface):
         for task_name, pid, socket in self.list_sockets(
             self.context, self.config["kernel"], filter_func=filter_func
         ):
-
             family = socket.get_family()
 
             if family == 1:

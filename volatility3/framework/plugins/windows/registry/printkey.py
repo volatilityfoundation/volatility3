@@ -241,7 +241,6 @@ class PrintKey(interfaces.plugins.PluginInterface):
         key: str = None,
         recurse: bool = False,
     ):
-
         for hive in hivelist.HiveList.list_hives(
             self.context,
             self.config_path,
@@ -249,14 +248,13 @@ class PrintKey(interfaces.plugins.PluginInterface):
             symbol_table=symbol_table,
             hive_offsets=hive_offsets,
         ):
-
             try:
                 # Walk it
                 if key is not None:
                     node_path = hive.get_key(key, return_list=True)
                 else:
                     node_path = [hive.get_node(hive.root_cell_offset)]
-                for (x, y) in self._printkey_iterator(hive, node_path, recurse=recurse):
+                for x, y in self._printkey_iterator(hive, node_path, recurse=recurse):
                     yield (x - len(node_path), y)
             except (
                 exceptions.InvalidAddressException,

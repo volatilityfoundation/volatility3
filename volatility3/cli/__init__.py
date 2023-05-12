@@ -353,7 +353,9 @@ class CommandLine:
         ###
         if args.file:
             try:
-                single_location = self.location_from_file(args.file)
+                single_location = requirements.URIRequirement.location_from_file(
+                    args.file
+                )
                 ctx.config["automagic.LayerStacker.single_location"] = single_location
             except ValueError as excp:
                 parser.error(str(excp))
@@ -443,7 +445,7 @@ class CommandLine:
             # Construct and run the plugin
             if constructed:
                 renderers[args.renderer]().render(constructed.run())
-        except (exceptions.VolatilityException) as excp:
+        except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
 
     @classmethod
@@ -456,19 +458,10 @@ class CommandLine:
         Returns:
             The URL for the location of the file
         """
-        # We want to work in URLs, but we need to accept absolute and relative files (including on windows)
-        single_location = parse.urlparse(filename, "")
-        if single_location.scheme == "" or len(single_location.scheme) == 1:
-            single_location = parse.urlparse(
-                parse.urljoin("file:", request.pathname2url(os.path.abspath(filename)))
-            )
-        if single_location.scheme == "file":
-            if not os.path.exists(request.url2pathname(single_location.path)):
-                filename = request.url2pathname(single_location.path)
-                if not filename:
-                    raise ValueError("File URL looks incorrect (potentially missing /)")
-                raise ValueError(f"File does not exist: {filename}")
-        return parse.urlunparse(single_location)
+        vollog.debug(
+            f"{__name__}.location_from_file has been deprecated and moved to requirements.URIRequirement.location_from_file"
+        )
+        return requirements.URIRequirement.location_from_file(filename)
 
     def process_exceptions(self, excp):
         """Provide useful feedback if an exception occurs during a run of a plugin."""

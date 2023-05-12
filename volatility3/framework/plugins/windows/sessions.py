@@ -51,7 +51,6 @@ class Sessions(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
             kernel.symbol_table_name,
             filter_func=filter_func,
         ):
-
             session_id = proc.get_session_id()
 
             # Detect RDP, Console or set default value
@@ -112,7 +111,6 @@ class Sessions(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
                 yield (description, timeliner.TimeLinerType.CREATED, row_data[5])
 
     def run(self):
-
         return renderers.TreeGrid(
             [
                 ("Session ID", int),

@@ -65,7 +65,6 @@ class Kauth_scopes(interfaces.plugins.PluginInterface):
         )
 
         for scope in self.list_kauth_scopes(self.context, self.config["kernel"]):
-
             callback = scope.ks_callback
             if callback == 0:
                 continue

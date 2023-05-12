@@ -117,13 +117,15 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         chunk_size = 4096
         data = b""
         for i in range(
-            base_layer.maximum_address, base_layer.minimum_address, -chunk_size
+            base_layer.maximum_address + 1, base_layer.minimum_address, -chunk_size
         ):
-            if i != base_layer.maximum_address:
+            # Since we're going backwards, we need to include one extra byte so the tail doesn't get chopped off
+            if i != base_layer.maximum_address + 1:
                 data = (base_layer.read(i, chunk_size) + data).rstrip(b"\x00")
                 if b"\x00" in data:
                     last_null_byte = data.rfind(b"\x00")
                     start_of_json = data.find(b"{", last_null_byte)
+
                     if start_of_json >= 0:
                         data = data[start_of_json:]
                         return json.loads(data)

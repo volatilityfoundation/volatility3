@@ -202,7 +202,6 @@ class MMVAD_SHORT(objects.StructType):
 
         # this is for windows 8 and 10
         elif self.has_member("VadNode"):
-
             if self.VadNode.has_member("u1"):
                 return self.VadNode.u1.Parent & ~0x3
 
@@ -211,7 +210,6 @@ class MMVAD_SHORT(objects.StructType):
 
         # also for windows 8 and 10
         elif self.has_member("Core"):
-
             if self.Core.VadNode.has_member("u1"):
                 return self.Core.VadNode.u1.Parent & ~0x3
 
@@ -224,14 +222,12 @@ class MMVAD_SHORT(objects.StructType):
         """Get the VAD's starting virtual address. This is the first accessible byte in the range."""
 
         if self.has_member("StartingVpn"):
-
             if self.has_member("StartingVpnHigh"):
                 return (self.StartingVpn << 12) | (self.StartingVpnHigh << 44)
             else:
                 return self.StartingVpn << 12
 
         elif self.has_member("Core"):
-
             if self.Core.has_member("StartingVpnHigh"):
                 return (self.Core.StartingVpn << 12) | (self.Core.StartingVpnHigh << 44)
             else:
@@ -243,7 +239,6 @@ class MMVAD_SHORT(objects.StructType):
         """Get the VAD's ending virtual address. This is the last accessible byte in the range."""
 
         if self.has_member("EndingVpn"):
-
             if self.has_member("EndingVpnHigh"):
                 return (((self.EndingVpn + 1) << 12) | (self.EndingVpnHigh << 44)) - 1
             else:
@@ -376,7 +371,6 @@ class EX_FAST_REF(objects.StructType):
     """
 
     def dereference(self) -> interfaces.objects.ObjectInterface:
-
         if constants.BANG not in self.vol.type_name:
             raise ValueError(
                 f"Invalid symbol table name syntax (no {constants.BANG} found)"
@@ -771,7 +765,6 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         return False
 
     def get_vad_root(self):
-
         # windows 8 and 2012 (_MM_AVL_TABLE)
         if self.VadRoot.has_member("BalancedRoot"):
             return self.VadRoot.BalancedRoot
@@ -1346,7 +1339,6 @@ class SHARED_CACHE_MAP(objects.StructType):
         limit_depth = level_depth
 
         if section_size > self.VACB_SIZE_OF_FIRST_LEVEL:
-
             # Create an array of 128 entries for the VACB index array.
             vacb_array = self._context.object(
                 object_type=symbol_table_name + constants.BANG + "array",

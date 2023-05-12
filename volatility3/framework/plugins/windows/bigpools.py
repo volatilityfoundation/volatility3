@@ -141,7 +141,6 @@ class BigPools(interfaces.plugins.PluginInterface):
             tags=tags,
             show_free=self.config.get("show-free"),
         ):
-
             num_bytes = big_pool.get_number_of_bytes()
             if not isinstance(num_bytes, interfaces.renderers.BaseAbsentValue):
                 num_bytes = format_hints.Hex(num_bytes)

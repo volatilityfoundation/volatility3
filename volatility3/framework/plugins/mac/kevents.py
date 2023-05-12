@@ -184,7 +184,6 @@ class Kevents(interfaces.plugins.PluginInterface):
         for task_name, pid, kn in self.list_kernel_events(
             self.context, self.config["kernel"], filter_func=filter_func
         ):
-
             filter_index = kn.kn_kevent.filter * -1
             if filter_index in self.event_types:
                 filter_name = self.event_types[filter_index]

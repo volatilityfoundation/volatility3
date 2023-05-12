@@ -381,6 +381,7 @@ class ModuleCollection(interfaces.context.ModuleContainer):
     def __init__(
         self, modules: Optional[List[interfaces.context.ModuleInterface]] = None
     ) -> None:
+        self._prefix_count = {}
         super().__init__(modules)
 
     def deduplicate(self) -> "ModuleCollection":
@@ -400,9 +401,13 @@ class ModuleCollection(interfaces.context.ModuleContainer):
 
     def free_module_name(self, prefix: str = "module") -> str:
         """Returns an unused module name"""
-        count = 1
+        if prefix not in self._prefix_count:
+            self._prefix_count[prefix] = 1
+            return prefix
+        count = self._prefix_count[prefix]
         while prefix + str(count) in self:
             count += 1
+        self._prefix_count[prefix] = count
         return prefix + str(count)
 
     @property

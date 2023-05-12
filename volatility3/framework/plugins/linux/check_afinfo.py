@@ -68,7 +68,6 @@ class Check_afinfo(plugins.PluginInterface):
             yield var_name, "show", var.seq_show
 
     def _generator(self):
-
         vmlinux = self.context.modules[self.config["kernel"]]
 
         op_members = vmlinux.get_type("file_operations").members
@@ -86,7 +85,7 @@ class Check_afinfo(plugins.PluginInterface):
         )
         protocols = [tcp, udp]
 
-        for (struct_type, global_vars) in protocols:
+        for struct_type, global_vars in protocols:
             for global_var_name in global_vars:
                 # this will lookup fail for the IPv6 protocols on kernels without IPv6 support
                 try:
@@ -104,7 +103,6 @@ class Check_afinfo(plugins.PluginInterface):
                     yield 0, (name, member, format_hints.Hex(address))
 
     def run(self):
-
         return renderers.TreeGrid(
             [
                 ("Symbol Name", str),

@@ -54,7 +54,6 @@ class DriverScan(interfaces.plugins.PluginInterface):
         for result in poolscanner.PoolScanner.generate_pool_scan(
             context, layer_name, symbol_table, constraints
         ):
-
             _constraint, mem_object, _header = result
             yield mem_object
 
