@@ -74,10 +74,14 @@ class Capabilities(plugins.PluginInterface):
         """
         vmlinux = self.context.modules[self.config["kernel"]]
 
-        kernel_cap_last_cap = vmlinux.object(object_type="int", offset=kernel_cap_last_cap)
+        kernel_cap_last_cap = vmlinux.object(
+            object_type="int", offset=kernel_cap_last_cap
+        )
         vol2_last_cap = extensions.kernel_cap_struct.get_last_cap_value()
         if kernel_cap_last_cap > vol2_last_cap:
-            vollog.warning("Developers: The supported Linux capabilities of this plugin are outdated for this kernel")
+            vollog.warning(
+                "Developers: The supported Linux capabilities of this plugin are outdated for this kernel"
+            )
 
     @staticmethod
     def _decode_cap(cap: interfaces.objects.ObjectInterface) -> str:
@@ -99,7 +103,7 @@ class Capabilities(plugins.PluginInterface):
         if cap_value == 0:
             return "-"
 
-        CAP_FULL = 0xffffffff
+        CAP_FULL = 0xFFFFFFFF
         if cap_value == CAP_FULL:
             return "all"
 
@@ -129,7 +133,7 @@ class Capabilities(plugins.PluginInterface):
                 task_cred.cap_permitted,
                 task_cred.cap_effective,
                 task_cred.cap_bset,
-            ]
+            ],
         }
 
         # Ambient capabilities were added in kernels 4.3.6
@@ -140,7 +144,9 @@ class Capabilities(plugins.PluginInterface):
 
         return fields
 
-    def get_tasks_capabilities(self, tasks: List[interfaces.objects.ObjectInterface]) -> Iterable[Dict]:
+    def get_tasks_capabilities(
+        self, tasks: List[interfaces.objects.ObjectInterface]
+    ) -> Iterable[Dict]:
         """Yields a dict for each task containing the task's basic information along with its capabilities
 
         Args:
@@ -155,7 +161,9 @@ class Capabilities(plugins.PluginInterface):
 
             yield self.get_task_capabilities(task)
 
-    def _generator(self, tasks: Iterable[interfaces.objects.ObjectInterface]) -> Iterable[Tuple[int, Tuple]]:
+    def _generator(
+        self, tasks: Iterable[interfaces.objects.ObjectInterface]
+    ) -> Iterable[Tuple[int, Tuple]]:
         for fields in self.get_tasks_capabilities(tasks):
             selected_fields = fields["common"]
             cap_inh, cap_prm, cap_eff, cap_bnd, cap_amb = fields["capabilities"]
@@ -188,7 +196,9 @@ class Capabilities(plugins.PluginInterface):
     def run(self):
         pids = self.config.get("pids")
         pid_filter = pslist.PsList.create_pid_filter(pids)
-        tasks = pslist.PsList.list_tasks(self.context, self.config["kernel"], filter_func=pid_filter)
+        tasks = pslist.PsList.list_tasks(
+            self.context, self.config["kernel"], filter_func=pid_filter
+        )
 
         columns = [
             ("Name", str),

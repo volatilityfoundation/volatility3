@@ -1430,6 +1430,7 @@ class bpf_prog(objects.StructType):
         # kernel < 3.18.140
         raise AttributeError("Unable to find the BPF type")
 
+
 class cred(objects.StructType):
     # struct cred was added in kernels 2.6.29
     def _get_cred_int_value(self, member: str) -> int:
@@ -1507,7 +1508,7 @@ class kernel_cap_struct(objects.StructType):
         """
         # In kernels 2.6.25.20 the kernel_cap_struct::cap became and array
         cap_value = self.cap[0] if isinstance(self.cap, objects.Array) else self.cap
-        return int(cap_value & 0xffffffff)
+        return int(cap_value & 0xFFFFFFFF)
 
     def enumerate_capabilities(self) -> List[str]:
         """Returns the list of capability strings.
