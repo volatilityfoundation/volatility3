@@ -5,7 +5,7 @@
 import collections.abc
 import logging
 import socket as socket_module
-from typing import Generator, Iterable, Iterator, Optional, Tuple
+from typing import Generator, Iterable, Iterator, Optional, Tuple, List
 
 from volatility3.framework import constants
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
@@ -1428,3 +1428,109 @@ class bpf_prog(objects.StructType):
 
         # kernel < 3.18.140
         raise AttributeError("Unable to find the BPF type")
+
+class cred(objects.StructType):
+    # struct cred was added in kernels 2.6.29
+    def _get_cred_int_value(self, member: str) -> int:
+        """Helper to obtain the right cred member value for the current kernel.
+
+        Args:
+            member (str): The requested cred member name to obtain its value
+
+        Raises:
+            AttributeError: When the requested cred member doesn't exist
+            AttributeError: When the cred implementation is not supported.
+
+        Returns:
+            int: The cred member value
+        """
+        if not self.has_member(member):
+            raise AttributeError(f"struct cred doesn't have a '{member}' member")
+
+        cred_val = self.member(member)
+        if hasattr(cred_val, "val"):
+            # From kernels 3.5.7 on it is a 'kuid_t' type
+            value = cred_val.val
+        elif isinstance(cred_val, objects.Integer):
+            # From at least 2.6.30 and until 3.5.7 it was a 'uid_t' type which was an 'unsigned int'
+            value = cred_val
+        else:
+            raise AttributeError("Kernel struct cred is not supported")
+
+        return int(value)
+
+    @property
+    def euid(self):
+        """Returns the effective user ID
+
+        Returns:
+            int: the effective user ID value
+        """
+        return self._get_cred_int_value("euid")
+
+
+class kernel_cap_struct(objects.StructType):
+    # struct kernel_cap_struct was added in kernels 2.5.0
+    @classmethod
+    def get_last_cap_value(cls) -> int:
+        """Returns the latest capability ID supported by the framework.
+
+        Returns:
+            int: The latest supported capability ID supported by the framework.
+        """
+        return len(constants.CAPABILITIES) - 1
+
+    @classmethod
+    def capabilities_to_string(cls, capabilities_bitfield: int) -> List[str]:
+        """Translates a capability bitfield to a list of capability strings.
+
+        Args:
+            capabilities_bitfield (int): The capability bitfield value.
+
+        Returns:
+            List[str]: A list of capability strings.
+        """
+
+        capabilities = []
+        for bit, name in enumerate(constants.CAPABILITIES):
+            if capabilities_bitfield & (1 << bit) != 0:
+                capabilities.append(name)
+
+        return capabilities
+
+    def get_capabilities(self) -> int:
+        """Returns the capability bitfield value
+
+        Returns:
+            int: The capability bitfield value.
+        """
+        # In kernels 2.6.25.20 the kernel_cap_struct::cap became and array
+        cap_value = self.cap[0] if isinstance(self.cap, objects.Array) else self.cap
+        return int(cap_value & 0xffffffff)
+
+    def enumerate_capabilities(self) -> List[str]:
+        """Returns the list of capability strings.
+
+        Returns:
+            List[str]: The list of capability strings.
+        """
+        capabilities_value = self.get_capabilities()
+        return self.capabilities_to_string(capabilities_value)
+
+    def has_capability(self, capability: str) -> bool:
+        """Checks if the given capability string is enabled.
+
+        Args:
+            capability (str): A string representing the capability i.e. dac_read_search
+
+        Raises:
+            AttributeError: If the fiven capability is unknown to the framework.
+
+        Returns:
+            bool: "True" if the given capability is enabled.
+        """
+        if capability not in constants.CAPABILITIES:
+            raise AttributeError(f"Unknown capability with name '{capability}'")
+
+        cap_value = 1 << constants.CAPABILITIES.index(capability)
+        return cap_value & self.get_capabilities() != 0
