@@ -224,6 +224,20 @@ class PoolScanner(plugins.PluginInterface):
                 size=(600, None),
                 page_type=PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE,
             ),
+            # threads on windows before windows8
+            PoolConstraint(b'Thr\xe5',  # -> “protected” allocation, MSB is set.
+                type_name = symbol_table + constants.BANG + "_ETHREAD",
+                object_type="Thread",
+                size = (600, None),     # -> 0x0258 - size of strcut in win5.1
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE
+            ),
+            # threads on windows starting with windows8
+            PoolConstraint(b'Thre',
+                type_name = symbol_table + constants.BANG + "_ETHREAD",
+                object_type="Thread",
+                size = (600, None),     # -> 0x0258 - size of strcut in win5.1
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE
+            ),
             # files on windows before windows 8
             PoolConstraint(
                 b"Fil\xe5",
