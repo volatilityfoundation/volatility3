@@ -13,6 +13,7 @@ from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
 from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
+from volatility3.framework.constants.linux import CAPABILITIES
 from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
@@ -1478,7 +1479,7 @@ class kernel_cap_struct(objects.StructType):
         Returns:
             int: The latest supported capability ID supported by the framework.
         """
-        return len(constants.CAPABILITIES) - 1
+        return len(CAPABILITIES) - 1
 
     @classmethod
     def capabilities_to_string(cls, capabilities_bitfield: int) -> List[str]:
@@ -1492,7 +1493,7 @@ class kernel_cap_struct(objects.StructType):
         """
 
         capabilities = []
-        for bit, name in enumerate(constants.CAPABILITIES):
+        for bit, name in enumerate(CAPABILITIES):
             if capabilities_bitfield & (1 << bit) != 0:
                 capabilities.append(name)
 
@@ -1529,8 +1530,8 @@ class kernel_cap_struct(objects.StructType):
         Returns:
             bool: "True" if the given capability is enabled.
         """
-        if capability not in constants.CAPABILITIES:
+        if capability not in CAPABILITIES:
             raise AttributeError(f"Unknown capability with name '{capability}'")
 
-        cap_value = 1 << constants.CAPABILITIES.index(capability)
+        cap_value = 1 << CAPABILITIES.index(capability)
         return cap_value & self.get_capabilities() != 0
