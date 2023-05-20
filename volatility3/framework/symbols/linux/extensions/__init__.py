@@ -1526,7 +1526,7 @@ class kernel_cap_struct(objects.StructType):
             capability (str): A string representing the capability i.e. dac_read_search
 
         Raises:
-            AttributeError: If the fiven capability is unknown to the framework.
+            AttributeError: If the given capability is unknown to the framework.
 
         Returns:
             bool: "True" if the given capability is enabled.
