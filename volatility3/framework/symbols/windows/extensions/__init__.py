@@ -492,9 +492,13 @@ class KMUTANT(objects.StructType, pool.ExecutiveObject):
         return header.NameInfo.Name.String  # type: ignore
 
 
-class ETHREAD(objects.StructType):
+class ETHREAD(objects.StructType, pool.ExecutiveObject):
     """A class for executive thread objects."""
 
+    def is_valid(self) -> bool:
+        """Determine if the object is valid."""
+        return True     # temporary, need to implement validation later.
+    
     def owning_process(self) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""
 
