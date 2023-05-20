@@ -497,7 +497,30 @@ class ETHREAD(objects.StructType, pool.ExecutiveObject):
 
     def is_valid(self) -> bool:
         """Determine if the object is valid."""
-        return True     # temporary, need to implement validation later.
+
+        try:
+
+            # validation by thread creation time:
+            ctime = self.get_create_time()
+            if not isinstance(ctime, datetime.datetime):
+                return False
+
+            # validation by parent process:
+            own_proc = self.owning_process()
+            # return own_proc.is_valid()    
+            if own_proc.UniqueProcessId % 4 != 0: # NT pids are divisible by 4
+                return False
+            
+            # passed all valitations
+            return True
+        except:
+            return False
+        
+    def get_create_time(self):
+        return conversion.wintime_to_datetime(self.CreateTime.QuadPart)
+
+    def get_exit_time(self):
+        return conversion.wintime_to_datetime(self.ExitTime.QuadPart)
     
     def owning_process(self) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""
