@@ -499,18 +499,21 @@ class ETHREAD(objects.StructType, pool.ExecutiveObject):
         """Determine if the object is valid."""
 
         try:
-
-            # validation by thread creation time:
-            ctime = self.get_create_time()
-            if not isinstance(ctime, datetime.datetime):
-                return False
-
-            # validation by parent process:
-            own_proc = self.owning_process()
-            # return own_proc.is_valid()    
-            if own_proc.UniqueProcessId % 4 != 0: # NT pids are divisible by 4
+            
+            # validation by TID:
+            if self.Cid.UniqueThread % 4 != 0: # NT tids are divisible by 4
                 return False
             
+            # validation by PID of parent process:
+            if self.Cid.UniqueProcess % 4 != 0:
+                return False
+            
+            # validation by thread creation time:
+            if self.Cid.UniqueProcess != 4:     # The System process (PID 4) has no create time
+                ctime = self.get_create_time()
+                if not isinstance(ctime, datetime.datetime):
+                    return False
+
             # passed all valitations
             return True
         except:
