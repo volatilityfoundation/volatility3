@@ -189,6 +189,16 @@ def test_windows_svcscan(image, volatility, python):
     assert rc == 0
 
 
+def test_windows_thrdscan(image, volatility, python):
+    rc, out, err = runvol_plugin("windows.thrdscan.ThrdScan", image, volatility, python)
+    # find pid 4 (of system process) which starts with lowest tids
+    assert out.find(b"\t4\t8") != -1
+    assert out.find(b"\t4\t12") != -1
+    assert out.find(b"\t4\t16") != -1
+    #assert out.find(b"this raieses AssertionError") != -1
+    assert rc == 0
+
+
 def test_windows_privileges(image, volatility, python):
     rc, out, err = runvol_plugin(
         "windows.privileges.Privs", image, volatility, python, pluginargs=["--pid", "4"]
