@@ -201,7 +201,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             str: A file (or sock pipe) pathname relative to the task's root directory.
         """
 
-        # Memory smear protection: Check that both the file and dentry pointers are valids.
+        # Memory smear protection: Check that both the file and dentry pointers are valid.
         try:
             dentry = filp.get_dentry()
             dentry.is_root()
