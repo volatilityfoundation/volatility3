@@ -9,15 +9,16 @@ from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins.windows import poolscanner
+from volatility3.plugins import timeliner
 
 vollog = logging.getLogger(__name__)
 
 
-class ThrdScan(interfaces.plugins.PluginInterface):
+class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for windows threads."""
 
     # cuz installed Framework interface version 2
-    _required_framework_version = (2, 0, 0)     
+    _required_framework_version = (2, 0, 0)  
 
     @classmethod
     def get_requirements(cls):
@@ -93,15 +94,40 @@ class ThrdScan(interfaces.plugins.PluginInterface):
                 )
             )
 
+    def generate_timeline(self):
+        for row in self._generator():
+            _depth, row_data = row
+            row_dict = {}
+            (
+                row_dict["Offset"],
+                row_dict["PID"],
+                row_dict["TID"],
+                row_dict["StartAddress"],
+                row_dict["CreateTime"],
+                row_dict["ExitTime"],
+            ) = row_data
+
+            # Skip threads with no creation time
+            # - mainly system process threads
+            if not isinstance(row_dict["CreateTime"], datetime.datetime):
+                continue
+            description = (f"Thread: Tid {row_dict['TID']} in Pid {row_dict['PID']} (Offset {row_dict['Offset']})")
+            
+            # yield created time, and if there is exit time, yield it too.
+            yield (description, timeliner.TimeLinerType.CREATED, row_dict["CreateTime"])
+            if isinstance(row_dict["ExitTime"], datetime.datetime):
+                yield (description, timeliner.TimeLinerType.MODIFIED, row_dict["ExitTime"])           
+
+
     def run(self):
         return renderers.TreeGrid(
             [
                 ("Offset", format_hints.Hex),
                 ("PID", int),
                 ("TID", int),
-                ("Start Address", format_hints.Hex),
-                ("Create Time", datetime.datetime),
-                ("Exit Time", datetime.datetime),
+                ("StartAddress", format_hints.Hex),
+                ("CreateTime", datetime.datetime),
+                ("ExitTime", datetime.datetime),
             ],
             self._generator(),
         )
