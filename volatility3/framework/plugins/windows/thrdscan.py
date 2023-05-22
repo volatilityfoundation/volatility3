@@ -18,7 +18,7 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
     """Scans for windows threads."""
 
     # cuz installed Framework interface version 2
-    _required_framework_version = (2, 0, 0)  
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
@@ -33,7 +33,7 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
                 name="poolscanner", plugin=poolscanner.PoolScanner, version=(1, 0, 0)
             ),
         ]
-    
+
     @classmethod
     def scan_threads(
         cls,
@@ -53,7 +53,7 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
         """
 
         constraints = poolscanner.PoolScanner.builtin_constraints(
-            symbol_table,  [b"Thr\xe5", b"Thre"]
+            symbol_table, [b"Thr\xe5", b"Thre"]
         )
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
@@ -69,12 +69,16 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
             self.context, kernel.layer_name, kernel.symbol_table_name
         ):
             try:
-                thread_offset       = ethread.vol.offset
-                owner_proc_pid      = ethread.Cid.UniqueProcess
-                thread_tid          = ethread.Cid.UniqueThread
-                thread_start_addr   = ethread.StartAddress
-                thread_create_time  = ethread.get_create_time()     # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
-                thread_exit_time    = ethread.get_exit_time()       # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
+                thread_offset = ethread.vol.offset
+                owner_proc_pid = ethread.Cid.UniqueProcess
+                thread_tid = ethread.Cid.UniqueThread
+                thread_start_addr = ethread.StartAddress
+                thread_create_time = (
+                    ethread.get_create_time()
+                )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
+                thread_exit_time = (
+                    ethread.get_exit_time()
+                )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
             except (ValueError, exceptions.InvalidAddressException):
                 vollog.debug(
                     "Thread :{}, invalid address {} in layer {}".format(
@@ -86,13 +90,13 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
             yield (
                 0,
                 (
-                format_hints.Hex(thread_offset),
-                owner_proc_pid,
-                thread_tid,
-                format_hints.Hex(thread_start_addr),
-                thread_create_time,
-                thread_exit_time,
-                )
+                    format_hints.Hex(thread_offset),
+                    owner_proc_pid,
+                    thread_tid,
+                    format_hints.Hex(thread_start_addr),
+                    thread_create_time,
+                    thread_exit_time,
+                ),
             )
 
     def generate_timeline(self):
@@ -112,13 +116,16 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
             # - mainly system process threads
             if not isinstance(row_dict["CreateTime"], datetime.datetime):
                 continue
-            description = (f"Thread: Tid {row_dict['TID']} in Pid {row_dict['PID']} (Offset {row_dict['Offset']})")
-            
+            description = f"Thread: Tid {row_dict['TID']} in Pid {row_dict['PID']} (Offset {row_dict['Offset']})"
+
             # yield created time, and if there is exit time, yield it too.
             yield (description, timeliner.TimeLinerType.CREATED, row_dict["CreateTime"])
             if isinstance(row_dict["ExitTime"], datetime.datetime):
-                yield (description, timeliner.TimeLinerType.MODIFIED, row_dict["ExitTime"])           
-
+                yield (
+                    description,
+                    timeliner.TimeLinerType.MODIFIED,
+                    row_dict["ExitTime"],
+                )
 
     def run(self):
         return renderers.TreeGrid(
