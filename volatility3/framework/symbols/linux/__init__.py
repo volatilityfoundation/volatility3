@@ -200,8 +200,11 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         Returns:
             str: A file (or sock pipe) pathname relative to the task's root directory.
         """
+
+        # Memory smear protection: Check that both the file and dentry pointers are valids.
         try:
             dentry = filp.get_dentry()
+            dentry.is_root()
         except exceptions.InvalidAddressException:
             return ""
 
