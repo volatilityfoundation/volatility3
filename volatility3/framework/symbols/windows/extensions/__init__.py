@@ -514,10 +514,11 @@ class ETHREAD(objects.StructType, pool.ExecutiveObject):
                 if not isinstance(ctime, datetime.datetime):
                     return False
 
-            # passed all valitations
-            return True
-        except:
+        except exceptions.InvalidAddressException:
             return False
+
+        # passed all validations
+        return True        
         
     def get_create_time(self):
         return conversion.wintime_to_datetime(self.CreateTime.QuadPart)
