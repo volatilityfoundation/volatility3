@@ -84,24 +84,24 @@ class ThrdScan(interfaces.plugins.PluginInterface):
             yield (
                 0,
                 (
-                hex(format_hints.Hex(thread_offset)),
+                format_hints.Hex(thread_offset),
                 owner_proc_pid,
                 thread_tid,
-                hex(thread_start_addr),
-                str(thread_create_time) if isinstance(thread_create_time, datetime.datetime) else "",
-                str(thread_exit_time) if isinstance(thread_exit_time, datetime.datetime) else ""
+                format_hints.Hex(thread_start_addr),
+                thread_create_time,
+                thread_exit_time,
                 )
             )
 
     def run(self):
         return renderers.TreeGrid(
             [
-                ("Offset", str),
+                ("Offset", format_hints.Hex),
                 ("PID", int),
                 ("TID", int),
-                ("Start Address", str),
-                ("Create Time", str),
-                ("Exit Time", str),
+                ("Start Address", format_hints.Hex),
+                ("Create Time", datetime.datetime),
+                ("Exit Time", datetime.datetime),
             ],
             self._generator(),
         )
