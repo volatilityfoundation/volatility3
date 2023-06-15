@@ -37,7 +37,7 @@ class LdrModules(interfaces.plugins.PluginInterface):
                 description="Print the full paths and base names in verbose mode ",
                 default=False,
                 optional=True,
-            )
+            ),
         ]
 
     def _generator(self, procs):
@@ -87,21 +87,30 @@ class LdrModules(interfaces.plugins.PluginInterface):
                 load_mod = load_order_mod.get(base, None)
                 init_mod = init_order_mod.get(base, None)
                 mem_mod = mem_order_mod.get(base, None)
-                
+
                 load = renderers.NotApplicableValue()
                 init = renderers.NotApplicableValue()
                 mem = renderers.NotApplicableValue()
 
                 try:
                     if load_mod:
-                        load = "{0} : {1}".format(load_mod.FullDllName.get_string(), load_mod.BaseDllName.get_string())
+                        load = "{0} : {1}".format(
+                            load_mod.FullDllName.get_string(),
+                            load_mod.BaseDllName.get_string(),
+                        )
                     if init_mod:
-                        init = "{0} : {1}".format(init_mod.FullDllName.get_string(), init_mod.BaseDllName.get_string())
+                        init = "{0} : {1}".format(
+                            init_mod.FullDllName.get_string(),
+                            init_mod.BaseDllName.get_string(),
+                        )
                     if mem_mod:
-                        mem = "{0} : {1}".format(mem_mod.FullDllName.get_string(), mem_mod.BaseDllName.get_string())
+                        mem = "{0} : {1}".format(
+                            mem_mod.FullDllName.get_string(),
+                            mem_mod.BaseDllName.get_string(),
+                        )
                 except exceptions.InvalidAddressException:
                     continue
-                
+
                 if not self.config.get("verbose", True):
                     yield (
                         0,
@@ -140,7 +149,7 @@ class LdrModules(interfaces.plugins.PluginInterface):
                             mapped_files[base],
                             load,
                             init,
-                            mem
+                            mem,
                         ],
                     )
 
@@ -180,7 +189,7 @@ class LdrModules(interfaces.plugins.PluginInterface):
                     ("MappedPath", str),
                     ("LoadPath", str),
                     ("InitPath", str),
-                    ("MemPath", str)
+                    ("MemPath", str),
                 ],
                 self._generator(
                     pslist.PsList.list_processes(
