@@ -34,7 +34,7 @@ class LdrModules(interfaces.plugins.PluginInterface):
             ),
             requirements.BooleanRequirement(
                 name="verbose",
-                description="Print the full paths and base names in verbose mode ",
+                description="Print the full paths and base names in verbose mode",
                 default=False,
                 optional=True,
             ),
