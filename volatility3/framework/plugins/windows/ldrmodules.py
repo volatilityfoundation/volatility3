@@ -88,9 +88,9 @@ class LdrModules(interfaces.plugins.PluginInterface):
                 init_mod = init_order_mod.get(base, None)
                 mem_mod = mem_order_mod.get(base, None)
                 
-                load = "-"
-                init = "-"
-                mem = "-"
+                load = renderers.NotApplicableValue()
+                init = renderers.NotApplicableValue()
+                mem = renderers.NotApplicableValue()
 
                 try:
                     if load_mod:
