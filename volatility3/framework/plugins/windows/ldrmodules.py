@@ -10,7 +10,7 @@ class LdrModules(interfaces.plugins.PluginInterface):
     """Lists the loaded modules in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls):
@@ -32,6 +32,12 @@ class LdrModules(interfaces.plugins.PluginInterface):
                 description="Process IDs to include (all other processes are excluded)",
                 optional=True,
             ),
+            requirements.BooleanRequirement(
+                name="verbose",
+                description="Print the full paths and base names in verbose mode ",
+                default=False,
+                optional=True,
+            )
         ]
 
     def _generator(self, procs):
@@ -81,46 +87,107 @@ class LdrModules(interfaces.plugins.PluginInterface):
                 load_mod = load_order_mod.get(base, None)
                 init_mod = init_order_mod.get(base, None)
                 mem_mod = mem_order_mod.get(base, None)
+                
+                load = "-"
+                init = "-"
+                mem = "-"
 
-                yield (
-                    0,
-                    [
-                        int(proc.UniqueProcessId),
-                        str(
-                            proc.ImageFileName.cast(
-                                "string",
-                                max_length=proc.ImageFileName.vol.count,
-                                errors="replace",
-                            )
-                        ),
-                        format_hints.Hex(base),
-                        load_mod is not None,
-                        init_mod is not None,
-                        mem_mod is not None,
-                        mapped_files[base],
-                    ],
-                )
+                try:
+                    if load_mod:
+                        load = "{0} : {1}".format(load_mod.FullDllName.get_string(), load_mod.BaseDllName.get_string())
+                    if init_mod:
+                        init = "{0} : {1}".format(init_mod.FullDllName.get_string(), init_mod.BaseDllName.get_string())
+                    if mem_mod:
+                        mem = "{0} : {1}".format(mem_mod.FullDllName.get_string(), mem_mod.BaseDllName.get_string())
+                except exceptions.InvalidAddressException:
+                    continue
+                
+                if not self.config.get("verbose", True):
+                    yield (
+                        0,
+                        [
+                            int(proc.UniqueProcessId),
+                            str(
+                                proc.ImageFileName.cast(
+                                    "string",
+                                    max_length=proc.ImageFileName.vol.count,
+                                    errors="replace",
+                                )
+                            ),
+                            format_hints.Hex(base),
+                            load_mod is not None,
+                            init_mod is not None,
+                            mem_mod is not None,
+                            mapped_files[base],
+                        ],
+                    )
+                else:
+                    yield (
+                        0,
+                        [
+                            int(proc.UniqueProcessId),
+                            str(
+                                proc.ImageFileName.cast(
+                                    "string",
+                                    max_length=proc.ImageFileName.vol.count,
+                                    errors="replace",
+                                )
+                            ),
+                            format_hints.Hex(base),
+                            load_mod is not None,
+                            init_mod is not None,
+                            mem_mod is not None,
+                            mapped_files[base],
+                            load,
+                            init,
+                            mem
+                        ],
+                    )
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
         kernel = self.context.modules[self.config["kernel"]]
 
-        return renderers.TreeGrid(
-            [
-                ("Pid", int),
-                ("Process", str),
-                ("Base", format_hints.Hex),
-                ("InLoad", bool),
-                ("InInit", bool),
-                ("InMem", bool),
-                ("MappedPath", str),
-            ],
-            self._generator(
-                pslist.PsList.list_processes(
-                    context=self.context,
-                    layer_name=kernel.layer_name,
-                    symbol_table=kernel.symbol_table_name,
-                    filter_func=filter_func,
-                )
-            ),
-        )
+        if not self.config.get("verbose", True):
+            return renderers.TreeGrid(
+                [
+                    ("Pid", int),
+                    ("Process", str),
+                    ("Base", format_hints.Hex),
+                    ("InLoad", bool),
+                    ("InInit", bool),
+                    ("InMem", bool),
+                    ("MappedPath", str),
+                ],
+                self._generator(
+                    pslist.PsList.list_processes(
+                        context=self.context,
+                        layer_name=kernel.layer_name,
+                        symbol_table=kernel.symbol_table_name,
+                        filter_func=filter_func,
+                    )
+                ),
+            )
+        else:
+            return renderers.TreeGrid(
+                [
+                    ("Pid", int),
+                    ("Process", str),
+                    ("Base", format_hints.Hex),
+                    ("InLoad", bool),
+                    ("InInit", bool),
+                    ("InMem", bool),
+                    ("MappedPath", str),
+                    ("LoadPath", str),
+                    ("InitPath", str),
+                    ("MemPath", str)
+                ],
+                self._generator(
+                    pslist.PsList.list_processes(
+                        context=self.context,
+                        layer_name=kernel.layer_name,
+                        symbol_table=kernel.symbol_table_name,
+                        filter_func=filter_func,
+                    )
+                ),
+            )
