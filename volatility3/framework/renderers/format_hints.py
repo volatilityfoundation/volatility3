@@ -36,7 +36,6 @@ class MultiTypeData(bytes):
         split_nulls: bool = False,
         show_hex: bool = False,
     ) -> "MultiTypeData":
-
         if isinstance(original, int):
             data = str(original).encode(encoding)
         else:

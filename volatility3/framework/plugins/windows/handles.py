@@ -136,7 +136,6 @@ class Handles(interfaces.plugins.PluginInterface):
         """
 
         if self._sar_value is None:
-
             if not has_capstone:
                 return None
             kernel = self.context.modules[self.config["kernel"]]
@@ -160,7 +159,7 @@ class Handles(interfaces.plugins.PluginInterface):
 
             md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
 
-            for (address, size, mnemonic, op_str) in md.disasm_lite(
+            for address, size, mnemonic, op_str in md.disasm_lite(
                 data, kvo + func_addr
             ):
                 # print("{} {} {} {}".format(address, size, mnemonic, op_str))
@@ -300,7 +299,6 @@ class Handles(interfaces.plugins.PluginInterface):
         masked_offset = offset & layer_object.maximum_address
 
         for entry in table:
-
             if level > 0:
                 for x in self._make_handle_array(entry, level - 1, depth):
                     yield x
@@ -329,7 +327,6 @@ class Handles(interfaces.plugins.PluginInterface):
                     continue
 
     def handles(self, handle_table):
-
         try:
             TableCode = handle_table.TableCode & ~self._level_mask
             table_levels = handle_table.TableCode & self._level_mask
@@ -395,7 +392,7 @@ class Handles(interfaces.plugins.PluginInterface):
                         except (ValueError, exceptions.InvalidAddressException):
                             obj_name = ""
 
-                except (exceptions.InvalidAddressException):
+                except exceptions.InvalidAddressException:
                     vollog.log(
                         constants.LOGLEVEL_VVV,
                         f"Cannot access _OBJECT_HEADER at {entry.vol.offset:#x}",
@@ -416,7 +413,6 @@ class Handles(interfaces.plugins.PluginInterface):
                 )
 
     def run(self):
-
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
         kernel = self.context.modules[self.config["kernel"]]
 

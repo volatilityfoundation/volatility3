@@ -7,6 +7,8 @@ from volatility3.plugins.windows import pslist, vadinfo
 
 
 class LdrModules(interfaces.plugins.PluginInterface):
+    """Lists the loaded modules in a particular windows memory image."""
+
     _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
@@ -33,7 +35,6 @@ class LdrModules(interfaces.plugins.PluginInterface):
         ]
 
     def _generator(self, procs):
-
         pe_table_name = intermed.IntermediateSymbolTable.create(
             self.context, self.config_path, "windows", "pe", class_types=pe.class_types
         )

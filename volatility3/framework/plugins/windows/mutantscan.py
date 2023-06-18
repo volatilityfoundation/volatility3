@@ -53,7 +53,6 @@ class MutantScan(interfaces.plugins.PluginInterface):
         for result in poolscanner.PoolScanner.generate_pool_scan(
             context, layer_name, symbol_table, constraints
         ):
-
             _constraint, mem_object, _header = result
             yield mem_object
 
@@ -63,7 +62,6 @@ class MutantScan(interfaces.plugins.PluginInterface):
         for mutant in self.scan_mutants(
             self.context, kernel.layer_name, kernel.symbol_table_name
         ):
-
             try:
                 name = mutant.get_name()
             except (ValueError, exceptions.InvalidAddressException):

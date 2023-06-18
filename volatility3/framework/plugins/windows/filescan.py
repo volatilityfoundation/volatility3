@@ -53,7 +53,6 @@ class FileScan(interfaces.plugins.PluginInterface):
         for result in poolscanner.PoolScanner.generate_pool_scan(
             context, layer_name, symbol_table, constraints
         ):
-
             _constraint, mem_object, _header = result
             yield mem_object
 
@@ -63,7 +62,6 @@ class FileScan(interfaces.plugins.PluginInterface):
         for fileobj in self.scan_files(
             self.context, kernel.layer_name, kernel.symbol_table_name
         ):
-
             try:
                 file_name = fileobj.FileName.String
             except exceptions.InvalidAddressException:

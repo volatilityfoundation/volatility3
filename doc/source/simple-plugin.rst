@@ -259,7 +259,7 @@ The plugin then takes the process's ``BaseDllName`` value, and calls :py:meth:`~
 as defined by the symbols, are directly accessible and use the case-style of the symbol library it came from (in Windows,
 attributes are CamelCase), such as ``entry.BaseDllName`` in this instance.  Any attributes not defined by the symbol but added
 by Volatility extensions cannot be properties (in case they overlap with the attributes defined in the symbol libraries)
-and are therefore always methods and pretended with ``get_``, in this example ``BaseDllName.get_string()``.
+and are therefore always methods and prepended with ``get_``, in this example ``BaseDllName.get_string()``.
 
 Finally, ``FullDllName`` is populated.  These operations read from memory, and as such, the memory image may be unable to
 read the data at a particular offset.  This will cause an exception to be thrown.  In Volatility 3, exceptions are thrown

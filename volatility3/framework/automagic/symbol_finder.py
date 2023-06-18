@@ -82,13 +82,13 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
             shortcut=False,
         )
 
-        for (sub_path, requirement) in self._requirements:
+        for sub_path, requirement in self._requirements:
             parent_path = interfaces.configuration.parent_path(sub_path)
 
             if isinstance(
                 requirement, requirements.SymbolTableRequirement
             ) and requirement.unsatisfied(context, parent_path):
-                for (tl_sub_path, tl_requirement) in self._requirements:
+                for tl_sub_path, tl_requirement in self._requirements:
                     tl_parent_path = interfaces.configuration.parent_path(tl_sub_path)
                     # Find the TranslationLayer sibling to the SymbolTableRequirement
                     if (

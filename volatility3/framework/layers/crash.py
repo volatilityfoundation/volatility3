@@ -39,7 +39,6 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     def __init__(
         self, context: interfaces.context.ContextInterface, config_path: str, name: str
     ) -> None:
-
         # Construct these so we can use self.config
         self._context = context
         self._config_path = config_path

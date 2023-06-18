@@ -187,7 +187,6 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         proc_layer_name: str,
         cryptdll_base: int,
     ) -> Tuple[interfaces.objects.ObjectInterface, int, int, int]:
-
         """
         Finds the CSystems array through use of PDB symbols
 
@@ -574,7 +573,6 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             scanners.BytesScanner(b"\x17\x00\x00\x00\x01\x00\x00\x00"),
             sections=[(cryptdll_base, cryptdll_size)],
         ):
-
             # this occurs across page boundaries
             if not proc_layer.is_valid(address, ecrypt_size):
                 continue

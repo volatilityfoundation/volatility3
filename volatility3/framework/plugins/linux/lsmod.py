@@ -60,7 +60,6 @@ class Lsmod(plugins.PluginInterface):
     def _generator(self):
         try:
             for module in self.list_modules(self.context, self.config["kernel"]):
-
                 mod_size = module.get_init_size() + module.get_core_size()
 
                 mod_name = utility.array_to_string(module.name)

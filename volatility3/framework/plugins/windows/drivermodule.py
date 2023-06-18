@@ -73,7 +73,6 @@ class DriverModule(interfaces.plugins.PluginInterface):
                 )
 
     def run(self) -> renderers.TreeGrid:
-
         return renderers.TreeGrid(
             [
                 ("Offset", format_hints.Hex),

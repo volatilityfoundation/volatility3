@@ -83,7 +83,7 @@ class Maps(plugins.PluginInterface):
             Yields vmas based on the task and filtered based on the filter function
         """
         if task.mm:
-            for vma in task.mm.get_mmap_iter():
+            for vma in task.mm.get_vma_iter():
                 if filter_func(vma):
                     yield vma
                 else:

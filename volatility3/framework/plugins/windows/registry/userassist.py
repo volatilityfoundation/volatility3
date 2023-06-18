@@ -248,7 +248,6 @@ class UserAssist(interfaces.plugins.PluginInterface):
 
                 # output any values under Count
                 for value in countkey.get_values():
-
                     value_name = value.get_name()
                     with contextlib.suppress(UnicodeDecodeError):
                         value_name = codecs.encode(value_name, "rot_13")
@@ -281,7 +280,6 @@ class UserAssist(interfaces.plugins.PluginInterface):
                     yield result
 
     def _generator(self):
-
         hive_offsets = None
         if self.config.get("offset", None) is not None:
             hive_offsets = [self.config.get("offset", None)]

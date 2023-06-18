@@ -54,8 +54,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
             requirements.IntRequirement(
                 name="address",
                 description="Process virtual memory address to include "
-                "(all other address ranges are excluded). This must be "
-                "a base address, not an address within the desired range.",
+                "(all other address ranges are excluded).",
                 optional=True,
             ),
             requirements.ListRequirement(
@@ -199,6 +198,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
     def _generator(self, procs):
         kernel = self.context.modules[self.config["kernel"]]
+        kernel_layer = self.context.layers[kernel.layer_name]
 
         def passthrough(_: interfaces.objects.ObjectInterface) -> bool:
             return False
@@ -207,7 +207,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
         if self.config.get("address", None) is not None:
 
             def filter_function(x: interfaces.objects.ObjectInterface) -> bool:
-                return x.get_start() not in [self.config["address"]]
+                return not (x.get_start() <= self.config["address"] <= x.get_end())
 
             filter_func = filter_function
 
@@ -215,7 +215,6 @@ class VadInfo(interfaces.plugins.PluginInterface):
             process_name = utility.array_to_string(proc.ImageFileName)
 
             for vad in self.list_vads(proc, filter_func=filter_func):
-
                 file_output = "Disabled"
                 if self.config["dump"]:
                     file_handle = self.vad_dump(
@@ -231,7 +230,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
                     (
                         proc.UniqueProcessId,
                         process_name,
-                        format_hints.Hex(vad.vol.offset),
+                        format_hints.Hex(kernel_layer.canonicalize(vad.vol.offset)),
                         format_hints.Hex(vad.get_start()),
                         format_hints.Hex(vad.get_end()),
                         vad.get_tag(),

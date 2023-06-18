@@ -70,7 +70,6 @@ class ModScan(interfaces.plugins.PluginInterface):
         for result in poolscanner.PoolScanner.generate_pool_scan(
             context, layer_name, symbol_table, constraints
         ):
-
             _constraint, mem_object, _header = result
             yield mem_object
 
@@ -175,7 +174,6 @@ class ModScan(interfaces.plugins.PluginInterface):
         for mod in self.scan_modules(
             self.context, kernel.layer_name, kernel.symbol_table_name
         ):
-
             try:
                 BaseDllName = mod.BaseDllName.get_string()
             except exceptions.InvalidAddressException:
@@ -188,7 +186,6 @@ class ModScan(interfaces.plugins.PluginInterface):
 
             file_output = "Disabled"
             if self.config["dump"]:
-
                 session_layer_name = self.find_session_layer(
                     self.context, session_layers, mod.DllBase
                 )

@@ -66,7 +66,6 @@ class Privs(interfaces.plugins.PluginInterface):
         ]
 
     def _generator(self, procs):
-
         for task in procs:
             try:
                 process_token = task.Token.dereference().cast("_TOKEN")
@@ -107,7 +106,6 @@ class Privs(interfaces.plugins.PluginInterface):
                 )
 
     def run(self):
-
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
         kernel = self.context.modules[self.config["kernel"]]
 

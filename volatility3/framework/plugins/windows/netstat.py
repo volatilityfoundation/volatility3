@@ -329,7 +329,6 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     alignment,
                     net_symbol_table,
                 ):
-
                     endpoint = context.object(
                         obj_name,
                         layer_name=layer_name,
@@ -591,7 +590,6 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             tcpip_module.DllBase,
             tcpip_symbol_table,
         ):
-
             # objects passed pool header constraints. check for additional constraints if strict flag is set.
             if not show_corrupt_results and not netw_obj.is_valid():
                 continue

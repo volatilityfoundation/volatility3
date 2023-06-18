@@ -54,6 +54,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         """
         result = cls.get_guid_from_mz(context, layer_name, offset)
         if result is None:
+            vollog.debug(f"Could not get GUID for {hex(offset)}")
             return None
         guid, age, pdb_name = result
         if config_path is None:
@@ -248,7 +249,6 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         # Check for writability
         filter_string = os.path.join(pdb_name, guid + "-" + str(age))
         for path in symbols.__path__:
-
             # Store any temporary files created by downloading PDB files
             tmp_files = []
             potential_output_filename = os.path.join(
@@ -352,7 +352,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         if end is None:
             end = ctx.layers[layer_name].maximum_address
 
-        for (GUID, age, pdb_name, signature_offset) in ctx.layers[layer_name].scan(
+        for GUID, age, pdb_name, signature_offset in ctx.layers[layer_name].scan(
             ctx,
             PdbSignatureScanner(pdb_names),
             progress_callback=progress_callback,
@@ -425,7 +425,6 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         module_size: int = None,
         create_module: bool = False,
     ) -> Tuple[Optional[str], Optional[str]]:
-
         if module_offset is None:
             module_offset = context.layers[layer_name].minimum_address
         if module_size is None:

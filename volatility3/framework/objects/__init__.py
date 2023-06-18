@@ -442,7 +442,7 @@ class Pointer(Integer):
     def is_readable(self, layer_name: Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from
         memory."""
-        layer_name = layer_name or self.vol.layer_name
+        layer_name = layer_name or self.vol.native_layer_name
         return self._context.layers[layer_name].is_valid(self, self.vol.subtype.size)
 
     def __getattr__(self, attr: str) -> Any:

@@ -22,7 +22,6 @@ class elf(objects.StructType):
         size: int,
         members: Dict[str, Tuple[int, interfaces.objects.Template]],
     ) -> None:
-
         super().__init__(
             context=context,
             type_name=type_name,
