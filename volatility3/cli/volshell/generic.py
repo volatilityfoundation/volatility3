@@ -480,7 +480,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         accessor = resources.ResourceAccessor()
         with accessor.open(url=location) as fp:
             self.__console.runsource(
-                io.TextIOWrapper(fp.read(), encoding="utf-8"), symbol="exec"
+                str(fp.read(), "utf-8"), symbol="exec"
             )
         print("\nCode complete")
 
