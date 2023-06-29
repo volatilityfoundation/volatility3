@@ -90,10 +90,10 @@ class _KPCR():
         self.symbol_table = symbol_table
     
     def idt_entries(self):
-        base_idt = self.kpcr.IDT.dereference()
+        base_idt = self.kpcr.IDT
         idt_index = 0
         for idt_index in range(256):
-            idt_offset = base_idt.vol.offset + 8 * idt_index
+            idt_offset = base_idt + 8 * idt_index
             idt_struct = self.ntkrnlmp.object(
                 object_type="_KIDTENTRY",
                 layer_name=self.layer_name,
@@ -106,12 +106,12 @@ class _KPCR():
                 pass
 
     def gdt_entries(self):
-        base_gdt = self.kpcr.GDT.dereference()
+        base_gdt = self.kpcr.GDT
 
         # Since the real GDT size is read from a register, we'll just assume
         # that there are 128 entries (which is normal for most OS)
         for gdt_index in range(128):
-            gdt_offset = base_gdt.vol.offset + 8 * gdt_index
+            gdt_offset = base_gdt + 8 * gdt_index
             gdt_struct = self.ntkrnlmp.object(
                 object_type="_KGDTENTRY",
                 layer_name=self.layer_name,
@@ -213,17 +213,13 @@ class IDT(plugins.PluginInterface):
                 layer_name=layer_name,
                 offset=KiProcessorBlock_addr,
             )
-
-            # Get kpcrb's offset
-            kpcrb = KiProcessorBlock.dereference()
-            kpcrb_offset = kpcrb.vol.offset
             
             # Get kpcr object
             kpcr_offset = ntkrnlmp.get_type("_KPCR").relative_child_offset("PrcbData")
             kpcr = ntkrnlmp.object(
                 object_type="_KPCR",
                 layer_name=layer_name,
-                offset=kpcrb_offset - kpcr_offset,
+                offset=KiProcessorBlock - kpcr_offset,
                 absolute=True)
 
             yield cpu_index, _KPCR(kpcr, ntkrnlmp, layer_name, symbol_table)
