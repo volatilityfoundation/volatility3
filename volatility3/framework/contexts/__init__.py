@@ -272,9 +272,9 @@ class Module(interfaces.context.ModuleInterface):
         symbol_name: str,
         native_layer_name: Optional[str] = None,
         absolute: bool = False,
-        object_type: Optional[Union[str, interfaces.objects.ObjectInterface]] = None,
+        object_type: Optional[Union[str, "interfaces.objects.ObjectInterface"]] = None,
         **kwargs,
-    ) -> interfaces.objects.ObjectInterface:
+    ) -> "interfaces.objects.ObjectInterface":
         """Returns an object based on a specific symbol (containing type and
         offset information) and the layer_name of the Module.  This will throw
         a ValueError if the symbol does not contain an associated type, or if
