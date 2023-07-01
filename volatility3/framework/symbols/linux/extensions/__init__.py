@@ -794,7 +794,7 @@ class mount(objects.StructType):
         """Gets the fs where we are mounted on
 
         Returns:
-            A 'mount *'
+            A mount pointer
         """
         return self.mnt_parent
 
@@ -802,7 +802,7 @@ class mount(objects.StructType):
         """Gets the dentry of the mountpoint
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
 
         return self.mnt_mountpoint
@@ -839,7 +839,7 @@ class mount(objects.StructType):
         """Returns the root of the mounted tree
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
         vfsmnt = self.get_vfsmnt_current()
         dentry = vfsmnt.mnt_root
@@ -850,7 +850,7 @@ class mount(objects.StructType):
         """Returns the parent root of the mounted tree
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
 
         return self.get_mnt_parent().get_dentry_current()
@@ -970,17 +970,17 @@ class vfsmount(objects.StructType):
         """Helper to make sure it is comparing two pointers to 'vfsmount'.
 
         Depending on the kernel version, the calling object (self) could be
-        a 'vfsmount *' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
+        a 'vfsmount \*' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
         in the framework "auto" dereferencing ability to assure that when we
         reach this point 'self' will be a 'vfsmount' already and self.vol.offset
-        a 'vfsmount *' and not a 'vfsmount **'. The argument must be a 'vfsmount *'.
+        a 'vfsmount \*' and not a 'vfsmount \*\*'. The argument must be a 'vfsmount \*'.
         Typically, it's called from do_get_path().
 
         Args:
-            vfsmount_ptr (vfsmount *): A pointer to a 'vfsmount'
+            vfsmount_ptr (vfsmount \*): A pointer to a 'vfsmount'
 
         Raises:
-            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount *'
+            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount \*'
 
         Returns:
             bool: 'True' if the given argument points to the the same 'vfsmount'
@@ -1010,7 +1010,7 @@ class vfsmount(objects.StructType):
         """Returns the current fs where we are mounted on
 
         Returns:
-            A 'vfsmount *'
+            A vfsmount pointer
         """
         return self.get_mnt_parent()
 
@@ -1018,8 +1018,8 @@ class vfsmount(objects.StructType):
         """Gets the parent fs (vfsmount) to where it's mounted on
 
         Returns:
-            For kernels <  3.3.8: A 'vfsmount *'
-            For kernels >= 3.3.8: A 'vfsmount'
+            For kernels <  3.3.8: A vfsmount pointer
+            For kernels >= 3.3.8: A vfsmount object
         """
         if self._is_kernel_prior_to_struct_mount():
             return self.get_mnt_parent()
@@ -1030,7 +1030,7 @@ class vfsmount(objects.StructType):
         """Returns the root of the mounted tree
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
         if self._is_kernel_prior_to_struct_mount():
             return self.get_mnt_mountpoint()
@@ -1041,7 +1041,7 @@ class vfsmount(objects.StructType):
         """Returns the parent root of the mounted tree
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
         if self._is_kernel_prior_to_struct_mount():
             return self.get_mnt_mountpoint()
@@ -1052,8 +1052,8 @@ class vfsmount(objects.StructType):
         """Gets the mnt_parent member.
 
         Returns:
-            For kernels <  3.3.8: A 'vfsmount *'
-            For kernels >= 3.3.8: A 'mount *'
+            For kernels <  3.3.8: A vfsmount pointer
+            For kernels >= 3.3.8: A mount pointer
         """
         if self._is_kernel_prior_to_struct_mount():
             return self.mnt_parent
@@ -1064,7 +1064,7 @@ class vfsmount(objects.StructType):
         """Gets the dentry of the mountpoint
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
         if self.has_member("mnt_mountpoint"):
             return self.mnt_mountpoint

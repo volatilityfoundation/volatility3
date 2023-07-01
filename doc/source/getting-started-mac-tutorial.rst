@@ -78,10 +78,10 @@ Thanks go to `stuxnet <https://github.com/stuxnet999/>`_ for providing this memo
         
 
 The above command helps us to find the memory dump's Darwin kernel version. Now using the above banner we can search for the needed ISF file.
-If ISF file cannot be found then, follow the instructions on :ref:`getting-started-macos-tutorial:Procedure to create symbol tables for macOS`. After that, place the ISF file under the ``volatility3/symbols`` directory.
+If ISF file cannot be found then, follow the instructions on :ref:`getting-started-mac-tutorial:Procedure to create symbol tables for macOS`. After that, place the ISF file under the ``volatility3/symbols`` directory.
 
 mac.pslist
-~~~~~~~~~~~~
+~~~~~~~~~~
 
 .. code-block:: shell-session
 
@@ -107,7 +107,7 @@ mac.pslist
 ``mac.pslist`` helps us to list the processes which are running, their PIDs and PPIDs.
 
 mac.pstree
-~~~~~~~~~~~~
+~~~~~~~~~~
 
 .. code-block:: shell-session
 
@@ -128,7 +128,7 @@ mac.pstree
 ``mac.pstree`` helps us to display the parent child relationships between processes.
 
 mac.ifconfig
-~~~~~~~~~~
+~~~~~~~~~~~~
 
 .. code-block:: shell-session
 
