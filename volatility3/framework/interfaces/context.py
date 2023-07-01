@@ -253,7 +253,7 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
         symbol_name: str,
         native_layer_name: Optional[str] = None,
         absolute: bool = False,
-        object_type: Optional[Union[str, interfaces.objects.ObjectInterface]] = None,
+        object_type: Optional[Union[str, "interfaces.objects.ObjectInterface"]] = None,
         **kwargs,
     ) -> "interfaces.objects.ObjectInterface":
         """Returns an object created using the symbol_table_name and layer_name
