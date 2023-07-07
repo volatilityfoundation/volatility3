@@ -230,7 +230,7 @@ class PoolScanner(plugins.PluginInterface):
                 b"Thr\xe5",  # -> “protected” allocation, MSB is set.
                 type_name=symbol_table + constants.BANG + "_ETHREAD",
                 object_type="Thread",
-                size=(600, None),  # -> 0x0258 - size of strcut in win5.1
+                size=(600, None),  # -> 0x0258 - size of struct in win5.1
                 skip_type_test=True,
                 page_type=PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE,
             ),
@@ -239,7 +239,7 @@ class PoolScanner(plugins.PluginInterface):
                 b"Thre",
                 type_name=symbol_table + constants.BANG + "_ETHREAD",
                 object_type="Thread",
-                size=(600, None),  # -> 0x0258 - size of strcut in win5.1
+                size=(600, None),  # -> 0x0258 - size of struct in win5.1
                 page_type=PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE,
             ),
             # files on windows before windows 8
