@@ -6,42 +6,47 @@ from volatility3.framework.interfaces import plugins
 from volatility3.framework.configuration import requirements
 from volatility3.plugins.windows import modules
 
-GDT_DESCRIPTORS = dict(enumerate([
-    "Data RO",
-    "Data RO Ac",
-    "Data RW",
-    "Data RW Ac",
-    "Data RO E",
-    "Data RO EA",
-    "Data RW E",
-    "Data RW EA",
-    "Code EO",
-    "Code EO Ac",
-    "Code RE",
-    "Code RE Ac",
-    "Code EO C",
-    "Code EO CA",
-    "Code RE C",
-    "Code RE CA",
-    "<Reserved>",
-    "TSS16 Avl",
-    "LDT",
-    "TSS16 Busy",
-    "CallGate16",
-    "TaskGate",
-    "Int Gate16",
-    "TrapGate16",
-    "<Reserved>",
-    "TSS32 Avl",
-    "<Reserved>",
-    "TSS32 Busy",
-    "CallGate32",
-    "<Reserved>",
-    "Int Gate32",
-    "TrapGate32",
-]))
+GDT_DESCRIPTORS = dict(
+    enumerate(
+        [
+            "Data RO",
+            "Data RO Ac",
+            "Data RW",
+            "Data RW Ac",
+            "Data RO E",
+            "Data RO EA",
+            "Data RW E",
+            "Data RW EA",
+            "Code EO",
+            "Code EO Ac",
+            "Code RE",
+            "Code RE Ac",
+            "Code EO C",
+            "Code EO CA",
+            "Code RE C",
+            "Code RE CA",
+            "<Reserved>",
+            "TSS16 Avl",
+            "LDT",
+            "TSS16 Busy",
+            "CallGate16",
+            "TaskGate",
+            "Int Gate16",
+            "TrapGate16",
+            "<Reserved>",
+            "TSS32 Avl",
+            "<Reserved>",
+            "TSS32 Busy",
+            "CallGate32",
+            "<Reserved>",
+            "Int Gate32",
+            "TrapGate32",
+        ]
+    )
+)
 
-class _KIDT():
+
+class _KIDT:
     def __init__(self, idt_struct):
         self.idt = idt_struct
         self.Offset = idt_struct.Offset
@@ -55,15 +60,15 @@ class _KIDT():
             return self.ExtendedOffset << 16 | self.Offset
 
         return 0
-    
 
-class _KGDT():
+
+class _KGDT:
     def __init__(self, gdt_struct):
         self.gdt = gdt_struct
         self.LimitLow = gdt_struct.LimitLow
         self.BaseLow = gdt_struct.BaseLow
         self.HighWord = gdt_struct.HighWord
-    
+
     @property
     def Type(self):
         """Get a string name of the descriptor type"""
@@ -74,21 +79,22 @@ class _KGDT():
             typeval += 16
 
         return GDT_DESCRIPTORS.get(typeval, "UNKNOWN")
-    
+
     @property
     def Base(self):
         """Get the base (start) of memory for this GDT"""
-        return (self.BaseLow + ((self.HighWord.Bits.BaseMid +
-               (self.HighWord.Bits.BaseHi << 8)) << 16))
+        return self.BaseLow + (
+            (self.HighWord.Bits.BaseMid + (self.HighWord.Bits.BaseHi << 8)) << 16
+        )
 
 
-class _KPCR():
+class _KPCR:
     def __init__(self, kpcr_obj, ntkrnlmp, layer_name, symbol_table):
         self.kpcr = kpcr_obj
         self.ntkrnlmp = ntkrnlmp
         self.layer_name = layer_name
         self.symbol_table = symbol_table
-    
+
     def idt_entries(self):
         base_idt = self.kpcr.IDT
         idt_index = 0
@@ -98,7 +104,7 @@ class _KPCR():
                 object_type="_KIDTENTRY",
                 layer_name=self.layer_name,
                 offset=idt_offset,
-                absolute=True
+                absolute=True,
             )
             try:
                 yield idt_index, _KIDT(idt_struct)
@@ -116,7 +122,7 @@ class _KPCR():
                 object_type="_KGDTENTRY",
                 layer_name=self.layer_name,
                 offset=gdt_offset,
-                absolute=True
+                absolute=True,
             )
 
             try:
@@ -143,12 +149,14 @@ class IDT(plugins.PluginInterface):
                 name="modules", plugin=modules.Modules, version=(1, 0, 0)
             ),
         ]
-    
-    def get_module(self, 
+
+    def get_module(
+        self,
         context: interfaces.context.ContextInterface,
         layer_name: str,
         symbol_table: str,
-        offset: int):
+        offset: int,
+    ):
         try:
             mods = modules.Modules.list_modules(context, layer_name, symbol_table)
 
@@ -157,21 +165,22 @@ class IDT(plugins.PluginInterface):
                     return mod
         except:
             pass
-        
+
         return None
-    
+
     @staticmethod
     def get_section_name(ntkrnlmp, layer_name, mod, addr):
-        """Get the name of the PE section containing 
-        the specified address. 
+        """Get the name of the PE section containing
+        the specified address.
 
         @param ntkrnlmp: ntkrnlmp module object
         @param layer_name: kernel layer name
-        @param mod: an _LDR_DATA_TABLE_ENTRY 
-        @param addr: virtual address to lookup 
-        
+        @param mod: an _LDR_DATA_TABLE_ENTRY
+        @param addr: virtual address to lookup
+
         @returns string PE section name
         """
+
         def name_array_to_str(name_array):
             name = ""
             for char in name_array:
@@ -184,20 +193,22 @@ class IDT(plugins.PluginInterface):
             dos_header = ntkrnlmp.object(
                 object_type="_IMAGE_DOS_HEADER",
                 layer_name=layer_name,
-                offset = mod.DllBase,
-                absolute=True)
+                offset=mod.DllBase,
+                absolute=True,
+            )
             nt_header = dos_header.get_nt_header()
         except ValueError:
             return ''
 
         for sec in nt_header.get_sections():
-            if (addr > mod.DllBase + sec.VirtualAddress and
-                    addr < sec.Misc.VirtualSize + (mod.DllBase + sec.VirtualAddress)):
-                
+            if (
+                addr > mod.DllBase + sec.VirtualAddress
+                and addr < sec.Misc.VirtualSize + (mod.DllBase + sec.VirtualAddress)
+            ):
                 return name_array_to_str(sec.Name) or ""
 
         return ''
-    
+
     def get_pcrs(self, ntkrnlmp, layer_name, symbol_table):
         # Get the number of processors
         cpu_count_offset = ntkrnlmp.get_symbol("KeNumberProcessors").address
@@ -207,20 +218,23 @@ class IDT(plugins.PluginInterface):
 
         for cpu_index in range(cpu_count):
             # Calculate the address of KiProcessorBlock
-            KiProcessorBlock_addr = ntkrnlmp.get_symbol("KiProcessorBlock").address + cpu_index * 4
+            KiProcessorBlock_addr = (
+                ntkrnlmp.get_symbol("KiProcessorBlock").address + cpu_index * 4
+            )
             KiProcessorBlock = ntkrnlmp.object(
                 object_type="pointer",
                 layer_name=layer_name,
                 offset=KiProcessorBlock_addr,
             )
-            
+
             # Get kpcr object
             kpcr_offset = ntkrnlmp.get_type("_KPCR").relative_child_offset("PrcbData")
             kpcr = ntkrnlmp.object(
                 object_type="_KPCR",
                 layer_name=layer_name,
                 offset=KiProcessorBlock - kpcr_offset,
-                absolute=True)
+                absolute=True,
+            )
 
             yield cpu_index, _KPCR(kpcr, ntkrnlmp, layer_name, symbol_table)
 
@@ -248,7 +262,9 @@ class IDT(plugins.PluginInterface):
                     sect_name = ''
                 elif module:
                     module_name = module.BaseDllName.get_string()
-                    sect_name = self.get_section_name(ntkrnlmp, layer_name, module, addr)
+                    sect_name = self.get_section_name(
+                        ntkrnlmp, layer_name, module, addr
+                    )
                 else:
                     module_name = "UNKNOWN"
                     sect_name = ''
@@ -261,8 +277,8 @@ class IDT(plugins.PluginInterface):
                         format_hints.Hex(idt.Selector),
                         format_hints.Hex(idt.Address),
                         module_name,
-                        sect_name
-                    )
+                        sect_name,
+                    ),
                 )
 
     def run(self):
@@ -273,7 +289,7 @@ class IDT(plugins.PluginInterface):
                 ('Selector', format_hints.Hex),
                 ('Value', format_hints.Hex),
                 ('Module', str),
-                ('Section', str)
+                ('Section', str),
             ],
-            self._generator()
+            self._generator(),
         )
