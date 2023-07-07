@@ -83,7 +83,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             sock: Kernel generic `sock` object
 
         Returns a tuple with:
-            sock: The respective kernel's *_sock object for that socket family
+            sock: The respective kernel's \*_sock object for that socket family
             sock_stat: A tuple with the source and destination (address and port) along with its state string
             socket_filter: A dictionary with information about the socket filter
         """
@@ -501,8 +501,7 @@ class Sockstat(plugins.PluginInterface):
             family: Socket family string (AF_UNIX, AF_INET, etc)
             sock_type: Socket type string (STREAM, DGRAM, etc)
             protocol: Protocol string (UDP, TCP, etc)
-            sock_fields: A tuple with the *_sock object, the sock stats and the
-                         extended info dictionary
+            sock_fields: A tuple with the \*_sock object, the sock stats and the extended info dictionary
         """
         vmlinux = context.modules[symbol_table]
 
