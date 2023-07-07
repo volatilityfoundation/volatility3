@@ -17,8 +17,8 @@ vollog = logging.getLogger(__name__)
 class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for windows threads."""
 
-    # cuz installed Framework interface version 2
-    _required_framework_version = (2, 0, 0)
+    # version 2.5.2 adds support for scanning for 'Ethread' structures by pool tags
+    _required_framework_version = (2, 5, 2)
     _version = (1, 0, 0)
 
     @classmethod
