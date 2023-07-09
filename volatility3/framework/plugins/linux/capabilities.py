@@ -126,7 +126,7 @@ class Capabilities(plugins.PluginInterface):
     def get_task_capabilities(
         cls, task: interfaces.objects.ObjectInterface
     ) -> Tuple[TaskData, CapabilitiesData]:
-        """Returns a dict with the task basic information along with its capabilities
+        """Returns a tuple with the task basic information along with its capabilities
 
         Args:
             task: A task object from where to get the fields.
@@ -161,7 +161,7 @@ class Capabilities(plugins.PluginInterface):
     def get_tasks_capabilities(
         cls, tasks: List[interfaces.objects.ObjectInterface]
     ) -> Iterable[Tuple[TaskData, CapabilitiesData]]:
-        """Yields a dict for each task containing the task's basic information along with its capabilities
+        """Yields a tuple for each task containing the task's basic information along with its capabilities
 
         Args:
             tasks: An iterable with the tasks to process.
