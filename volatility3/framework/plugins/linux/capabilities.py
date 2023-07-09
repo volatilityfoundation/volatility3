@@ -114,8 +114,8 @@ class Capabilities(plugins.PluginInterface):
             return cap
 
         cap_value = cap.get_capabilities()
-        if cap_value == 0:
-            return "-"
+        if not cap_value:
+            return ""
 
         if cap_value == CAP_FULL:
             return "all"
@@ -123,14 +123,16 @@ class Capabilities(plugins.PluginInterface):
         return ", ".join(cap.enumerate_capabilities())
 
     @classmethod
-    def get_task_capabilities(cls, task: interfaces.objects.ObjectInterface) -> Dict:
+    def get_task_capabilities(
+        cls, task: interfaces.objects.ObjectInterface
+    ) -> Tuple[TaskData, CapabilitiesData]:
         """Returns a dict with the task basic information along with its capabilities
 
         Args:
             task: A task object from where to get the fields.
 
         Returns:
-            dict: A dict with the task basic information along with its capabilities
+            A tuple with the task basic information and its capabilities
         """
         task_data = TaskData(
             comm=utility.array_to_string(task.comm),
@@ -158,14 +160,14 @@ class Capabilities(plugins.PluginInterface):
     @classmethod
     def get_tasks_capabilities(
         cls, tasks: List[interfaces.objects.ObjectInterface]
-    ) -> Iterable[Dict]:
+    ) -> Iterable[Tuple[TaskData, CapabilitiesData]]:
         """Yields a dict for each task containing the task's basic information along with its capabilities
 
         Args:
             tasks: An iterable with the tasks to process.
 
         Yields:
-            Iterable[Dict]: A dict for each task containing the task's basic information along with its capabilities
+            A tuple for each task containing the task's basic information and its capabilities
         """
         for task in tasks:
             yield cls.get_task_capabilities(task)
