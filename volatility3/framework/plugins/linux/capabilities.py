@@ -4,7 +4,7 @@
 
 import logging
 from dataclasses import dataclass, astuple, fields
-from typing import Iterable, List, Tuple, Dict
+from typing import Iterable, List, Tuple
 
 from volatility3.framework import interfaces, renderers, exceptions
 from volatility3.framework.constants.linux import CAP_FULL
