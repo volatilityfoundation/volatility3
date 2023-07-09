@@ -13,7 +13,7 @@ from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
 from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
-from volatility3.framework.constants.linux import CAPABILITIES
+from volatility3.framework.constants.linux import CAPABILITIES, CAP_FULL
 from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
@@ -1508,7 +1508,7 @@ class kernel_cap_struct(objects.StructType):
         """
         # In kernels 2.6.25.20 the kernel_cap_struct::cap became and array
         cap_value = self.cap[0] if isinstance(self.cap, objects.Array) else self.cap
-        return int(cap_value & 0xFFFFFFFF)
+        return cap_value & CAP_FULL
 
     def enumerate_capabilities(self) -> List[str]:
         """Returns the list of capability strings.

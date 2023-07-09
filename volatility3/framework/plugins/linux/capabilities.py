@@ -3,17 +3,48 @@
 #
 
 import logging
+from dataclasses import dataclass, astuple, fields
 from typing import Iterable, List, Tuple, Dict
 
-from volatility3.framework import interfaces, renderers
+from volatility3.framework import interfaces, renderers, exceptions
+from volatility3.framework.constants.linux import CAP_FULL
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
-from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols.linux import extensions
 from volatility3.plugins.linux import pslist
 
 vollog = logging.getLogger(__name__)
+
+
+@dataclass
+class TaskData:
+    """Stores basic information about a task"""
+
+    comm: str
+    pid: int
+    tgid: int
+    ppid: int
+    euid: int
+
+
+@dataclass
+class CapabilitiesData:
+    """Stores each set of capabilties for a task"""
+
+    cap_inheritable: interfaces.objects.ObjectInterface
+    cap_permitted: interfaces.objects.ObjectInterface
+    cap_effective: interfaces.objects.ObjectInterface
+    cap_bset: interfaces.objects.ObjectInterface
+    cap_ambient: interfaces.objects.ObjectInterface
+
+    def astuple(self) -> Tuple:
+        """Returns a shallow copy of the capability sets in a tuple.
+
+        Otherwise, when dataclasses.astuple() performs a deep-copy recursion on
+        ObjectInterface will take a substantial amount of time.
+        """
+        return tuple(getattr(self, field.name) for field in fields(self))
 
 
 class Capabilities(plugins.PluginInterface):
@@ -40,43 +71,26 @@ class Capabilities(plugins.PluginInterface):
                 element_type=int,
                 optional=True,
             ),
-            requirements.BooleanRequirement(
-                name="inheritable",
-                description="Show only inheritable capabilities in human-readable strings.",
-                optional=True,
-            ),
-            requirements.BooleanRequirement(
-                name="permitted",
-                description="Show only permitted capabilities in human-readable strings.",
-                optional=True,
-            ),
-            requirements.BooleanRequirement(
-                name="effective",
-                description="Show only effective capabilities in human-readable strings.",
-                optional=True,
-            ),
-            requirements.BooleanRequirement(
-                name="bounding",
-                description="Show only bounding capabilities in human-readable strings.",
-                optional=True,
-            ),
-            requirements.BooleanRequirement(
-                name="ambient",
-                description="Show only ambient capabilities in human-readable strings.",
-                optional=True,
-            ),
         ]
 
-    def _check_capabilities_support(self):
+    def _check_capabilities_support(
+        self,
+        context: interfaces.context.ContextInterface,
+        vmlinux_module_name: str,
+    ):
         """Checks that the framework supports at least as much capabilities as
         the kernel being analysed. Otherwise, it shows a warning for the
         developers.
         """
-        vmlinux = self.context.modules[self.config["kernel"]]
 
-        kernel_cap_last_cap = vmlinux.object(
-            object_type="int", offset=kernel_cap_last_cap
-        )
+        vmlinux = context.modules[vmlinux_module_name]
+
+        try:
+            kernel_cap_last_cap = vmlinux.object_from_symbol(symbol_name="cap_last_cap")
+        except exceptions.SymbolError:
+            # It should be a kernel < 3.2
+            return
+
         vol2_last_cap = extensions.kernel_cap_struct.get_last_cap_value()
         if kernel_cap_last_cap > vol2_last_cap:
             vollog.warning(
@@ -103,7 +117,6 @@ class Capabilities(plugins.PluginInterface):
         if cap_value == 0:
             return "-"
 
-        CAP_FULL = 0xFFFFFFFF
         if cap_value == CAP_FULL:
             return "all"
 
@@ -119,33 +132,32 @@ class Capabilities(plugins.PluginInterface):
         Returns:
             dict: A dict with the task basic information along with its capabilities
         """
+        task_data = TaskData(
+            comm=utility.array_to_string(task.comm),
+            pid=int(task.pid),
+            tgid=int(task.tgid),
+            ppid=int(task.parent.pid),
+            euid=int(task.cred.euid),
+        )
+
         task_cred = task.real_cred
-        fields = {
-            "common": [
-                utility.array_to_string(task.comm),
-                int(task.pid),
-                int(task.tgid),
-                int(task.parent.pid),
-                int(task.cred.euid),
-            ],
-            "capabilities": [
-                task_cred.cap_inheritable,
-                task_cred.cap_permitted,
-                task_cred.cap_effective,
-                task_cred.cap_bset,
-            ],
-        }
+        capabilities_data = CapabilitiesData(
+            cap_inheritable=task_cred.cap_inheritable,
+            cap_permitted=task_cred.cap_permitted,
+            cap_effective=task_cred.cap_effective,
+            cap_bset=task_cred.cap_bset,
+            cap_ambient=renderers.NotAvailableValue(),
+        )
 
         # Ambient capabilities were added in kernels 4.3.6
         if task_cred.has_member("cap_ambient"):
-            fields["capabilities"].append(task_cred.cap_ambient)
-        else:
-            fields["capabilities"].append(renderers.NotAvailableValue())
+            capabilities_data.cap_ambient = task_cred.cap_ambient
 
-        return fields
+        return task_data, capabilities_data
 
+    @classmethod
     def get_tasks_capabilities(
-        self, tasks: List[interfaces.objects.ObjectInterface]
+        cls, tasks: List[interfaces.objects.ObjectInterface]
     ) -> Iterable[Dict]:
         """Yields a dict for each task containing the task's basic information along with its capabilities
 
@@ -156,44 +168,23 @@ class Capabilities(plugins.PluginInterface):
             Iterable[Dict]: A dict for each task containing the task's basic information along with its capabilities
         """
         for task in tasks:
-            if task.is_kernel_thread:
-                continue
-
-            yield self.get_task_capabilities(task)
+            yield cls.get_task_capabilities(task)
 
     def _generator(
         self, tasks: Iterable[interfaces.objects.ObjectInterface]
     ) -> Iterable[Tuple[int, Tuple]]:
-        for fields in self.get_tasks_capabilities(tasks):
-            selected_fields = fields["common"]
-            cap_inh, cap_prm, cap_eff, cap_bnd, cap_amb = fields["capabilities"]
+        for task_fields, capabilities_fields in self.get_tasks_capabilities(tasks):
+            task_fields = astuple(task_fields)
 
-            if self.config.get("inheritable"):
-                selected_fields.append(self._decode_cap(cap_inh))
-            elif self.config.get("permitted"):
-                selected_fields.append(self._decode_cap(cap_prm))
-            elif self.config.get("effective"):
-                selected_fields.append(self._decode_cap(cap_eff))
-            elif self.config.get("bounding"):
-                selected_fields.append(self._decode_cap(cap_bnd))
-            elif self.config.get("ambient"):
-                selected_fields.append(self._decode_cap(cap_amb))
-            else:
-                # Raw values
-                selected_fields.append(format_hints.Hex(cap_inh.get_capabilities()))
-                selected_fields.append(format_hints.Hex(cap_prm.get_capabilities()))
-                selected_fields.append(format_hints.Hex(cap_eff.get_capabilities()))
-                selected_fields.append(format_hints.Hex(cap_bnd.get_capabilities()))
+            capabilities_text = tuple(
+                self._decode_cap(cap) for cap in capabilities_fields.astuple()
+            )
 
-                # Ambient capabilities were added in kernels 4.3.6
-                if isinstance(cap_amb, renderers.NotAvailableValue):
-                    selected_fields.append(cap_amb)
-                else:
-                    selected_fields.append(format_hints.Hex(cap_amb.get_capabilities()))
-
-            yield 0, selected_fields
+            yield 0, task_fields + capabilities_text
 
     def run(self):
+        self._check_capabilities_support(self.context, self.config["kernel"])
+
         pids = self.config.get("pids")
         pid_filter = pslist.PsList.create_pid_filter(pids)
         tasks = pslist.PsList.list_tasks(
@@ -206,23 +197,11 @@ class Capabilities(plugins.PluginInterface):
             ("Pid", int),
             ("PPid", int),
             ("EUID", int),
+            ("cap_inheritable", str),
+            ("cap_permitted", str),
+            ("cap_effective", str),
+            ("cap_bounding", str),
+            ("cap_ambient", str),
         ]
-
-        if self.config.get("inheritable"):
-            columns.append(("cap_inheritable", str))
-        elif self.config.get("permitted"):
-            columns.append(("cap_permitted", str))
-        elif self.config.get("effective"):
-            columns.append(("cap_effective", str))
-        elif self.config.get("bounding"):
-            columns.append(("cap_bounding", str))
-        elif self.config.get("ambient"):
-            columns.append(("cap_ambient", str))
-        else:
-            columns.append(("cap_inheritable", format_hints.Hex))
-            columns.append(("cap_permitted", format_hints.Hex))
-            columns.append(("cap_effective", format_hints.Hex))
-            columns.append(("cap_bounding", format_hints.Hex))
-            columns.append(("cap_ambient", format_hints.Hex))
 
         return renderers.TreeGrid(columns, self._generator(tasks))

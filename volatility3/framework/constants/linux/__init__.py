@@ -279,3 +279,5 @@ CAPABILITIES = (
     "bpf",
     "checkpoint_restore",
 )
+
+CAP_FULL = 0xFFFFFFFF
