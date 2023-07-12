@@ -4,13 +4,13 @@
 
 import datetime
 import logging
-from typing import Callable, Iterable, List, Dict
+from typing import Callable, Dict, Iterable, List
 
-from volatility3.framework import renderers, interfaces, exceptions
+from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
-from volatility3.framework.symbols import mac
 from volatility3.framework.renderers import format_hints
+from volatility3.framework.symbols import mac
 
 vollog = logging.getLogger(__name__)
 
