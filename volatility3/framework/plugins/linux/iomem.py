@@ -66,7 +66,7 @@ class IOMem(interfaces.plugins.PluginInterface):
             name = utility.pointer_to_string(resource.name, 128)
         except exceptions.InvalidAddressException:
             vollog.warning(
-                "Unable to follow pointer to name for resource object at {resource_offset:#x}, "
+                f"Unable to follow pointer to name for resource object at {resource_offset:#x}, "
                 "replaced with UnreadableValue"
             )
             name = renderers.UnreadableValue()
