@@ -1523,11 +1523,15 @@ class kernel_cap_struct(objects.StructType):
         """
 
         if isinstance(self.cap, objects.Array):
-            # In 2.6.25.x <= kernels < 6.3 kernel_cap_struct::cap is an array
-            # to become a 64bit bitfield
+            # In 2.6.25.x <= kernels < 6.3 kernel_cap_struct::cap is a two
+            # elements __u32 array that constitutes a 64bit bitfield.
+            # Technically, it can also be an array of 1 element if
+            # _KERNEL_CAPABILITY_U32S = _LINUX_CAPABILITY_U32S_1
+            # However, in the source code, that never happens.
+            # From 2.6.24 to 2.6.25 cap became an array of 2 elements.
             cap_value = (self.cap[1] << 32) | self.cap[0]
         else:
-            # In kernels < 2.6.25.x kernel_cap_struct::cap was a u32
+            # In kernels < 2.6.25.x kernel_cap_struct::cap was a __u32
             # In kernels >= 6.3 kernel_cap_struct::cap is a u64
             cap_value = self.cap
 
