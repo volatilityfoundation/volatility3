@@ -7,7 +7,6 @@ from dataclasses import dataclass, astuple, fields
 from typing import Iterable, List, Tuple
 
 from volatility3.framework import interfaces, renderers, exceptions
-from volatility3.framework.constants.linux import CAP_FULL
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
@@ -117,7 +116,7 @@ class Capabilities(plugins.PluginInterface):
         if not cap_value:
             return ""
 
-        if cap_value == CAP_FULL:
+        if cap_value == cap.get_kernel_cap_full():
             return "all"
 
         return ", ".join(cap.enumerate_capabilities())

@@ -13,7 +13,7 @@ from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
 from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
-from volatility3.framework.constants.linux import CAPABILITIES, CAP_FULL
+from volatility3.framework.constants.linux import CAPABILITIES
 from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
@@ -1482,6 +1482,21 @@ class kernel_cap_struct(objects.StructType):
         """
         return len(CAPABILITIES) - 1
 
+    def get_kernel_cap_full(self) -> int:
+        """Return the maximum value allowed for this kernel for a capability
+
+        Returns:
+            int: _description_
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        try:
+            cap_last_cap = vmlinux.object_from_symbol(symbol_name="cap_last_cap")
+        except exceptions.SymbolError:
+            # It should be a kernel < 3.2, let's use our list of capabilities
+            cap_last_cap = self.get_last_cap_value()
+
+        return (1 << cap_last_cap + 1) - 1
+
     @classmethod
     def capabilities_to_string(cls, capabilities_bitfield: int) -> List[str]:
         """Translates a capability bitfield to a list of capability strings.
@@ -1506,9 +1521,21 @@ class kernel_cap_struct(objects.StructType):
         Returns:
             int: The capability bitfield value.
         """
-        # In kernels 2.6.25.20 the kernel_cap_struct::cap became and array
-        cap_value = self.cap[0] if isinstance(self.cap, objects.Array) else self.cap
-        return cap_value & CAP_FULL
+
+        if isinstance(self.cap, objects.Array):
+            # In 2.6.25.x <= kernels < 6.3 kernel_cap_struct::cap is a two
+            # elements __u32 array that constitutes a 64bit bitfield.
+            # Technically, it can also be an array of 1 element if
+            # _KERNEL_CAPABILITY_U32S = _LINUX_CAPABILITY_U32S_1
+            # However, in the source code, that never happens.
+            # From 2.6.24 to 2.6.25 cap became an array of 2 elements.
+            cap_value = (self.cap[1] << 32) | self.cap[0]
+        else:
+            # In kernels < 2.6.25.x kernel_cap_struct::cap was a __u32
+            # In kernels >= 6.3 kernel_cap_struct::cap is a u64
+            cap_value = self.cap
+
+        return cap_value & self.get_kernel_cap_full()
 
     def enumerate_capabilities(self) -> List[str]:
         """Returns the list of capability strings.
