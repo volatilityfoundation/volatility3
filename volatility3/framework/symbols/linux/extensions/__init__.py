@@ -1472,13 +1472,13 @@ class cred(objects.StructType):
 
 
 class kernel_cap_struct(objects.StructType):
-    # struct kernel_cap_struct was added in kernels 2.5.0
+    # struct kernel_cap_struct exists from 2.1.92 <= kernels < 6.3
     @classmethod
     def get_last_cap_value(cls) -> int:
         """Returns the latest capability ID supported by the framework.
 
         Returns:
-            int: The latest supported capability ID supported by the framework.
+            int: The latest capability ID supported by the framework.
         """
         return len(CAPABILITIES) - 1
 
@@ -1486,7 +1486,7 @@ class kernel_cap_struct(objects.StructType):
         """Return the maximum value allowed for this kernel for a capability
 
         Returns:
-            int: _description_
+            int: The capability full bitfield mask
         """
         vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         try:
@@ -1522,17 +1522,29 @@ class kernel_cap_struct(objects.StructType):
             int: The capability bitfield value.
         """
 
+        if not self.has_member("cap"):
+            raise exceptions.VolatilityException(
+                "Unsupported kernel capabilities implementation"
+            )
+
         if isinstance(self.cap, objects.Array):
-            # In 2.6.25.x <= kernels < 6.3 kernel_cap_struct::cap is a two
-            # elements __u32 array that constitutes a 64bit bitfield.
-            # Technically, it can also be an array of 1 element if
-            # _KERNEL_CAPABILITY_U32S = _LINUX_CAPABILITY_U32S_1
-            # However, in the source code, that never happens.
-            # From 2.6.24 to 2.6.25 cap became an array of 2 elements.
-            cap_value = (self.cap[1] << 32) | self.cap[0]
+            if len(self.cap) == 1:
+                # At least in the vanilla kernel, from 2.6.24 to 2.6.25
+                # kernel_cap_struct::cap become a two elements array.
+                # However, in some distros or custom kernel can techically
+                # be _KERNEL_CAPABILITY_U32S = _LINUX_CAPABILITY_U32S_1
+                # Leaving this code here for the sake of ensuring completeness.
+                cap_value = self.cap[0]
+            elif len(self.cap) == 2:
+                # In 2.6.25.x <= kernels < 6.3 kernel_cap_struct::cap is a two
+                # elements __u32 array that constitutes a 64bit bitfield.
+                cap_value = (self.cap[1] << 32) | self.cap[0]
+            else:
+                raise exceptions.VolatilityException(
+                    "Unsupported kernel capabilities implementation"
+                )
         else:
-            # In kernels < 2.6.25.x kernel_cap_struct::cap was a __u32
-            # In kernels >= 6.3 kernel_cap_struct::cap is a u64
+            # In kernels < 2.6.25.x kernel_cap_struct::cap is a __u32
             cap_value = self.cap
 
         return cap_value & self.get_kernel_cap_full()
@@ -1563,3 +1575,23 @@ class kernel_cap_struct(objects.StructType):
 
         cap_value = 1 << CAPABILITIES.index(capability)
         return cap_value & self.get_capabilities() != 0
+
+
+class kernel_cap_t(kernel_cap_struct):
+    # In kernels 6.3 kernel_cap_struct became the kernel_cap_t typedef
+    def get_capabilities(self) -> int:
+        """Returns the capability bitfield value
+
+        Returns:
+            int: The capability bitfield value.
+        """
+
+        if self.has_member("val"):
+            # In kernels >= 6.3 kernel_cap_t::val is a u64
+            cap_value = self.val
+        else:
+            raise exceptions.VolatilityException(
+                "Unsupported kernel capabilities implementation"
+            )
+
+        return cap_value & self.get_kernel_cap_full()
