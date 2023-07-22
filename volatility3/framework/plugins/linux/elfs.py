@@ -105,8 +105,9 @@ class Elfs(plugins.PluginInterface):
 
             real_size = end - start
 
-            if real_size < 0 or real_size > 100000000:
-                continue
+            # Check if ELF has a legitimate size
+            if real_size < 0 or real_size > constants.linux.ELF_MAX_EXTRACTION_SIZE:
+                raise ValueError(f"The claimed size of the ELF is invalid: {real_size}")
 
             sections[start] = real_size
 
