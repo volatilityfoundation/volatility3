@@ -107,7 +107,7 @@ The latest generated copy of the documentation can be found at: <https://volatil
 
 ## Licensing and Copyright
 
-Copyright (C) 2007-2022 Volatility Foundation
+Copyright (C) 2007-2023 Volatility Foundation
 
 All Rights Reserved
 

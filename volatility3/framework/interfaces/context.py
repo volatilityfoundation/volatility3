@@ -253,6 +253,7 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
         symbol_name: str,
         native_layer_name: Optional[str] = None,
         absolute: bool = False,
+        object_type: Optional[Union[str, "interfaces.objects.ObjectInterface"]] = None,
         **kwargs,
     ) -> "interfaces.objects.ObjectInterface":
         """Returns an object created using the symbol_table_name and layer_name
@@ -262,6 +263,7 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
             symbol_name: The name of a symbol (that must be present in the module's symbol table).  The symbol's associated type will be used to construct an object at the symbol's offset.
             native_layer_name: The native layer for objects that reference a different layer (if not the default provided during module construction)
             absolute: A boolean specifying whether the offset is absolute within the layer, or relative to the start of the module
+            object_type: Override for the type from the symobl to use (or if the symbol type is missing)
 
         Returns:
             The constructed object

@@ -138,7 +138,7 @@ class Elfs(plugins.PluginInterface):
 
             name = utility.array_to_string(task.comm)
 
-            for vma in task.mm.get_mmap_iter():
+            for vma in task.mm.get_vma_iter():
                 hdr = proc_layer.read(vma.vm_start, 4, pad=True)
                 if not (
                     hdr[0] == 0x7F
