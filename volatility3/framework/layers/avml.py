@@ -19,8 +19,14 @@ vollog = logging.getLogger(__name__)
 try:
     # TODO: Find library for windows if needed
     try:
-        # Linux/Mac
+        # Linux
         lib_snappy = ctypes.cdll.LoadLibrary("libsnappy.so.1")
+    except OSError:
+        lib_snappy = None
+
+    try:
+        # macOS
+        lib_snappy = ctypes.cdll.LoadLibrary("libsnappy.1.dylib")
     except OSError:
         lib_snappy = None
 
@@ -31,7 +37,7 @@ try:
     except OSError:
         lib_snappy = None
 
-    if lib_snappy:
+    if not lib_snappy:
         # Windows 32
         lib_snappy = ctypes.cdll.LoadLibrary("snappy32")
 
