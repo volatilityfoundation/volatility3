@@ -25,8 +25,9 @@ try:
         lib_snappy = None
 
     try:
-        # macOS
-        lib_snappy = ctypes.cdll.LoadLibrary("libsnappy.1.dylib")
+        if not lib_snappy:
+            # macOS
+            lib_snappy = ctypes.cdll.LoadLibrary("libsnappy.1.dylib")
     except OSError:
         lib_snappy = None
 
