@@ -22,12 +22,17 @@ class Lsmod(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
         ]
 
     @classmethod
-    def list_modules(cls, context: interfaces.context.ContextInterface, darwin_module_name: str):
+    def list_modules(
+        cls, context: interfaces.context.ContextInterface, darwin_module_name: str
+    ):
         """Lists all the modules in the primary layer.
 
         Args:
@@ -41,26 +46,23 @@ class Lsmod(plugins.PluginInterface):
         kernel = context.modules[darwin_module_name]
         kernel_layer = context.layers[kernel.layer_name]
 
-        kmod_ptr = kernel.object_from_symbol(symbol_name = "kmod")
+        kmod_ptr = kernel.object_from_symbol(symbol_name="kmod")
 
         try:
             kmod = kmod_ptr.dereference().cast("kmod_info")
         except exceptions.InvalidAddressException:
-            return []
+            return  # Generation finished
 
         yield kmod
 
         try:
             kmod = kmod.next
         except exceptions.InvalidAddressException:
-            return []
+            return  # Generation finished
 
         seen: Set = set()
 
-        while kmod != 0 and \
-                kmod not in seen and \
-                len(seen) < 1024:
-
+        while kmod != 0 and kmod not in seen and len(seen) < 1024:
             kmod_obj = kmod.dereference()
 
             if not kernel_layer.is_valid(kmod_obj.vol.offset, kmod_obj.vol.size):
@@ -74,14 +76,17 @@ class Lsmod(plugins.PluginInterface):
                 kmod = kmod.next
             except exceptions.InvalidAddressException:
                 return
+        return  # Generation finished
 
     def _generator(self):
-        for module in self.list_modules(self.context, self.config['kernel']):
-
+        for module in self.list_modules(self.context, self.config["kernel"]):
             mod_name = utility.array_to_string(module.name)
             mod_size = module.size
 
             yield 0, (format_hints.Hex(module.vol.offset), mod_name, mod_size)
 
     def run(self):
-        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Name", str), ("Size", int)], self._generator())
+        return renderers.TreeGrid(
+            [("Offset", format_hints.Hex), ("Name", str), ("Size", int)],
+            self._generator(),
+        )

@@ -23,8 +23,10 @@ Steps to reproduce the behavior:
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+**Example output**
+Please copy and paste the text demonstrating the issue, ideally with verbose output turned on (`vol.py -vvv ...`).  
+
+Text is preferred to screenshots for searching and to talk about specific parts of the output.
 
 **Additional information**
 Add any other information about the problem here.

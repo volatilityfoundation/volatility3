@@ -23,8 +23,11 @@ class Check_afinfo(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
         ]
 
     # returns whether the symbol is found within the kernel (system.map) or not
@@ -40,7 +43,7 @@ class Check_afinfo(plugins.PluginInterface):
                 continue
 
             if check == "write":
-                addr = var_ops.member(attr = 'write')
+                addr = var_ops.member(attr="write")
             else:
                 addr = getattr(var_ops, check)
 
@@ -48,12 +51,16 @@ class Check_afinfo(plugins.PluginInterface):
                 yield check, addr
 
     def _check_afinfo(self, var_name, var, op_members, seq_members):
-        for hooked_member, hook_address in self._check_members(var.seq_fops, var_name, op_members):
+        for hooked_member, hook_address in self._check_members(
+            var.seq_fops, var_name, op_members
+        ):
             yield var_name, hooked_member, hook_address
 
         # newer kernels
         if var.has_member("seq_ops"):
-            for hooked_member, hook_address in self._check_members(var.seq_ops, var_name, seq_members):
+            for hooked_member, hook_address in self._check_members(
+                var.seq_ops, var_name, seq_members
+            ):
                 yield var_name, hooked_member, hook_address
 
         # this is the most commonly hooked member by rootkits, so a force a check on it
@@ -61,17 +68,24 @@ class Check_afinfo(plugins.PluginInterface):
             yield var_name, "show", var.seq_show
 
     def _generator(self):
+        vmlinux = self.context.modules[self.config["kernel"]]
 
-        vmlinux = self.context.modules[self.config['kernel']]
-
-        op_members = vmlinux.get_type('file_operations').members
-        seq_members = vmlinux.get_type('seq_operations').members
+        op_members = vmlinux.get_type("file_operations").members
+        seq_members = vmlinux.get_type("seq_operations").members
 
         tcp = ("tcp_seq_afinfo", ["tcp6_seq_afinfo", "tcp4_seq_afinfo"])
-        udp = ("udp_seq_afinfo", ["udplite6_seq_afinfo", "udp6_seq_afinfo", "udplite4_seq_afinfo", "udp4_seq_afinfo"])
+        udp = (
+            "udp_seq_afinfo",
+            [
+                "udplite6_seq_afinfo",
+                "udp6_seq_afinfo",
+                "udplite4_seq_afinfo",
+                "udp4_seq_afinfo",
+            ],
+        )
         protocols = [tcp, udp]
 
-        for (struct_type, global_vars) in protocols:
+        for struct_type, global_vars in protocols:
             for global_var_name in global_vars:
                 # this will lookup fail for the IPv6 protocols on kernels without IPv6 support
                 try:
@@ -79,12 +93,21 @@ class Check_afinfo(plugins.PluginInterface):
                 except exceptions.SymbolError:
                     continue
 
-                global_var = vmlinux.object(object_type = struct_type, offset = global_var.address)
+                global_var = vmlinux.object(
+                    object_type=struct_type, offset=global_var.address
+                )
 
-                for name, member, address in self._check_afinfo(global_var_name, global_var, op_members, seq_members):
+                for name, member, address in self._check_afinfo(
+                    global_var_name, global_var, op_members, seq_members
+                ):
                     yield 0, (name, member, format_hints.Hex(address))
 
     def run(self):
-
-        return renderers.TreeGrid([("Symbol Name", str), ("Member", str), ("Handler Address", format_hints.Hex)],
-                                  self._generator())
+        return renderers.TreeGrid(
+            [
+                ("Symbol Name", str),
+                ("Member", str),
+                ("Handler Address", format_hints.Hex),
+            ],
+            self._generator(),
+        )

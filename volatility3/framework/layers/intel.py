@@ -28,28 +28,44 @@ class Intel(linear.LinearlyMappedLayer):
     # NOTE: _maxphyaddr is MAXPHYADDR as defined in the Intel specs *NOT* the maximum physical address
     _maxphyaddr = 32
     _maxvirtaddr = _maxphyaddr
-    _structure = [('page directory', 10, False), ('page table', 10, True)]
-    _direct_metadata = collections.ChainMap({'architecture': 'Intel32'}, {'mapped': True},
-                                            interfaces.layers.TranslationLayerInterface._direct_metadata)
+    _structure = [("page directory", 10, False), ("page table", 10, True)]
+    _direct_metadata = collections.ChainMap(
+        {"architecture": "Intel32"},
+        {"mapped": True},
+        interfaces.layers.TranslationLayerInterface._direct_metadata,
+    )
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 name: str,
-                 metadata: Optional[Dict[str, Any]] = None) -> None:
-        super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
+    def __init__(
+        self,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        name: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        super().__init__(
+            context=context, config_path=config_path, name=name, metadata=metadata
+        )
         self._base_layer = self.config["memory_layer"]
         self._swap_layers: List[str] = []
         self._page_map_offset = self.config["page_map_offset"]
 
         # Assign constants
         self._initial_position = min(self._maxvirtaddr, self._bits_per_register) - 1
-        self._initial_entry = self._mask(self._page_map_offset, self._initial_position, 0) | 0x1
+        self._initial_entry = (
+            self._mask(self._page_map_offset, self._initial_position, 0) | 0x1
+        )
         self._entry_size = struct.calcsize(self._entry_format)
         self._entry_number = self.page_size // self._entry_size
+        self._canonical_prefix = self._mask(
+            (1 << self._bits_per_register) - 1,
+            self._bits_per_register,
+            self._maxvirtaddr,
+        )
 
         # These can vary depending on the type of space
-        self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
+        self._index_shift = int(
+            math.ceil(math.log2(struct.calcsize(self._entry_format)))
+        )
 
     @classproperty
     @functools.lru_cache()
@@ -86,7 +102,7 @@ class Intel(linear.LinearlyMappedLayer):
         """Returns the bits of a value between highbit and lowbit inclusive."""
         high_mask = (1 << (high_bit + 1)) - 1
         low_mask = (1 << low_bit) - 1
-        mask = (high_mask ^ low_mask)
+        mask = high_mask ^ low_mask
         # print(high_bit, low_bit, bin(mask), bin(value))
         return value & mask
 
@@ -94,6 +110,23 @@ class Intel(linear.LinearlyMappedLayer):
     def _page_is_valid(entry: int) -> bool:
         """Returns whether a particular page is valid based on its entry."""
         return bool(entry & 1)
+
+    def canonicalize(self, addr: int) -> int:
+        """Canonicalizes an address by performing an appropiate sign extension on the higher addresses"""
+        if self._bits_per_register <= self._maxvirtaddr:
+            return addr & self.address_mask
+        elif addr < (1 << self._maxvirtaddr - 1):
+            return addr
+        return self._mask(addr, self._maxvirtaddr, 0) + self._canonical_prefix
+
+    def decanonicalize(self, addr: int) -> int:
+        """Removes canonicalization to ensure an adress fits within the correct range if it has been canonicalized
+
+        This will produce an address outside the range if the canonicalization is incorrect
+        """
+        if addr < (1 << self._maxvirtaddr - 1):
+            return addr
+        return addr ^ self._canonical_prefix
 
     def _translate(self, offset: int) -> Tuple[int, int, str]:
         """Translates a specific offset based on paging tables.
@@ -106,9 +139,16 @@ class Intel(linear.LinearlyMappedLayer):
 
         # Now we're done
         if not self._page_is_valid(entry):
-            raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
-                                                          f"Page Fault at entry {hex(entry)} in page entry")
-        page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
+            raise exceptions.PagedInvalidAddressException(
+                self.name,
+                offset,
+                position + 1,
+                entry,
+                f"Page Fault at entry {hex(entry)} in page entry",
+            )
+        page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(
+            offset, position, 0
+        )
 
         return page, 1 << (position + 1), self._base_layer
 
@@ -124,20 +164,30 @@ class Intel(linear.LinearlyMappedLayer):
         entry = self._initial_entry
 
         if self.minimum_address > offset > self.maximum_address:
-            raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
-                                                          "Entry outside virtual address range: " + hex(entry))
+            raise exceptions.PagedInvalidAddressException(
+                self.name,
+                offset,
+                position + 1,
+                entry,
+                "Entry outside virtual address range: " + hex(entry),
+            )
 
         # Run through the offset in various chunks
-        for (name, size, large_page) in self._structure:
+        for name, size, large_page in self._structure:
             # Check we're valid
             if not self._page_is_valid(entry):
-                raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
-                                                              "Page Fault at entry " + hex(entry) + " in table " + name)
+                raise exceptions.PagedInvalidAddressException(
+                    self.name,
+                    offset,
+                    position + 1,
+                    entry,
+                    "Page Fault at entry " + hex(entry) + " in table " + name,
+                )
             # Check if we're a large page
             if large_page and (entry & (1 << 7)):
                 # Mask off the PAT bit
                 if entry & (1 << 12):
-                    entry -= (1 << 12)
+                    entry -= 1 << 12
                 # We're a large page, the rest is finished below
                 # If we want to implement PSE-36, it would need to be done here
                 break
@@ -147,33 +197,51 @@ class Intel(linear.LinearlyMappedLayer):
             index = self._mask(offset, start, position + 1) >> (position + 1)
 
             # Grab the base address of the table we'll be getting the next entry from
-            base_address = self._mask(entry, self._maxphyaddr - 1, size + self._index_shift)
+            base_address = self._mask(
+                entry, self._maxphyaddr - 1, size + self._index_shift
+            )
 
             table = self._get_valid_table(base_address)
             if table is None:
-                raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
-                                                              "Page Fault at entry " + hex(entry) + " in table " + name)
+                raise exceptions.PagedInvalidAddressException(
+                    self.name,
+                    offset,
+                    position + 1,
+                    entry,
+                    "Page Fault at entry " + hex(entry) + " in table " + name,
+                )
 
             # Read the data for the next entry
-            entry_data = table[(index << self._index_shift):(index << self._index_shift) + self._entry_size]
+            entry_data = table[
+                (index << self._index_shift) : (index << self._index_shift)
+                + self._entry_size
+            ]
 
             if INTEL_TRANSLATION_DEBUGGING:
                 vollog.log(
-                    constants.LOGLEVEL_VVVV, "Entry {} at index {} gives data {} as {}".format(
-                        hex(entry), hex(index), hex(struct.unpack(self._entry_format, entry_data)[0]), name))
+                    constants.LOGLEVEL_VVVV,
+                    "Entry {} at index {} gives data {} as {}".format(
+                        hex(entry),
+                        hex(index),
+                        hex(struct.unpack(self._entry_format, entry_data)[0]),
+                        name,
+                    ),
+                )
 
             # Read out the new entry from memory
-            entry, = struct.unpack(self._entry_format, entry_data)
+            (entry,) = struct.unpack(self._entry_format, entry_data)
 
         return entry, position
 
     @functools.lru_cache(1025)
     def _get_valid_table(self, base_address: int) -> Optional[bytes]:
         """Extracts the table, validates it and returns it if it's valid."""
-        table = self._context.layers.read(self._base_layer, base_address, self.page_size)
+        table = self._context.layers.read(
+            self._base_layer, base_address, self.page_size
+        )
 
         # If the table is entirely duplicates, then mark the whole table as bad
-        if (table == table[:self._entry_size] * self._entry_number):
+        if table == table[: self._entry_size] * self._entry_number:
             return None
         return table
 
@@ -182,27 +250,36 @@ class Intel(linear.LinearlyMappedLayer):
         address."""
         try:
             # TODO: Consider reimplementing this, since calls to mapping can call is_valid
-            return all([
-                self._context.layers[layer].is_valid(mapped_offset)
-                for _, _, mapped_offset, _, layer in self.mapping(offset, length)
-            ])
+            return all(
+                [
+                    self._context.layers[layer].is_valid(mapped_offset)
+                    for _, _, mapped_offset, _, layer in self.mapping(offset, length)
+                ]
+            )
         except exceptions.InvalidAddressException:
             return False
 
-    def mapping(self,
-                offset: int,
-                length: int,
-                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
+    def mapping(
+        self, offset: int, length: int, ignore_errors: bool = False
+    ) -> Iterable[Tuple[int, int, int, int, str]]:
         """Returns a sorted iterable of (offset, sublength, mapped_offset, mapped_length, layer)
         mappings.
 
         This allows translation layers to provide maps of contiguous
         regions in one layer
         """
-        stashed_offset = stashed_mapped_offset = stashed_size = stashed_mapped_size = stashed_map_layer = None
-        for offset, size, mapped_offset, mapped_size, map_layer in self._mapping(offset, length, ignore_errors):
-            if stashed_offset is None or (stashed_offset + stashed_size != offset) or (
-                    stashed_mapped_offset + stashed_mapped_size != mapped_offset) or (stashed_map_layer != map_layer):
+        stashed_offset = (
+            stashed_mapped_offset
+        ) = stashed_size = stashed_mapped_size = stashed_map_layer = None
+        for offset, size, mapped_offset, mapped_size, map_layer in self._mapping(
+            offset, length, ignore_errors
+        ):
+            if (
+                stashed_offset is None
+                or (stashed_offset + stashed_size != offset)
+                or (stashed_mapped_offset + stashed_mapped_size != mapped_offset)
+                or (stashed_map_layer != map_layer)
+            ):
                 # The block isn't contiguous
                 if stashed_offset is not None:
                     yield stashed_offset, stashed_size, stashed_mapped_offset, stashed_mapped_size, stashed_map_layer
@@ -217,14 +294,18 @@ class Intel(linear.LinearlyMappedLayer):
                 stashed_size += size
                 stashed_mapped_size += mapped_size
         # Yield whatever's left
-        if (stashed_offset is not None and stashed_mapped_offset is not None and stashed_size is not None
-                and stashed_mapped_size is not None and stashed_map_layer is not None):
+        if (
+            stashed_offset is not None
+            and stashed_mapped_offset is not None
+            and stashed_size is not None
+            and stashed_mapped_size is not None
+            and stashed_map_layer is not None
+        ):
             yield stashed_offset, stashed_size, stashed_mapped_offset, stashed_mapped_size, stashed_map_layer
 
-    def _mapping(self,
-                 offset: int,
-                 length: int,
-                 ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
+    def _mapping(
+        self, offset: int, length: int, ignore_errors: bool = False
+    ) -> Iterable[Tuple[int, int, int, int, str]]:
         """Returns a sorted iterable of (offset, sublength, mapped_offset, mapped_length, layer)
         mappings.
 
@@ -235,7 +316,9 @@ class Intel(linear.LinearlyMappedLayer):
             try:
                 mapped_offset, _, layer_name = self._translate(offset)
                 if not self._context.layers[layer_name].is_valid(mapped_offset):
-                    raise exceptions.InvalidAddressException(layer_name = layer_name, invalid_address = mapped_offset)
+                    raise exceptions.InvalidAddressException(
+                        layer_name=layer_name, invalid_address=mapped_offset
+                    )
             except exceptions.InvalidAddressException:
                 if not ignore_errors:
                     raise
@@ -246,9 +329,16 @@ class Intel(linear.LinearlyMappedLayer):
             try:
                 chunk_offset, page_size, layer_name = self._translate(offset)
                 chunk_size = min(page_size - (chunk_offset % page_size), length)
-                if not self._context.layers[layer_name].is_valid(chunk_offset, chunk_size):
-                    raise exceptions.InvalidAddressException(layer_name = layer_name, invalid_address = chunk_offset)
-            except (exceptions.PagedInvalidAddressException, exceptions.InvalidAddressException) as excp:
+                if not self._context.layers[layer_name].is_valid(
+                    chunk_offset, chunk_size
+                ):
+                    raise exceptions.InvalidAddressException(
+                        layer_name=layer_name, invalid_address=chunk_offset
+                    )
+            except (
+                exceptions.PagedInvalidAddressException,
+                exceptions.InvalidAddressException,
+            ) as excp:
                 if not ignore_errors:
                     raise
                 # We can jump more if we know where the page fault failed
@@ -256,7 +346,7 @@ class Intel(linear.LinearlyMappedLayer):
                     mask = (1 << excp.invalid_bits) - 1
                 else:
                     mask = (1 << self._page_size_in_bits) - 1
-                length_diff = (mask + 1 - (offset & mask))
+                length_diff = mask + 1 - (offset & mask)
                 length -= length_diff
                 offset += length_diff
             else:
@@ -273,11 +363,13 @@ class Intel(linear.LinearlyMappedLayer):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'memory_layer', optional = False),
-            requirements.LayerListRequirement(name = 'swap_layers', optional = True),
-            requirements.IntRequirement(name = 'page_map_offset', optional = False),
-            requirements.IntRequirement(name = 'kernel_virtual_offset', optional = True),
-            requirements.StringRequirement(name = 'kernel_banner', optional = True)
+            requirements.TranslationLayerRequirement(
+                name="memory_layer", optional=False
+            ),
+            requirements.LayerListRequirement(name="swap_layers", optional=True),
+            requirements.IntRequirement(name="page_map_offset", optional=False),
+            requirements.IntRequirement(name="kernel_virtual_offset", optional=True),
+            requirements.StringRequirement(name="kernel_banner", optional=True),
         ]
 
 
@@ -289,25 +381,34 @@ class IntelPAE(Intel):
     _bits_per_register = 32
     _maxphyaddr = 40
     _maxvirtaddr = 32
-    _structure = [('page directory pointer', 2, False), ('page directory', 9, True), ('page table', 9, True)]
-    _direct_metadata = collections.ChainMap({'pae': True}, Intel._direct_metadata)
+    _structure = [
+        ("page directory pointer", 2, False),
+        ("page directory", 9, True),
+        ("page table", 9, True),
+    ]
+    _direct_metadata = collections.ChainMap({"pae": True}, Intel._direct_metadata)
 
 
 class Intel32e(Intel):
     """Class for handling 64-bit (32-bit extensions) for Intel
     architectures."""
 
-    _direct_metadata = collections.ChainMap({'architecture': 'Intel64'}, Intel._direct_metadata)
+    _direct_metadata = collections.ChainMap(
+        {"architecture": "Intel64"}, Intel._direct_metadata
+    )
     _entry_format = "<Q"
     _bits_per_register = 64
     _maxphyaddr = 52
     _maxvirtaddr = 48
-    _structure = [('page map layer 4', 9, False), ('page directory pointer', 9, True), ('page directory', 9, True),
-                  ('page table', 9, True)]
+    _structure = [
+        ("page map layer 4", 9, False),
+        ("page directory pointer", 9, True),
+        ("page directory", 9, True),
+        ("page table", 9, True),
+    ]
 
 
 class WindowsMixin(Intel):
-
     @staticmethod
     def _page_is_valid(entry: int) -> bool:
         """Returns whether a particular page is valid based on its entry.
@@ -321,7 +422,9 @@ class WindowsMixin(Intel):
         """
         return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
 
-    def _translate_swap(self, layer: Intel, offset: int, bit_offset: int) -> Tuple[int, int, str]:
+    def _translate_swap(
+        self, layer: Intel, offset: int, bit_offset: int
+    ) -> Tuple[int, int, str]:
         try:
             return super()._translate(offset)
         except exceptions.PagedInvalidAddressException as excp:
@@ -331,19 +434,27 @@ class WindowsMixin(Intel):
             unknown_bit = bool(entry & (1 << 7))
             n = (entry >> 1) & 0xF
             vbit = bool(entry & 1)
-            if (not tbit and not pbit and not vbit and unknown_bit) and ((entry >> bit_offset) != 0):
+            if (not tbit and not pbit and not vbit and unknown_bit) and (
+                (entry >> bit_offset) != 0
+            ):
                 swap_offset = entry >> bit_offset << excp.invalid_bits
 
-                if layer.config.get('swap_layers', False):
+                if layer.config.get("swap_layers", False):
                     swap_layer_name = layer.config.get(
-                        interfaces.configuration.path_join('swap_layers', 'swap_layers' + str(n)), None)
+                        interfaces.configuration.path_join(
+                            "swap_layers", "swap_layers" + str(n)
+                        ),
+                        None,
+                    )
                     if swap_layer_name:
                         return swap_offset, 1 << excp.invalid_bits, swap_layer_name
-                raise exceptions.SwappedInvalidAddressException(layer_name = excp.layer_name,
-                                                                invalid_address = excp.invalid_address,
-                                                                invalid_bits = excp.invalid_bits,
-                                                                entry = excp.entry,
-                                                                swap_offset = swap_offset)
+                raise exceptions.SwappedInvalidAddressException(
+                    layer_name=excp.layer_name,
+                    invalid_address=excp.invalid_address,
+                    invalid_bits=excp.invalid_bits,
+                    entry=excp.entry,
+                    swap_offset=swap_offset,
+                )
             raise
 
 
@@ -351,13 +462,11 @@ class WindowsMixin(Intel):
 
 
 class WindowsIntel(WindowsMixin, Intel):
-
     def _translate(self, offset):
         return self._translate_swap(self, offset, self._page_size_in_bits)
 
 
 class WindowsIntelPAE(WindowsMixin, IntelPAE):
-
     def _translate(self, offset: int) -> Tuple[int, int, str]:
         return self._translate_swap(self, offset, self._bits_per_register)
 

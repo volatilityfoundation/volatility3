@@ -31,6 +31,7 @@ try:
     # Import so that the handler is found by the framework.class_subclasses callc
     import smb.SMBHandler  # lgtm [py/unused-import]
 except ImportError:
+    # If we fail to import this, it means that SMB handling won't be available
     pass
 
 vollog = logging.getLogger(__name__)
@@ -62,10 +63,12 @@ class ResourceAccessor(object):
 
     list_handlers = True
 
-    def __init__(self,
-                 progress_callback: Optional[constants.ProgressCallback] = None,
-                 context: Optional[ssl.SSLContext] = None,
-                 enable_cache: bool = True) -> None:
+    def __init__(
+        self,
+        progress_callback: Optional[constants.ProgressCallback] = None,
+        context: Optional[ssl.SSLContext] = None,
+        enable_cache: bool = True,
+    ) -> None:
         """Creates a resource accessor.
 
         Note: context is an SSL context, not a volatility context
@@ -75,20 +78,24 @@ class ResourceAccessor(object):
         self._handlers = list(framework.class_subclasses(urllib.request.BaseHandler))
         self._enable_cache = enable_cache
         if self.list_handlers:
-            vollog.log(constants.LOGLEVEL_VVV,
-                       f"Available URL handlers: {', '.join([x.__name__ for x in self._handlers])}")
+            vollog.log(
+                constants.LOGLEVEL_VVV,
+                f"Available URL handlers: {', '.join([x.__name__ for x in self._handlers])}",
+            )
             self.__class__.list_handlers = False
 
     def uses_cache(self, url: str) -> bool:
         """Determines whether a URLs contents should be cached"""
         parsed_url = urllib.parse.urlparse(url)
 
-        return self._enable_cache and parsed_url.scheme not in self._non_cached_schemes()
+        return (
+            self._enable_cache and parsed_url.scheme not in self._non_cached_schemes()
+        )
 
     @staticmethod
     def _non_cached_schemes() -> List[str]:
         """Returns the list of schemes not to be cached"""
-        result = ['file']
+        result = ["file"]
         for clazz in framework.class_subclasses(VolatilityHandler):
             result += clazz.non_cached_schemes()
         return result
@@ -102,34 +109,44 @@ class ResourceAccessor(object):
         urllib.request.install_opener(urllib.request.build_opener(*self._handlers))
 
         # Python bug 46654
-        if sys.platform == 'win32':
+        if sys.platform == "win32":
             # We only need to worry about UNC paths on windows, on linux they'd be smb:// and need pysmb or similar
-            parsed_url = urllib.parse.urlparse(url, scheme = 'file')
+            parsed_url = urllib.parse.urlparse(url, scheme="file")
             # Only worry about file scheme URLs, make sure that there's either a host or
             # the unparsing left an extra slash at the start (which will get lost with urlunparse)
-            if parsed_url.scheme == 'file' and (parsed_url.netloc or parsed_url.path.startswith('//')):
+            if parsed_url.scheme == "file" and (
+                parsed_url.netloc or parsed_url.path.startswith("//")
+            ):
                 # Change the netloc to '/' and then prepend the netloc to the path
                 # Urlunparse will remove extra initial slashes from path, hence setting netloc
-                new_url = urllib.parse.urlunparse((parsed_url.scheme, '/',
-                                                   '/' + parsed_url.netloc + parsed_url.path, parsed_url.params,
-                                                   parsed_url.query, parsed_url.fragment))
-                vollog.log(constants.LOGLEVEL_VVVV, f'UNC path detected, converted path {url} to {new_url}')
+                new_url = urllib.parse.urlunparse(
+                    (
+                        parsed_url.scheme,
+                        "/",
+                        "/" + parsed_url.netloc + parsed_url.path,
+                        parsed_url.params,
+                        parsed_url.query,
+                        parsed_url.fragment,
+                    )
+                )
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    f"UNC path detected, converted path {url} to {new_url}",
+                )
                 url = new_url
 
         try:
-            fp = urllib.request.urlopen(url, context = self._context)
+            fp = urllib.request.urlopen(url, context=self._context)
         except error.URLError as excp:
             if excp.args:
-                # TODO: As of python3.7 this can be removed
-                unverified_retrieval = (hasattr(ssl, "SSLCertVerificationError") and isinstance(
-                    excp.args[0], ssl.SSLCertVerificationError)) or (isinstance(excp.args[0], ssl.SSLError) and
-                                                                     excp.args[0].reason == "CERTIFICATE_VERIFY_FAILED")
-                if unverified_retrieval:
-                    vollog.warning("SSL certificate verification failed: attempting UNVERIFIED retrieval")
+                if isinstance(excp.args[0], ssl.SSLCertVerificationError):
+                    vollog.warning(
+                        "SSL certificate verification failed: attempting UNVERIFIED retrieval"
+                    )
                     non_verifying_ctx = ssl.SSLContext()
                     non_verifying_ctx.check_hostname = False
                     non_verifying_ctx.verify_mode = ssl.CERT_NONE
-                    fp = urllib.request.urlopen(url, context = non_verifying_ctx)
+                    fp = urllib.request.urlopen(url, context=non_verifying_ctx)
                 else:
                     raise excp
             else:
@@ -143,40 +160,43 @@ class ResourceAccessor(object):
 
             if not self.uses_cache(url):
                 # ZipExtFiles (files in zips) cannot seek, so must be cached in order to use and/or decompress
-                curfile = urllib.request.urlopen(url, context = self._context)
+                curfile = urllib.request.urlopen(url, context=self._context)
             else:
                 # TODO: find a way to check if we already have this file (look at http headers?)
                 block_size = 1028 * 8
                 temp_filename = os.path.join(
                     constants.CACHE_PATH,
-                    "data_" + hashlib.sha512(bytes(url, 'raw_unicode_escape')).hexdigest() + ".cache")
+                    "data_"
+                    + hashlib.sha512(bytes(url, "raw_unicode_escape")).hexdigest()
+                    + ".cache",
+                )
 
                 if not os.path.exists(temp_filename):
                     vollog.debug(f"Caching file at: {temp_filename}")
 
                     try:
-                        content_length = fp.info().get('Content-Length', -1)
+                        content_length = fp.info().get("Content-Length", -1)
                     except AttributeError:
                         # If our fp doesn't have an info member, carry on gracefully
                         content_length = -1
-                    cache_file = open(temp_filename, "wb")
-
-                    count = 0
-                    block = fp.read(block_size)
-                    while block:
-                        count += len(block)
-                        if self._progress_callback:
-                            self._progress_callback(count * 100 / max(count, int(content_length)),
-                                                    f"Reading file {url}")
-                        cache_file.write(block)
+                    with open(temp_filename, "wb") as cache_file:
+                        count = 0
                         block = fp.read(block_size)
-                    cache_file.close()
+                        while block:
+                            count += len(block)
+                            if self._progress_callback:
+                                self._progress_callback(
+                                    count * 100 / max(count, int(content_length)),
+                                    f"Reading file {url}",
+                                )
+                            cache_file.write(block)
+                            block = fp.read(block_size)
                 else:
                     vollog.debug(f"Using already cached file at: {temp_filename}")
                 # Re-open the cache with a different mode
                 # Since we don't want people thinking they're able to save to the cache file,
                 # open it in read mode only and allow breakages to happen if they wanted to write
-                curfile = open(temp_filename, mode = "rb")
+                curfile = open(temp_filename, mode="rb")
 
         # Determine whether the file is a particular type of file, and if so, open it as such
         IMPORTED_MAGIC = False
@@ -192,13 +212,21 @@ class ResourceAccessor(object):
                     # Only file's python has magic.detect_from_fobj
 
                 if detected:
-                    if detected.mime_type == 'application/x-xz':
-                        curfile = cascadeCloseFile(lzma.LZMAFile(curfile, mode), curfile)
-                    elif detected.mime_type == 'application/x-bzip2':
+                    if detected.mime_type == "application/x-xz":
+                        curfile = cascadeCloseFile(
+                            lzma.LZMAFile(curfile, mode), curfile
+                        )
+                    elif detected.mime_type == "application/x-bzip2":
                         curfile = cascadeCloseFile(bz2.BZ2File(curfile, mode), curfile)
-                    elif detected.mime_type == 'application/x-gzip':
-                        curfile = cascadeCloseFile(gzip.GzipFile(fileobj = curfile, mode = mode), curfile)
-                    if detected.mime_type in ['application/x-xz', 'application/x-bzip2', 'application/x-gzip']:
+                    elif detected.mime_type == "application/x-gzip":
+                        curfile = cascadeCloseFile(
+                            gzip.GzipFile(fileobj=curfile, mode=mode), curfile
+                        )
+                    if detected.mime_type in [
+                        "application/x-xz",
+                        "application/x-bzip2",
+                        "application/x-gzip",
+                    ]:
                         # Read and rewind to ensure we're inside any compressed file layers
                         curfile.read(1)
                         curfile.seek(0)
@@ -221,7 +249,9 @@ class ResourceAccessor(object):
                 elif extension == "bz2":
                     curfile = cascadeCloseFile(bz2.BZ2File(curfile, mode), curfile)
                 elif extension == "gz":
-                    curfile = cascadeCloseFile(gzip.GzipFile(fileobj = curfile, mode = mode), curfile)
+                    curfile = cascadeCloseFile(
+                        gzip.GzipFile(fileobj=curfile, mode=mode), curfile
+                    )
                 else:
                     stop = True
 
@@ -232,7 +262,6 @@ class ResourceAccessor(object):
 
 
 class VolatilityHandler(urllib.request.BaseHandler):
-
     @classmethod
     def non_cached_schemes(cls) -> List[str]:
         return []
@@ -250,21 +279,27 @@ class JarHandler(VolatilityHandler):
 
     @classmethod
     def non_cached_schemes(cls) -> List[str]:
-        return ['jar']
+        return ["jar"]
 
     @staticmethod
     def default_open(req: urllib.request.Request) -> Optional[Any]:
         """Handles the request if it's the jar scheme."""
-        if req.type == 'jar':
-            subscheme, remainder = req.full_url.split(":")[1], ":".join(req.full_url.split(":")[2:])
-            if subscheme != 'file':
-                vollog.log(constants.LOGLEVEL_VVV, f"Unsupported jar subscheme {subscheme}")
+        if req.type == "jar":
+            subscheme, remainder = req.full_url.split(":")[1], ":".join(
+                req.full_url.split(":")[2:]
+            )
+            if subscheme != "file":
+                vollog.log(
+                    constants.LOGLEVEL_VVV, f"Unsupported jar subscheme {subscheme}"
+                )
                 return None
 
             zipsplit = remainder.split("!")
             if len(zipsplit) != 2:
-                vollog.log(constants.LOGLEVEL_VVV,
-                           f"Path did not contain exactly one fragment indicator: {remainder}")
+                vollog.log(
+                    constants.LOGLEVEL_VVV,
+                    f"Path did not contain exactly one fragment indicator: {remainder}",
+                )
                 return None
 
             zippath, filepath = zipsplit
@@ -275,6 +310,6 @@ class JarHandler(VolatilityHandler):
 class OfflineHandler(VolatilityHandler):
     @staticmethod
     def default_open(req: urllib.request.Request) -> Optional[Any]:
-        if constants.OFFLINE and req.type in ['http', 'https']:
+        if constants.OFFLINE and req.type in ["http", "https"]:
             raise exceptions.OfflineException(req.full_url)
         return None

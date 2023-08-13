@@ -14,19 +14,23 @@ vollog = logging.getLogger(__name__)
 
 
 class Crashinfo(interfaces.plugins.PluginInterface):
+    """Lists the information from a Windows crash dump."""
+
     _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(
+                name="primary",
+                description="Memory layer for the kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
         ]
 
     def _generator(self, layer: crash.WindowsCrashDump32Layer):
         header = layer.get_header()
-        uptime = datetime.timedelta(microseconds = int(header.SystemUpTime) / 10)
+        uptime = datetime.timedelta(microseconds=int(header.SystemUpTime) / 10)
 
         if header.DumpType == 0x1:
             dump_type = "Full Dump (0x1)"
@@ -42,27 +46,32 @@ class Crashinfo(interfaces.plugins.PluginInterface):
             bitmap_size = format_hints.Hex(summary_header.BitmapSize)
             bitmap_pages = format_hints.Hex(summary_header.Pages)
         else:
-            bitmap_header_size = bitmap_size = bitmap_pages = renderers.NotApplicableValue()
+            bitmap_header_size = (
+                bitmap_size
+            ) = bitmap_pages = renderers.NotApplicableValue()
 
-        yield (0, (
-            utility.array_to_string(header.Signature),
-            header.MajorVersion,
-            header.MinorVersion,
-            format_hints.Hex(header.DirectoryTableBase),
-            format_hints.Hex(header.PfnDataBase),
-            format_hints.Hex(header.PsLoadedModuleList),
-            format_hints.Hex(header.PsActiveProcessHead),
-            header.MachineImageType,
-            header.NumberProcessors,
-            format_hints.Hex(header.KdDebuggerDataBlock),
-            dump_type,
-            str(uptime),
-            utility.array_to_string(header.Comment),
-            conversion.wintime_to_datetime(header.SystemTime),
-            bitmap_header_size,
-            bitmap_size,
-            bitmap_pages,
-        ))
+        yield (
+            0,
+            (
+                utility.array_to_string(header.Signature),
+                header.MajorVersion,
+                header.MinorVersion,
+                format_hints.Hex(header.DirectoryTableBase),
+                format_hints.Hex(header.PfnDataBase),
+                format_hints.Hex(header.PsLoadedModuleList),
+                format_hints.Hex(header.PsActiveProcessHead),
+                header.MachineImageType,
+                header.NumberProcessors,
+                format_hints.Hex(header.KdDebuggerDataBlock),
+                dump_type,
+                str(uptime),
+                utility.array_to_string(header.Comment),
+                conversion.wintime_to_datetime(header.SystemTime),
+                bitmap_header_size,
+                bitmap_size,
+                bitmap_pages,
+            ),
+        )
 
     def run(self):
         crash_layer = None
@@ -76,22 +85,25 @@ class Crashinfo(interfaces.plugins.PluginInterface):
             vollog.error("This plugin requires a Windows crash dump")
             raise
 
-        return renderers.TreeGrid([
-            ("Signature", str),
-            ("MajorVersion", int),
-            ("MinorVersion", int),
-            ("DirectoryTableBase", format_hints.Hex),
-            ("PfnDataBase", format_hints.Hex),
-            ("PsLoadedModuleList", format_hints.Hex),
-            ("PsActiveProcessHead", format_hints.Hex),
-            ("MachineImageType", int),
-            ("NumberProcessors", int),
-            ("KdDebuggerDataBlock", format_hints.Hex),
-            ("DumpType", str),
-            ("SystemUpTime", str),
-            ("Comment", str),
-            ("SystemTime", datetime.datetime),
-            ("BitmapHeaderSize", format_hints.Hex),
-            ("BitmapSize", format_hints.Hex),
-            ("BitmapPages", format_hints.Hex),
-        ], self._generator(crash_layer))
+        return renderers.TreeGrid(
+            [
+                ("Signature", str),
+                ("MajorVersion", int),
+                ("MinorVersion", int),
+                ("DirectoryTableBase", format_hints.Hex),
+                ("PfnDataBase", format_hints.Hex),
+                ("PsLoadedModuleList", format_hints.Hex),
+                ("PsActiveProcessHead", format_hints.Hex),
+                ("MachineImageType", int),
+                ("NumberProcessors", int),
+                ("KdDebuggerDataBlock", format_hints.Hex),
+                ("DumpType", str),
+                ("SystemUpTime", str),
+                ("Comment", str),
+                ("SystemTime", datetime.datetime),
+                ("BitmapHeaderSize", format_hints.Hex),
+                ("BitmapSize", format_hints.Hex),
+                ("BitmapPages", format_hints.Hex),
+            ],
+            self._generator(crash_layer),
+        )

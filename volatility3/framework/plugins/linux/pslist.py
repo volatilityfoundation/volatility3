@@ -19,20 +19,29 @@ class PsList(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.ListRequirement(name = 'pid',
-                                         description = 'Filter on specific process IDs',
-                                         element_type = int,
-                                         optional = True),
-            requirements.BooleanRequirement(name="threads",
-                                            description="Include user threads",
-                                            optional=True,
-                                            default=False),
-            requirements.BooleanRequirement(name="decorate_comm",
-                                            description="Show `user threads` comm in curly brackets, and `kernel threads` comm in square brackets",
-                                            optional=True,
-                                            default=False),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                description="Filter on specific process IDs",
+                element_type=int,
+                optional=True,
+            ),
+            requirements.BooleanRequirement(
+                name="threads",
+                description="Include user threads",
+                optional=True,
+                default=False,
+            ),
+            requirements.BooleanRequirement(
+                name="decorate_comm",
+                description="Show `user threads` comm in curly brackets, and `kernel threads` comm in square brackets",
+                optional=True,
+                default=False,
+            ),
         ]
 
     @classmethod
@@ -58,9 +67,8 @@ class PsList(interfaces.plugins.PluginInterface):
             return lambda _: False
 
     def _get_task_fields(
-            self,
-            task: interfaces.objects.ObjectInterface,
-            decorate_comm: bool = False) -> Tuple[int, int, int, str]:
+        self, task: interfaces.objects.ObjectInterface, decorate_comm: bool = False
+    ) -> Tuple[int, int, int, str]:
         """Extract the fields needed for the final output
 
         Args:
@@ -86,10 +94,11 @@ class PsList(interfaces.plugins.PluginInterface):
         return task_fields
 
     def _generator(
-            self,
-            pid_filter: Callable[[Any], bool],
-            include_threads: bool = False,
-            decorate_comm: bool = False):
+        self,
+        pid_filter: Callable[[Any], bool],
+        include_threads: bool = False,
+        decorate_comm: bool = False,
+    ):
         """Generates the tasks list.
 
         Args:
@@ -104,20 +113,20 @@ class PsList(interfaces.plugins.PluginInterface):
         Yields:
             Each rows
         """
-        for task in self.list_tasks(self.context,
-                                    self.config['kernel'],
-                                    pid_filter,
-                                    include_threads):
+        for task in self.list_tasks(
+            self.context, self.config["kernel"], pid_filter, include_threads
+        ):
             row = self._get_task_fields(task, decorate_comm)
             yield (0, row)
 
     @classmethod
     def list_tasks(
-            cls,
-            context: interfaces.context.ContextInterface,
-            vmlinux_module_name: str,
-            filter_func: Callable[[int], bool] = lambda _: False,
-            include_threads: bool = False) -> Iterable[interfaces.objects.ObjectInterface]:
+        cls,
+        context: interfaces.context.ContextInterface,
+        vmlinux_module_name: str,
+        filter_func: Callable[[int], bool] = lambda _: False,
+        include_threads: bool = False,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer.
 
         Args:
@@ -130,7 +139,7 @@ class PsList(interfaces.plugins.PluginInterface):
         """
         vmlinux = context.modules[vmlinux_module_name]
 
-        init_task = vmlinux.object_from_symbol(symbol_name = "init_task")
+        init_task = vmlinux.object_from_symbol(symbol_name="init_task")
 
         # Note that the init_task itself is not yielded, since "ps" also never shows it.
         for task in init_task.tasks:
@@ -143,10 +152,18 @@ class PsList(interfaces.plugins.PluginInterface):
                 yield from task.get_threads()
 
     def run(self):
-        pids = self.config.get('pid')
-        include_threads = self.config.get('threads')
-        decorate_comm = self.config.get('decorate_comm')
+        pids = self.config.get("pid")
+        include_threads = self.config.get("threads")
+        decorate_comm = self.config.get("decorate_comm")
         filter_func = self.create_pid_filter(pids)
 
-        columns = [("OFFSET (V)", format_hints.Hex), ("PID", int), ("TID", int), ("PPID", int), ("COMM", str)]
-        return renderers.TreeGrid(columns, self._generator(filter_func, include_threads, decorate_comm))
+        columns = [
+            ("OFFSET (V)", format_hints.Hex),
+            ("PID", int),
+            ("TID", int),
+            ("PPID", int),
+            ("COMM", str),
+        ]
+        return renderers.TreeGrid(
+            columns, self._generator(filter_func, include_threads, decorate_comm)
+        )

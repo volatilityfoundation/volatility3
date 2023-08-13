@@ -9,7 +9,7 @@ of a normal plugin, and reuses other plugins appropriately.
 .. note::
 
     This document will not include the complete code necessary for a
-    working plugin (such as imports, etc) since it's designed to focus on the necessary componets for writing a plugin.
+    working plugin (such as imports, etc) since it's designed to focus on the necessary components for writing a plugin.
     For complete and functioning plugins, the ``framework/plugins`` directory should be consulted.
 
 Inherit from PluginInterface
@@ -259,7 +259,7 @@ The plugin then takes the process's ``BaseDllName`` value, and calls :py:meth:`~
 as defined by the symbols, are directly accessible and use the case-style of the symbol library it came from (in Windows,
 attributes are CamelCase), such as ``entry.BaseDllName`` in this instance.  Any attributes not defined by the symbol but added
 by Volatility extensions cannot be properties (in case they overlap with the attributes defined in the symbol libraries)
-and are therefore always methods and pretended with ``get_``, in this example ``BaseDllName.get_string()``.
+and are therefore always methods and prepended with ``get_``, in this example ``BaseDllName.get_string()``.
 
 Finally, ``FullDllName`` is populated.  These operations read from memory, and as such, the memory image may be unable to
 read the data at a particular offset.  This will cause an exception to be thrown.  In Volatility 3, exceptions are thrown

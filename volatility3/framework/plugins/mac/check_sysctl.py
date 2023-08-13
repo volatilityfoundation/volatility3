@@ -25,10 +25,17 @@ class Check_sysctl(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0))
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="macutils", component=mac.MacUtilities, version=(1, 0, 0)
+            ),
+            requirements.PluginRequirement(
+                name="lsmod", plugin=lsmod.Lsmod, version=(2, 0, 0)
+            ),
         ]
 
     def _parse_global_variable_sysctls(self, kernel, name):
@@ -43,7 +50,7 @@ class Check_sysctl(plugins.PluginInterface):
             var_name = known_sysctls[name]
 
             try:
-                var_array = kernel.object_from_symbol(symbol_name = var_name)
+                var_array = kernel.object_from_symbol(symbol_name=var_name)
             except exceptions.SymbolError:
                 var_array = None
 
@@ -52,7 +59,7 @@ class Check_sysctl(plugins.PluginInterface):
 
         return var_str
 
-    def _process_sysctl_list(self, kernel, sysctl_list, recursive = 0):
+    def _process_sysctl_list(self, kernel, sysctl_list, recursive=0):
         if type(sysctl_list) == volatility3.framework.objects.Pointer:
             sysctl_list = sysctl_list.dereference().cast("sysctl_oid_list")
 
@@ -84,20 +91,22 @@ class Check_sysctl(plugins.PluginInterface):
 
             if arg1 == 0 or arg1_ptr == 0:
                 val = self._parse_global_variable_sysctls(kernel, name)
-            elif ctltype == 'CTLTYPE_NODE':
+            elif ctltype == "CTLTYPE_NODE":
                 if sysctl.oid_handler == 0:
-                    for info in self._process_sysctl_list(kernel, sysctl.oid_arg1, recursive = 1):
+                    for info in self._process_sysctl_list(
+                        kernel, sysctl.oid_arg1, recursive=1
+                    ):
                         yield info
 
                 val = "Node"
 
-            elif ctltype in ['CTLTYPE_INT', 'CTLTYPE_QUAD', 'CTLTYPE_OPAQUE']:
+            elif ctltype in ["CTLTYPE_INT", "CTLTYPE_QUAD", "CTLTYPE_OPAQUE"]:
                 try:
                     val = str(arg1.dereference().cast("int"))
                 except exceptions.InvalidAddressException:
                     val = "-1"
 
-            elif ctltype == 'CTLTYPE_STRING':
+            elif ctltype == "CTLTYPE_STRING":
                 try:
                     val = utility.pointer_to_string(sysctl.oid_arg1, 64)
                 except exceptions.InvalidAddressException:
@@ -113,13 +122,15 @@ class Check_sysctl(plugins.PluginInterface):
                 break
 
     def _generator(self):
-        kernel = self.context.modules[self.config['kernel']]
+        kernel = self.context.modules[self.config["kernel"]]
 
-        mods = lsmod.Lsmod.list_modules(self.context, self.config['kernel'])
+        mods = lsmod.Lsmod.list_modules(self.context, self.config["kernel"])
 
-        handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, kernel.layer_name, kernel, mods)
+        handlers = mac.MacUtilities.generate_kernel_handler_info(
+            self.context, kernel.layer_name, kernel, mods
+        )
 
-        sysctl_list = kernel.object_from_symbol(symbol_name = "sysctl__children")
+        sysctl_list = kernel.object_from_symbol(symbol_name="sysctl__children")
 
         for sysctl, name, val in self._process_sysctl_list(kernel, sysctl_list):
             try:
@@ -127,13 +138,33 @@ class Check_sysctl(plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 continue
 
-            module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, check_addr,
-                                                                              self.config['kernel'])
+            module_name, symbol_name = mac.MacUtilities.lookup_module_address(
+                self.context, handlers, check_addr, self.config["kernel"]
+            )
 
-            yield (0, (name, sysctl.oid_number, sysctl.get_perms(), format_hints.Hex(check_addr), val, module_name,
-                       symbol_name))
+            yield (
+                0,
+                (
+                    name,
+                    sysctl.oid_number,
+                    sysctl.get_perms(),
+                    format_hints.Hex(check_addr),
+                    val,
+                    module_name,
+                    symbol_name,
+                ),
+            )
 
     def run(self):
-        return renderers.TreeGrid([("Name", str), ("Number", int), ("Perms", str),
-                                   ("Handler Address", format_hints.Hex), ("Value", str), ("Handler Module", str),
-                                   ("Handler Symbol", str)], self._generator())
+        return renderers.TreeGrid(
+            [
+                ("Name", str),
+                ("Number", int),
+                ("Perms", str),
+                ("Handler Address", format_hints.Hex),
+                ("Value", str),
+                ("Handler Module", str),
+                ("Handler Symbol", str),
+            ],
+            self._generator(),
+        )

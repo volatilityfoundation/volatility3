@@ -16,11 +16,7 @@ pycryptodome
 
 # This can improve error messages regarding improperly configured ISF files,
 # but is only recommended for development
-# jsonschema>=2.3.0
+jsonschema>=2.3.0
 
 # This is required for memory acquisition via leechcore/pcileech.
 leechcorepyc>=2.4.0
-
-# This is required for analyzing Linux samples compressed using AVMLs native
-# compression format.  It is not required for AVML's standard LiME compression.
-python-snappy==0.6.0

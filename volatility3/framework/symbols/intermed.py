@@ -14,7 +14,13 @@ from abc import ABCMeta
 from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Tuple, Type
 
 from volatility3 import schemas, symbols
-from volatility3.framework import class_subclasses, constants, exceptions, interfaces, objects
+from volatility3.framework import (
+    class_subclasses,
+    constants,
+    exceptions,
+    interfaces,
+    objects,
+)
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import resources
 from volatility3.framework.symbols import metadata, native
@@ -74,16 +80,20 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     These are documented in JSONSchema JSON files located in volatility3/schemas.
     """
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 name: str,
-                 isf_url: str,
-                 native_types: interfaces.symbols.NativeTableInterface = None,
-                 table_mapping: Optional[Dict[str, str]] = None,
-                 validate: bool = True,
-                 class_types: Optional[Mapping[str, Type[interfaces.objects.ObjectInterface]]] = None,
-                 symbol_mask: int = 0) -> None:
+    def __init__(
+        self,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        name: str,
+        isf_url: str,
+        native_types: interfaces.symbols.NativeTableInterface = None,
+        table_mapping: Optional[Dict[str, str]] = None,
+        validate: bool = True,
+        class_types: Optional[
+            Mapping[str, Type[interfaces.objects.ObjectInterface]]
+        ] = None,
+        symbol_mask: int = 0,
+    ) -> None:
         """Instantiates a SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
         appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
         done.
@@ -102,45 +112,56 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         # Check there are no obvious errors
         # Open the file and test the version
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
-        fp = resources.ResourceAccessor().open(isf_url)
-        reader = codecs.getreader("utf-8")
-        json_object = json.load(reader(fp))  # type: ignore
-        fp.close()
+        with resources.ResourceAccessor().open(isf_url) as fp:
+            reader = codecs.getreader("utf-8")
+            json_object = json.load(reader(fp))  # type: ignore
 
         # Validation is expensive, but we cache to store the hashes of successfully validated json objects
         if validate and not schemas.validate(json_object):
-            raise exceptions.SymbolSpaceError(f"File does not pass version validation: {isf_url}")
+            raise exceptions.SymbolSpaceError(
+                f"File does not pass version validation: {isf_url}"
+            )
 
-        metadata = json_object.get('metadata', None)
+        metadata = json_object.get("metadata", None)
 
         if not metadata:
-            raise exceptions.SymbolSpaceError(f"Invalid ISF file attempted to be parsed: {isf_url}")
+            raise exceptions.SymbolSpaceError(
+                f"Invalid ISF file attempted to be parsed: {isf_url}"
+            )
 
         # Determine the delegate or throw an exception
-        self._delegate = self._closest_version(metadata.get('format', "0.0.0"),
-                                               self._versions)(context, config_path, name, json_object, native_types,
-                                                               table_mapping)
+        self._delegate = self._closest_version(
+            metadata.get("format", "0.0.0"), self._versions
+        )(context, config_path, name, json_object, native_types, table_mapping)
         if self._delegate.version < constants.ISF_MINIMUM_SUPPORTED:
-            raise RuntimeError("ISF version {} is no longer supported: {}".format(metadata.get('format', "0.0.0"),
-                                                                                  isf_url))
+            raise RuntimeError(
+                "ISF version {} is no longer supported: {}".format(
+                    metadata.get("format", "0.0.0"), isf_url
+                )
+            )
         elif self._delegate.version < constants.ISF_MINIMUM_DEPRECATED:
-            vollog.warning(f"ISF version {metadata.get('format', '0.0.0')} has been deprecated: {isf_url}")
+            vollog.warning(
+                f"ISF version {metadata.get('format', '0.0.0')} has been deprecated: {isf_url}"
+            )
 
         # Inherit
-        super().__init__(context,
-                         config_path,
-                         name,
-                         native_types or self._delegate.natives,
-                         table_mapping = table_mapping,
-                         class_types = class_types)
+        super().__init__(
+            context,
+            config_path,
+            name,
+            native_types or self._delegate.natives,
+            table_mapping=table_mapping,
+            class_types=class_types,
+        )
 
         # Since we've been created with parameters, ensure our config is populated likewise
-        self.config['isf_url'] = isf_url
-        self.config['symbol_mask'] = symbol_mask
+        self.config["isf_url"] = isf_url
+        self.config["symbol_mask"] = symbol_mask
 
     @staticmethod
-    def _closest_version(version: str, versions: Dict[Tuple[int, int, int], Type['ISFormatTable']]) \
-            -> Type['ISFormatTable']:
+    def _closest_version(
+        version: str, versions: Dict[Tuple[int, int, int], Type["ISFormatTable"]]
+    ) -> Type["ISFormatTable"]:
         """Determines the highest suitable handler for specified version
         format.
 
@@ -154,23 +175,26 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         supported_versions = [x for x in versions if x[0] == major and x[1] >= minor]
         if not supported_versions:
             raise ValueError(
-                f"No Intermediate Format interface versions support file interface version: {version}")
+                f"No Intermediate Format interface versions support file interface version: {version}"
+            )
         return versions[max(supported_versions)]
 
-    symbols = _construct_delegate_function('symbols', True)
-    types = _construct_delegate_function('types', True)
-    enumerations = _construct_delegate_function('enumerations', True)
-    metadata = _construct_delegate_function('metadata', True)
-    clear_symbol_cache = _construct_delegate_function('clear_symbol_cache')
-    get_type = _construct_delegate_function('get_type')
-    get_symbol = _construct_delegate_function('get_symbol')
-    get_enumeration = _construct_delegate_function('get_enumeration')
-    get_type_class = _construct_delegate_function('get_type_class')
-    set_type_class = _construct_delegate_function('set_type_class')
-    del_type_class = _construct_delegate_function('del_type_class')
+    symbols = _construct_delegate_function("symbols", True)
+    types = _construct_delegate_function("types", True)
+    enumerations = _construct_delegate_function("enumerations", True)
+    metadata = _construct_delegate_function("metadata", True)
+    clear_symbol_cache = _construct_delegate_function("clear_symbol_cache")
+    get_type = _construct_delegate_function("get_type")
+    get_symbol = _construct_delegate_function("get_symbol")
+    get_enumeration = _construct_delegate_function("get_enumeration")
+    get_type_class = _construct_delegate_function("get_type_class")
+    set_type_class = _construct_delegate_function("set_type_class")
+    del_type_class = _construct_delegate_function("del_type_class")
 
     @classmethod
-    def file_symbol_url(cls, sub_path: str, filename: Optional[str] = None) -> Generator[str, None, None]:
+    def file_symbol_url(
+        cls, sub_path: str, filename: Optional[str] = None
+    ) -> Generator[str, None, None]:
         """Returns an iterator of appropriate file-scheme symbol URLs that can
         be opened by a ResourceAccessor class.
 
@@ -188,39 +212,57 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             zip_match = "/".join(os.path.split(filename))
 
         # Check user symbol directory first, then fallback to the framework's library to allow for overloading
-        vollog.log(constants.LOGLEVEL_VVVV, f"Searching for symbols in {', '.join(symbols.__path__)}")
+        vollog.log(
+            constants.LOGLEVEL_VVVV,
+            f"Searching for symbols in {', '.join(symbols.__path__)}",
+        )
         for path in symbols.__path__:
             if not os.path.isabs(path):
                 path = os.path.abspath(os.path.join(__file__, path))
             for extension in extensions:
                 # Hopefully these will not be large lists, otherwise this might be slow
                 try:
-                    for found in pathlib.Path(path).joinpath(sub_path).resolve().rglob(filename + extension):
+                    for found in (
+                        pathlib.Path(path)
+                        .joinpath(sub_path)
+                        .resolve()
+                        .rglob(filename + extension)
+                    ):
                         yield found.as_uri()
                 except FileNotFoundError:
                     # If there's no linux symbols, don't cry about it
                     pass
 
             # Finally try looking in zip files
-            for zip_path in pathlib.Path(path).joinpath(sub_path).resolve().rglob(filename + '.zip'):
+            for zip_path in (
+                pathlib.Path(path).joinpath(sub_path).resolve().rglob(filename + ".zip")
+            ):
                 # We have a zipfile, so run through it and look for sub files that match the filename
                 with zipfile.ZipFile(zip_path) as zfile:
                     for name in zfile.namelist():
                         for extension in extensions:
                             # By ending with an extension (and therefore, not /), we should not return any directories
-                            if name.endswith(zip_match + extension) or (zip_match == "*" and name.endswith(extension)):
-                                yield "jar:file:" + str(pathlib.Path(zip_path)) + "!" + name
+                            if name.endswith(zip_match + extension) or (
+                                zip_match == "*" and name.endswith(extension)
+                            ):
+                                yield "jar:file:" + str(
+                                    pathlib.Path(zip_path)
+                                ) + "!" + name
 
     @classmethod
-    def create(cls,
-               context: interfaces.context.ContextInterface,
-               config_path: str,
-               sub_path: str,
-               filename: str,
-               native_types: Optional[interfaces.symbols.NativeTableInterface] = None,
-               table_mapping: Optional[Dict[str, str]] = None,
-               class_types: Optional[Mapping[str, Type[interfaces.objects.ObjectInterface]]] = None,
-               symbol_mask: int = 0) -> str:
+    def create(
+        cls,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        sub_path: str,
+        filename: str,
+        native_types: Optional[interfaces.symbols.NativeTableInterface] = None,
+        table_mapping: Optional[Dict[str, str]] = None,
+        class_types: Optional[
+            Mapping[str, Type[interfaces.objects.ObjectInterface]]
+        ] = None,
+        symbol_mask: int = 0,
+    ) -> str:
         """Takes a context and loads an intermediate symbol table based on a
         filename.
 
@@ -238,16 +280,20 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         """
         urls = list(cls.file_symbol_url(sub_path, filename))
         if not urls:
-            raise FileNotFoundError("No symbol files found at provided filename: {}", filename)
+            raise FileNotFoundError(
+                "No symbol files found at provided filename: {}", filename
+            )
         table_name = context.symbol_space.free_table_name(filename)
-        table = cls(context = context,
-                    config_path = config_path,
-                    name = table_name,
-                    isf_url = urls[0],
-                    native_types = native_types,
-                    table_mapping = table_mapping,
-                    class_types = class_types,
-                    symbol_mask = symbol_mask)
+        table = cls(
+            context=context,
+            config_path=config_path,
+            name=table_name,
+            isf_url=urls[0],
+            native_types=native_types,
+            table_mapping=table_mapping,
+            class_types=class_types,
+            symbol_mask=symbol_mask,
+        )
         context.symbol_space.append(table)
         return table_name
 
@@ -255,21 +301,26 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return super().get_requirements() + [
             requirements.StringRequirement(
-                "isf_url", description = "JSON file containing the symbols encoded in the Intermediate Symbol Format"),
+                "isf_url",
+                description="JSON file containing the symbols encoded in the Intermediate Symbol Format",
+            ),
         ]
 
 
-class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta):
+class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass=ABCMeta):
     """Provide a base class to identify all subclasses."""
+
     version = (0, 0, 0)
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 name: str,
-                 json_object: Any,
-                 native_types: interfaces.symbols.NativeTableInterface = None,
-                 table_mapping: Optional[Dict[str, str]] = None) -> None:
+    def __init__(
+        self,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        name: str,
+        json_object: Any,
+        native_types: interfaces.symbols.NativeTableInterface = None,
+        table_mapping: Optional[Dict[str, str]] = None,
+    ) -> None:
         self._json_object = json_object
         self._validate_json()
         self.name = name
@@ -277,7 +328,7 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
         if nt is None:
             raise TypeError("Native table not provided")
         nt.name = name + "_natives"
-        super().__init__(context, config_path, name, nt, table_mapping = table_mapping)
+        super().__init__(context, config_path, name, nt, table_mapping=table_mapping)
         self._overrides: Dict[str, Type[interfaces.objects.ObjectInterface]] = {}
         self._symbol_cache: Dict[str, interfaces.symbols.SymbolInterface] = {}
 
@@ -288,9 +339,12 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
         classes = {"x64": native.x64NativeTable, "x86": native.x86NativeTable}
         for nc in sorted(classes):
             native_class = classes[nc]
-            for base_type in self._json_object['base_types']:
+            for base_type in self._json_object["base_types"]:
                 try:
-                    if self._json_object['base_types'][base_type]['length'] != native_class.get_type(base_type).size:
+                    if (
+                        self._json_object["base_types"][base_type]["length"]
+                        != native_class.get_type(base_type).size
+                    ):
                         break
                 except TypeError:
                     # TODO: determine whether we should give voids a size - We don't give voids a length, whereas microsoft seemingly do
@@ -303,9 +357,13 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
     # TODO: Check the format and make use of the other metadata
 
     def _validate_json(self) -> None:
-        if ('user_types' not in self._json_object or 'base_types' not in self._json_object
-                or 'metadata' not in self._json_object or 'symbols' not in self._json_object
-                or 'enums' not in self._json_object):
+        if (
+            "user_types" not in self._json_object
+            or "base_types" not in self._json_object
+            or "metadata" not in self._json_object
+            or "symbols" not in self._json_object
+            or "enums" not in self._json_object
+        ):
             raise exceptions.SymbolSpaceError("Malformed JSON file provided")
 
     @property
@@ -321,6 +379,7 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
 
 class Version1Format(ISFormatTable):
     """Class for storing intermediate debugging data as objects and classes."""
+
     version = (0, 0, 1)
 
     def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
@@ -329,35 +388,39 @@ class Version1Format(ISFormatTable):
         # note that this should invalidate/update the cache
         if self._symbol_cache.get(name, None):
             return self._symbol_cache[name]
-        symbol = self._json_object['symbols'].get(name, None)
+        symbol = self._json_object["symbols"].get(name, None)
         if not symbol:
             raise exceptions.SymbolError(name, self.name, f"Unknown symbol: {name}")
-        address = symbol['address']
-        if self.config.get('symbol_mask', 0):
-            address = address & self.config['symbol_mask']
+        address = symbol["address"]
+        if self.config.get("symbol_mask", 0):
+            address = address & self.config["symbol_mask"]
 
-        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name, address = address)
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(
+            name=name, address=address
+        )
         return self._symbol_cache[name]
 
     @property
     def symbols(self) -> Iterable[str]:
         """Returns an iterator of the symbol names."""
-        return list(self._json_object.get('symbols', {}))
+        return list(self._json_object.get("symbols", {}))
 
     @property
     def enumerations(self) -> Iterable[str]:
         """Returns an iterator of the available enumerations."""
-        return list(self._json_object.get('enums', {}))
+        return list(self._json_object.get("enums", {}))
 
     @property
     def types(self) -> Iterable[str]:
         """Returns an iterator of the symbol type names."""
-        return list(self._json_object.get('user_types', {})) + list(self.natives.types)
+        return list(self._json_object.get("user_types", {})) + list(self.natives.types)
 
     def get_type_class(self, name: str) -> Type[interfaces.objects.ObjectInterface]:
         return self._overrides.get(name, objects.AggregateType)
 
-    def set_type_class(self, name: str, clazz: Type[interfaces.objects.ObjectInterface]) -> None:
+    def set_type_class(
+        self, name: str, clazz: Type[interfaces.objects.ObjectInterface]
+    ) -> None:
         if name not in self.types:
             raise ValueError(f"Symbol type not in {self.name} SymbolTable: {name}")
         self._overrides[name] = clazz
@@ -366,112 +429,144 @@ class Version1Format(ISFormatTable):
         if name in self._overrides:
             del self._overrides[name]
 
-    def _interdict_to_template(self, dictionary: Dict[str, Any]) -> interfaces.objects.Template:
+    def _interdict_to_template(
+        self, dictionary: Dict[str, Any]
+    ) -> interfaces.objects.Template:
         """Converts an intermediate format dict into an object template."""
         if not dictionary:
-            raise exceptions.SymbolSpaceError(f"Invalid intermediate dictionary: {dictionary}")
+            raise exceptions.SymbolSpaceError(
+                f"Invalid intermediate dictionary: {dictionary}"
+            )
 
-        type_name = dictionary['kind']
-        if type_name == 'base':
-            type_name = dictionary['name']
+        type_name = dictionary["kind"]
+        if type_name == "base":
+            type_name = dictionary["name"]
 
         if type_name in self.natives.types:
             # The symbol is a native type
-            native_template = self.natives.get_type(self.name + constants.BANG + type_name)
+            native_template = self.natives.get_type(
+                self.name + constants.BANG + type_name
+            )
 
             # Add specific additional parameters, etc
             update = {}
-            if type_name == 'array':
-                update['count'] = dictionary['count']
-                update['subtype'] = self._interdict_to_template(dictionary['subtype'])
-            elif type_name == 'pointer':
-                if dictionary.get('base', None):
-                    base_type = self.natives.get_type(self.name + constants.BANG + dictionary['base'])
-                    update['data_format'] = base_type.vol['data_format']
-                update['subtype'] = self._interdict_to_template(dictionary['subtype'])
-            elif type_name == 'enum':
-                update = self._lookup_enum(dictionary['name'])
-            elif type_name == 'bitfield':
+            if type_name == "array":
+                update["count"] = dictionary["count"]
+                update["subtype"] = self._interdict_to_template(dictionary["subtype"])
+            elif type_name == "pointer":
+                if dictionary.get("base", None):
+                    base_type = self.natives.get_type(
+                        self.name + constants.BANG + dictionary["base"]
+                    )
+                    update["data_format"] = base_type.vol["data_format"]
+                update["subtype"] = self._interdict_to_template(dictionary["subtype"])
+            elif type_name == "enum":
+                update = self._lookup_enum(dictionary["name"])
+            elif type_name == "bitfield":
                 update = {
-                    'start_bit': dictionary['bit_position'],
-                    'end_bit': dictionary['bit_position'] + dictionary['bit_length']
+                    "start_bit": dictionary["bit_position"],
+                    "end_bit": dictionary["bit_position"] + dictionary["bit_length"],
                 }
-                update['base_type'] = self._interdict_to_template(dictionary['type'])
+                update["base_type"] = self._interdict_to_template(dictionary["type"])
             # We do *not* call native_template.clone(), since it slows everything down a lot
             # We require that the native.get_type method always returns a newly constructed python object
             native_template.update_vol(**update)
             return native_template
 
         # Otherwise
-        if dictionary['kind'] not in objects.AggregateTypes.values():
-            raise exceptions.SymbolSpaceError(f"Unknown Intermediate format: {dictionary}")
+        if dictionary["kind"] not in objects.AggregateTypes.values():
+            raise exceptions.SymbolSpaceError(
+                f"Unknown Intermediate format: {dictionary}"
+            )
 
-        reference_name = dictionary['name']
+        reference_name = dictionary["name"]
         if constants.BANG not in reference_name:
             reference_name = self.name + constants.BANG + reference_name
         else:
             reference_parts = reference_name.split(constants.BANG)
-            reference_name = (self.table_mapping.get(reference_parts[0], reference_parts[0]) + constants.BANG +
-                              constants.BANG.join(reference_parts[1:]))
+            reference_name = (
+                self.table_mapping.get(reference_parts[0], reference_parts[0])
+                + constants.BANG
+                + constants.BANG.join(reference_parts[1:])
+            )
 
-        return objects.templates.ReferenceTemplate(type_name = reference_name)
+        return objects.templates.ReferenceTemplate(type_name=reference_name)
 
     def _lookup_enum(self, name: str) -> Dict[str, Any]:
         """Looks up an enumeration and returns a dictionary of __init__
         parameters for an Enum."""
-        lookup = self._json_object['enums'].get(name, None)
+        lookup = self._json_object["enums"].get(name, None)
         if not lookup:
             raise exceptions.SymbolSpaceError(f"Unknown enumeration: {name}")
-        result = {"choices": copy.deepcopy(lookup['constants']), "base_type": self.natives.get_type(lookup['base'])}
+        result = {
+            "choices": copy.deepcopy(lookup["constants"]),
+            "base_type": self.natives.get_type(lookup["base"]),
+        }
         return result
 
     def get_enumeration(self, enum_name: str) -> interfaces.objects.Template:
         """Resolves an individual enumeration."""
         if constants.BANG in enum_name:
-            raise exceptions.SymbolError(enum_name, self.name,
-                                         f"Enumeration for a different table requested: {enum_name}")
-        if enum_name not in self._json_object['enums']:
+            raise exceptions.SymbolError(
+                enum_name,
+                self.name,
+                f"Enumeration for a different table requested: {enum_name}",
+            )
+        if enum_name not in self._json_object["enums"]:
             # Fall back to the natives table
-            raise exceptions.SymbolError(enum_name, self.name,
-                                         f"Enumeration not found in {self.name} table: {enum_name}")
-        curdict = self._json_object['enums'][enum_name]
-        base_type = self.natives.get_type(curdict['base'])
+            raise exceptions.SymbolError(
+                enum_name,
+                self.name,
+                f"Enumeration not found in {self.name} table: {enum_name}",
+            )
+        curdict = self._json_object["enums"][enum_name]
+        base_type = self.natives.get_type(curdict["base"])
         # The size isn't actually used, the base-type defines it.
-        return objects.templates.ObjectTemplate(type_name = self.name + constants.BANG + enum_name,
-                                                object_class = objects.Enumeration,
-                                                base_type = base_type,
-                                                choices = curdict['constants'])
+        return objects.templates.ObjectTemplate(
+            type_name=self.name + constants.BANG + enum_name,
+            object_class=objects.Enumeration,
+            base_type=base_type,
+            choices=curdict["constants"],
+        )
 
     def get_type(self, type_name: str) -> interfaces.objects.Template:
         """Resolves an individual symbol."""
         if constants.BANG in type_name:
             index = type_name.find(constants.BANG)
-            table_name, type_name = type_name[:index], type_name[index + 1:]
+            table_name, type_name = type_name[:index], type_name[index + 1 :]
             raise exceptions.SymbolError(
-                type_name, table_name,
-                f"Symbol for a different table requested: {table_name + constants.BANG + type_name}")
-        if type_name not in self._json_object['user_types']:
+                type_name,
+                table_name,
+                f"Symbol for a different table requested: {table_name + constants.BANG + type_name}",
+            )
+        if type_name not in self._json_object["user_types"]:
             # Fall back to the natives table
             return self.natives.get_type(self.name + constants.BANG + type_name)
-        curdict = self._json_object['user_types'][type_name]
+        curdict = self._json_object["user_types"][type_name]
         members = {}
-        for member_name in curdict['fields']:
-            interdict = curdict['fields'][member_name]
-            member = (interdict['offset'], self._interdict_to_template(interdict['type']))
+        for member_name in curdict["fields"]:
+            interdict = curdict["fields"][member_name]
+            member = (
+                interdict["offset"],
+                self._interdict_to_template(interdict["type"]),
+            )
             members[member_name] = member
         object_class = self.get_type_class(type_name)
         if object_class == objects.AggregateType:
             for clazz in objects.AggregateTypes:
-                if objects.AggregateTypes[clazz] == curdict['kind']:
+                if objects.AggregateTypes[clazz] == curdict["kind"]:
                     object_class = clazz
-        return objects.templates.ObjectTemplate(type_name = self.name + constants.BANG + type_name,
-                                                object_class = object_class,
-                                                size = curdict['length'],
-                                                members = members)
+        return objects.templates.ObjectTemplate(
+            type_name=self.name + constants.BANG + type_name,
+            object_class=object_class,
+            size=curdict["length"],
+            members=members,
+        )
 
 
 class Version2Format(Version1Format):
     """Class for storing intermediate debugging data as objects and classes."""
+
     version = (2, 0, 0)
 
     def _get_natives(self) -> Optional[interfaces.symbols.NativeTableInterface]:
@@ -480,9 +575,12 @@ class Version2Format(Version1Format):
         classes = {"x64": native.x64NativeTable, "x86": native.x86NativeTable}
         for nc in sorted(classes):
             native_class = classes[nc]
-            for base_type in self._json_object['base_types']:
+            for base_type in self._json_object["base_types"]:
                 try:
-                    if self._json_object['base_types'][base_type]['size'] != native_class.get_type(base_type).size:
+                    if (
+                        self._json_object["base_types"][base_type]["size"]
+                        != native_class.get_type(base_type).size
+                    ):
                         break
                 except TypeError:
                     # TODO: determine whether we should give voids a size - We don't give voids a length, whereas microsoft seemingly do
@@ -496,162 +594,184 @@ class Version2Format(Version1Format):
         """Resolves an individual symbol."""
         if constants.BANG in type_name:
             index = type_name.find(constants.BANG)
-            table_name, type_name = type_name[:index], type_name[index + 1:]
+            table_name, type_name = type_name[:index], type_name[index + 1 :]
             raise exceptions.SymbolError(
-                type_name, table_name,
-                f"Symbol for a different table requested: {table_name + constants.BANG + type_name}")
-        if type_name not in self._json_object['user_types']:
+                type_name,
+                table_name,
+                f"Symbol for a different table requested: {table_name + constants.BANG + type_name}",
+            )
+        if type_name not in self._json_object["user_types"]:
             # Fall back to the natives table
             if type_name in self.natives.types:
                 return self.natives.get_type(self.name + constants.BANG + type_name)
             else:
-                raise exceptions.SymbolError(type_name, self.name, f"Unknown symbol: {type_name}")
-        curdict = self._json_object['user_types'][type_name]
+                raise exceptions.SymbolError(
+                    type_name, self.name, f"Unknown symbol: {type_name}"
+                )
+        curdict = self._json_object["user_types"][type_name]
         members = {}
-        for member_name in curdict['fields']:
-            interdict = curdict['fields'][member_name]
-            member = (interdict['offset'], self._interdict_to_template(interdict['type']))
+        for member_name in curdict["fields"]:
+            interdict = curdict["fields"][member_name]
+            member = (
+                interdict["offset"],
+                self._interdict_to_template(interdict["type"]),
+            )
             members[member_name] = member
         object_class = self.get_type_class(type_name)
         if object_class == objects.AggregateType:
             for clazz in objects.AggregateTypes:
-                if objects.AggregateTypes[clazz] == curdict['kind']:
+                if objects.AggregateTypes[clazz] == curdict["kind"]:
                     object_class = clazz
-        return objects.templates.ObjectTemplate(type_name = self.name + constants.BANG + type_name,
-                                                object_class = object_class,
-                                                size = curdict['size'],
-                                                members = members)
+        return objects.templates.ObjectTemplate(
+            type_name=self.name + constants.BANG + type_name,
+            object_class=object_class,
+            size=curdict["size"],
+            members=members,
+        )
 
 
 class Version3Format(Version2Format):
     """Class for storing intermediate debugging data as objects and classes."""
+
     version = (2, 1, 0)
 
     def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
         """Returns the symbol given by the symbol name."""
         if self._symbol_cache.get(name, None):
             return self._symbol_cache[name]
-        symbol = self._json_object['symbols'].get(name, None)
+        symbol = self._json_object["symbols"].get(name, None)
         if not symbol:
             raise exceptions.SymbolError(name, self.name, f"Unknown symbol: {name}")
-        address = symbol['address']
-        if self.config.get('symbol_mask', 0):
-            address = address & self.config['symbol_mask']
+        address = symbol["address"]
+        if self.config.get("symbol_mask", 0):
+            address = address & self.config["symbol_mask"]
 
         symbol_type = None
-        if 'type' in symbol:
-            symbol_type = self._interdict_to_template(symbol['type'])
+        if "type" in symbol:
+            symbol_type = self._interdict_to_template(symbol["type"])
 
-        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name, address = address,
-                                                                      type = symbol_type)
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(
+            name=name, address=address, type=symbol_type
+        )
         return self._symbol_cache[name]
 
 
 class Version4Format(Version3Format):
     """Class for storing intermediate debugging data as objects and classes."""
+
     version = (4, 0, 0)
 
     format_mapping = {
-        'int': objects.Integer,
-        'float': objects.Float,
-        'void': objects.Integer,
-        'bool': objects.Boolean,
-        'char': objects.Char
+        "int": objects.Integer,
+        "float": objects.Float,
+        "void": objects.Integer,
+        "bool": objects.Boolean,
+        "char": objects.Char,
     }
 
     def _get_natives(self) -> Optional[interfaces.symbols.NativeTableInterface]:
         """Determines the appropriate native_types to use from the JSON
         data."""
         native_dict = {}
-        base_types = self._json_object['base_types']
+        base_types = self._json_object["base_types"]
         for base_type in base_types:
             # Void are ignored because voids are not a volatility primitive, they are a specific Volatility object
-            if base_type != 'void':
+            if base_type != "void":
                 current = base_types[base_type]
                 # TODO: Fix up the typing of this, it bugs out because of the tuple assignment
-                if current['kind'] not in self.format_mapping:
+                if current["kind"] not in self.format_mapping:
                     raise ValueError("Unsupported base kind")
-                format_val = (current['size'], current['endian'], current['signed'])
-                object_type = self.format_mapping[current['kind']]
-                if base_type == 'pointer':
+                format_val = (current["size"], current["endian"], current["signed"])
+                object_type = self.format_mapping[current["kind"]]
+                if base_type == "pointer":
                     object_type = objects.Pointer
                 native_dict[base_type] = (object_type, format_val)
-        return native.NativeTable(name = "native", native_dictionary = native_dict)
+        return native.NativeTable(name="native", native_dictionary=native_dict)
 
 
 class Version5Format(Version4Format):
     """Class for storing intermediate debugging data as objects and classes."""
+
     version = (4, 1, 0)
 
     def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
         """Returns the symbol given by the symbol name."""
         if self._symbol_cache.get(name, None):
             return self._symbol_cache[name]
-        symbol = self._json_object['symbols'].get(name, None)
+        symbol = self._json_object["symbols"].get(name, None)
         if not symbol:
             raise exceptions.SymbolError(name, self.name, f"Unknown symbol: {name}")
-        address = symbol['address']
-        if self.config.get('symbol_mask', 0):
-            address = address & self.config['symbol_mask']
+        address = symbol["address"]
+        if self.config.get("symbol_mask", 0):
+            address = address & self.config["symbol_mask"]
 
         symbol_type = None
-        if 'type' in symbol:
-            symbol_type = self._interdict_to_template(symbol['type'])
+        if "type" in symbol:
+            symbol_type = self._interdict_to_template(symbol["type"])
         symbol_constant_data = None
-        if 'constant_data' in symbol:
-            symbol_constant_data = base64.b64decode(symbol.get('constant_data'))
+        if "constant_data" in symbol:
+            symbol_constant_data = base64.b64decode(symbol.get("constant_data"))
 
-        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name,
-                                                                      address = address,
-                                                                      type = symbol_type,
-                                                                      constant_data = symbol_constant_data)
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(
+            name=name,
+            address=address,
+            type=symbol_type,
+            constant_data=symbol_constant_data,
+        )
         return self._symbol_cache[name]
 
 
 class Version6Format(Version5Format):
     """Class for storing intermediate debugging data as objects and classes."""
+
     version = (6, 0, 0)
 
     @property
     def metadata(self) -> Optional[interfaces.symbols.MetadataInterface]:
         """Returns a MetadataInterface object."""
-        if self._json_object.get('metadata', {}).get('windows'):
-            return metadata.WindowsMetadata(self._json_object['metadata']['windows'])
-        if self._json_object.get('metadata', {}).get('linux'):
-            return metadata.LinuxMetadata(self._json_object['metadata']['linux'])
+        if self._json_object.get("metadata", {}).get("windows"):
+            return metadata.WindowsMetadata(self._json_object["metadata"]["windows"])
+        if self._json_object.get("metadata", {}).get("linux"):
+            return metadata.LinuxMetadata(self._json_object["metadata"]["linux"])
         return None
 
 
 class Version7Format(Version6Format):
     """Class for storing intermediate debugging data as objects and classes."""
+
     version = (6, 1, 0)
 
 
 class Version8Format(Version7Format):
     """Class for storing intermediate debugging data as objects and classes."""
+
     version = (6, 2, 0)
 
-    def _process_fields(self, fields: Dict[str, Dict[str, Any]]) -> Dict[Any, Tuple[int, interfaces.objects.Template]]:
+    def _process_fields(
+        self, fields: Dict[str, Dict[str, Any]]
+    ) -> Dict[Any, Tuple[int, interfaces.objects.Template]]:
         """For each type field, it walks its tree of subtypes, reducing the hierarchy to just one level.
         It creates a tuple of offset and object templates for each field.
         """
         members = {}
         for new_offset, member_name, member_value in self._reduce_fields(fields):
-            member = (new_offset, self._interdict_to_template(member_value['type']))
+            member = (new_offset, self._interdict_to_template(member_value["type"]))
             members[member_name] = member
         return members
 
-    def _reduce_fields(self,
-                       fields: Dict[str, Dict[str, Any]],
-                       parent_offset: int = 0) -> Generator[Tuple[int, str, Dict], None, None]:
+    def _reduce_fields(
+        self, fields: Dict[str, Dict[str, Any]], parent_offset: int = 0
+    ) -> Generator[Tuple[int, str, Dict], None, None]:
         """Reduce the fields bringing them one level up. It supports anonymous types such as structs or unions in any
         level of depth."""
         for member_name, member_value in fields.items():
-            new_offset = parent_offset + member_value.get('offset', 0)
-            if member_value.get('anonymous', False) and isinstance(member_value, dict):
+            new_offset = parent_offset + member_value.get("offset", 0)
+            if member_value.get("anonymous", False) and isinstance(member_value, dict):
                 # Gets the subtype from the json ISF and recursively reduce its fields
-                subtype = self._json_object['user_types'].get(member_value['type']['name'], {})
-                yield from self._reduce_fields(subtype['fields'], new_offset)
+                subtype = self._json_object["user_types"].get(
+                    member_value["type"]["name"], {}
+                )
+                yield from self._reduce_fields(subtype["fields"], new_offset)
             else:
                 yield new_offset, member_name, member_value
 
@@ -659,24 +779,28 @@ class Version8Format(Version7Format):
         """Resolves an individual symbol."""
         index = type_name.find(constants.BANG)
         if index != -1:
-            table_name, type_name = type_name[:index], type_name[index + 1:]
+            table_name, type_name = type_name[:index], type_name[index + 1 :]
             raise exceptions.SymbolError(
-                type_name, table_name,
-                f"Symbol for a different table requested: {table_name + constants.BANG + type_name}")
+                type_name,
+                table_name,
+                f"Symbol for a different table requested: {table_name + constants.BANG + type_name}",
+            )
 
-        type_definition = self._json_object['user_types'].get(type_name)
+        type_definition = self._json_object["user_types"].get(type_name)
         if type_definition is None:
             # Fall back to the natives table
             return self.natives.get_type(self.name + constants.BANG + type_name)
 
-        members = self._process_fields(type_definition['fields'])
+        members = self._process_fields(type_definition["fields"])
 
         object_class = self.get_type_class(type_name)
         if object_class == objects.AggregateType:
             for clazz in objects.AggregateTypes:
-                if objects.AggregateTypes[clazz] == type_definition['kind']:
+                if objects.AggregateTypes[clazz] == type_definition["kind"]:
                     object_class = clazz
-        return objects.templates.ObjectTemplate(type_name = self.name + constants.BANG + type_name,
-                                                object_class = object_class,
-                                                size = type_definition['size'],
-                                                members = members)
+        return objects.templates.ObjectTemplate(
+            type_name=self.name + constants.BANG + type_name,
+            object_class=object_class,
+            size=type_definition["size"],
+            members=members,
+        )

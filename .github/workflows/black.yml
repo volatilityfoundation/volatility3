@@ -1,0 +1,13 @@
+name: Black python linter
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: psf/black@stable
+        with:
+          options: "--check --diff --verbose"
+          src: "./volatility3"

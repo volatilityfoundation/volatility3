@@ -9,6 +9,7 @@ from typing import Optional, Any, List
 
 try:
     import leechcorepyc
+
     HAS_LEECHCORE = True
 except ImportError:
     HAS_LEECHCORE = False
@@ -66,7 +67,7 @@ if HAS_LEECHCORE:
             """
             return bool(self._handle)
 
-        def seek(self, offset, whence = io.SEEK_SET):
+        def seek(self, offset, whence=io.SEEK_SET):
             if whence == io.SEEK_SET:
                 self._cursor = offset
             elif whence == io.SEEK_CUR:
@@ -90,10 +91,14 @@ if HAS_LEECHCORE:
             chunk_size = size
             output = []
             for entry in self.handle.memmap:
-
-                if entry['base'] + entry['size'] <= chunk_start or entry['base'] >= chunk_start + chunk_size:
+                if (
+                    entry["base"] + entry["size"] <= chunk_start
+                    or entry["base"] >= chunk_start + chunk_size
+                ):
                     continue
-                output += [(max(entry['base'], chunk_start), min(entry['size'], chunk_size))]
+                output += [
+                    (max(entry["base"], chunk_start), min(entry["size"], chunk_size))
+                ]
                 chunk_start = output[-1][0] + output[-1][1]
                 chunk_size = max(0, size - chunk_start)
 
@@ -114,14 +119,16 @@ if HAS_LEECHCORE:
             if len(data) > size:
                 data = data[:size]
             else:
-                data = data + b'\x00' * (size - len(data))
+                data = data + b"\x00" * (size - len(data))
             self._cursor += len(data)
             if not len(data):
-                raise exceptions.InvalidAddressException('LeechCore layer read failure', self._cursor + len(data))
+                raise exceptions.InvalidAddressException(
+                    "LeechCore layer read failure", self._cursor + len(data)
+                )
             return data
 
         def readline(self, __size: Optional[int] = ...) -> bytes:
-            data = b''
+            data = b""
             while __size > self._chunk_size or __size < 0:
                 data += self.read(self._chunk_size)
                 index = data.find(b"\n")
@@ -159,20 +166,18 @@ if HAS_LEECHCORE:
         def closed(self):
             return self._handle
 
-
     class LeechCoreHandler(resources.VolatilityHandler):
-        """Handler for the invented `leechcore` scheme.  This is an unofficial scheme and not registered with IANA
-        """
+        """Handler for the invented `leechcore` scheme.  This is an unofficial scheme and not registered with IANA"""
 
         @classmethod
         def non_cached_schemes(cls) -> List[str]:
             """We need to turn caching *off* for a live filesystem"""
-            return ['leechcore']
+            return ["leechcore"]
 
         @staticmethod
         def default_open(req: urllib.request.Request) -> Optional[Any]:
             """Handles the request if it's the leechcore scheme."""
-            if req.type == 'leechcore':
-                device_uri = '://'.join(req.full_url.split('://')[1:])
+            if req.type == "leechcore":
+                device_uri = "://".join(req.full_url.split("://")[1:])
                 return LeechCoreFile(device_uri)
             return None
