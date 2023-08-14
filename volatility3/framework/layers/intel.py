@@ -110,6 +110,11 @@ class Intel(linear.LinearlyMappedLayer):
     def _page_is_valid(entry: int) -> bool:
         """Returns whether a particular page is valid based on its entry."""
         return bool(entry & 1)
+    
+    @staticmethod
+    def _page_is_dirty(entry: int) -> bool:
+        """Returns whether a particular page is dirty based on its entry."""
+        return bool(entry & (1<<6))
 
     def canonicalize(self, addr: int) -> int:
         """Canonicalizes an address by performing an appropiate sign extension on the higher addresses"""
@@ -259,6 +264,10 @@ class Intel(linear.LinearlyMappedLayer):
         except exceptions.InvalidAddressException:
             return False
 
+    def is_dirty(self, offset: int) -> bool:
+        """Returns whether the page at offset is marked dirty"""
+        return self._page_is_dirty(self._translate_entry(offset)[0])
+    
     def mapping(
         self, offset: int, length: int, ignore_errors: bool = False
     ) -> Iterable[Tuple[int, int, int, int, str]]:
