@@ -203,7 +203,7 @@ class task_struct(generic.GenericIntelProcess):
     ) -> Generator[Tuple[int, int], None, None]:
         """Returns a list of sections based on the memory manager's view of
         this task's virtual memory."""
-        for vma in self.mm.get_mmap_iter():
+        for vma in self.mm.get_vma_iter():
             start = int(vma.vm_start)
             end = int(vma.vm_end)
 
