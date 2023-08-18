@@ -578,7 +578,7 @@ class vm_area_struct(objects.StructType):
         return fname
 
     # used by malfind
-    def is_suspicious(self, proclayer):
+    def is_suspicious(self, proclayer=None):
         ret = False
 
         flags_str = self.get_protection()
@@ -587,15 +587,24 @@ class vm_area_struct(objects.StructType):
             ret = True
         elif flags_str == "r-x" and self.vm_file.dereference().vol.offset == 0:
             ret = True
-        elif "x" in flags_str:
-            for i in range(self.vm_start,self.vm_end,constants.linux.PAGE_SHIFT):
+        elif proclayer and "x" in flags_str:
+            for i in range(self.vm_start, self.vm_end, 1 << constants.linux.PAGE_SHIFT):
                 try:
                     if proclayer.is_dirty(i):
-                        vollog.warning(f"Found malicious (dirty+exec) page at {hex(i)} !")
+                        vollog.warning(
+                            f"Found malicious (dirty+exec) page at {hex(i)} !"
+                        )
+                        # We do not attempt to find other dirty+exec pages once we have found one
                         ret = True
                         break
-                except (exceptions.PagedInvalidAddressException, exceptions.InvalidAddressException):
-                    pass
+                except (
+                    exceptions.PagedInvalidAddressException,
+                    exceptions.InvalidAddressException,
+                ) as excp:
+                    vollog.debug(f"Unable to translate address {hex(i)} : {excp}")
+                    # Abort as it is likely that other addresses in the same range will also fail
+                    ret = False
+                    break
         return ret
 
 
