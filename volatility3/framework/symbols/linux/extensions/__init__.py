@@ -1531,7 +1531,7 @@ class kernel_cap_struct(objects.StructType):
             if len(self.cap) == 1:
                 # At least in the vanilla kernel, from 2.6.24 to 2.6.25
                 # kernel_cap_struct::cap become a two elements array.
-                # However, in some distros or custom kernel can techically
+                # However, in some distros or custom kernel can technically
                 # be _KERNEL_CAPABILITY_U32S = _LINUX_CAPABILITY_U32S_1
                 # Leaving this code here for the sake of ensuring completeness.
                 cap_value = self.cap[0]
