@@ -67,9 +67,10 @@ return a dictionary of plugin names and the plugin classes.
 Determine what configuration options a plugin requires
 ------------------------------------------------------
 
-For each plugin class, we can call the classmethod `requirements` on it, which will return a list of objects that
-adhere to the :py:class:`~volatility3.framework.interfaces.configuration.RequirementInterface` method.  The various
-types of Requirement are split roughly in two,
+For each plugin class, we can call the classmethod 
+:py:func:`~volatility3.framework.interfaces.configuration.ConfigurableInterface.get_requirements` on it, which will 
+return a list of objects that adhere to the :py:class:`~volatility3.framework.interfaces.configuration.RequirementInterface` 
+method.  The various types of Requirement are split roughly in two,
 :py:class:`~volatility3.framework.interfaces.configuration.SimpleTypeRequirement` (such as integers, booleans, floats
 and strings) and more complex requirements (such as lists, choices, multiple requirements, translation layer
 requirements or symbol table requirements).  A requirement just specifies a type of data and a name, and must be
