@@ -279,3 +279,5 @@ CAPABILITIES = (
     "bpf",
     "checkpoint_restore",
 )
+
+ELF_MAX_EXTRACTION_SIZE = 1024 * 1024 * 1024 * 4 - 1
