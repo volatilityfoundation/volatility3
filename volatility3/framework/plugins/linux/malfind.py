@@ -3,13 +3,15 @@
 #
 
 from typing import List
-
+import logging
 from volatility3.framework import constants, interfaces
 from volatility3.framework import renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins.linux import pslist
+
+vollog = logging.getLogger(__name__)
 
 
 class Malfind(interfaces.plugins.PluginInterface):
@@ -47,7 +49,14 @@ class Malfind(interfaces.plugins.PluginInterface):
         proc_layer = self.context.layers[proc_layer_name]
 
         for vma in task.mm.get_vma_iter():
-            if vma.is_suspicious() and vma.get_name(self.context, task) != "[vdso]":
+            vma_name = vma.get_name(self.context, task)
+            vollog.debug(
+                f"Injections : processing PID {task.pid} : VMA {vma_name} : {hex(vma.vm_start)}-{hex(vma.vm_end)}"
+            )
+            if (
+                vma.is_suspicious(proc_layer)
+                and vma.get_name(self.context, task) != "[vdso]"
+            ):
                 data = proc_layer.read(vma.vm_start, 64, pad=True)
                 yield vma, data
 
