@@ -156,6 +156,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 self._cached = context.config.get(path, None), context.config.branch(
                     path
                 )
+        vollog.debug(
+            f"physical_layer maximum_address: {physical_layer.maximum_address}"
+        )
         vollog.debug(f"Stacked layers: {stacked_layers}")
 
     @classmethod
