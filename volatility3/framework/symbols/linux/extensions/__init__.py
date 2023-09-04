@@ -258,6 +258,18 @@ class task_struct(generic.GenericIntelProcess):
         ):
             yield task
 
+    def get_pid(self) -> int:
+        """Returns the pid of this process"""
+        return self.tgid
+
+    def get_parent_pid(self) -> int:
+        """Returns the pid of parent of this process"""
+        return self.parent.get_pid() if self.parent else 0
+
+    def get_name(self) -> str:
+        """Returns the name of this process"""
+        return utility.array_to_string(self.comm)
+
 
 class fs_struct(objects.StructType):
     def get_root_dentry(self):
