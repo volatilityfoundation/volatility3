@@ -112,7 +112,7 @@ class PsList(interfaces.plugins.PluginInterface):
             pid = task.get_pid()
             uid = task.p_uid
             gid = task.p_gid
-            start_time = task.create_time()
+            start_time = task.get_create_time()
 
             ppid = task.get_parent_pid()
 
