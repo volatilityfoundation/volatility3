@@ -109,16 +109,12 @@ class PsList(interfaces.plugins.PluginInterface):
         ):
             offset = format_hints.Hex(task.vol.offset)
             name = utility.array_to_string(task.p_comm)
-            pid = task.p_pid
+            pid = task.get_pid()
             uid = task.p_uid
             gid = task.p_gid
-            start_time_seconds = task.p_start.tv_sec
-            start_time_microseconds = task.p_start.tv_usec
-            start_time = datetime.datetime.fromtimestamp(
-                start_time_seconds + start_time_microseconds / 1e6
-            )
+            start_time = task.create_time()
 
-            ppid = task.p_ppid
+            ppid = task.get_parent_pid()
 
             yield (0, (offset, name, pid, uid, gid, start_time, ppid))
 
