@@ -37,11 +37,12 @@ setuptools.setup(
         "Documentation": "https://volatility3.readthedocs.io/",
         "Source Code": "https://github.com/volatilityfoundation/volatility3",
     },
+    packages=setuptools.find_namespace_packages(
+        include=["volatility3", "volatility3.*"]
+    ),
+    package_dir={"volatility3": "volatility3"},
     python_requires=">=3.7.0",
     include_package_data=True,
-    exclude_package_data={"": ["development", "development.*"], "development": ["*"]},
-    packages=setuptools.find_namespace_packages(where="volatility3"),
-    package_dir={"": "volatility3"},
     entry_points={
         "console_scripts": [
             "vol = volatility3.cli:main",
