@@ -12,13 +12,14 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 def get_install_requires():
     requirements = []
-    with open("requirements-minimal.txt", "r", encoding = "utf-8") as fh:
+    with open("requirements-minimal.txt", "r", encoding="utf-8") as fh:
         for line in fh.readlines():
             stripped_line = line.strip()
             if stripped_line == "" or stripped_line.startswith("#"):
                 continue
             requirements.append(stripped_line)
     return requirements
+
 
 setuptools.setup(
     name="volatility3",
@@ -39,9 +40,8 @@ setuptools.setup(
     python_requires=">=3.7.0",
     include_package_data=True,
     exclude_package_data={"": ["development", "development.*"], "development": ["*"]},
-    packages=setuptools.find_namespace_packages(
-        include=["volatility3"]
-    ),
+    packages=setuptools.find_namespace_packages(where="volatility3"),
+    package_dir={"": "volatility3"},
     entry_points={
         "console_scripts": [
             "vol = volatility3.cli:main",
