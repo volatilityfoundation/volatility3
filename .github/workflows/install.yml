@@ -1,0 +1,29 @@
+name: Test install Volatility3
+on: [push, pull_request]
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.7"]
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Setup python-pip
+      run: python -m pip install --upgrade pip
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Install volatility3
+      run: pip install .
+
+    - name: Run volatility3
+      run: vol --help
