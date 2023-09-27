@@ -42,7 +42,7 @@ class IOMem(interfaces.plugins.PluginInterface):
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             vmlinux_module_name: The name of the kernel module on which to operate
-            resource_offset: The offset to the resouce to be parsed
+            resource_offset: The offset to the resource to be parsed
             seen: The set of resource offsets that have already been parsed
             depth: How deep into the resource structure we are
 
@@ -57,7 +57,7 @@ class IOMem(interfaces.plugins.PluginInterface):
         except exceptions.InvalidAddressException:
             vollog.warning(
                 f"Unable to create resource object at {resource_offset:#x}. This resource, "
-                "its sibling, and any of it's childern and will be missing from the output."
+                "its sibling, and any of it's children and will be missing from the output."
             )
             return None
 
@@ -66,7 +66,7 @@ class IOMem(interfaces.plugins.PluginInterface):
             name = utility.pointer_to_string(resource.name, 128)
         except exceptions.InvalidAddressException:
             vollog.warning(
-                "Unable to follow pointer to name for resource object at {resource_offset:#x}, "
+                f"Unable to follow pointer to name for resource object at {resource_offset:#x}, "
                 "replaced with UnreadableValue"
             )
             name = renderers.UnreadableValue()
