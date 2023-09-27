@@ -1,4 +1,4 @@
-from volatility3.plugins.linux import envvars
+from volatility3.plugins import envvars
 import logging
 
 vollog = logging.getLogger(__name__)
