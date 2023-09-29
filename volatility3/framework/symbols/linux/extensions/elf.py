@@ -33,14 +33,18 @@ class elf(objects.StructType):
         layer_name = self.vol.layer_name
         symbol_table_name = self.get_symbol_table_name()
         # We read the MAGIC: (0x0 to 0x4) 0x7f 0x45 0x4c 0x46
-        magic = self._context.object(
-            symbol_table_name + constants.BANG + "unsigned long",
-            layer_name=layer_name,
-            offset=object_info.offset,
-        )
+        magic = self._context.layers[layer_name].read(object_info.offset, 4, True)
 
         # Check validity
-        if magic != 0x464C457F:
+        if (
+            magic[0] == 0x7F
+            and magic[1] == 0x45  # E
+            and magic[2] == 0x4C  # L
+            and magic[3] == 0x46  # F
+        ):
+            self._valid_magic = True
+        else:
+            self._valid_magic = False
             return None
 
         # We need to read the EI_CLASS (0x4 offset)
@@ -72,7 +76,10 @@ class elf(objects.StructType):
         """
         Determine whether it is a valid object
         """
-        return self._type_prefix is not None and self._hdr is not None
+        if self._valid_magic:
+            return self._type_prefix is not None and self._hdr is not None
+        else:
+            return False
 
     def __getattr__(self, name):
         # Just redirect to the corresponding header
