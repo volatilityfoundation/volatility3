@@ -3,9 +3,12 @@
 #
 
 from typing import Dict, Tuple
+import logging
 
 from volatility3.framework import constants
-from volatility3.framework import objects, interfaces
+from volatility3.framework import objects, interfaces, exceptions
+
+vollog = logging.getLogger(__name__)
 
 
 class elf(objects.StructType):
@@ -33,19 +36,28 @@ class elf(objects.StructType):
         layer_name = self.vol.layer_name
         symbol_table_name = self.get_symbol_table_name()
         # We read the MAGIC: (0x0 to 0x4) 0x7f 0x45 0x4c 0x46
-        magic = self._context.layers[layer_name].read(object_info.offset, 4, True)
-
-        # Check validity
-        if (
-            magic[0] == 0x7F
-            and magic[1] == 0x45  # E
-            and magic[2] == 0x4C  # L
-            and magic[3] == 0x46  # F
-        ):
-            self._valid_magic = True
-        else:
+        try:
+            magic = self._context.object(
+                symbol_table_name + constants.BANG + "unsigned long",
+                layer_name=layer_name,
+                offset=object_info.offset,
+            )
+        except (
+            exceptions.PagedInvalidAddressException,
+            exceptions.InvalidAddressException,
+        ) as excp:
+            vollog.debug(
+                f"Unable to check magic bytes for ELF file at offset {hex(object_info.offset)} in layer {layer_name}: {excp}"
+            )
             self._valid_magic = False
             return None
+
+        # Check validity
+        if magic != 0x464C457F:  # e.g. ELF
+            self._valid_magic = False
+            return None
+        else:
+            self._valid_magic = True
 
         # We need to read the EI_CLASS (0x4 offset)
         ei_class = self._context.object(
