@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from typing import Iterable, List, Tuple
+from typing import Iterable, List, Tuple, Callable
 import struct
 from enum import Enum
 
@@ -11,6 +11,7 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.layers import scanners
 from volatility3.framework.renderers import format_hints
+from volatility3.plugins.linux import pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class PsScan(interfaces.plugins.PluginInterface):
     """Scans for processes present in a particular linux image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -37,6 +38,15 @@ class PsScan(interfaces.plugins.PluginInterface):
                 name="kernel",
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                description="Filter on specific process IDs",
+                element_type=int,
+                optional=True,
+            ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
         ]
 
@@ -75,8 +85,10 @@ class PsScan(interfaces.plugins.PluginInterface):
         vmlinux_module_name = self.config["kernel"]
         vmlinux = self.context.modules[vmlinux_module_name]
 
+        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
+
         for task in self.scan_tasks(
-            self.context, vmlinux_module_name, vmlinux.layer_name
+            self.context, vmlinux_module_name, vmlinux.layer_name, filter_func
         ):
             row = self._get_task_fields(task)
             yield (0, row)
@@ -87,6 +99,7 @@ class PsScan(interfaces.plugins.PluginInterface):
         context: interfaces.context.ContextInterface,
         vmlinux_module_name: str,
         kernel_layer_name: str,
+        filter_func: Callable[[int], bool] = lambda _: False,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Scans for tasks in the memory layer.
 
@@ -168,6 +181,10 @@ class PsScan(interfaces.plugins.PluginInterface):
                     f"Skipping task_struct at {hex(ptask.vol.offset)} as pid {ptask.pid} is likely not valid"
                 )
                 continue
+
+            if filter_func(ptask):
+                continue
+
             yield ptask
 
     def run(self):
