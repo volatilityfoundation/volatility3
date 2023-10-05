@@ -179,7 +179,7 @@ class task_struct(generic.GenericIntelProcess):
         Returns the name of the Layer or None.
         """
 
-        parent_layer = self._context.layers[self.vol.layer_name]
+        parent_layer = self._context.layers[self.vol.native_layer_name]
         try:
             pgd = self.mm.pgd
         except exceptions.InvalidAddressException:

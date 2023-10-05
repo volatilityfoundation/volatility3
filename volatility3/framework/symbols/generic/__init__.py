@@ -39,7 +39,7 @@ class GenericIntelProcess(objects.StructType):
                 preferred_name = context.layers.free_layer_name(prefix=preferred_name)
 
         # Copy the parent's config and then make suitable changes
-        parent_layer = context.layers[self.vol.layer_name]
+        parent_layer = context.layers[self.vol.native_layer_name]
         parent_config = parent_layer.build_configuration()
         # It's an intel layer, because we hardwire the "memory_layer" config option
         # FIXME: this could be for other architectures if we don't hardwire this/these values
