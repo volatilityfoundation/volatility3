@@ -8,7 +8,7 @@ from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
-from volatility3.plugins.linux import pslist
+from volatility3.plugins.linux import pslist, psscan
 
 
 class PsAux(plugins.PluginInterface):
@@ -28,11 +28,20 @@ class PsAux(plugins.PluginInterface):
             requirements.PluginRequirement(
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
+            requirements.PluginRequirement(
+                name="psscan", plugin=psscan.PsScan, version=(1, 1, 0)
+            ),
             requirements.ListRequirement(
                 name="pid",
                 description="Filter on specific process IDs",
                 element_type=int,
                 optional=True,
+            ),
+            requirements.BooleanRequirement(
+                name="scan",
+                description="Scan for processes rather than using pslist",
+                optional=True,
+                default=False,
             ),
         ]
 
@@ -80,6 +89,9 @@ class PsAux(plugins.PluginInterface):
             s = argv.decode().split("\x00")
             args = " ".join(s)
         else:
+            # TODO: when scanning for tasks many are in EXIT_ZOMBIE state and have no mm
+            # even though they were not kernel threads
+
             # kernel thread
             # [ ] mimics ps on a live system
             # also helps identify malware masquerading as a kernel thread, which is fairly common
@@ -112,11 +124,29 @@ class PsAux(plugins.PluginInterface):
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
-        return renderers.TreeGrid(
-            [("PID", int), ("PPID", int), ("COMM", str), ("ARGS", str)],
-            self._generator(
-                pslist.PsList.list_tasks(
-                    self.context, self.config["kernel"], filter_func=filter_func
-                )
-            ),
-        )
+        tree_grid_fields = [("PID", int), ("PPID", int), ("COMM", str), ("ARGS", str)]
+
+        if self.config.get("scan", None) == True:
+            vmlinux_module_name = self.config["kernel"]
+            vmlinux = self.context.modules[vmlinux_module_name]
+            return renderers.TreeGrid(
+                tree_grid_fields,
+                self._generator(
+                    psscan.PsScan.scan_tasks(
+                        self.context,
+                        vmlinux_module_name,
+                        vmlinux.layer_name,
+                        filter_func=filter_func,
+                    )
+                ),
+            )
+
+        else:
+            return renderers.TreeGrid(
+                tree_grid_fields,
+                self._generator(
+                    pslist.PsList.list_tasks(
+                        self.context, self.config["kernel"], filter_func=filter_func
+                    )
+                ),
+            )

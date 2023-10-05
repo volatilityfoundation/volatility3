@@ -14,7 +14,7 @@ from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux.extensions import elf
-from volatility3.plugins.linux import pslist
+from volatility3.plugins.linux import pslist, psscan
 
 vollog = logging.getLogger(__name__)
 
@@ -36,6 +36,9 @@ class Elfs(plugins.PluginInterface):
             requirements.PluginRequirement(
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
+            requirements.PluginRequirement(
+                name="psscan", plugin=psscan.PsScan, version=(1, 1, 0)
+            ),
             requirements.ListRequirement(
                 name="pid",
                 description="Filter on specific process IDs",
@@ -47,6 +50,12 @@ class Elfs(plugins.PluginInterface):
                 description="Extract listed processes",
                 default=False,
                 optional=True,
+            ),
+            requirements.BooleanRequirement(
+                name="scan",
+                description="Scan for processes rather than using pslist",
+                optional=True,
+                default=False,
             ),
         ]
 
@@ -133,11 +142,9 @@ class Elfs(plugins.PluginInterface):
             proc_layer_name = task.add_process_layer()
             if not proc_layer_name:
                 continue
-
             proc_layer = self.context.layers[proc_layer_name]
 
             name = utility.array_to_string(task.comm)
-
             for vma in task.mm.get_vma_iter():
                 hdr = proc_layer.read(vma.vm_start, 4, pad=True)
                 if not (
@@ -180,18 +187,36 @@ class Elfs(plugins.PluginInterface):
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
-        return renderers.TreeGrid(
-            [
-                ("PID", int),
-                ("Process", str),
-                ("Start", format_hints.Hex),
-                ("End", format_hints.Hex),
-                ("File Path", str),
-                ("File Output", str),
-            ],
-            self._generator(
-                pslist.PsList.list_tasks(
-                    self.context, self.config["kernel"], filter_func=filter_func
-                )
-            ),
-        )
+        tree_grid_fields = [
+            ("PID", int),
+            ("Process", str),
+            ("Start", format_hints.Hex),
+            ("End", format_hints.Hex),
+            ("File Path", str),
+            ("File Output", str),
+        ]
+
+        if self.config.get("scan", None) == True:
+            vmlinux_module_name = self.config["kernel"]
+            vmlinux = self.context.modules[vmlinux_module_name]
+            return renderers.TreeGrid(
+                tree_grid_fields,
+                self._generator(
+                    psscan.PsScan.scan_tasks(
+                        self.context,
+                        vmlinux_module_name,
+                        vmlinux.layer_name,
+                        filter_func=filter_func,
+                    )
+                ),
+            )
+
+        else:
+            return renderers.TreeGrid(
+                tree_grid_fields,
+                self._generator(
+                    pslist.PsList.list_tasks(
+                        self.context, self.config["kernel"], filter_func=filter_func
+                    )
+                ),
+            )
