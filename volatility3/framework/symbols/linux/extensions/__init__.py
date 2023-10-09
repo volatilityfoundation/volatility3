@@ -5,7 +5,7 @@
 import collections.abc
 import logging
 import socket as socket_module
-from typing import Generator, Iterable, Iterator, Optional, Tuple
+from typing import Generator, Iterable, Iterator, Optional, Tuple, List
 
 from volatility3.framework import constants
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
@@ -13,6 +13,7 @@ from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
 from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
+from volatility3.framework.constants.linux import CAPABILITIES
 from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
@@ -202,7 +203,7 @@ class task_struct(generic.GenericIntelProcess):
     ) -> Generator[Tuple[int, int], None, None]:
         """Returns a list of sections based on the memory manager's view of
         this task's virtual memory."""
-        for vma in self.mm.get_mmap_iter():
+        for vma in self.mm.get_vma_iter():
             start = int(vma.vm_start)
             end = int(vma.vm_end)
 
@@ -577,7 +578,7 @@ class vm_area_struct(objects.StructType):
         return fname
 
     # used by malfind
-    def is_suspicious(self):
+    def is_suspicious(self, proclayer=None):
         ret = False
 
         flags_str = self.get_protection()
@@ -586,6 +587,24 @@ class vm_area_struct(objects.StructType):
             ret = True
         elif flags_str == "r-x" and self.vm_file.dereference().vol.offset == 0:
             ret = True
+        elif proclayer and "x" in flags_str:
+            for i in range(self.vm_start, self.vm_end, 1 << constants.linux.PAGE_SHIFT):
+                try:
+                    if proclayer.is_dirty(i):
+                        vollog.warning(
+                            f"Found malicious (dirty+exec) page at {hex(i)} !"
+                        )
+                        # We do not attempt to find other dirty+exec pages once we have found one
+                        ret = True
+                        break
+                except (
+                    exceptions.PagedInvalidAddressException,
+                    exceptions.InvalidAddressException,
+                ) as excp:
+                    vollog.debug(f"Unable to translate address {hex(i)} : {excp}")
+                    # Abort as it is likely that other addresses in the same range will also fail
+                    ret = False
+                    break
         return ret
 
 
@@ -794,7 +813,7 @@ class mount(objects.StructType):
         """Gets the fs where we are mounted on
 
         Returns:
-            A 'mount *'
+            A mount pointer
         """
         return self.mnt_parent
 
@@ -802,7 +821,7 @@ class mount(objects.StructType):
         """Gets the dentry of the mountpoint
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
 
         return self.mnt_mountpoint
@@ -839,7 +858,7 @@ class mount(objects.StructType):
         """Returns the root of the mounted tree
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
         vfsmnt = self.get_vfsmnt_current()
         dentry = vfsmnt.mnt_root
@@ -850,7 +869,7 @@ class mount(objects.StructType):
         """Returns the parent root of the mounted tree
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
 
         return self.get_mnt_parent().get_dentry_current()
@@ -970,17 +989,17 @@ class vfsmount(objects.StructType):
         """Helper to make sure it is comparing two pointers to 'vfsmount'.
 
         Depending on the kernel version, the calling object (self) could be
-        a 'vfsmount *' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
+        a 'vfsmount \*' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
         in the framework "auto" dereferencing ability to assure that when we
         reach this point 'self' will be a 'vfsmount' already and self.vol.offset
-        a 'vfsmount *' and not a 'vfsmount **'. The argument must be a 'vfsmount *'.
+        a 'vfsmount \*' and not a 'vfsmount \*\*'. The argument must be a 'vfsmount \*'.
         Typically, it's called from do_get_path().
 
         Args:
-            vfsmount_ptr (vfsmount *): A pointer to a 'vfsmount'
+            vfsmount_ptr (vfsmount \*): A pointer to a 'vfsmount'
 
         Raises:
-            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount *'
+            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount \*'
 
         Returns:
             bool: 'True' if the given argument points to the the same 'vfsmount'
@@ -1010,7 +1029,7 @@ class vfsmount(objects.StructType):
         """Returns the current fs where we are mounted on
 
         Returns:
-            A 'vfsmount *'
+            A vfsmount pointer
         """
         return self.get_mnt_parent()
 
@@ -1018,8 +1037,8 @@ class vfsmount(objects.StructType):
         """Gets the parent fs (vfsmount) to where it's mounted on
 
         Returns:
-            For kernels <  3.3.8: A 'vfsmount *'
-            For kernels >= 3.3.8: A 'vfsmount'
+            For kernels <  3.3.8: A vfsmount pointer
+            For kernels >= 3.3.8: A vfsmount object
         """
         if self._is_kernel_prior_to_struct_mount():
             return self.get_mnt_parent()
@@ -1030,7 +1049,7 @@ class vfsmount(objects.StructType):
         """Returns the root of the mounted tree
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
         if self._is_kernel_prior_to_struct_mount():
             return self.get_mnt_mountpoint()
@@ -1041,7 +1060,7 @@ class vfsmount(objects.StructType):
         """Returns the parent root of the mounted tree
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
         if self._is_kernel_prior_to_struct_mount():
             return self.get_mnt_mountpoint()
@@ -1052,8 +1071,8 @@ class vfsmount(objects.StructType):
         """Gets the mnt_parent member.
 
         Returns:
-            For kernels <  3.3.8: A 'vfsmount *'
-            For kernels >= 3.3.8: A 'mount *'
+            For kernels <  3.3.8: A vfsmount pointer
+            For kernels >= 3.3.8: A mount pointer
         """
         if self._is_kernel_prior_to_struct_mount():
             return self.mnt_parent
@@ -1064,7 +1083,7 @@ class vfsmount(objects.StructType):
         """Gets the dentry of the mountpoint
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
         if self.has_member("mnt_mountpoint"):
             return self.mnt_mountpoint
@@ -1428,3 +1447,137 @@ class bpf_prog(objects.StructType):
 
         # kernel < 3.18.140
         raise AttributeError("Unable to find the BPF type")
+
+
+class cred(objects.StructType):
+    # struct cred was added in kernels 2.6.29
+    def _get_cred_int_value(self, member: str) -> int:
+        """Helper to obtain the right cred member value for the current kernel.
+
+        Args:
+            member (str): The requested cred member name to obtain its value
+
+        Raises:
+            AttributeError: When the requested cred member doesn't exist
+            AttributeError: When the cred implementation is not supported.
+
+        Returns:
+            int: The cred member value
+        """
+        if not self.has_member(member):
+            raise AttributeError(f"struct cred doesn't have a '{member}' member")
+
+        cred_val = self.member(member)
+        if hasattr(cred_val, "val"):
+            # From kernels 3.5.7 on it is a 'kuid_t' type
+            value = cred_val.val
+        elif isinstance(cred_val, objects.Integer):
+            # From at least 2.6.30 and until 3.5.7 it was a 'uid_t' type which was an 'unsigned int'
+            value = cred_val
+        else:
+            raise AttributeError("Kernel struct cred is not supported")
+
+        return int(value)
+
+    @property
+    def euid(self):
+        """Returns the effective user ID
+
+        Returns:
+            int: the effective user ID value
+        """
+        return self._get_cred_int_value("euid")
+
+
+class kernel_cap_struct(objects.StructType):
+    # struct kernel_cap_struct was added in kernels 2.5.0
+    @classmethod
+    def get_last_cap_value(cls) -> int:
+        """Returns the latest capability ID supported by the framework.
+
+        Returns:
+            int: The latest supported capability ID supported by the framework.
+        """
+        return len(CAPABILITIES) - 1
+
+    def get_kernel_cap_full(self) -> int:
+        """Return the maximum value allowed for this kernel for a capability
+
+        Returns:
+            int: _description_
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        try:
+            cap_last_cap = vmlinux.object_from_symbol(symbol_name="cap_last_cap")
+        except exceptions.SymbolError:
+            # It should be a kernel < 3.2, let's use our list of capabilities
+            cap_last_cap = self.get_last_cap_value()
+
+        return (1 << cap_last_cap + 1) - 1
+
+    @classmethod
+    def capabilities_to_string(cls, capabilities_bitfield: int) -> List[str]:
+        """Translates a capability bitfield to a list of capability strings.
+
+        Args:
+            capabilities_bitfield (int): The capability bitfield value.
+
+        Returns:
+            List[str]: A list of capability strings.
+        """
+
+        capabilities = []
+        for bit, name in enumerate(CAPABILITIES):
+            if capabilities_bitfield & (1 << bit) != 0:
+                capabilities.append(name)
+
+        return capabilities
+
+    def get_capabilities(self) -> int:
+        """Returns the capability bitfield value
+
+        Returns:
+            int: The capability bitfield value.
+        """
+
+        if isinstance(self.cap, objects.Array):
+            # In 2.6.25.x <= kernels < 6.3 kernel_cap_struct::cap is a two
+            # elements __u32 array that constitutes a 64bit bitfield.
+            # Technically, it can also be an array of 1 element if
+            # _KERNEL_CAPABILITY_U32S = _LINUX_CAPABILITY_U32S_1
+            # However, in the source code, that never happens.
+            # From 2.6.24 to 2.6.25 cap became an array of 2 elements.
+            cap_value = (self.cap[1] << 32) | self.cap[0]
+        else:
+            # In kernels < 2.6.25.x kernel_cap_struct::cap was a __u32
+            # In kernels >= 6.3 kernel_cap_struct::cap is a u64
+            cap_value = self.cap
+
+        return cap_value & self.get_kernel_cap_full()
+
+    def enumerate_capabilities(self) -> List[str]:
+        """Returns the list of capability strings.
+
+        Returns:
+            List[str]: The list of capability strings.
+        """
+        capabilities_value = self.get_capabilities()
+        return self.capabilities_to_string(capabilities_value)
+
+    def has_capability(self, capability: str) -> bool:
+        """Checks if the given capability string is enabled.
+
+        Args:
+            capability (str): A string representing the capability i.e. dac_read_search
+
+        Raises:
+            AttributeError: If the given capability is unknown to the framework.
+
+        Returns:
+            bool: "True" if the given capability is enabled.
+        """
+        if capability not in CAPABILITIES:
+            raise AttributeError(f"Unknown capability with name '{capability}'")
+
+        cap_value = 1 << CAPABILITIES.index(capability)
+        return cap_value & self.get_capabilities() != 0

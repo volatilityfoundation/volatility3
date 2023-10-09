@@ -224,4 +224,7 @@ def list_plugins() -> Dict[str, Type[interfaces.plugins.PluginInterface]]:
 
 
 def clear_cache(complete=False):
-    os.unlink(os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME))
+    try:
+        os.unlink(os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME))
+    except FileNotFoundError:
+        vollog.log(constants.LOGLEVEL_VVVV, "Attempting to clear a non-existant cache")
