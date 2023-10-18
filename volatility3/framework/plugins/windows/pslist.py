@@ -50,12 +50,6 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 default=False,
                 optional=True,
             ),
-            requirements.BooleanRequirement(
-                name="friendly",
-                description="Display process name in dump filename",
-                default=False,
-                optional=True,
-            ),
         ]
 
     @classmethod
@@ -66,7 +60,6 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         pe_table_name: str,
         proc: interfaces.objects.ObjectInterface,
         open_method: Type[interfaces.plugins.FileHandlerInterface],
-        friendly: bool = False,
     ) -> interfaces.plugins.FileHandlerInterface:
         """Extracts the complete data for a process as a FileHandlerInterface
 
@@ -103,14 +96,13 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 max_length=proc.ImageFileName.vol.count,
                 errors="replace",
             )
-            if friendly:
-                file_handle = open_method(
+
+            file_handle = open_method(
+                open_method.sanitize_filename(
                     f"{proc.UniqueProcessId}.{process_name}.{peb.ImageBaseAddress:#x}.dmp"
                 )
-            else:
-                file_handle = open_method(
-                    f"pid.{proc.UniqueProcessId}.{peb.ImageBaseAddress:#x}.dmp"
-                )
+            )
+
             for offset, data in dos_header.reconstruct():
                 file_handle.seek(offset)
                 file_handle.write(data)
@@ -261,7 +253,6 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         pe_table_name,
                         proc,
                         self.open,
-                        self.config["friendly"],
                     )
                     file_output = "Error outputting file"
                     if file_handle:
