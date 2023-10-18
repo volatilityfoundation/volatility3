@@ -45,7 +45,7 @@ BANG = "!"
 # We use the SemVer 2.0.0 versioning scheme
 VERSION_MAJOR = 2  # Number of releases of the library with a breaking change
 VERSION_MINOR = 5  # Number of changes that only add to the interface
-VERSION_PATCH = 0  # Number of changes that do not change the interface
+VERSION_PATCH = 2  # Number of changes that do not change the interface
 VERSION_SUFFIX = ""
 
 # TODO: At version 2.0.0, remove the symbol_shift feature
