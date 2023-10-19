@@ -153,6 +153,11 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     vollog.debug(excp)
                     key_node_name = renderers.UnreadableValue()
 
+                # if the item is a subkey, use the LastWriteTime of that subkey
+                last_write_time = conversion.wintime_to_datetime(
+                    node.LastWriteTime.QuadPart
+                )
+
                 yield (
                     depth,
                     (
