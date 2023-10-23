@@ -429,7 +429,8 @@ class SqliteCache(CacheManagerInterface):
             progress_callback(0, "Reading remote ISF list")
             cursor = self._database.cursor()
             cursor.execute(
-                f"SELECT cached FROM cache WHERE local = 0 and cached < datetime('now', '{self.cache_period}')"            )
+                f"SELECT cached FROM cache WHERE local = 0 and cached < datetime('now', '{self.cache_period}')"
+            )
             remote_identifiers = RemoteIdentifierFormat(constants.REMOTE_ISF_URL)
             progress_callback(50, "Reading remote ISF list")
             for operating_system in constants.OS_CATEGORIES:
@@ -438,9 +439,11 @@ class SqliteCache(CacheManagerInterface):
                 )
                 for identifier, location in identifiers:
                     identifier = identifier.rstrip()
-                    identifier = identifier[:-1] if identifier.endswith(b"\x00") else identifier # Linux banners dumped by dwarf2json end with "\x00\n". If not stripped, the banner cannot match.
+                    identifier = (
+                        identifier[:-1] if identifier.endswith(b"\x00") else identifier
+                    )  # Linux banners dumped by dwarf2json end with "\x00\n". If not stripped, the banner cannot match.
                     cursor.execute(
-                         "INSERT OR REPLACE INTO cache(identifier, location, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
+                        "INSERT OR REPLACE INTO cache(identifier, location, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
                         (identifier, location, operating_system, False),
                     )
             progress_callback(100, "Reading remote ISF list")
