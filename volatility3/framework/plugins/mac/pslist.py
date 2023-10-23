@@ -188,7 +188,9 @@ class PsList(interfaces.plugins.PluginInterface):
 
         kernel_layer = context.layers[kernel.layer_name]
 
-        queue_entry = kernel.object(object_type="queue_entry", offset=kernel.get_symbol("tasks").address)
+        queue_entry = kernel.object(
+            object_type="queue_entry", offset=kernel.get_symbol("tasks").address
+        )
 
         seen: Dict[int, int] = {}
         for task in queue_entry.walk_list(queue_entry, "tasks", "task"):
