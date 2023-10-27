@@ -11,11 +11,13 @@ from volatility3.framework.layers.codecs import lz77_plain_decompress, lz77_huff
 vollog = logging.getLogger(__name__)
 
 
-def uncompress(data: bytes, huffman: bool):
-    if huffman ==1:
-        return lz77_huffman_decompress(data)
-    else:
+def uncompress(data: bytes, huffman):
+    if huffman == 0:
         return lz77_plain_decompress(data)
+    elif huffman == 2 or huffman == 3:
+        return lz77_huffman_decompress(data)
+    else: 
+        raise ValueError('Cannot decompress the data.')
 
 
 def readBytes(data, position, num):
@@ -106,7 +108,7 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
         data = struct.unpack('<I', header)[0]
         number_of_descs = data & 0xff
         size_of_compressed_data = (data >> 8) & 0x3fffff
-        huffman_compressed = (data >> 30) & 0x1
+        huffman_compressed = (data >> 30) & 0x3
         mapped_address = offset+self.HEADER_SIZE+number_of_descs*self.PAGE_DESC_SIZE
         total_page_count = 0
         position = 0
@@ -140,19 +142,14 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
     ) -> bytes:
         start_offset, _, _, _ = self._find_segment(offset)
         if mapped_offset in self._compressed:
-            try:
-                decoded_data = uncompress(data, self._compressed[mapped_offset])
-            except:
-                return bytearray(output_length)
+            decoded_data = uncompress(data, self._compressed[mapped_offset])
         else:
             decoded_data = data
         page_offset = self._mapping[start_offset]
         decoded_data = decoded_data[page_offset + (offset - start_offset):]
         decoded_data = decoded_data[:output_length]
-        if len(decoded_data) == output_length:
-            return decoded_data
-        else:
-            return bytearray(output_length)
+        return decoded_data
+
 
 class HibernationFileStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 10
