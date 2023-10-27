@@ -14,8 +14,7 @@ def encoded_bit_length(data, symbol):
 
 def Read16Bits(input, current_position):
     if current_position > len(input):
-        print("Incomplete Prefetch")
-        exit(1)
+        raise ValueError("Incomplete Data")
     stream = io.BytesIO(input)
     stream.seek(current_position)
     byte_value = bytearray(stream.read(2))
@@ -33,15 +32,15 @@ def ReadByte(input, current_position):
 
 def lz77_huffman_decompress(in_buf):
     """
-    Description : Decompress the prefetch using LZ77+Huffman Decompression Algorithm
+    Description : Decompress the data using LZ77+Huffman Decompression Algorithm
     Params :
-        @data : The compressed prefetch data extracted from memory
-        @result : The uncompressed prefetch file ready to be forensically analysed
+        @data : The compressed  data extracted from memory
+        @result : The uncompressed data 
     Possible errors :
         Invalid compressed data.
     """
     if len(in_buf) < 256:
-        print("Error : The prefetch must use a 256-byte Huffman table. -> Invalid data")
+        raise ValueError("Error : The data must use a 256-byte Huffman table. -> Invalid data")
 
     #First, we construct our Huffman decoding table
     decoding_table = [0] * (2**15)
