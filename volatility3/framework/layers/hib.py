@@ -1,9 +1,7 @@
-from typing import Optional, Tuple
+from typing import Optional
 import logging, struct
-from volatility3.framework import automagic, interfaces, constants, exceptions
-from volatility3.framework.interfaces import context
-from volatility3.framework.automagic import stacker
-from volatility3.framework.layers import intel, physical, segmented
+from volatility3.framework import interfaces, constants, exceptions
+from volatility3.framework.layers import segmented
 from volatility3.framework.renderers import conversion
 from volatility3.framework.layers.codecs import lz77_plain_decompress, lz77_huffman_decompress
 
@@ -11,11 +9,11 @@ from volatility3.framework.layers.codecs import lz77_plain_decompress, lz77_huff
 vollog = logging.getLogger(__name__)
 
 
-def uncompress(data: bytes, huffman):
+def uncompress(data: bytes, huffman, out_size):
     if huffman == 0:
         return lz77_plain_decompress(data)
     elif huffman == 2 or huffman == 3:
-        return lz77_huffman_decompress(data)
+        return lz77_huffman_decompress(data,out_size)[0]
     else: 
         raise ValueError('Cannot decompress the data.')
 
@@ -142,7 +140,7 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
     ) -> bytes:
         start_offset, _, _, _ = self._find_segment(offset)
         if mapped_offset in self._compressed:
-            decoded_data = uncompress(data, self._compressed[mapped_offset])
+            decoded_data = uncompress(data, self._compressed[mapped_offset],65536)
         else:
             decoded_data = data
         page_offset = self._mapping[start_offset]
