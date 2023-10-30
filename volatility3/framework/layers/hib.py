@@ -1,3 +1,6 @@
+# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
+#
 from typing import Optional
 import logging, struct
 from volatility3.framework import interfaces, constants, exceptions
@@ -18,11 +21,6 @@ def uncompress(data: bytes, huffman, out_size):
         raise ValueError('Cannot decompress the data.')
 
 
-def readBytes(data, position, num):
-    end = position + num
-    byte_vals = data[position:end]
-    return int.from_bytes(byte_vals, byteorder='big')
-
 class HibernationFileException(exceptions.LayerException):
     """Thrown when an error occurs with the underlying Hibernation file format."""
 
@@ -30,7 +28,7 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
     """
     A TranslationLayer that maps physical memory against a Microsoft Windows hibernation file (x64 only for now).
     """
-    PAGE_SIZE = 4096
+    PAGE_SIZE = 4096 #For x64.
     HEADER_SIZE = 4
     PAGE_DESC_SIZE = 8
     def __init__(self, context: interfaces.context.ContextInterface, config_path: str, name: str, **kwargs):
@@ -68,9 +66,9 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
         #         KernelPageProcessed : {KernelPagesProcessed} \n
         #         FirstKernelRestorePage : {FirstKernelRestorePage} \n       
         # """)
-        # TODO : If the FirstKernelRestorePage member of the header is non-zero, 
-        # its value gives the page number of the start of the KernelRestore- Pages.
-        # We need to check if this value is zero and not process the KernelRestorePages if so.
+
+        # TODO : The offset of the FirstKernelRestorePage vary for some Windows version. Need to check the other location if == 0.
+
 
         offset = FirstBootRestorePage * self.PAGE_SIZE
         total_pages = NumPagesForLoader
