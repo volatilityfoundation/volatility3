@@ -312,6 +312,22 @@ class Volshell(interfaces.plugins.PluginInterface):
                 for i in disasm_types[architecture].disasm(remaining_data, offset):
                     print(f"0x{i.address:x}:\t{i.mnemonic}\t{i.op_str}")
 
+    def _get_type_name_with_pointer(self, member_type) -> str:
+        """Takes a member_type from and returns the subtype name with a * if the member_type is
+        a pointer otherwise it returns just the normal type name."""
+        if isinstance(member_type, objects.templates.ReferenceTemplate):
+            member_type_name = member_type.vol.type_name
+        elif member_type.vol.object_class == objects.Pointer:
+            # to handle pointers to pointers without recursion
+            sub_member_type = member_type.vol.subtype
+            if sub_member_type.vol.object_class == objects.Pointer:
+                member_type_name = f"**{sub_member_type.vol.subtype.vol.type_name}"
+            else:
+                member_type_name = f"*{sub_member_type.vol.type_name}"
+        else:
+            member_type_name = member_type.vol.type_name
+        return member_type_name
+
     def display_type(
         self,
         object: Union[
@@ -344,16 +360,38 @@ class Volshell(interfaces.plugins.PluginInterface):
                 volobject.vol.type_name, layer_name=self.current_layer, offset=offset
             )
 
+        # add special case for pointer so that information about the struct the
+        # pointer is pointing to is shown rather than simply the fact this is a
+        # pointer object.
+        dereference_count = 0
+        while isinstance(volobject, objects.Pointer) and dereference_count < 2:
+            # check that we can follow the pointer before dereferencing
+            if volobject.is_readable():
+                volobject = volobject.dereference()
+                dereference_count = dereference_count + 1
+            else:
+                break
+
+        if dereference_count == 0:
+            dereference_comment = ""
+        elif dereference_count == 1:
+            dereference_comment = "(deferenced once)"
+        elif dereference_count == 2:
+            dereference_comment = "(deferenced twice)"
+
         if hasattr(volobject.vol, "size"):
-            print(f"{volobject.vol.type_name} ({volobject.vol.size} bytes)")
+            print(
+                f"{volobject.vol.type_name} ({volobject.vol.size} bytes) {dereference_comment}"
+            )
         elif hasattr(volobject.vol, "data_format"):
             data_format = volobject.vol.data_format
             print(
-                "{} ({} bytes, {} endian, {})".format(
+                "{} ({} bytes, {} endian, {} {})".format(
                     volobject.vol.type_name,
                     data_format.length,
                     data_format.byteorder,
                     "signed" if data_format.signed else "unsigned",
+                    dereference_comment,
                 )
             )
 
@@ -363,7 +401,10 @@ class Volshell(interfaces.plugins.PluginInterface):
                 relative_offset, member_type = volobject.vol.members[member]
                 longest_member = max(len(member), longest_member)
                 longest_offset = max(len(hex(relative_offset)), longest_offset)
-                longest_typename = max(len(member_type.vol.type_name), longest_typename)
+                member_type_name = self._get_type_name_with_pointer(
+                    member_type
+                )  # special case for pointers to show what they point to
+                longest_typename = max(len(member_type_name), longest_typename)
 
             for member in sorted(
                 volobject.vol.members, key=lambda x: (volobject.vol.members[x][0], x)
@@ -371,7 +412,10 @@ class Volshell(interfaces.plugins.PluginInterface):
                 relative_offset, member_type = volobject.vol.members[member]
                 len_offset = len(hex(relative_offset))
                 len_member = len(member)
-                len_typename = len(member_type.vol.type_name)
+                member_type_name = self._get_type_name_with_pointer(
+                    member_type
+                )  # special case for pointers to show what they point to
+                len_typename = len(member_type_name)
                 if isinstance(volobject, interfaces.objects.ObjectInterface):
                     # We're an instance, so also display the data
                     print(
@@ -381,7 +425,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                         member,
                         " " * (longest_member - len_member),
                         "  ",
-                        member_type.vol.type_name,
+                        member_type_name,
                         " " * (longest_typename - len_typename),
                         "  ",
                         self._display_value(getattr(volobject, member)),
@@ -394,7 +438,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                         member,
                         " " * (longest_member - len_member),
                         "  ",
-                        member_type.vol.type_name,
+                        member_type_name,
                     )
 
     @classmethod
