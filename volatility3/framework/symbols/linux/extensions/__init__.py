@@ -19,6 +19,12 @@ from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import generic, linux, intermed
 from volatility3.framework.symbols.linux.extensions import elf
+from volatility3.framework.renderers import conversion
+from volatility3.framework.symbols.wrappers import Flags
+from volatility3.framework.constants.linux import (
+    NET_DEVICE_FLAGS,
+    RFC2863OPERATIONALSTATE,
+)
 
 vollog = logging.getLogger(__name__)
 
@@ -1581,3 +1587,79 @@ class kernel_cap_struct(objects.StructType):
 
         cap_value = 1 << CAPABILITIES.index(capability)
         return cap_value & self.get_capabilities() != 0
+
+
+class net_device(objects.StructType):
+    def get_hardware_address(self):
+        parent_layer = self._context.layers[self.vol.layer_name]
+        if self.has_member("perm_addr"):
+            raw_addr = self.perm_addr[0 : self.addr_len]
+        else:  # perm_addr is not found in older kernels
+            raw_addr = parent_layer.read(self.dev_addr, self.addr_len, pad=True)
+        addr = ":".join([f"{byte:02x}" for byte in raw_addr])
+        return addr
+
+    def get_operational_state(self):
+        return RFC2863OPERATIONALSTATE[self.operstate]
+
+    def get_promiscuous_state(self):
+        return True if self.flags & NET_DEVICE_FLAGS["IFF_PROMISC"] else False
+
+    def get_device_name(self):
+        return utility.array_to_string(self.name)
+
+    def get_qdisc_name(self):
+        return utility.array_to_string(self.qdisc.ops.id)
+
+    def get_flag_names(self) -> list[str]:
+        """Return the net_deivce flags as a list of strings"""
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        try:
+            # read flags using the net_device_flags enum
+            net_device_flags_enum = vmlinux.get_enumeration("net_device_flags")
+            choices = net_device_flags_enum.choices
+
+        except exceptions.SymbolError:
+            vollog.debug(
+                f"Unable to find net_device_flags enum in ISF, using hard coded enum for flag names"
+            )
+            choices = NET_DEVICE_FLAGS
+
+        net_device_flags_enum_flags = Flags(choices=choices)
+        flags = net_device_flags_enum_flags(self.flags)
+
+        # format flags to string, drop IFF_ to match `ip link` output
+        flags = [
+            flag.replace("IFF_", "") for flag in net_device_flags_enum_flags(self.flags)
+        ]
+        return flags
+
+    def get_ip_addresses(self) -> list[str]:
+        return self.get_ipv4_addresses() + self.get_ipv6_addresses()
+
+    def get_ipv4_addresses(self) -> list[str]:
+        ipv4_addresses = []
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+
+        # follow chain to all in_ifaddr
+        in_ifaddr_ptr = self.ip_ptr.ifa_list
+        while in_ifaddr_ptr > 0:
+            in_ifaddr = vmlinux.object("in_ifaddr", in_ifaddr_ptr, absolute=True)
+            ip_addr = conversion.convert_ipv4(in_ifaddr.ifa_address)
+            ip_prefix = in_ifaddr.ifa_prefixlen
+            ipv4_addresses.append(f"{ip_addr}/{ip_prefix}")
+            # process next in list
+            in_ifaddr_ptr = in_ifaddr.ifa_next
+        return ipv4_addresses
+
+    def get_ipv6_addresses(self) -> list[str]:
+        ipv6_addresses = []
+        symbol_table_name = self.get_symbol_table_name()
+        inet6_ifaddr_symbol_name = symbol_table_name + constants.BANG + "inet6_ifaddr"
+        for inet6_ifaddr in self.ip6_ptr.addr_list.to_list(
+            inet6_ifaddr_symbol_name, "if_list"
+        ):
+            ip_addr = conversion.convert_ipv6(inet6_ifaddr.addr.in6_u.u6_addr32)
+            ip_prefix = inet6_ifaddr.prefix_len
+            ipv6_addresses.append(f"{ip_addr}/{ip_prefix}")
+        return ipv6_addresses

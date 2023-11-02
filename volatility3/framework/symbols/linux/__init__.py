@@ -46,6 +46,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("sock", extensions.sock)
         self.set_type_class("inet_sock", extensions.inet_sock)
         self.set_type_class("unix_sock", extensions.unix_sock)
+        self.set_type_class("net_device", extensions.net_device)
         # Might not exist in older kernels or the current symbols
         self.optional_set_type_class("netlink_sock", extensions.netlink_sock)
         self.optional_set_type_class("vsock_sock", extensions.vsock_sock)
