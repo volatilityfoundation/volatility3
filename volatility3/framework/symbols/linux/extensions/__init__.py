@@ -1629,9 +1629,7 @@ class net_device(objects.StructType):
         flags = net_device_flags_enum_flags(self.flags)
 
         # format flags to string, drop IFF_ to match `ip link` output
-        flags = [
-            flag.replace("IFF_", "") for flag in net_device_flags_enum_flags(self.flags)
-        ]
+        flags = [flag.replace("IFF_", "") for flag in flags]
         return flags
 
     def get_ip_addresses(self) -> List[str]:
