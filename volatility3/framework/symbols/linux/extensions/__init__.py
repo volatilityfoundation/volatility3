@@ -1611,7 +1611,7 @@ class net_device(objects.StructType):
     def get_qdisc_name(self):
         return utility.array_to_string(self.qdisc.ops.id)
 
-    def get_flag_names(self) -> list[str]:
+    def get_flag_names(self) -> List[str]:
         """Return the net_deivce flags as a list of strings"""
         vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         try:
@@ -1634,10 +1634,10 @@ class net_device(objects.StructType):
         ]
         return flags
 
-    def get_ip_addresses(self) -> list[str]:
+    def get_ip_addresses(self) -> List[str]:
         return self.get_ipv4_addresses() + self.get_ipv6_addresses()
 
-    def get_ipv4_addresses(self) -> list[str]:
+    def get_ipv4_addresses(self) -> List[str]:
         ipv4_addresses = []
         vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
 
@@ -1652,7 +1652,7 @@ class net_device(objects.StructType):
             in_ifaddr_ptr = in_ifaddr.ifa_next
         return ipv4_addresses
 
-    def get_ipv6_addresses(self) -> list[str]:
+    def get_ipv6_addresses(self) -> List[str]:
         ipv6_addresses = []
         symbol_table_name = self.get_symbol_table_name()
         inet6_ifaddr_symbol_name = symbol_table_name + constants.BANG + "inet6_ifaddr"
