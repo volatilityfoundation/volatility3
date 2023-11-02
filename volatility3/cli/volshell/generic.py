@@ -316,12 +316,13 @@ class Volshell(interfaces.plugins.PluginInterface):
         """Takes a member_type from and returns the subtype name with a * if the member_type is
         a pointer otherwise it returns just the normal type name."""
         pointer_marker = "*" * depth
-        if isinstance(member_type, objects.templates.ReferenceTemplate):
-            member_type_name = pointer_marker + member_type.vol.type_name
-        elif member_type.vol.object_class == objects.Pointer:
-            sub_member_type = member_type.vol.subtype
-            return self._get_type_name_with_pointer(sub_member_type, depth + 1)
-        else:
+        try:
+            if member_type.vol.object_class == objects.Pointer:
+                sub_member_type = member_type.vol.subtype
+                return self._get_type_name_with_pointer(sub_member_type, depth + 1)
+        except AttributeError:
+            pass  # not all objects get a `object_class`, and those that don't are not pointers.
+        finally:
             member_type_name = pointer_marker + member_type.vol.type_name
         return member_type_name
 
