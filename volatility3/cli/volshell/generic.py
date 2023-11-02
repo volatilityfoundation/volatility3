@@ -312,20 +312,17 @@ class Volshell(interfaces.plugins.PluginInterface):
                 for i in disasm_types[architecture].disasm(remaining_data, offset):
                     print(f"0x{i.address:x}:\t{i.mnemonic}\t{i.op_str}")
 
-    def _get_type_name_with_pointer(self, member_type) -> str:
+    def _get_type_name_with_pointer(self, member_type, depth=0) -> str:
         """Takes a member_type from and returns the subtype name with a * if the member_type is
         a pointer otherwise it returns just the normal type name."""
+        pointer_marker = "*" * depth
         if isinstance(member_type, objects.templates.ReferenceTemplate):
-            member_type_name = member_type.vol.type_name
+            member_type_name = pointer_marker + member_type.vol.type_name
         elif member_type.vol.object_class == objects.Pointer:
-            # to handle pointers to pointers without recursion
             sub_member_type = member_type.vol.subtype
-            if sub_member_type.vol.object_class == objects.Pointer:
-                member_type_name = f"**{sub_member_type.vol.subtype.vol.type_name}"
-            else:
-                member_type_name = f"*{sub_member_type.vol.type_name}"
+            return self._get_type_name_with_pointer(sub_member_type, depth + 1)
         else:
-            member_type_name = member_type.vol.type_name
+            member_type_name = pointer_marker + member_type.vol.type_name
         return member_type_name
 
     def display_type(
@@ -364,7 +361,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         # pointer is pointing to is shown rather than simply the fact this is a
         # pointer object.
         dereference_count = 0
-        while isinstance(volobject, objects.Pointer) and dereference_count < 2:
+        while isinstance(volobject, objects.Pointer):
             # check that we can follow the pointer before dereferencing
             if volobject.is_readable():
                 volobject = volobject.dereference()
@@ -376,8 +373,8 @@ class Volshell(interfaces.plugins.PluginInterface):
             dereference_comment = ""
         elif dereference_count == 1:
             dereference_comment = "(deferenced once)"
-        elif dereference_count == 2:
-            dereference_comment = "(deferenced twice)"
+        else:
+            dereference_comment = f"(deferenced {dereference_count} times)"
 
         if hasattr(volobject.vol, "size"):
             print(
