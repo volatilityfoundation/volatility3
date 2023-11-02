@@ -372,9 +372,9 @@ class Volshell(interfaces.plugins.PluginInterface):
         if dereference_count == 0:
             dereference_comment = ""
         elif dereference_count == 1:
-            dereference_comment = "(deferenced once)"
+            dereference_comment = "(dereferenced once)"
         else:
-            dereference_comment = f"(deferenced {dereference_count} times)"
+            dereference_comment = f"(dereferenced {dereference_count} times)"
 
         if hasattr(volobject.vol, "size"):
             print(
