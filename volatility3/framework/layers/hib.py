@@ -13,11 +13,12 @@ vollog = logging.getLogger(__name__)
 
 
 def uncompress(data: bytes, huffman, out_size):
-    if huffman == 0:
+    if huffman == 0 or huffman == 1:
         return lz77_plain_decompress(data)
     elif huffman == 2 or huffman == 3:
         return lz77_huffman_decompress(data,out_size)[0]
     else: 
+        vollog.warning(f"A compression set could not be decompressed : Compression algorithm : {huffman}")
         raise ValueError('Cannot decompress the data.')
 
 
@@ -28,7 +29,7 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
     """
     A TranslationLayer that maps physical memory against a Microsoft Windows hibernation file (x64 only for now).
     """
-    PAGE_SIZE = 4096 #For x64.
+    PAGE_SIZE = 4096 #For x64 by default
     HEADER_SIZE = 4
     PAGE_DESC_SIZE = 8
     def __init__(self, context: interfaces.context.ContextInterface, config_path: str, name: str, **kwargs):
@@ -38,6 +39,32 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
         # Call the superclass constructor.
         self._compressed = {}
         self._mapping = {}
+        self.version = 0 #By default we want to analyze modern windows hiberfiles (Windows 10 2016 1703 to Windows 11 23H2)
+        if "plugins.Dump.version" in context.config:
+            # The user is using the hibernation.Dump plugin
+            self.version = context.config["plugins.Dump.version"]
+        self.NPFL_OFFSET = 0x058
+        self.FBRP_OFFSET = 0x068
+
+        """
+            | Windows Versions                          | FirstKernelRestorePage | KernelPagesProcessed   |   
+            | ------------------------------------------|:----------------------:|:----------------------:|
+            | Windows 8/8.1                             |           0x68         |	    0x1C8             | 
+            | Windows 10 2016 1507-1511                 |           0x70         |	    0x218             | 
+            | Windows 10 2016 1607                      |           0x70         |	    0x220             |
+            | Windows 10 2016 1703 - Windows 11 23H2    |           0x70         |	    0x230             |
+        """
+        if self.version == 0:
+            self.FKRP_OFFSET = 0x070
+            self.KPP_OFFSET = 0x230
+        if self.version == 1:
+            self.FKRP_OFFSET = 0x68
+            self.KPP_OFFSET = 0x1C8
+        if self.version == 2:
+            self.FKRP_OFFSET = 0x70
+            self.KPP_OFFSET = 0x218
+
+
         super().__init__(context, config_path, name, **kwargs)
 
     @classmethod
@@ -52,24 +79,11 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
 
     def _load_segments(self):
         base_layer = self.context.layers[self._base_layer]
-        system_time = int.from_bytes(base_layer.read(0x020, 8), "little")
-        systemTime = conversion.wintime_to_datetime(system_time)
-        NumPagesForLoader = int.from_bytes(base_layer.read(0x058, 8), "little")
-        FirstBootRestorePage = int.from_bytes(base_layer.read(0x068, 8), "little") 
-        FirstKernelRestorePage = int.from_bytes(base_layer.read(0x070, 8), "little")
-        KernelPagesProcessed = int.from_bytes(base_layer.read(0x230, 8), "little")
-
-        # vollog.info(f"""
-        #         SystemTime : {systemTime} \n
-        #         NumPagesForLoader : {NumPagesForLoader} \n
-        #         FirstBootRestorePage : {hex(FirstBootRestorePage)} \n
-        #         KernelPageProcessed : {KernelPagesProcessed} \n
-        #         FirstKernelRestorePage : {FirstKernelRestorePage} \n       
-        # """)
-
-        # TODO : The offset of the FirstKernelRestorePage vary for some Windows version. Need to check the other location if == 0.
-
-
+        NumPagesForLoader = int.from_bytes(base_layer.read(self.NPFL_OFFSET, 8), "little")
+        FirstBootRestorePage = int.from_bytes(base_layer.read(self.FBRP_OFFSET, 8), "little") 
+        FirstKernelRestorePage = int.from_bytes(base_layer.read(self.FKRP_OFFSET, 8), "little")
+        KernelPagesProcessed = int.from_bytes(base_layer.read(self.KPP_OFFSET, 8), "little")
+        
         offset = FirstBootRestorePage * self.PAGE_SIZE
         total_pages = NumPagesForLoader
         treated = 0
@@ -86,7 +100,7 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
         while total_pages > treated:
             page_read, next_cs = self._read_compression_set(offset)
             offset += next_cs
-            treated += page_read        
+            treated += page_read  
         
         self._segments = sorted(self._segments, key=lambda x: x[0])
 
@@ -143,7 +157,7 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
             decoded_data = data
         page_offset = self._mapping[start_offset]
         decoded_data = decoded_data[page_offset + (offset - start_offset):]
-        decoded_data = decoded_data[:output_length]
+        decoded_data = decoded_data[:output_length]  
         return decoded_data
 
 

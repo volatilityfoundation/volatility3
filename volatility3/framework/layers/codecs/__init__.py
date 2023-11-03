@@ -1,8 +1,10 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-import struct
+import struct, logging
 from typing import Tuple, List, Union
+vollog = logging.getLogger(__name__)
+
 
 class BitStream:
     def __init__(self, source: bytes, in_pos: int):
@@ -121,10 +123,12 @@ def prefix_code_tree_decode_symbol(bstr: BitStream, root: PREFIX_CODE_NODE) -> T
         bit = bstr.lookup(1)
         err = bstr.skip(1)
         if err is not None:
+            vollog.warning("Some data could not be decompressed.")
             return 0, err
 
         node = node.child[bit]
         if node == None:
+            vollog.warning("Corruption detected when decompressing the data.")
             return 0, Exception("Corruption detected")
 
         if node.leaf:
@@ -142,7 +146,6 @@ def lz77_huffman_decompress_chunck(in_idx: int,
         return 0, 0, Exception("EOF Error")
 
     root = prefix_code_tree_rebuild(input[in_idx:])
-    #print_tree(root)
     bstr = BitStream(input, in_idx+256)
 
     i = out_idx
@@ -183,7 +186,7 @@ def lz77_huffman_decompress_chunck(in_idx: int,
             length += 3
             while length > 0:
                 if i + offset < 0:
-                    print(i + offset)
+                    vollog.warning("Some data could not be decompressed.")
                     return int(bstr.index), i, Exception("Decompression Error")
                 
                 output[i] = output[i + offset]
