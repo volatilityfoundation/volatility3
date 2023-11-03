@@ -63,7 +63,9 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
         if self.version == 2:
             self.FKRP_OFFSET = 0x70
             self.KPP_OFFSET = 0x218
-
+        if self.version == 3:
+            self.FKRP_OFFSET = 0x70
+            self.KPP_OFFSET = 0x220
 
         super().__init__(context, config_path, name, **kwargs)
 

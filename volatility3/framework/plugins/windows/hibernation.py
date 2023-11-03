@@ -62,9 +62,6 @@ class Dump(plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.PluginRequirement(
-                name="hibernation", plugin=Info, version=(2, 0, 0)
-            ),
-            requirements.PluginRequirement(
                 name="layerwriter", plugin=layerwriter.LayerWriter, version=(2, 0, 0)
             ),
             requirements.IntRequirement(
