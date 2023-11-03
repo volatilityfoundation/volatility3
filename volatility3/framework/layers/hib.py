@@ -39,7 +39,6 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
         # Call the superclass constructor.
         self._compressed = {}
         self._mapping = {}
-        self.version = 0 #By default we want to analyze modern windows hiberfiles (Windows 10 2016 1703 to Windows 11 23H2)
         if "plugins.Dump.version" in context.config:
             # The user is using the hibernation.Dump plugin
             self.version = context.config["plugins.Dump.version"]
@@ -83,8 +82,6 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
         base_layer = self.context.layers[self._base_layer]
         NumPagesForLoader = int.from_bytes(base_layer.read(self.NPFL_OFFSET, 8), "little")
         FirstBootRestorePage = int.from_bytes(base_layer.read(self.FBRP_OFFSET, 8), "little") 
-        FirstKernelRestorePage = int.from_bytes(base_layer.read(self.FKRP_OFFSET, 8), "little")
-        KernelPagesProcessed = int.from_bytes(base_layer.read(self.KPP_OFFSET, 8), "little")
         
         offset = FirstBootRestorePage * self.PAGE_SIZE
         total_pages = NumPagesForLoader
@@ -95,14 +92,18 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
             offset += next_cs
             treated += page_read
 
-        offset = FirstKernelRestorePage * self.PAGE_SIZE
-        total_pages = KernelPagesProcessed
-       
-        treated = 0
-        while total_pages > treated:
-            page_read, next_cs = self._read_compression_set(offset)
-            offset += next_cs
-            treated += page_read  
+        if "plugins.Dump.version" in self.context.config:
+            FirstKernelRestorePage = int.from_bytes(base_layer.read(self.FKRP_OFFSET, 8), "little")
+            KernelPagesProcessed = int.from_bytes(base_layer.read(self.KPP_OFFSET, 8), "little")
+            # The user is using the hibernation.Dump plugin 
+            offset = FirstKernelRestorePage * self.PAGE_SIZE
+            total_pages = KernelPagesProcessed
+        
+            treated = 0
+            while total_pages > treated:
+                page_read, next_cs = self._read_compression_set(offset)
+                offset += next_cs
+                treated += page_read  
         
         self._segments = sorted(self._segments, key=lambda x: x[0])
 
