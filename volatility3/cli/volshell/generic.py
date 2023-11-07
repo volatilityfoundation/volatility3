@@ -319,7 +319,11 @@ class Volshell(interfaces.plugins.PluginInterface):
         try:
             if member_type.vol.object_class == objects.Pointer:
                 sub_member_type = member_type.vol.subtype
-                return self._get_type_name_with_pointer(sub_member_type, depth + 1)
+                # follow at most 8 pointers. A guard against, hopefully unlikely, infinite loops
+                if depth < 8:
+                    return self._get_type_name_with_pointer(sub_member_type, depth + 1)
+                else:
+                    return member_type_name
         except AttributeError:
             pass  # not all objects get a `object_class`, and those that don't are not pointers.
         finally:
@@ -360,40 +364,35 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         # add special case for pointer so that information about the struct the
         # pointer is pointing to is shown rather than simply the fact this is a
-        # pointer object.
+        # pointer object. The "dereference_count < 8" is to guard against loops
         dereference_count = 0
-        while isinstance(volobject, objects.Pointer):
-            # check that we can follow the pointer before dereferencing
-            if volobject.is_readable():
+        while isinstance(volobject, objects.Pointer) and dereference_count < 8:
+            # before defreerencing the pointer, show it's information
+            print("   " * dereference_count, self._display_simple_type(volobject))
+
+            # check that we can follow the pointer before dereferencing and do not
+            # attempt to follow null pointers.
+            if volobject.is_readable() and volobject != 0:
+                # now deference the pointer and store this as the new volobject
                 volobject = volobject.dereference()
                 dereference_count = dereference_count + 1
             else:
-                break
-
-        if dereference_count == 0:
-            dereference_comment = ""
-        elif dereference_count == 1:
-            dereference_comment = "(dereferenced once)"
-        else:
-            dereference_comment = f"(dereferenced {dereference_count} times)"
-
-        if hasattr(volobject.vol, "size"):
-            print(
-                f"{volobject.vol.type_name} ({volobject.vol.size} bytes) {dereference_comment}"
-            )
-        elif hasattr(volobject.vol, "data_format"):
-            data_format = volobject.vol.data_format
-            print(
-                "{} ({} bytes, {} endian, {} {})".format(
-                    volobject.vol.type_name,
-                    data_format.length,
-                    data_format.byteorder,
-                    "signed" if data_format.signed else "unsigned",
-                    dereference_comment,
-                )
-            )
+                # if we aren't able to follow the pointers anymore then there will
+                # be no more information to display as we've already printed the
+                # details of this pointer
+                return
 
         if hasattr(volobject.vol, "members"):
+            # display the header for this object, if the orginal object was just a type string, display the type information
+            if isinstance(object, str):
+                print(self._display_simple_type(volobject, include_value=False))
+
+            # if the original object was an actual volobject or was a type string
+            # with an offset. Then append the actual data to the display.
+            else:
+                print("    " * dereference_count, self._display_simple_type(volobject))
+
+            # it is a more complex type, so all members also need information displayed
             longest_member = longest_offset = longest_typename = 0
             for member in volobject.vol.members:
                 relative_offset, member_type = volobject.vol.members[member]
@@ -417,6 +416,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                 if isinstance(volobject, interfaces.objects.ObjectInterface):
                     # We're an instance, so also display the data
                     print(
+                        "    " * dereference_count,
                         " " * (longest_offset - len_offset),
                         hex(relative_offset),
                         ":  ",
@@ -430,6 +430,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                     )
                 else:
                     print(
+                        "    " * dereference_count,
                         " " * (longest_offset - len_offset),
                         hex(relative_offset),
                         ":  ",
@@ -439,14 +440,51 @@ class Volshell(interfaces.plugins.PluginInterface):
                         member_type_name,
                     )
 
+        else:  # simple type with no members, only one line to print
+            # if the orginal object was just a type string, display the type information
+            if isinstance(object, str):
+                print(self._display_simple_type(volobject, include_value=False))
+
+            # if the original object was an actual volobject or was a type string
+            # with an offset. Then append the actual data to the display.
+            else:
+                print("    " * dereference_count, self._display_simple_type(volobject))
+
+    def _display_simple_type(self, volobject: Any, include_value: bool = True) -> str:
+        # build the display_type_string based on the aviable information
+        if hasattr(volobject.vol, "size"):
+            display_type_string = (
+                f"{volobject.vol.type_name} ({volobject.vol.size} bytes)"
+            )
+        elif hasattr(volobject.vol, "data_format"):
+            data_format = volobject.vol.data_format
+            display_type_string = "{} ({} bytes, {} endian, {})".format(
+                volobject.vol.type_name,
+                data_format.length,
+                data_format.byteorder,
+                "signed" if data_format.signed else "unsigned",
+            )
+
+        if include_value == True:
+            # if include_value is true also add the value to the display
+            return f"{display_type_string}: {self._display_value(volobject)}"
+        else:
+            return display_type_string
+
     @classmethod
     def _display_value(cls, value: Any) -> str:
-        if isinstance(value, objects.PrimitiveObject):
-            return repr(value)
-        elif isinstance(value, objects.Array):
-            return repr([cls._display_value(val) for val in value])
-        else:
-            return hex(value.vol.offset)
+        try:
+            if isinstance(value, objects.Pointer):
+                # show pointers in hex to match output for struct addrs
+                return hex(value)
+            elif isinstance(value, objects.PrimitiveObject):
+                return repr(value)
+            elif isinstance(value, objects.Array):
+                return repr([cls._display_value(val) for val in value])
+            else:
+                return hex(value.vol.offset)
+        except exceptions.InvalidAddressException:
+            return "-"
 
     def generate_treegrid(
         self, plugin: Type[interfaces.plugins.PluginInterface], **kwargs
