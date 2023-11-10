@@ -301,7 +301,11 @@ class maple_tree(objects.StructType):
             self.ma_flags & self.MT_FLAGS_HEIGHT_MASK
         ) >> self.MT_FLAGS_HEIGHT_OFFSET
         yield from self._parse_maple_tree_node(
-            self.ma_root, maple_tree_offset, expected_maple_tree_depth
+            self.ma_root,
+            maple_tree_offset,
+            expected_maple_tree_depth,
+            seen=set(),
+            current_depth=1,
         )
 
     def _parse_maple_tree_node(
