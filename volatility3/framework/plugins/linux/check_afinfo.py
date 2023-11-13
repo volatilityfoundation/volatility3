@@ -51,10 +51,24 @@ class Check_afinfo(plugins.PluginInterface):
                 yield check, addr
 
     def _check_afinfo(self, var_name, var, op_members, seq_members):
-        for hooked_member, hook_address in self._check_members(
-            var.seq_fops, var_name, op_members
-        ):
-            yield var_name, hooked_member, hook_address
+        # check if object has a least one of the members used for analysis by this function
+        required_members = ["seq_fops", "seq_ops", "seq_show"]
+        for member in required_members:
+            vollog.debug(f"{var_name}: {member} :{var.has_member(member)}")
+        has_required_member = any(
+            [var.has_member(member) for member in required_members]
+        )
+        if not has_required_member:
+            vollog.warning(
+                f"This plugin requires the seq_fops, seq_ops, or seq_show members to be to check for hooks. These members are not present in the {var_name} object at {hex(var.vol.offset)}. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
+            )
+            return
+
+        if var.has_member("seq_fops"):
+            for hooked_member, hook_address in self._check_members(
+                var.seq_fops, var_name, op_members
+            ):
+                yield var_name, hooked_member, hook_address
 
         # newer kernels
         if var.has_member("seq_ops"):
@@ -64,8 +78,10 @@ class Check_afinfo(plugins.PluginInterface):
                 yield var_name, hooked_member, hook_address
 
         # this is the most commonly hooked member by rootkits, so a force a check on it
-        elif not self._is_known_address(var.seq_show):
-            yield var_name, "show", var.seq_show
+        else:
+            if var.has_member("seq_show"):
+                if not self._is_known_address(var.seq_show):
+                    yield var_name, "show", var.seq_show
 
     def _generator(self):
         vmlinux = self.context.modules[self.config["kernel"]]
