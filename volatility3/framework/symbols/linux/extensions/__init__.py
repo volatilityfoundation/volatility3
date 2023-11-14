@@ -71,11 +71,11 @@ class module(generic.GenericIntelProcess):
     def _get_sect_count(self, grp):
         """Try to determine the number of valid sections"""
         arr = self._context.object(
-            self.get_symbol_table().name + constants.BANG + "array",
+            self.get_symbol_table_name() + constants.BANG + "array",
             layer_name=self.vol.layer_name,
             offset=grp.attrs,
             subtype=self._context.symbol_space.get_type(
-                self.get_symbol_table().name + constants.BANG + "pointer"
+                self.get_symbol_table_name() + constants.BANG + "pointer"
             ),
             count=25,
         )
@@ -92,11 +92,11 @@ class module(generic.GenericIntelProcess):
         else:
             num_sects = self._get_sect_count(self.sect_attrs.grp)
         arr = self._context.object(
-            self.get_symbol_table().name + constants.BANG + "array",
+            self.get_symbol_table_name() + constants.BANG + "array",
             layer_name=self.vol.layer_name,
             offset=self.sect_attrs.attrs.vol.offset,
             subtype=self._context.symbol_space.get_type(
-                self.get_symbol_table().name + constants.BANG + "module_sect_attr"
+                self.get_symbol_table_name() + constants.BANG + "module_sect_attr"
             ),
             count=num_sects,
         )
@@ -105,13 +105,14 @@ class module(generic.GenericIntelProcess):
             yield attr
 
     def get_symbols(self):
-        if symbols.symbol_table_is_64bit(self._context, self.get_symbol_table().name):
+        """Get module symbols"""
+        if symbols.symbol_table_is_64bit(self._context, self.get_symbol_table_name()):
             prefix = "Elf64_"
         else:
             prefix = "Elf32_"
         elf_table_name = intermed.IntermediateSymbolTable.create(
-            self.context,
-            self.config_path,
+            self._context,
+            self._context.modules["kernel"].config_path,
             "linux",
             "elf",
             native_types=None,
@@ -119,7 +120,7 @@ class module(generic.GenericIntelProcess):
         )
 
         syms = self._context.object(
-            self.get_symbol_table().name + constants.BANG + "array",
+            self.get_symbol_table_name() + constants.BANG + "array",
             layer_name=self.vol.layer_name,
             offset=self.section_symtab,
             subtype=self._context.symbol_space.get_type(
@@ -127,18 +128,39 @@ class module(generic.GenericIntelProcess):
             ),
             count=self.num_symtab + 1,
         )
+
         if self.section_strtab:
             for sym in syms:
-                sym.set_cached_strtab(self.section_strtab)
-                yield sym
+                try:
+                    sym_offset = self.section_strtab + sym.st_name
+                    sym_name = self._context.layers[self.vol.layer_name].read(
+                        sym_offset, sym.st_size
+                    )
+                except exceptions.PagedInvalidAddressException:
+                    continue
+
+                if sym_name:
+                    # Normalize sym_value
+                    mask = self._context.layers[self.vol.layer_name].address_mask
+                    sym_value = sym.st_value & mask
+                    # Stop at first null byte (strtab is a null terminated strings list)
+                    sym_name = sym_name.split(b"\x00")[0].decode("latin-1")
+                    yield (sym_name, sym_value, sym_offset)
 
     def get_symbol(self, wanted_sym_name):
-        """Get value for a given symbol name"""
-        for sym in self.get_symbols():
-            sym_name = sym.get_name()
-            sym_addr = sym.st_value
+        """Get symbol value for a given symbol name"""
+        for sym_name, sym_value, sym_offset in self.get_symbols():
             if wanted_sym_name == sym_name:
-                return sym_addr
+                return sym_value
+
+        return None
+
+    def get_symbol_name_from_value(self, wanted_sym_value):
+        """Get symbol name for a given symbol value"""
+        for sym_name, sym_value, sym_offset in self.get_symbols():
+            if wanted_sym_value == sym_value:
+                return sym_name
+
         return None
 
     @property
