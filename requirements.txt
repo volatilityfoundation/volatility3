@@ -1,5 +1,5 @@
 # The following packages are required for core functionality.
-pefile>=2017.8.1
+pefile>=2023.2.7
 
 # The following packages are optional.
 # If certain packages are not necessary, place a comment (#) at the start of the line.
