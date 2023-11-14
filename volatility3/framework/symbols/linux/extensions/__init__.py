@@ -1154,7 +1154,7 @@ class vfsmount(objects.StructType):
 class kobject(objects.StructType):
     def reference_count(self):
         refcnt = self.kref.refcount
-        if self.has_member("counter"):
+        if refcnt.has_member("counter"):
             ret = refcnt.counter
         else:
             ret = refcnt.refs.counter
