@@ -49,15 +49,11 @@ class elf(objects.StructType):
             vollog.debug(
                 f"Unable to check magic bytes for ELF file at offset {hex(object_info.offset)} in layer {layer_name}: {excp}"
             )
-            self._valid_magic = False
             return None
 
         # Check validity
         if magic != 0x464C457F:  # e.g. ELF
-            self._valid_magic = False
             return None
-        else:
-            self._valid_magic = True
 
         # We need to read the EI_CLASS (0x4 offset)
         ei_class = self._context.object(
@@ -88,7 +84,7 @@ class elf(objects.StructType):
         """
         Determine whether it is a valid object
         """
-        if self._valid_magic:
+        if hasattr(self, "_type_prefix") and hasattr(self, "_hdr"):
             return self._type_prefix is not None and self._hdr is not None
         else:
             return False
