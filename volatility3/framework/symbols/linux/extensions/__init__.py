@@ -134,8 +134,8 @@ class module(generic.GenericIntelProcess):
                 try:
                     sym_offset = self.section_strtab + sym.st_name
                     sym_name = self._context.layers[self.vol.layer_name].read(
-                        sym_offset, sym.st_size
-                    )
+                        sym_offset, 512
+                    )  # 512 is the value of KSYM_NAME_LEN
                 except exceptions.PagedInvalidAddressException:
                     continue
 
