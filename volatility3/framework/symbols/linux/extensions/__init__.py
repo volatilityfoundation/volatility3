@@ -139,12 +139,12 @@ class module(generic.GenericIntelProcess):
                 except exceptions.PagedInvalidAddressException:
                     continue
 
-                if sym_name:
+                # Stop at first null byte (strtab is a null terminated strings list)
+                sym_name = sym_name.split(b"\x00")[0].decode("latin-1")
+                if sym_name != "":
                     # Normalize sym_value
                     mask = self._context.layers[self.vol.layer_name].address_mask
                     sym_value = sym.st_value & mask
-                    # Stop at first null byte (strtab is a null terminated strings list)
-                    sym_name = sym_name.split(b"\x00")[0].decode("latin-1")
                     yield (sym_name, sym_value, sym_offset)
 
     def get_symbol(self, wanted_sym_name):
