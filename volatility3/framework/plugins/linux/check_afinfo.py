@@ -53,16 +53,14 @@ class Check_afinfo(plugins.PluginInterface):
     def _check_afinfo(self, var_name, var, op_members, seq_members):
         # check if object has a least one of the members used for analysis by this function
         required_members = ["seq_fops", "seq_ops", "seq_show"]
-        for member in required_members:
-            vollog.debug(f"{var_name}: {member} :{var.has_member(member)}")
         has_required_member = any(
             [var.has_member(member) for member in required_members]
         )
         if not has_required_member:
-            vollog.warning(
-                f"This plugin requires the seq_fops, seq_ops, or seq_show members to be to check for hooks. These members are not present in the {var_name} object at {hex(var.vol.offset)}. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
+            vollog.debug(
+                f"{var_name} object at {hex(var.vol.offset)} had none of the required members: {', '.join([member for member in required_members])}"
             )
-            return
+            raise exceptions.PluginRequirementException
 
         if var.has_member("seq_fops"):
             for hooked_member, hook_address in self._check_members(
@@ -101,6 +99,12 @@ class Check_afinfo(plugins.PluginInterface):
         )
         protocols = [tcp, udp]
 
+        # used to track the calls to _check_afinfo and the
+        # number of errors produced due to missing members
+        symbols_checked = set()
+        symbols_with_errors = set()
+
+        # loop through all symbols
         for struct_type, global_vars in protocols:
             for global_var_name in global_vars:
                 # this will lookup fail for the IPv6 protocols on kernels without IPv6 support
@@ -113,10 +117,20 @@ class Check_afinfo(plugins.PluginInterface):
                     object_type=struct_type, offset=global_var.address
                 )
 
-                for name, member, address in self._check_afinfo(
-                    global_var_name, global_var, op_members, seq_members
-                ):
-                    yield 0, (name, member, format_hints.Hex(address))
+                symbols_checked.add(global_var_name)
+                try:
+                    for name, member, address in self._check_afinfo(
+                        global_var_name, global_var, op_members, seq_members
+                    ):
+                        yield 0, (name, member, format_hints.Hex(address))
+                except exceptions.PluginRequirementException:
+                    symbols_with_errors.add(global_var_name)
+
+        # if every call to _check_afinfo failed show a warning
+        if symbols_checked == symbols_with_errors:
+            vollog.warning(
+                "This plugin was not able to check for hooks. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
+            )
 
     def run(self):
         return renderers.TreeGrid(
