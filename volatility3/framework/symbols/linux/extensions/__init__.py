@@ -132,37 +132,37 @@ class module(generic.GenericIntelProcess):
             ),
             count=self.num_symtab + 1,
         )
-
         if self.section_strtab:
             for sym in syms:
+                sym_arr = self._context.object(
+                    self.get_symbol_table_name() + constants.BANG + "array",
+                    layer_name=self.vol.native_layer_name,
+                    offset=self.section_strtab + sym.st_name,
+                )
                 try:
-                    sym_offset = self.section_strtab + sym.st_name
-                    sym_name = self._context.layers[self.vol.layer_name].read(
-                        sym_offset, 512
-                    )  # 512 is the value of KSYM_NAME_LEN
-                except exceptions.PagedInvalidAddressException:
+                    sym_name = utility.array_to_string(
+                        sym_arr, 512
+                    )  # 512 is the value of KSYM_NAME_LEN kernel constant
+                except exceptions.InvalidAddressException:
                     continue
-
-                # Stop at first null byte (strtab is a null terminated strings list)
-                sym_name = sym_name.split(b"\x00")[0].decode("latin-1")
                 if sym_name != "":
-                    # Normalize sym_value
+                    # Normalize sym.st_value offset, which is an address pointing to the symbol value
                     mask = self._context.layers[self.vol.layer_name].address_mask
-                    sym_value = sym.st_value & mask
-                    yield (sym_name, sym_value, sym_offset)
+                    sym_address = sym.st_value & mask
+                    yield (sym_name, sym_address)
 
     def get_symbol(self, wanted_sym_name):
         """Get symbol value for a given symbol name"""
-        for sym_name, sym_value, sym_offset in self.get_symbols():
+        for sym_name, sym_address in self.get_symbols():
             if wanted_sym_name == sym_name:
-                return sym_value
+                return sym_address
 
         return None
 
-    def get_symbol_name_from_value(self, wanted_sym_value):
-        """Get symbol name for a given symbol value"""
-        for sym_name, sym_value, sym_offset in self.get_symbols():
-            if wanted_sym_value == sym_value:
+    def get_symbol_from_address(self, wanted_sym_address):
+        """Get symbol name for a given symbol address"""
+        for sym_name, sym_address in self.get_symbols():
+            if wanted_sym_address == sym_address:
                 return sym_name
 
         return None
