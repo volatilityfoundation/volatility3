@@ -105,14 +105,18 @@ class module(generic.GenericIntelProcess):
             yield attr
 
     def get_symbols(self):
-        """Get module symbols"""
+        """Get module symbols
+
+        Yields:
+                A tuple for each symbol containing the symbol name and its corresponding value
+        """
         if symbols.symbol_table_is_64bit(self._context, self.get_symbol_table_name()):
             prefix = "Elf64_"
         else:
             prefix = "Elf32_"
         elf_table_name = intermed.IntermediateSymbolTable.create(
             self._context,
-            self._context.modules["kernel"].config_path,
+            "module",
             "linux",
             "elf",
             native_types=None,
