@@ -300,10 +300,24 @@
                         "kind": "base",
                         "name": "unsigned short"
                       }
+                },
+                "ContentLength": {
+                    "offset": 16,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                      }
+                },
+                "ContentOffset": {
+                    "offset": 20,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                      }
                 }
             },
             "kind": "struct",
-            "size": 16
+            "size": 22
         },"RESIDENT_HEADER": {
             "fields": {
                 "AttrSize": {

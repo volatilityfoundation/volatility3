@@ -5,7 +5,7 @@ import contextlib
 import datetime
 import logging
 
-from volatility3.framework import constants, exceptions, interfaces, renderers
+from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import conversion, format_hints
 from volatility3.framework.symbols import intermed
@@ -31,6 +31,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             requirements.VersionRequirement(
                 name="yarascanner", component=yarascan.YaraScanner, version=(2, 0, 0)
             ),
+
         ]
 
     def _generator(self):
@@ -186,6 +187,156 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 ("Updated", datetime.datetime),
                 ("Accessed", datetime.datetime),
                 ("Filename", str),
+            ],
+            self._generator(),
+        )
+
+
+class ADS(interfaces.plugins.PluginInterface):
+
+    """Scans for Alternate Data Stream"""
+
+    _required_framework_version = (2, 0, 0)
+
+    @classmethod
+    def get_requirements(cls):
+        return [
+            requirements.TranslationLayerRequirement(
+                name="primary",
+                description="Memory layer for the kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="yarascanner", component=yarascan.YaraScanner, version=(2, 0, 0)
+            ),
+        ]
+
+    def _generator(self):
+        layer = self.context.layers[self.config["primary"]]
+
+        # Yara Rule to scan for MFT Header Signatures
+        rules = yarascan.YaraScan.process_yara_options(
+            {"yara_rules": "/FILE0|FILE\*|BAAD/"}
+        )
+
+        # Read in the Symbol File
+        symbol_table = intermed.IntermediateSymbolTable.create(
+            context=self.context,
+            config_path=self.config_path,
+            sub_path="windows",
+            filename="mft",
+            class_types={"MFT_ENTRY": mft.MFTEntry,"FILE_NAME_ENTRY": mft.MFTFileName},
+        )
+
+        # get each of the individual Field Sets
+        mft_object = symbol_table + constants.BANG + "MFT_ENTRY"
+        header_object = symbol_table + constants.BANG + "ATTR_HEADER"
+        attribute_object = symbol_table + constants.BANG + "ATTRIBUTE"
+        fn_object = symbol_table + constants.BANG + "FILE_NAME_ENTRY"
+
+        # Scan the layer for Raw MFT records and parse the fields
+        for offset, _rule_name, _name, _value in layer.scan(
+            context=self.context, scanner=yarascan.YaraScanner(rules=rules)
+        ):
+            with contextlib.suppress(exceptions.PagedInvalidAddressException):
+                mft_record = self.context.object(
+                    mft_object, offset=offset, layer_name=layer.name
+                )
+                # We will update this on each pass in the next loop and use it as the new offset.
+                attr_base_offset = mft_record.FirstAttrOffset
+
+                attr_header = self.context.object(
+                    header_object,
+                    offset=offset + attr_base_offset,
+                    layer_name=layer.name,
+                )
+
+                # There is no field that has a count of Attributes
+                # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
+                file_name = ""
+                while attr_header.AttrType.is_valid_choice:
+
+                    # Offset past the headers to the attribute data
+                    attr_data_offset = (
+                        offset
+                        + attr_base_offset
+                        + self.context.symbol_space.get_type(
+                            attribute_object
+                        ).relative_child_offset("Attr_Data")
+                    )
+
+                    if attr_header.AttrType.lookup() == "FILE_NAME":
+                        attr_data = self.context.object(
+                            fn_object, offset=attr_data_offset, layer_name=layer.name
+                        )
+                        file_name = attr_data.get_full_name()
+                    
+
+                    # DATA Attribute (can be ADS or not)
+                    if attr_header.AttrType.lookup() == "DATA":
+                        if not attr_header.NonResidentFlag:
+                            # It is a resident file
+                            if attr_header.NameLength > 0:
+                                attr_name_offset = (
+                                    offset
+                                    + attr_base_offset
+                                    + attr_header.NameOffset
+                                )
+                                ads_name = self._context.layers[layer.name].read(
+                                    attr_name_offset, attr_header.NameLength*2 , pad=True
+                                ).decode('utf-16')
+                                attr_content_offset = (
+                                    offset
+                                    + attr_base_offset
+                                    + attr_header.ContentOffset
+                                )                                    
+                                content = self._context.layers[layer.name].read(
+                                    attr_content_offset, attr_header.ContentLength , pad=True
+                                )
+
+                                
+                                # Preparing for Disassembly
+                                architecture = layer.metadata.get("architecture", None)
+                                disasm = interfaces.renderers.Disassembly(
+                                    content, 0, architecture.lower()
+                                )
+
+                                yield 0, (
+                                    format_hints.Hex(attr_data_offset),
+                                    mft_record.get_signature(),
+                                    mft_record.RecordNumber,
+                                    attr_header.AttrType.lookup(),
+                                    file_name,
+                                    ads_name,
+                                    format_hints.HexBytes(content),
+                                    disasm,
+                                )
+                            
+                    # If there's no advancement the loop will never end, so break it now
+                    if attr_header.Length == 0:
+                        break
+
+                    # Update the base offset to point to the next attribute
+                    attr_base_offset += attr_header.Length
+                    # Get the next attribute
+                    attr_header = self.context.object(
+                        header_object,
+                        offset=offset + attr_base_offset,
+                        layer_name=layer.name,
+                    )
+
+
+    def run(self):
+        return renderers.TreeGrid(
+            [
+                ("Offset", format_hints.Hex),
+                ("Record Type", str),
+                ("Record Number", int),
+                ("MFT Type", str),
+                ("Filename", str),
+                ("ADS Filename", str),
+                ("Hexdump", format_hints.HexBytes),
+                ("Disasm", interfaces.renderers.Disassembly),
             ],
             self._generator(),
         )
