@@ -35,6 +35,7 @@ class S3FileSystemHandler(resources.VolatilityHandler):
             if req.type == "s3":
                 object_uri = "://".join(req.full_url.split("://")[1:])
                 return s3fs.S3FileSystem().open(object_uri)
+            return None
     else:
         raise exceptions.LayerException("s3 requirement is missing.")
 
