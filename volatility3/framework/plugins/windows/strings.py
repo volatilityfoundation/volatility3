@@ -118,7 +118,7 @@ class Strings(interfaces.plugins.PluginInterface):
                 yield (
                     0,
                     (
-                        str(string, "latin-1"),
+                        str(string.strip(), "latin-1"),
                         location,
                         int(pid),
                         format_hints.Hex(phys_offset),
