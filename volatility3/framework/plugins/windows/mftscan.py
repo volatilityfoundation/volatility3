@@ -254,8 +254,8 @@ class ADS(interfaces.plugins.PluginInterface):
                 # There is no field that has a count of Attributes
                 # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
                 file_name = ""
+                is_ads = 0
                 while attr_header.AttrType.is_valid_choice:
-
                     # Offset past the headers to the attribute data
                     attr_data_offset = (
                         offset
@@ -274,43 +274,48 @@ class ADS(interfaces.plugins.PluginInterface):
 
                     # DATA Attribute (can be ADS or not)
                     if attr_header.AttrType.lookup() == "DATA":
-                        if not attr_header.NonResidentFlag:
-                            # It is a resident file
-                            if attr_header.NameLength > 0:
-                                attr_name_offset = (
-                                    offset
-                                    + attr_base_offset
-                                    + attr_header.NameOffset
-                                )
-                                ads_name = self._context.layers[layer.name].read(
-                                    attr_name_offset, attr_header.NameLength*2 , pad=True
-                                ).decode('utf-16')
-                                attr_content_offset = (
-                                    offset
-                                    + attr_base_offset
-                                    + attr_header.ContentOffset
-                                )                                    
-                                content = self._context.layers[layer.name].read(
-                                    attr_content_offset, attr_header.ContentLength , pad=True
-                                )
+                        if is_ads > 0:
+                            if not attr_header.NonResidentFlag:
+                                # Resident files are the most interesting.
+                                if attr_header.NameLength > 0:
+                                    attr_name_offset = (
+                                        offset
+                                        + attr_base_offset
+                                        + attr_header.NameOffset
+                                    )
+                                    ads_name = self._context.layers[layer.name].read(
+                                        attr_name_offset, attr_header.NameLength*2 , pad=True
+                                    ).decode('utf-16')
+                                    attr_content_offset = (
+                                        offset
+                                        + attr_base_offset
+                                        + attr_header.ContentOffset
+                                    )                                    
+                                    content = self._context.layers[layer.name].read(
+                                        attr_content_offset, attr_header.ContentLength , pad=True
+                                    )
 
-                                
-                                # Preparing for Disassembly
-                                architecture = layer.metadata.get("architecture", None)
-                                disasm = interfaces.renderers.Disassembly(
-                                    content, 0, architecture.lower()
-                                )
+                                    
+                                    # Preparing for Disassembly
+                                    architecture = layer.metadata.get("architecture", None)
+                                    disasm = interfaces.renderers.Disassembly(
+                                        content, 0, architecture.lower()
+                                    )
 
-                                yield 0, (
-                                    format_hints.Hex(attr_data_offset),
-                                    mft_record.get_signature(),
-                                    mft_record.RecordNumber,
-                                    attr_header.AttrType.lookup(),
-                                    file_name,
-                                    ads_name,
-                                    format_hints.HexBytes(content),
-                                    disasm,
-                                )
+                                    yield 0, (
+                                        format_hints.Hex(attr_data_offset),
+                                        mft_record.get_signature(),
+                                        mft_record.RecordNumber,
+                                        attr_header.AttrType.lookup(),
+                                        file_name,
+                                        ads_name,
+                                        format_hints.HexBytes(content),
+                                        disasm,
+                                    )
+                        else:
+                            # The First Data Attr is the file itself not the ADS
+                            is_ads+= 1
+                            
                             
                     # If there's no advancement the loop will never end, so break it now
                     if attr_header.Length == 0:
