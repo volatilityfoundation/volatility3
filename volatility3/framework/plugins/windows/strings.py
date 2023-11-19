@@ -18,7 +18,7 @@ vollog = logging.getLogger(__name__)
 class Strings(interfaces.plugins.PluginInterface):
     """Reads output from the strings command and indicates which process(es) each string belongs to."""
 
-    _version = (1, 2, 0)
+    _version = (2, 0, 0)
     _required_framework_version = (2, 0, 0)
     strings_pattern = re.compile(rb"^(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)\n?")
 
@@ -47,7 +47,13 @@ class Strings(interfaces.plugins.PluginInterface):
 
     def run(self):
         return renderers.TreeGrid(
-            [("String", str), ("Physical Address", format_hints.Hex), ("Result", str)],
+            [
+                ("String", str),
+                ("Region", str),
+                ("PID", int),
+                ("Physical Address", format_hints.Hex),
+                ("Virtual Address", format_hints.Hex),
+            ],
             self._generator(),
         )
 
@@ -81,22 +87,45 @@ class Strings(interfaces.plugins.PluginInterface):
         last_prog: float = 0
         line_count: float = 0
         num_strings = len(string_list)
-        for offset, string in string_list:
+        for phys_offset, string in string_list:
             line_count += 1
-            try:
-                revmap_list = [
-                    name + ":" + hex(offset) for (name, offset) in revmap[offset >> 12]
-                ]
-            except (IndexError, KeyError):
-                revmap_list = ["FREE MEMORY"]
-            yield (
-                0,
-                (
-                    str(string, "latin-1"),
-                    format_hints.Hex(offset),
-                    ", ".join(revmap_list),
-                ),
+
+            # We should really take care of this in the revmap generator
+            mapping_entry = revmap.get(
+                phys_offset & 0xFFFFFFFFFFFFF000, [("In Unallocated Space", 0)]
             )
+            for item in mapping_entry:
+                region, offset = item
+                if "Process" in region:
+                    location = "Process"
+                    pid = region.split(" ")[1]
+                elif "kernel" in region:
+                    location = "Kernel"
+                    pid = -1
+                elif "In Unallocated Space" in region:
+                    location = "Unallocated Space"
+                    pid = -1
+                else:
+                    location = "Unknown"
+                    pid = -1
+
+                # Get the full virtual address not just the page start
+                if offset == 0:
+                    virtual_address = 0
+                else:
+                    virtual_address = (offset & ~0xFFF) | (phys_offset & 0xFFF)
+
+                yield (
+                    0,
+                    (
+                        str(string, "latin-1"),
+                        location,
+                        int(pid),
+                        format_hints.Hex(phys_offset),
+                        format_hints.Hex(virtual_address),
+                    ),
+                )
+
             prog = line_count / num_strings * 100
             if round(prog, 1) > last_prog:
                 last_prog = round(prog, 1)
@@ -149,9 +178,9 @@ class Strings(interfaces.plugins.PluginInterface):
             for mapval in layer.mapping(0x0, layer.maximum_address, ignore_errors=True):
                 offset, _, mapped_offset, mapped_size, maplayer = mapval
                 for val in range(mapped_offset, mapped_offset + mapped_size, 0x1000):
-                    cur_set = reverse_map.get(val >> 12, set())
-                    cur_set.add(("kernel", offset))
-                    reverse_map[val >> 12] = cur_set
+                    cur_set = reverse_map.get(val, set())
+                    cur_set.add(("kernel", val))
+                    reverse_map[offset] = cur_set
                 if progress_callback:
                     progress_callback(
                         (offset * 100) / layer.maximum_address,
@@ -185,11 +214,14 @@ class Strings(interfaces.plugins.PluginInterface):
                             for val in range(
                                 mapped_offset, mapped_offset + mapped_size, 0x1000
                             ):
-                                cur_set = reverse_map.get(mapped_offset >> 12, set())
+                                cur_set = reverse_map.get(mapped_offset, set())
                                 cur_set.add(
-                                    (f"Process {process.UniqueProcessId}", offset)
+                                    (
+                                        f"Process {process.UniqueProcessId}",
+                                        mapped_offset,
+                                    )
                                 )
-                                reverse_map[mapped_offset >> 12] = cur_set
+                                reverse_map[offset] = cur_set
                             # FIXME: make the progress for all processes, rather than per-process
                             if progress_callback:
                                 progress_callback(
