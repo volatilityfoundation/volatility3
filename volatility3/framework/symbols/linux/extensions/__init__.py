@@ -104,64 +104,79 @@ class module(generic.GenericIntelProcess):
         for attr in arr:
             yield attr
 
-    def get_symbols(self):
-        """Get module symbols
-
-        Yields:
-                A tuple for each symbol containing the symbol name and its corresponding value
-        """
-        if symbols.symbol_table_is_64bit(self._context, self.get_symbol_table_name()):
-            prefix = "Elf64_"
-        else:
-            prefix = "Elf32_"
+    def get_elf_table_name(self):
         elf_table_name = intermed.IntermediateSymbolTable.create(
             self._context,
-            "module",
+            "config_name_elf_symbol_table",
             "linux",
             "elf",
             native_types=None,
             class_types=elf.class_types,
         )
+        return elf_table_name
 
+    def get_symbols(self):
+        """Get symbols of the module
+
+        Yields:
+                A symbol object
+        """
+
+        if not hasattr(self, "_elf_table_name"):
+            self._elf_table_name = self.get_elf_table_name()
+        if symbols.symbol_table_is_64bit(self._context, self.get_symbol_table_name()):
+            prefix = "Elf64_"
+        else:
+            prefix = "Elf32_"
         syms = self._context.object(
             self.get_symbol_table_name() + constants.BANG + "array",
             layer_name=self.vol.layer_name,
             offset=self.section_symtab,
             subtype=self._context.symbol_space.get_type(
-                elf_table_name + constants.BANG + prefix + "Sym"
+                self._elf_table_name + constants.BANG + prefix + "Sym"
             ),
             count=self.num_symtab + 1,
         )
         if self.section_strtab:
             for sym in syms:
-                sym_arr = self._context.object(
-                    self.get_symbol_table_name() + constants.BANG + "array",
-                    layer_name=self.vol.native_layer_name,
-                    offset=self.section_strtab + sym.st_name,
-                )
-                try:
-                    sym_name = utility.array_to_string(
-                        sym_arr, 512
-                    )  # 512 is the value of KSYM_NAME_LEN kernel constant
-                except exceptions.InvalidAddressException:
-                    continue
-                if sym_name != "":
-                    # Normalize sym.st_value offset, which is an address pointing to the symbol value
-                    mask = self._context.layers[self.vol.layer_name].address_mask
-                    sym_address = sym.st_value & mask
-                    yield (sym_name, sym_address)
+                yield sym
+
+    def get_symbols_names_and_addresses(self):
+        """Get names and addresses for each symbol of the module
+
+        Yields:
+                A tuple for each symbol containing the symbol name and its corresponding value
+        """
+
+        for sym in self.get_symbols():
+            sym_arr = self._context.object(
+                self.get_symbol_table_name() + constants.BANG + "array",
+                layer_name=self.vol.native_layer_name,
+                offset=self.section_strtab + sym.st_name,
+            )
+            try:
+                sym_name = utility.array_to_string(
+                    sym_arr, 512
+                )  # 512 is the value of KSYM_NAME_LEN kernel constant
+            except exceptions.InvalidAddressException:
+                continue
+            if sym_name != "":
+                # Normalize sym.st_value offset, which is an address pointing to the symbol value
+                mask = self._context.layers[self.vol.layer_name].address_mask
+                sym_address = sym.st_value & mask
+                yield (sym_name, sym_address)
 
     def get_symbol(self, wanted_sym_name):
         """Get symbol value for a given symbol name"""
-        for sym_name, sym_address in self.get_symbols():
+        for sym_name, sym_address in self.get_symbols_names_and_addresses():
             if wanted_sym_name == sym_name:
                 return sym_address
 
         return None
 
-    def get_symbol_from_address(self, wanted_sym_address):
+    def get_symbol_by_address(self, wanted_sym_address):
         """Get symbol name for a given symbol address"""
-        for sym_name, sym_address in self.get_symbols():
+        for sym_name, sym_address in self.get_symbols_names_and_addresses():
             if wanted_sym_address == sym_address:
                 return sym_name
 
