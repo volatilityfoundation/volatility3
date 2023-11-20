@@ -92,7 +92,7 @@ class Strings(interfaces.plugins.PluginInterface):
 
             # We should really take care of this in the revmap generator
             mapping_entry = revmap.get(
-                phys_offset & 0xFFFFFFFFFFFFF000, [("In Unallocated Space", 0)]
+                phys_offset >> 12, [("In Unallocated Space", 0)]
             )
             for item in mapping_entry:
                 region, offset = item
@@ -178,9 +178,9 @@ class Strings(interfaces.plugins.PluginInterface):
             for mapval in layer.mapping(0x0, layer.maximum_address, ignore_errors=True):
                 offset, _, mapped_offset, mapped_size, maplayer = mapval
                 for val in range(mapped_offset, mapped_offset + mapped_size, 0x1000):
-                    cur_set = reverse_map.get(val, set())
+                    cur_set = reverse_map.get(val >> 12, set())
                     cur_set.add(("kernel", val))
-                    reverse_map[offset] = cur_set
+                    reverse_map[offset >> 12] = cur_set
                 if progress_callback:
                     progress_callback(
                         (offset * 100) / layer.maximum_address,
@@ -214,14 +214,14 @@ class Strings(interfaces.plugins.PluginInterface):
                             for val in range(
                                 mapped_offset, mapped_offset + mapped_size, 0x1000
                             ):
-                                cur_set = reverse_map.get(mapped_offset, set())
+                                cur_set = reverse_map.get(mapped_offset >> 12, set())
                                 cur_set.add(
                                     (
                                         f"Process {process.UniqueProcessId}",
                                         mapped_offset,
                                     )
                                 )
-                                reverse_map[offset] = cur_set
+                                reverse_map[offset >> 12] = cur_set
                             # FIXME: make the progress for all processes, rather than per-process
                             if progress_callback:
                                 progress_callback(
