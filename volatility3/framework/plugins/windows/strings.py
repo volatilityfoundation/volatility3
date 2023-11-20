@@ -90,28 +90,16 @@ class Strings(interfaces.plugins.PluginInterface):
         for phys_offset, string in string_list:
             line_count += 1
 
-            # We should really take care of this in the revmap generator
             mapping_entry = revmap.get(
-                phys_offset >> 12, [("In Unallocated Space", 0)]
+                phys_offset >> 12, [{"region": "Unallocated", "pid": -1, "offset": 0x00}]
             )
             for item in mapping_entry:
-                region, offset = item
-                if "Process" in region:
-                    location = "Process"
-                    pid = region.split(" ")[1]
-                elif "kernel" in region:
-                    location = "Kernel"
-                    pid = -1
-                elif "In Unallocated Space" in region:
-                    location = "Unallocated Space"
-                    pid = -1
-                else:
-                    location = "Unknown"
-                    pid = -1
 
                 # Get the full virtual address not just the page start
-                if offset == 0:
-                    virtual_address = 0
+                # If the string is in unalloacted memory, we set the offset to 0x00
+                offset = item.get('offset', 0x00)
+                if offset == 0x00:
+                    virtual_address = 0x00
                 else:
                     virtual_address = (offset & ~0xFFF) | (phys_offset & 0xFFF)
 
@@ -119,8 +107,8 @@ class Strings(interfaces.plugins.PluginInterface):
                     0,
                     (
                         str(string.strip(), "latin-1"),
-                        location,
-                        int(pid),
+                        item.get("region", "Unallocated"),
+                        item.get("pid", -1),
                         format_hints.Hex(phys_offset),
                         format_hints.Hex(virtual_address),
                     ),
@@ -172,14 +160,17 @@ class Strings(interfaces.plugins.PluginInterface):
         filter = pslist.PsList.create_pid_filter(pid_list)
 
         layer = context.layers[layer_name]
-        reverse_map: Dict[int, Set[Tuple[str, int]]] = dict()
+        #reverse_map: Dict[int, Set[Tuple[str, int]]] = dict()
+        reverse_map: Dict[int, List[Dict[str, Union[str, int]]]] = dict()
         if isinstance(layer, intel.Intel):
             # We don't care about errors, we just wanted chunks that map correctly
             for mapval in layer.mapping(0x0, layer.maximum_address, ignore_errors=True):
                 offset, _, mapped_offset, mapped_size, maplayer = mapval
                 for val in range(mapped_offset, mapped_offset + mapped_size, 0x1000):
-                    cur_set = reverse_map.get(val >> 12, set())
-                    cur_set.add(("kernel", val))
+                    
+                    cur_set = reverse_map.get(val >> 12, list())
+                    cur_set.append({"region": "kernel", "pid": -1, "offset": val})
+
                     reverse_map[offset >> 12] = cur_set
                 if progress_callback:
                     progress_callback(
@@ -214,13 +205,9 @@ class Strings(interfaces.plugins.PluginInterface):
                             for val in range(
                                 mapped_offset, mapped_offset + mapped_size, 0x1000
                             ):
-                                cur_set = reverse_map.get(mapped_offset >> 12, set())
-                                cur_set.add(
-                                    (
-                                        f"Process {process.UniqueProcessId}",
-                                        mapped_offset,
-                                    )
-                                )
+                                cur_set = reverse_map.get(mapped_offset >> 12, list())
+                                cur_set.append({"region": "process", "pid": process.UniqueProcessId, "offset": mapped_offset})
+
                                 reverse_map[offset >> 12] = cur_set
                             # FIXME: make the progress for all processes, rather than per-process
                             if progress_callback:
