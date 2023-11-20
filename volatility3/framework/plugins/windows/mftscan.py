@@ -59,7 +59,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         fn_object = symbol_table + constants.BANG + "FILE_NAME_ENTRY"
 
         # Scan the layer for Raw MFT records and parse the fields
-        for offset, _rule_name, _name, _value in layer.scan(
+        for offset, _, _, _ in layer.scan(
             context=self.context, scanner=yarascan.YaraScanner(rules=rules)
         ):
             with contextlib.suppress(exceptions.PagedInvalidAddressException):
@@ -253,8 +253,9 @@ class ADS(interfaces.plugins.PluginInterface):
 
                 # There is no field that has a count of Attributes
                 # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
-                file_name = ""
-                is_ads = 0
+                file_name = "N/A"
+                is_ads = False
+                    # The First $DATA Attr is the 'principal' file itself not the ADS
                 while attr_header.AttrType.is_valid_choice:
                     # Offset past the headers to the attribute data
                     attr_data_offset = (
@@ -274,7 +275,7 @@ class ADS(interfaces.plugins.PluginInterface):
 
                     # DATA Attribute (can be ADS or not)
                     if attr_header.AttrType.lookup() == "DATA":
-                        if is_ads > 0:
+                        if is_ads:
                             if not attr_header.NonResidentFlag:
                                 # Resident files are the most interesting.
                                 if attr_header.NameLength > 0:
@@ -313,8 +314,7 @@ class ADS(interfaces.plugins.PluginInterface):
                                         disasm,
                                     )
                         else:
-                            # The First Data Attr is the file itself not the ADS
-                            is_ads+= 1
+                            is_ads = True
                             
                             
                     # If there's no advancement the loop will never end, so break it now
