@@ -230,21 +230,21 @@
                     "offset": 0,
                     "type": {
                         "kind": "struct",
-                        "name": "mft!ATTR_HEADER"
+                        "name": "ATTR_HEADER"
                     }
                 },
                 "Resident_Header": {
                     "offset": 16,
                     "type": {
                         "kind": "struct",
-                        "name": "mft!RESIDENT_HEADER"
+                        "name": "RESIDENT_HEADER"
                     }
                 },
                 "Attr_Data": {
                     "offset": 24,
                     "type": {
                         "kind": "struct",
-                        "name": "mft!ATTR_HEADER"
+                        "name": "ATTR_HEADER"
                     }
                 }
             },
@@ -317,7 +317,7 @@
                 }
             },
             "kind": "struct",
-            "size": 22
+            "size": 24
         },"RESIDENT_HEADER": {
             "fields": {
                 "AttrSize": {

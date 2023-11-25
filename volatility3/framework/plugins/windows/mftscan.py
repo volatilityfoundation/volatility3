@@ -5,7 +5,7 @@ import contextlib
 import datetime
 import logging
 
-from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import conversion, format_hints
 from volatility3.framework.symbols import intermed
@@ -53,13 +53,12 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         # get each of the individual Field Sets
         mft_object = symbol_table + constants.BANG + "MFT_ENTRY"
-        attribute_object = symbol_table + constants.BANG + "ATTRIBUTE"
         header_object = symbol_table + constants.BANG + "ATTR_HEADER"
         si_object = symbol_table + constants.BANG + "STANDARD_INFORMATION_ENTRY"
         fn_object = symbol_table + constants.BANG + "FILE_NAME_ENTRY"
 
         # Scan the layer for Raw MFT records and parse the fields
-        for offset, _, _, _ in layer.scan(
+        for offset, _rule_name, _name, _value in layer.scan(
             context=self.context, scanner=yarascan.YaraScanner(rules=rules)
         ):
             with contextlib.suppress(exceptions.PagedInvalidAddressException):
@@ -86,8 +85,8 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         offset
                         + attr_base_offset
                         + self.context.symbol_space.get_type(
-                            attribute_object
-                        ).relative_child_offset("Attr_Data")
+                            header_object
+                        ).size
                     )
 
                     # MFT Flags determine the file type or dir
@@ -231,7 +230,6 @@ class ADS(interfaces.plugins.PluginInterface):
         # get each of the individual Field Sets
         mft_object = symbol_table + constants.BANG + "MFT_ENTRY"
         header_object = symbol_table + constants.BANG + "ATTR_HEADER"
-        attribute_object = symbol_table + constants.BANG + "ATTRIBUTE"
         fn_object = symbol_table + constants.BANG + "FILE_NAME_ENTRY"
 
         # Scan the layer for Raw MFT records and parse the fields
@@ -253,7 +251,7 @@ class ADS(interfaces.plugins.PluginInterface):
 
                 # There is no field that has a count of Attributes
                 # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
-                file_name = "N/A"
+                file_name = renderers.NotAvailableValue
                 is_ads = False
                     # The First $DATA Attr is the 'principal' file itself not the ADS
                 while attr_header.AttrType.is_valid_choice:
@@ -262,8 +260,8 @@ class ADS(interfaces.plugins.PluginInterface):
                         offset
                         + attr_base_offset
                         + self.context.symbol_space.get_type(
-                            attribute_object
-                        ).relative_child_offset("Attr_Data")
+                            header_object
+                        ).size
                     )
 
                     if attr_header.AttrType.lookup() == "FILE_NAME":
@@ -272,7 +270,6 @@ class ADS(interfaces.plugins.PluginInterface):
                         )
                         file_name = attr_data.get_full_name()
                     
-
                     # DATA Attribute (can be ADS or not)
                     if attr_header.AttrType.lookup() == "DATA":
                         if is_ads:
@@ -284,19 +281,21 @@ class ADS(interfaces.plugins.PluginInterface):
                                         + attr_base_offset
                                         + attr_header.NameOffset
                                     )
+
                                     ads_name = self._context.layers[layer.name].read(
                                         attr_name_offset, attr_header.NameLength*2 , pad=True
                                     ).decode('utf-16')
+
                                     attr_content_offset = (
                                         offset
                                         + attr_base_offset
                                         + attr_header.ContentOffset
-                                    )                                    
+                                    )
+                                                                   
                                     content = self._context.layers[layer.name].read(
                                         attr_content_offset, attr_header.ContentLength , pad=True
                                     )
 
-                                    
                                     # Preparing for Disassembly
                                     architecture = layer.metadata.get("architecture", None)
                                     disasm = interfaces.renderers.Disassembly(
@@ -329,7 +328,6 @@ class ADS(interfaces.plugins.PluginInterface):
                         offset=offset + attr_base_offset,
                         layer_name=layer.name,
                     )
-
 
     def run(self):
         return renderers.TreeGrid(
