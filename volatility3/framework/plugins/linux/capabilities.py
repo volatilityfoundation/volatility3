@@ -88,7 +88,7 @@ class Capabilities(plugins.PluginInterface):
             kernel_cap_last_cap = vmlinux.object_from_symbol(symbol_name="cap_last_cap")
         except exceptions.SymbolError:
             # It should be a kernel < 3.2
-            return
+            return None
 
         vol2_last_cap = extensions.kernel_cap_struct.get_last_cap_value()
         if kernel_cap_last_cap > vol2_last_cap:

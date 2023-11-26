@@ -130,7 +130,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 constants.LOGLEVEL_VVV,
                 f"The file object at {file_obj.vol.offset:#x} is not a file on disk",
             )
-            return
+            return None
 
         # Depending on the type of object (DataSection, ImageSection, SharedCacheMap) we may need to
         # read from the memory layer or the primary layer.

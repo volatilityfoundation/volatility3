@@ -44,7 +44,7 @@ class Malfind(interfaces.plugins.PluginInterface):
 
         proc_layer_name = task.add_process_layer()
         if not proc_layer_name:
-            return
+            return None
 
         proc_layer = self.context.layers[proc_layer_name]
 

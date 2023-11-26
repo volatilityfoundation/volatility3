@@ -29,9 +29,9 @@ class KernelModule(interfaces.automagic.AutomagicInterface):
                     requirement.requirements[req],
                     progress_callback,
                 )
-            return
+            return None
         if not requirement.unsatisfied(context, config_path):
-            return
+            return None
         # The requirement is unfulfilled and is a ModuleRequirement
 
         context.config[
@@ -43,7 +43,7 @@ class KernelModule(interfaces.automagic.AutomagicInterface):
                 requirement.requirements[req].unsatisfied(context, new_config_path)
                 and req != "offset"
             ):
-                return
+                return None
 
         # We now just have the offset requirement, but the layer requirement has been fulfilled.
         # Unfortunately we don't know the layer name requirement's exact name

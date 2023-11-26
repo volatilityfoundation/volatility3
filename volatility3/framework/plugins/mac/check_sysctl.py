@@ -69,7 +69,7 @@ class Check_sysctl(plugins.PluginInterface):
             try:
                 sysctl = sysctl.oid_link.sle_next.dereference()
             except exceptions.InvalidAddressException:
-                return
+                return None
 
         while sysctl:
             try:

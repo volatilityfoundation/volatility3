@@ -171,7 +171,7 @@ class elf(objects.StructType):
             self._find_symbols()
 
         if self._cached_symtab is None:
-            return
+            return None
 
         symtab_arr = self._context.object(
             self.get_symbol_table_name() + constants.BANG + "array",

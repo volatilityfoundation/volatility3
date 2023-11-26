@@ -69,7 +69,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
 
         # Bomb out early if our details haven't been configured
         if self.symbol_class is None:
-            return
+            return None
 
         self._requirements = self.find_requirements(
             context,
@@ -120,7 +120,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
 
         # Bomb out early if there's no banners
         if not self.banners:
-            return
+            return None
 
         mss = scanners.MultiStringScanner([x for x in self.banners if x is not None])
 

@@ -169,7 +169,7 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         try:
             table_addr = task.p_fd.fd_ofiles.dereference()
         except exceptions.InvalidAddressException:
-            return
+            return None
 
         fds = objects.utility.array_of_pointers(
             table_addr, count=num_fds, subtype=file_type, context=context
@@ -204,7 +204,7 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         try:
             current = queue.member(attr=list_head_member)
         except exceptions.InvalidAddressException:
-            return
+            return None
 
         while current:
             if current.vol.offset in seen:

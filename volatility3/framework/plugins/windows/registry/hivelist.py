@@ -30,7 +30,7 @@ class HiveGenerator:
         ):
             if not hive.is_valid():
                 self._invalid = hive.vol.offset
-                return
+                return None
             yield hive
 
     @property

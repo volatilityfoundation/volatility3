@@ -116,7 +116,7 @@ class Kevents(interfaces.plugins.PluginInterface):
             )
 
         except exceptions.InvalidAddressException:
-            return
+            return None
 
         for klist in klist_array:
             for kn in mac.MacUtilities.walk_slist(klist, "kn_link"):
@@ -140,7 +140,7 @@ class Kevents(interfaces.plugins.PluginInterface):
         try:
             p_klist = task.p_klist
         except exceptions.InvalidAddressException:
-            return
+            return None
 
         for kn in mac.MacUtilities.walk_slist(p_klist, "kn_link"):
             yield kn

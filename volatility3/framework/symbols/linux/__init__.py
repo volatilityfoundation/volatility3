@@ -243,17 +243,17 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
     ):
         # task.files can be null
         if not task.files:
-            return
+            return None
 
         fd_table = task.files.get_fds()
         if fd_table == 0:
-            return
+            return None
 
         max_fds = task.files.get_max_fds()
 
         # corruption check
         if max_fds > 500000:
-            return
+            return None
 
         file_type = symbol_table + constants.BANG + "file"
 
@@ -378,7 +378,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         """
 
         if not addr:
-            return
+            return None
 
         type_dec = vmlinux.get_type(type_name)
         member_offset = type_dec.relative_child_offset(member_name)

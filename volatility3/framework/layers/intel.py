@@ -331,9 +331,9 @@ class Intel(linear.LinearlyMappedLayer):
             except exceptions.InvalidAddressException:
                 if not ignore_errors:
                     raise
-                return
+                return None
             yield offset, length, mapped_offset, length, layer_name
-            return
+            return None
         while length > 0:
             try:
                 chunk_offset, page_size, layer_name = self._translate(offset)

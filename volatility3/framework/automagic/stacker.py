@@ -103,7 +103,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 appropriate_config_path, layer_name = result
                 context.config.merge(appropriate_config_path, subconfig)
                 context.config[appropriate_config_path] = top_layer_name
-                return
+                return None
             self._cached = None
 
         new_context = context.clone()

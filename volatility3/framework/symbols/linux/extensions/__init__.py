@@ -319,7 +319,7 @@ class maple_tree(objects.StructType):
             vollog.warning(
                 f"The mte {hex(maple_tree_entry)} has all ready been seen, no further results will be produced for this node."
             )
-            return
+            return None
         else:
             seen.add(maple_tree_entry)
         # check if we have exceeded the expected depth of this maple tree.
@@ -402,7 +402,7 @@ class mm_struct(objects.StructType):
                 "get_mmap_iter called on mm_struct where no mmap member exists."
             )
         if not self.mmap:
-            return
+            return None
         yield self.mmap
 
         seen = {self.mmap.vol.offset}
@@ -723,7 +723,7 @@ class list_head(objects.StructType, collections.abc.Iterable):
         try:
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
-            return
+            return None
         if not sentinel:
             yield self._context.object(
                 symbol_type, layer, offset=self.vol.offset - relative_offset
@@ -1218,7 +1218,7 @@ class sock(objects.StructType):
         return self.sk_socket.get_inode()
 
     def get_protocol(self):
-        return
+        return None
 
     def get_state(self):
         # Return the generic socket state
@@ -1230,13 +1230,13 @@ class sock(objects.StructType):
 class unix_sock(objects.StructType):
     def get_name(self):
         if not self.addr:
-            return
+            return None
         sockaddr_un = self.addr.name.cast("sockaddr_un")
         saddr = str(utility.array_to_string(sockaddr_un.sun_path))
         return saddr
 
     def get_protocol(self):
-        return
+        return None
 
     def get_state(self):
         """Return a string representing the sock state."""
@@ -1295,7 +1295,7 @@ class inet_sock(objects.StructType):
         elif hasattr(sk_common, "skc_dport"):
             dport_le = sk_common.skc_dport
         else:
-            return
+            return None
         return socket_module.htons(dport_le)
 
     def get_src_addr(self):
@@ -1313,7 +1313,7 @@ class inet_sock(objects.StructType):
             addr_size = 16
             saddr = self.pinet6.saddr
         else:
-            return
+            return None
         parent_layer = self._context.layers[self.vol.layer_name]
         try:
             addr_bytes = parent_layer.read(saddr.vol.offset, addr_size)
@@ -1321,7 +1321,7 @@ class inet_sock(objects.StructType):
             vollog.debug(
                 f"Unable to read socket src address from {saddr.vol.offset:#x}"
             )
-            return
+            return None
         return socket_module.inet_ntop(family, addr_bytes)
 
     def get_dst_addr(self):
@@ -1342,7 +1342,7 @@ class inet_sock(objects.StructType):
                 daddr = sk_common.skc_v6_daddr
             addr_size = 16
         else:
-            return
+            return None
         parent_layer = self._context.layers[self.vol.layer_name]
         try:
             addr_bytes = parent_layer.read(daddr.vol.offset, addr_size)
@@ -1350,7 +1350,7 @@ class inet_sock(objects.StructType):
             vollog.debug(
                 f"Unable to read socket dst address from {daddr.vol.offset:#x}"
             )
-            return
+            return None
         return socket_module.inet_ntop(family, addr_bytes)
 
 
@@ -1388,7 +1388,7 @@ class netlink_sock(objects.StructType):
 class vsock_sock(objects.StructType):
     def get_protocol(self):
         # The protocol should always be 0 for vsocks
-        return
+        return None
 
     def get_state(self):
         # Return the generic socket state
@@ -1399,7 +1399,7 @@ class packet_sock(objects.StructType):
     def get_protocol(self):
         eth_proto = socket_module.htons(self.num)
         if eth_proto == 0:
-            return
+            return None
         elif eth_proto in ETH_PROTOCOLS:
             return ETH_PROTOCOLS[eth_proto]
         else:
@@ -1425,7 +1425,7 @@ class bt_sock(objects.StructType):
 class xdp_sock(objects.StructType):
     def get_protocol(self):
         # The protocol should always be 0 for xdp_sock
-        return
+        return None
 
     def get_state(self):
         # xdp_sock.state is an enum

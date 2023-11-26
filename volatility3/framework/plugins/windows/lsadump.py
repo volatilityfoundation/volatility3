@@ -168,16 +168,16 @@ class Lsadump(interfaces.plugins.PluginInterface):
         lsakey = self.get_lsa_key(sechive, bootkey, vista_or_later)
         if not bootkey:
             vollog.warning("Unable to find bootkey")
-            return
+            return None
 
         if not lsakey:
             vollog.warning("Unable to find lsa key")
-            return
+            return None
 
         secrets_key = hashdump.Hashdump.get_hive_key(sechive, "Policy\\Secrets")
         if not secrets_key:
             vollog.warning("Unable to find secrets key")
-            return
+            return None
 
         for key in secrets_key.get_subkeys():
             sec_val_key = hashdump.Hashdump.get_hive_key(
