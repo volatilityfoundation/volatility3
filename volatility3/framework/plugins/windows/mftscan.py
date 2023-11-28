@@ -224,12 +224,12 @@ class ADS(interfaces.plugins.PluginInterface):
             config_path=self.config_path,
             sub_path="windows",
             filename="mft",
-            class_types={"MFT_ENTRY": mft.MFTEntry,"FILE_NAME_ENTRY": mft.MFTFileName},
+            class_types={"MFT_ENTRY": mft.MFTEntry,"FILE_NAME_ENTRY": mft.MFTFileName, "ATTRIBUTE": mft.MFTAttribute},
         )
 
         # get each of the individual Field Sets
         mft_object = symbol_table + constants.BANG + "MFT_ENTRY"
-        header_object = symbol_table + constants.BANG + "ATTR_HEADER"
+        attribute_object = symbol_table + constants.BANG + "ATTRIBUTE"
         fn_object = symbol_table + constants.BANG + "FILE_NAME_ENTRY"
 
         # Scan the layer for Raw MFT records and parse the fields
@@ -243,58 +243,32 @@ class ADS(interfaces.plugins.PluginInterface):
                 # We will update this on each pass in the next loop and use it as the new offset.
                 attr_base_offset = mft_record.FirstAttrOffset
 
-                attr_header = self.context.object(
-                    header_object,
+                attr = self.context.object(
+                    attribute_object,
                     offset=offset + attr_base_offset,
                     layer_name=layer.name,
                 )
 
                 # There is no field that has a count of Attributes
-                # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
+                # Keep Attempting to read attributes until we get an invalid attr.AttrType
                 file_name = renderers.NotAvailableValue
                 is_ads = False
-                    # The First $DATA Attr is the 'principal' file itself not the ADS
-                while attr_header.AttrType.is_valid_choice:
-                    # Offset past the headers to the attribute data
-                    attr_data_offset = (
-                        offset
-                        + attr_base_offset
-                        + self.context.symbol_space.get_type(
-                            header_object
-                        ).size
-                    )
+                
+                # The First $DATA Attr is the 'principal' file itself not the ADS
+                while attr.Attr_Header.AttrType.is_valid_choice:
 
-                    if attr_header.AttrType.lookup() == "FILE_NAME":
-                        attr_data = self.context.object(
-                            fn_object, offset=attr_data_offset, layer_name=layer.name
-                        )
+                    if attr.Attr_Header.AttrType.lookup() == "FILE_NAME":
+                        attr_data = attr.Attr_Data.cast(fn_object)
                         file_name = attr_data.get_full_name()
-                    
-                    # DATA Attribute (can be ADS or not)
-                    if attr_header.AttrType.lookup() == "DATA":
+                
+                    if attr.Attr_Header.AttrType.lookup() == "DATA":
                         if is_ads:
-                            if not attr_header.NonResidentFlag:
+                            if not attr.Attr_Header.NonResidentFlag:
                                 # Resident files are the most interesting.
-                                if attr_header.NameLength > 0:
-                                    attr_name_offset = (
-                                        offset
-                                        + attr_base_offset
-                                        + attr_header.NameOffset
-                                    )
+                                if attr.Attr_Header.NameLength > 0:
 
-                                    ads_name = self._context.layers[layer.name].read(
-                                        attr_name_offset, attr_header.NameLength*2 , pad=True
-                                    ).decode('utf-16')
-
-                                    attr_content_offset = (
-                                        offset
-                                        + attr_base_offset
-                                        + attr_header.ContentOffset
-                                    )
-                                                                   
-                                    content = self._context.layers[layer.name].read(
-                                        attr_content_offset, attr_header.ContentLength , pad=True
-                                    )
+                                    ads_name = attr.get_resident_filename()
+                                    content =  attr.get_resident_filecontent()
 
                                     # Preparing for Disassembly
                                     architecture = layer.metadata.get("architecture", None)
@@ -303,10 +277,10 @@ class ADS(interfaces.plugins.PluginInterface):
                                     )
 
                                     yield 0, (
-                                        format_hints.Hex(attr_data_offset),
+                                        format_hints.Hex(attr_data.vol.offset),
                                         mft_record.get_signature(),
                                         mft_record.RecordNumber,
-                                        attr_header.AttrType.lookup(),
+                                        attr.Attr_Header.AttrType.lookup(),
                                         file_name,
                                         ads_name,
                                         format_hints.HexBytes(content),
@@ -317,18 +291,17 @@ class ADS(interfaces.plugins.PluginInterface):
                             
                             
                     # If there's no advancement the loop will never end, so break it now
-                    if attr_header.Length == 0:
+                    if attr.Attr_Header.Length == 0:
                         break
 
                     # Update the base offset to point to the next attribute
-                    attr_base_offset += attr_header.Length
+                    attr_base_offset += attr.Attr_Header.Length
                     # Get the next attribute
-                    attr_header = self.context.object(
-                        header_object,
+                    attr = self.context.object(
+                        attribute_object,
                         offset=offset + attr_base_offset,
                         layer_name=layer.name,
                     )
-
     def run(self):
         return renderers.TreeGrid(
             [
