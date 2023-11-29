@@ -141,7 +141,7 @@ class module(generic.GenericIntelProcess):
             for sym in syms:
                 yield sym
 
-    def get_symbols_names_and_addresses(self):
+    def get_symbols_names_and_addresses(self) -> Tuple[str, int]:
         """Get names and addresses for each symbol of the module
 
         Yields:
