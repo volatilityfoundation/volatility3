@@ -107,7 +107,7 @@ class module(generic.GenericIntelProcess):
     def get_elf_table_name(self):
         elf_table_name = intermed.IntermediateSymbolTable.create(
             self._context,
-            "config_name_elf_symbol_table",
+            "elf_symbol_table",
             "linux",
             "elf",
             native_types=None,
