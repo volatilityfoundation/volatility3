@@ -301,11 +301,7 @@ class maple_tree(objects.StructType):
             self.ma_flags & self.MT_FLAGS_HEIGHT_MASK
         ) >> self.MT_FLAGS_HEIGHT_OFFSET
         yield from self._parse_maple_tree_node(
-            self.ma_root,
-            maple_tree_offset,
-            expected_maple_tree_depth,
-            seen=set(),
-            current_depth=1,
+            self.ma_root, maple_tree_offset, expected_maple_tree_depth
         )
 
     def _parse_maple_tree_node(
@@ -313,10 +309,15 @@ class maple_tree(objects.StructType):
         maple_tree_entry,
         parent,
         expected_maple_tree_depth,
-        seen=set(),
+        seen=None,
         current_depth=1,
     ):
         """Recursively parse Maple Tree Nodes and yield all non empty slots"""
+
+        # create seen set if it does not exist, e.g. on the first call into
+        # this recursive function.
+        if seen == None:
+            seen = set()
 
         # protect against unlikely loop
         if maple_tree_entry in seen:
@@ -326,6 +327,7 @@ class maple_tree(objects.StructType):
             return
         else:
             seen.add(maple_tree_entry)
+
         # check if we have exceeded the expected depth of this maple tree.
         # e.g. when current_depth is larger than expected_maple_tree_depth there may be an issue.
         # it is normal that expected_maple_tree_depth is equal to current_depth.
@@ -334,6 +336,7 @@ class maple_tree(objects.StructType):
                 f"The depth for the maple tree at {hex(self.vol.offset)} is {expected_maple_tree_depth}, however when parsing the nodes "
                 f"a depth of {current_depth} was reached. This is unexpected and may lead to incorrect results."
             )
+
         # parse the mte to extract the pointer value, node type, and leaf status
         pointer = maple_tree_entry & ~(self.MAPLE_NODE_POINTER_MASK)
         node_type = (
