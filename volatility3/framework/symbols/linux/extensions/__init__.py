@@ -314,8 +314,13 @@ class maple_tree(objects.StructType):
     ):
         """Recursively parse Maple Tree Nodes and yield all non empty slots"""
 
-        # create seen set if it does not exist, e.g. on the first call into
-        # this recursive function.
+        # Create seen set if it does not exist, e.g. on the first call into this recursive function. This
+        # must be None or an existing set of addresses for MTEs that have already been processed or that
+        # should otherwise be ignored. If parsing from the root node for example this should be None on the
+        # first call. If you needed to parse all nodes downwards from part of the tree this should still be
+        # None. If however you wanted to parse from a node, but ignore some parts of the tree below it then
+        # this could be populated with the addresses of the nodes you wish to ignore.
+
         if seen == None:
             seen = set()
 
