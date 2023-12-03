@@ -258,17 +258,14 @@ class ADS(interfaces.plugins.PluginInterface):
                                     content = attr.get_resident_filecontent()
                                     if content:
                                         # Preparing for Disassembly
+                                        disasm = interfaces.renderers.BaseAbsentValue
                                         architecture = layer.metadata.get(
                                             "architecture", None
                                         )
-
-                                        disasm = (
-                                            interfaces.renderers.Disassembly(
+                                        if architecture:
+                                            disasm = interfaces.renderers.Disassembly(
                                                 content, 0, architecture.lower()
                                             )
-                                            if architecture
-                                            else interfaces.renderers.BaseAbsentValue
-                                        )
                                     else:
                                         content = renderers.NotAvailableValue
                                         disasm = interfaces.renderers.BaseAbsentValue
