@@ -31,7 +31,6 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             requirements.VersionRequirement(
                 name="yarascanner", component=yarascan.YaraScanner, version=(2, 0, 0)
             ),
-
         ]
 
     def _generator(self):
@@ -53,6 +52,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         # get each of the individual Field Sets
         mft_object = symbol_table + constants.BANG + "MFT_ENTRY"
+        attribute_object = symbol_table + constants.BANG + "ATTRIBUTE"
         header_object = symbol_table + constants.BANG + "ATTR_HEADER"
         si_object = symbol_table + constants.BANG + "STANDARD_INFORMATION_ENTRY"
         fn_object = symbol_table + constants.BANG + "FILE_NAME_ENTRY"
@@ -67,9 +67,8 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 )
                 # We will update this on each pass in the next loop and use it as the new offset.
                 attr_base_offset = mft_record.FirstAttrOffset
-
-                attr_header = self.context.object(
-                    header_object,
+                attr = self.context.object(
+                    attribute_object,
                     offset=offset + attr_base_offset,
                     layer_name=layer.name,
                 )
@@ -77,17 +76,8 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 # There is no field that has a count of Attributes
                 # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
 
-                while attr_header.AttrType.is_valid_choice:
-                    vollog.debug(f"Attr Type: {attr_header.AttrType.lookup()}")
-
-                    # Offset past the headers to the attribute data
-                    attr_data_offset = (
-                        offset
-                        + attr_base_offset
-                        + self.context.symbol_space.get_type(
-                            header_object
-                        ).size
-                    )
+                while attr.Attr_Header.AttrType.is_valid_choice:
+                    vollog.debug(f"Attr Type: {attr.Attr_Header.AttrType.lookup()}")
 
                     # MFT Flags determine the file type or dir
                     # If we don't have a valid enum, coerce to hex so we can keep the record
@@ -97,19 +87,16 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         mft_flag = hex(mft_record.Flags)
 
                     # Standard Information Attribute
-                    if attr_header.AttrType.lookup() == "STANDARD_INFORMATION":
-                        attr_data = self.context.object(
-                            si_object, offset=attr_data_offset, layer_name=layer.name
-                        )
-
+                    if attr.Attr_Header.AttrType.lookup() == "STANDARD_INFORMATION":
+                        attr_data = attr.Attr_Data.cast(si_object)
                         yield 0, (
-                            format_hints.Hex(attr_data_offset),
+                            format_hints.Hex(attr_data.vol.offset),
                             mft_record.get_signature(),
                             mft_record.RecordNumber,
                             mft_record.LinkCount,
                             mft_flag,
                             renderers.NotApplicableValue(),
-                            attr_header.AttrType.lookup(),
+                            attr.Attr_Header.AttrType.lookup(),
                             conversion.wintime_to_datetime(attr_data.CreationTime),
                             conversion.wintime_to_datetime(attr_data.ModifiedTime),
                             conversion.wintime_to_datetime(attr_data.UpdatedTime),
@@ -118,10 +105,8 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         )
 
                     # File Name Attribute
-                    if attr_header.AttrType.lookup() == "FILE_NAME":
-                        attr_data = self.context.object(
-                            fn_object, offset=attr_data_offset, layer_name=layer.name
-                        )
+                    if attr.Attr_Header.AttrType.lookup() == "FILE_NAME":
+                        attr_data = attr.Attr_Data.cast(fn_object)
                         file_name = attr_data.get_full_name()
 
                         # If we don't have a valid enum, coerce to hex so we can keep the record
@@ -131,13 +116,13 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                             permissions = hex(attr_data.Flags)
 
                         yield 1, (
-                            format_hints.Hex(attr_data_offset),
+                            format_hints.Hex(attr_data.vol.offset),
                             mft_record.get_signature(),
                             mft_record.RecordNumber,
                             mft_record.LinkCount,
                             mft_flag,
                             permissions,
-                            attr_header.AttrType.lookup(),
+                            attr.Attr_Header.AttrType.lookup(),
                             conversion.wintime_to_datetime(attr_data.CreationTime),
                             conversion.wintime_to_datetime(attr_data.ModifiedTime),
                             conversion.wintime_to_datetime(attr_data.UpdatedTime),
@@ -146,14 +131,13 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         )
 
                     # If there's no advancement the loop will never end, so break it now
-                    if attr_header.Length == 0:
+                    if attr.Attr_Header.Length == 0:
                         break
 
                     # Update the base offset to point to the next attribute
-                    attr_base_offset += attr_header.Length
-                    # Get the next attribute
-                    attr_header = self.context.object(
-                        header_object,
+                    attr_base_offset += attr.Attr_Header.Length
+                    attr = self.context.object(
+                        attribute_object,
                         offset=offset + attr_base_offset,
                         layer_name=layer.name,
                     )
@@ -224,7 +208,11 @@ class ADS(interfaces.plugins.PluginInterface):
             config_path=self.config_path,
             sub_path="windows",
             filename="mft",
-            class_types={"MFT_ENTRY": mft.MFTEntry,"FILE_NAME_ENTRY": mft.MFTFileName, "ATTRIBUTE": mft.MFTAttribute},
+            class_types={
+                "MFT_ENTRY": mft.MFTEntry,
+                "FILE_NAME_ENTRY": mft.MFTFileName,
+                "ATTRIBUTE": mft.MFTAttribute,
+            },
         )
 
         # get each of the individual Field Sets
@@ -251,30 +239,39 @@ class ADS(interfaces.plugins.PluginInterface):
 
                 # There is no field that has a count of Attributes
                 # Keep Attempting to read attributes until we get an invalid attr.AttrType
-                file_name = renderers.NotAvailableValue
                 is_ads = False
-                
+                file_name = renderers.NotAvailableValue
                 # The First $DATA Attr is the 'principal' file itself not the ADS
                 while attr.Attr_Header.AttrType.is_valid_choice:
-
                     if attr.Attr_Header.AttrType.lookup() == "FILE_NAME":
                         attr_data = attr.Attr_Data.cast(fn_object)
                         file_name = attr_data.get_full_name()
-                
                     if attr.Attr_Header.AttrType.lookup() == "DATA":
                         if is_ads:
                             if not attr.Attr_Header.NonResidentFlag:
                                 # Resident files are the most interesting.
                                 if attr.Attr_Header.NameLength > 0:
-
                                     ads_name = attr.get_resident_filename()
-                                    content =  attr.get_resident_filecontent()
+                                    if not ads_name:
+                                        ads_name = renderers.NotAvailableValue
 
-                                    # Preparing for Disassembly
-                                    architecture = layer.metadata.get("architecture", None)
-                                    disasm = interfaces.renderers.Disassembly(
-                                        content, 0, architecture.lower()
-                                    )
+                                    content = attr.get_resident_filecontent()
+                                    if content:
+                                        # Preparing for Disassembly
+                                        architecture = layer.metadata.get(
+                                            "architecture", None
+                                        )
+
+                                        disasm = (
+                                            interfaces.renderers.Disassembly(
+                                                content, 0, architecture.lower()
+                                            )
+                                            if architecture
+                                            else interfaces.renderers.BaseAbsentValue
+                                        )
+                                    else:
+                                        content = renderers.NotAvailableValue
+                                        disasm = interfaces.renderers.BaseAbsentValue
 
                                     yield 0, (
                                         format_hints.Hex(attr_data.vol.offset),
@@ -288,8 +285,7 @@ class ADS(interfaces.plugins.PluginInterface):
                                     )
                         else:
                             is_ads = True
-                            
-                            
+
                     # If there's no advancement the loop will never end, so break it now
                     if attr.Attr_Header.Length == 0:
                         break
@@ -302,6 +298,7 @@ class ADS(interfaces.plugins.PluginInterface):
                         offset=offset + attr_base_offset,
                         layer_name=layer.name,
                     )
+
     def run(self):
         return renderers.TreeGrid(
             [
