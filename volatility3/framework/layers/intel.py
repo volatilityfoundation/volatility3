@@ -464,6 +464,27 @@ class WindowsMixin(Intel):
                     entry=excp.entry,
                     swap_offset=swap_offset,
                 )
+            # Handle Prototype PTEs
+            if isinstance(self, WindowsIntel32e):
+                if pbit:           
+                    vaddr = (0xffff << self._maxvirtaddr) | (entry >> 16)
+                    try:
+                        pte_addr = self._translate_swap(self, vaddr, bit_offset)
+                        
+                        # Read and unpack the PTE
+                        entry = self._context.layers.read(self._base_layer, pte_addr[0], 
+                            self._bits_per_register // 8)
+                            
+                        (entry, ) = struct.unpack(self._entry_format, entry)
+                        
+                        # Check if it's valid
+                        if super()._page_is_valid(entry):
+                            position = 11
+                            page = self._mask(entry, self._maxphyaddr - 1, position + 1) | \
+                                self._mask(offset, position, 0)
+                            return page, 1 << (position + 1), self._base_layer
+                    except:
+                        raise
             raise
 
 
