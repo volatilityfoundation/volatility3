@@ -3,9 +3,12 @@
 #
 
 from typing import Dict, Tuple
+import logging
 
 from volatility3.framework import constants
-from volatility3.framework import objects, interfaces
+from volatility3.framework import objects, interfaces, exceptions
+
+vollog = logging.getLogger(__name__)
 
 
 class elf(objects.StructType):
@@ -33,14 +36,23 @@ class elf(objects.StructType):
         layer_name = self.vol.layer_name
         symbol_table_name = self.get_symbol_table_name()
         # We read the MAGIC: (0x0 to 0x4) 0x7f 0x45 0x4c 0x46
-        magic = self._context.object(
-            symbol_table_name + constants.BANG + "unsigned long",
-            layer_name=layer_name,
-            offset=object_info.offset,
-        )
+        try:
+            magic = self._context.object(
+                symbol_table_name + constants.BANG + "unsigned long",
+                layer_name=layer_name,
+                offset=object_info.offset,
+            )
+        except (
+            exceptions.PagedInvalidAddressException,
+            exceptions.InvalidAddressException,
+        ) as excp:
+            vollog.debug(
+                f"Unable to check magic bytes for ELF file at offset {hex(object_info.offset)} in layer {layer_name}: {excp}"
+            )
+            return None
 
         # Check validity
-        if magic != 0x464C457F:
+        if magic != 0x464C457F:  # e.g. ELF
             return None
 
         # We need to read the EI_CLASS (0x4 offset)
@@ -72,7 +84,10 @@ class elf(objects.StructType):
         """
         Determine whether it is a valid object
         """
-        return self._type_prefix is not None and self._hdr is not None
+        if hasattr(self, "_type_prefix") and hasattr(self, "_hdr"):
+            return self._type_prefix is not None and self._hdr is not None
+        else:
+            return False
 
     def __getattr__(self, name):
         # Just redirect to the corresponding header
