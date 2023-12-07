@@ -67,7 +67,7 @@ class ABCKmsg(ABC):
         vmlinux = context.modules[self._config["kernel"]]
         self.layer_name = vmlinux.layer_name  # type: ignore
         symbol_table_name = vmlinux.symbol_table_name  # type: ignore
-        self.vmlinux = contexts.Module.create(context, symbol_table_name, self.layer_name, 0)  # type: ignore
+        self.vmlinux = contexts.Module.create(context, symbol_table_name, self.layer_name, vmlinux.offset)  # type: ignore
         self.long_unsigned_int_size = self.vmlinux.get_type("long unsigned int").size
 
     @classmethod
@@ -365,12 +365,14 @@ class KmsgFiveTen(ABCKmsg):
             offset=desc_ring.descs,
             subtype=self.vmlinux.get_type("prb_desc"),
             count=desc_count,
+            absolute=True,
         )
         info_arr = self.vmlinux.object(
             object_type="array",
             offset=desc_ring.infos,
             subtype=self.vmlinux.get_type("printk_info"),
             count=desc_count,
+            absolute=True,
         )
 
         # See kernel/printk/printk_ringbuffer.h
