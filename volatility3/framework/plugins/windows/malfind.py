@@ -46,6 +46,12 @@ class Malfind(interfaces.plugins.PluginInterface):
             requirements.VersionRequirement(
                 name="vadinfo", component=vadinfo.VadInfo, version=(2, 0, 0)
             ),
+            requirements.BooleanRequirement(
+                name="refined",
+                description="Refine the output. Only show regions with an MZ header or that start with well known opcode combinations (i.e. PUSH EBP). WARNING: This can cause you to overlook regions with wiped headers or shell code blocks starting with NOP sleds, etc.. However, it will in general result in less noisy output.",
+                default=False,
+                optional=True,
+            ),
         ]
 
     @classmethod
@@ -138,6 +144,9 @@ class Malfind(interfaces.plugins.PluginInterface):
                 yield vad, data
 
     def _generator(self, procs):
+        # set refined criteria
+        refined_criteria = [b"MZ", b"\x55\x8B", b"\x55\x48", b"\x55\x89"]
+
         # determine if we're on a 32 or 64 bit kernel
         kernel = self.context.modules[self.config["kernel"]]
 
@@ -151,6 +160,10 @@ class Malfind(interfaces.plugins.PluginInterface):
             for vad, data in self.list_injections(
                 self.context, kernel.layer_name, kernel.symbol_table_name, proc
             ):
+                # check if refined option was passed
+                if self.config["refined"] and data[0:2] not in refined_criteria:
+                    continue
+
                 # if we're on a 64 bit kernel, we may still need 32 bit disasm due to wow64
                 if is_32bit_arch or proc.get_is_wow64():
                     architecture = "intel"
