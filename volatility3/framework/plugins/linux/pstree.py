@@ -39,7 +39,11 @@ class PsTree(pslist.PsList):
         self._levels[pid] = level
 
     def _generator(
-        self, pid_filter, include_threads: bool = False, decorate_com: bool = False
+        self,
+        pid_filter,
+        include_threads: bool = False,
+        decorate_com: bool = False,
+        dump: bool = False,
     ):
         """Generates the tasks hierarchy tree.
 
@@ -72,6 +76,12 @@ class PsTree(pslist.PsList):
             task = self._tasks[pid]
 
             row = self._get_task_fields(task, decorate_com)
+            if dump:
+                file_output = self._get_file_output(task)
+            else:
+                file_output = "Disabled"
+            row = self._get_task_fields(task, decorate_com)
+            row += (file_output,)  # also add the file output column
 
             tid = task.pid
             yield (self._levels[tid] - 1, row)
