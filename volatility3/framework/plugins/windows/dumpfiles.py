@@ -327,7 +327,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 self.context,
                 kernel.layer_name,
                 kernel.symbol_table_name,
-                filter_func=filter_func,
+                filter_funcs=[filter_func],
             )
 
         return renderers.TreeGrid(

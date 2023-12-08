@@ -706,7 +706,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
                     context=self.context,
                     layer_name=kernel.layer_name,
                     symbol_table=kernel.symbol_table_name,
-                    filter_func=self._lsass_proc_filter,
+                    filter_funcs=[self._lsass_proc_filter],
                 )
             ),
         )
