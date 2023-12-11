@@ -17,7 +17,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (2, 1, 1)
+    _version = (2, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -78,8 +78,9 @@ class PsList(interfaces.plugins.PluginInterface):
         else:
             return lambda _: False
 
-    def _get_task_fields(
-        self, task: interfaces.objects.ObjectInterface, decorate_comm: bool = False
+    @classmethod
+    def get_task_fields(
+        cls, task: interfaces.objects.ObjectInterface, decorate_comm: bool = False
     ) -> Tuple[int, int, int, str]:
         """Extract the fields needed for the final output
         Args:
@@ -101,7 +102,7 @@ class PsList(interfaces.plugins.PluginInterface):
             elif task.is_user_thread:
                 name = f"{{{name}}}"
 
-        task_fields = (format_hints.Hex(task.vol.offset), pid, tid, ppid, name)
+        task_fields = (task.vol.offset, pid, tid, ppid, name)
         return task_fields
 
     def _get_file_output(self, task: interfaces.objects.ObjectInterface) -> str:
@@ -174,10 +175,10 @@ class PsList(interfaces.plugins.PluginInterface):
             else:
                 file_output = "Disabled"
 
-            offset, pid, tid, ppid, name = self._get_task_fields(task, decorate_comm)
+            offset, pid, tid, ppid, name = self.get_task_fields(task, decorate_comm)
 
             yield 0, (
-                offset,
+                format_hints.Hex(offset),
                 pid,
                 tid,
                 ppid,
