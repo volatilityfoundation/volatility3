@@ -1,0 +1,37 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Volatility 3
+message: >-
+  If you reference this software, please feel free to cite
+  it using the information below.
+type: software
+authors:
+  - name: Volatility Foundation
+    country: US
+    website: 'https://www.volatilityfoundation.org/'
+identifiers:
+  - type: url
+    value: 'https://github.com/volatilityfoundation/volatility3'
+    description: Volatility 3 source code respository
+repository-code: 'https://github.com/volatilityfoundation/volatility3'
+url: 'https://github.com/volatilityfoundation/volatility3'
+abstract: >-
+  Volatility is the world's most widely used framework for
+  extracting digital artifacts from volatile memory (RAM)
+  samples. The extraction techniques are performed
+  completely independent of the system being investigated
+  but offer visibility into the runtime state of the system.
+  The framework is intended to introduce people to the
+  techniques and complexities associated with extracting
+  digital artifacts from volatile memory samples and provide
+  a platform for further work into this exciting area of
+  research.
+keywords:
+  - malware
+  - forensics
+  - memory
+  - python
+  - ram
+  - volatility

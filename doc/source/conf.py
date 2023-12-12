@@ -27,7 +27,7 @@ def setup(app):
 
     source_dir = os.path.abspath(os.path.dirname(__file__))
     sphinx.ext.apidoc.main(
-        argv=["-e", "-M", "-f", "-T", "-o", source_dir, volatility_directory]
+        ["-e", "-M", "-f", "-T", "-o", source_dir, volatility_directory]
     )
 
     # Go through the volatility3.framework.plugins files and change them to volatility3.plugins

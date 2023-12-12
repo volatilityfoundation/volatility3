@@ -74,7 +74,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
             node_path = [hive.get_node(hive.root_cell_offset)]
         if not isinstance(node_path, list) or len(node_path) < 1:
             vollog.warning("Hive walker was not passed a valid node_path (or None)")
-            return
+            return None
         node = node_path[-1]
         key_path_items = [hive] + node_path[1:]
         key_path = "\\".join([k.get_name() for k in key_path_items])
@@ -152,6 +152,11 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 ) as excp:
                     vollog.debug(excp)
                     key_node_name = renderers.UnreadableValue()
+
+                # if the item is a subkey, use the LastWriteTime of that subkey
+                last_write_time = conversion.wintime_to_datetime(
+                    node.LastWriteTime.QuadPart
+                )
 
                 yield (
                     depth,

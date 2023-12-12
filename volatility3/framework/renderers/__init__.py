@@ -10,7 +10,7 @@ import collections
 import collections.abc
 import datetime
 import logging
-from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from volatility3.framework import interfaces
 from volatility3.framework.interfaces import renderers
@@ -95,6 +95,10 @@ class TreeNode(interfaces.renderers.TreeNode):
             # TODO: Consider how to deal with timezone naive/aware datetimes (and alert plugin uses to be precise)
             # if isinstance(val, datetime.datetime):
             #     tznaive = val.tzinfo is None or val.tzinfo.utcoffset(val) is None
+
+    def asdict(self) -> Dict[str, Any]:
+        """Returns the contents of the node as a dictionary"""
+        return self._values._asdict()
 
     @property
     def values(self) -> List[interfaces.renderers.BaseTypes]:

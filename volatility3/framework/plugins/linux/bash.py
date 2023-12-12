@@ -75,11 +75,16 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             bang_addrs = []
 
+            # get task memory sections to be used by scanners
+            task_memory_sections = [
+                section for section in task.get_process_memory_sections(heap_only=True)
+            ]
+
             # find '#' values on the heap
             for address in proc_layer.scan(
                 self.context,
                 scanners.BytesScanner(b"#"),
-                sections=task.get_process_memory_sections(heap_only=True),
+                sections=task_memory_sections,
             ):
                 bang_addrs.append(struct.pack(pack_format, address))
 
@@ -89,7 +94,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 for address, _ in proc_layer.scan(
                     self.context,
                     scanners.MultiStringScanner(bang_addrs),
-                    sections=task.get_process_memory_sections(heap_only=True),
+                    sections=task_memory_sections,
                 ):
                     hist = self.context.object(
                         bash_table_name + constants.BANG + "hist_entry",
