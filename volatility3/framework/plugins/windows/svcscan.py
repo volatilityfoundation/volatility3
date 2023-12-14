@@ -4,18 +4,28 @@
 
 import logging
 import os
-from typing import List
+from typing import Dict, List, NamedTuple, Union
 
-from volatility3.framework import interfaces, renderers, constants, symbols, exceptions
+from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import scanners
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import versions
 from volatility3.framework.symbols.windows.extensions import services
-from volatility3.plugins.windows import poolscanner, vadyarascan, pslist
+from volatility3.plugins.windows import poolscanner, pslist, vadyarascan
+from volatility3.plugins.windows.registry import hivelist
 
 vollog = logging.getLogger(__name__)
+
+
+ServiceBinaryInfo = NamedTuple(
+    "ServiceBinaryInfo",
+    [
+        ("dll", Union[str, interfaces.renderers.BaseAbsentValue]),
+        ("binary", Union[str, interfaces.renderers.BaseAbsentValue]),
+    ],
+)
 
 
 class SvcScan(interfaces.plugins.PluginInterface):
@@ -42,10 +52,16 @@ class SvcScan(interfaces.plugins.PluginInterface):
             requirements.PluginRequirement(
                 name="vadyarascan", plugin=vadyarascan.VadYaraScan, version=(1, 0, 0)
             ),
+            requirements.PluginRequirement(
+                name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
+            ),
         ]
 
     @staticmethod
-    def get_record_tuple(service_record: interfaces.objects.ObjectInterface):
+    def get_record_tuple(
+        service_record: interfaces.objects.ObjectInterface,
+        binary_info: ServiceBinaryInfo,
+    ):
         return (
             format_hints.Hex(service_record.vol.offset),
             service_record.Order,
@@ -56,6 +72,8 @@ class SvcScan(interfaces.plugins.PluginInterface):
             service_record.get_name(),
             service_record.get_display(),
             service_record.get_binary(),
+            binary_info.binary,
+            binary_info.dll,
         )
 
     @staticmethod
@@ -150,11 +168,100 @@ class SvcScan(interfaces.plugins.PluginInterface):
             native_types=native_types,
         )
 
+    def _get_service_key(self, kernel):
+        for hive in hivelist.HiveList.list_hives(
+            context=self.context,
+            base_config_path=self.config_path,
+            layer_name=kernel.layer_name,
+            symbol_table=kernel.symbol_table_name,
+            filter_string="machine\\system",
+            hive_offsets=None,
+        ):
+            # Get ControlSet\Services.
+            try:
+                return hive.get_key(r"CurrentControlSet\Services")
+            except (KeyError, exceptions.InvalidAddressException):
+                try:
+                    return hive.get_key(r"ControlSet001\Services")
+                except (KeyError, exceptions.InvalidAddressException):
+                    pass
+
+            return None
+
+    @staticmethod
+    def _get_service_dll(
+        service_key,
+    ) -> Union[str, interfaces.renderers.BaseAbsentValue]:
+        try:
+            param_key = next(
+                key
+                for key in service_key.get_subkeys()
+                if key.get_name() == "Parameters"
+            )
+            return (
+                next(
+                    val
+                    for val in param_key.get_values()
+                    if val.get_name() == "ServiceDll"
+                )
+                .decode_data()
+                .decode("utf-16")
+                .rstrip("\x00")
+            )
+
+        except UnicodeDecodeError:
+            return renderers.UnparsableValue()
+        except StopIteration:
+            return renderers.UnreadableValue()
+
+    @staticmethod
+    def _get_service_binary(
+        service_key,
+    ) -> Union[str, interfaces.renderers.BaseAbsentValue]:
+        try:
+            return (
+                next(
+                    val
+                    for val in service_key.get_values()
+                    if val.get_name() == "ImagePath"
+                )
+                .decode_data()
+                .decode("utf-16")
+                .rstrip("\x00")
+            )
+
+        except UnicodeDecodeError:
+            return renderers.UnparsableValue()
+        except StopIteration:
+            return renderers.UnreadableValue()
+
+    @staticmethod
+    def _get_service_binary_map(
+        services_key: interfaces.objects.ObjectInterface,
+    ) -> Dict[str, ServiceBinaryInfo]:
+        services = services_key.get_subkeys()
+        return {
+            service_key.get_name(): ServiceBinaryInfo(
+                SvcScan._get_service_dll(service_key),
+                SvcScan._get_service_binary(service_key),
+            )
+            for service_key in services
+        }
+
     def _generator(self):
         kernel = self.context.modules[self.config["kernel"]]
 
         service_table_name = self.create_service_table(
             self.context, kernel.symbol_table_name, self.config_path
+        )
+
+        # Building the dictionary ahead of time is much better for performance
+        # vs looking up each service's DLL individually.
+        services_key = self._get_service_key(kernel)
+        service_binary_dll_map = (
+            self._get_service_binary_map(services_key)
+            if services_key is not None
+            else {}
         )
 
         relative_tag_offset = self.context.symbol_space.get_type(
@@ -209,7 +316,16 @@ class SvcScan(interfaces.plugins.PluginInterface):
                     if not service_record.is_valid():
                         continue
 
-                    yield (0, self.get_record_tuple(service_record))
+                    service_info = service_binary_dll_map.get(
+                        service_record.get_name(),
+                        ServiceBinaryInfo(
+                            renderers.UnreadableValue(), renderers.UnreadableValue()
+                        ),
+                    )
+                    yield (
+                        0,
+                        self.get_record_tuple(service_record, service_info),
+                    )
                 else:
                     service_header = self.context.object(
                         service_table_name + constants.BANG + "_SERVICE_HEADER",
@@ -227,7 +343,16 @@ class SvcScan(interfaces.plugins.PluginInterface):
                         if service_record in seen:
                             break
                         seen.append(service_record)
-                        yield (0, self.get_record_tuple(service_record))
+                        service_info = service_binary_dll_map.get(
+                            service_record.get_name(),
+                            ServiceBinaryInfo(
+                                renderers.UnreadableValue(), renderers.UnreadableValue()
+                            ),
+                        )
+                        yield (
+                            0,
+                            self.get_record_tuple(service_record, service_info),
+                        )
 
     def run(self):
         return renderers.TreeGrid(
@@ -241,6 +366,8 @@ class SvcScan(interfaces.plugins.PluginInterface):
                 ("Name", str),
                 ("Display", str),
                 ("Binary", str),
+                ("Binary (Registry)", str),
+                ("Dll", str),
             ],
             self._generator(),
         )
