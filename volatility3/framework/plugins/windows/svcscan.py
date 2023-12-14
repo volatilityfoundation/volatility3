@@ -107,25 +107,45 @@ class SvcScan(interfaces.plugins.PluginInterface):
         ):
             symbol_filename = "services-xp-2003-x64"
         elif (
+            versions.is_win10_25398_or_later(context=context, symbol_table=symbol_table)
+            and is_64bit
+        ):
+            symbol_filename = "services-win10-25398-x64"
+        elif (
+            versions.is_win10_19041_or_later(context=context, symbol_table=symbol_table)
+            and is_64bit
+        ):
+            symbol_filename = "services-win10-19041-x64"
+        elif (
+            versions.is_win10_19041_or_later(context=context, symbol_table=symbol_table)
+            and not is_64bit
+        ):
+            symbol_filename = "services-win10-19041-x86"
+        elif (
+            versions.is_win10_18362_or_later(context=context, symbol_table=symbol_table)
+            and is_64bit
+        ):
+            symbol_filename = "services-win10-18362-x64"
+        elif (
+            versions.is_win10_18362_or_later(context=context, symbol_table=symbol_table)
+            and not is_64bit
+        ):
+            symbol_filename = "services-win10-18362-x86"
+        elif (
             versions.is_win10_16299_or_later(context=context, symbol_table=symbol_table)
             and is_64bit
         ):
             symbol_filename = "services-win10-16299-x64"
         elif (
+            versions.is_win10_17763_or_later(context=context, symbol_table=symbol_table)
+            and not is_64bit
+        ):
+            symbol_filename = "services-win10-17763-x86"
+        elif (
             versions.is_win10_16299_or_later(context=context, symbol_table=symbol_table)
             and not is_64bit
         ):
             symbol_filename = "services-win10-16299-x86"
-        elif (
-            versions.is_win10_up_to_15063(context=context, symbol_table=symbol_table)
-            and is_64bit
-        ):
-            symbol_filename = "services-win8-x64"
-        elif (
-            versions.is_win10_up_to_15063(context=context, symbol_table=symbol_table)
-            and not is_64bit
-        ):
-            symbol_filename = "services-win8-x86"
         elif (
             versions.is_win10_15063(context=context, symbol_table=symbol_table)
             and is_64bit
@@ -136,6 +156,16 @@ class SvcScan(interfaces.plugins.PluginInterface):
             and not is_64bit
         ):
             symbol_filename = "services-win10-15063-x86"
+        elif (
+            versions.is_win10_up_to_15063(context=context, symbol_table=symbol_table)
+            and is_64bit
+        ):
+            symbol_filename = "services-win8-x64"
+        elif (
+            versions.is_win10_up_to_15063(context=context, symbol_table=symbol_table)
+            and not is_64bit
+        ):
+            symbol_filename = "services-win8-x86"
         elif (
             versions.is_windows_8_or_later(context=context, symbol_table=symbol_table)
             and is_64bit

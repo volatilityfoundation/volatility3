@@ -87,7 +87,7 @@ class ContextInterface(metaclass=ABCMeta):
         offset: int,
         native_layer_name: str = None,
         **arguments,
-    ):
+    ) -> "interfaces.objects.ObjectInterface":
         """Object factory, takes a context, symbol, offset and optional
         layer_name.
 

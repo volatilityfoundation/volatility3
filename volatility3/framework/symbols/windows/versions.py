@@ -151,9 +151,43 @@ is_win10_16299_or_later = OsDistinguisher(
     ],
 )
 
+is_win10_17763_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0, 17763),
+    fallback_checks=[
+        ("_EPROCESS", "TrustletIdentity", False),
+        ("ParentSecurityDomain", None, False),
+    ],
+)
+
+is_win10_18362_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0, 18362),
+    fallback_checks=[
+        ("ObHeaderCookie", None, True),
+        ("_CM_CACHED_VALUE_INDEX", None, False),
+        ("_WNF_PROCESS_CONTEXT", None, True),
+    ],
+)
+
 is_win10_18363_or_later = OsDistinguisher(
     version_check=lambda x: x >= (10, 0, 18363),
     fallback_checks=[("_KQOS_GROUPING_SETS", None, True)],
+)
+
+is_win10_19041_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0, 19041),
+    fallback_checks=[
+        ("_EPROCESS", "TimerResolutionIgnore", True),
+        ("_EPROCESS", "VmProcessorHostTransition", True),
+        ("_KQOS_GROUPING_SETS", None, True),
+    ],
+)
+
+is_win10_25398_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0, 25398),
+    fallback_checks=[
+        ("_EPROCESS", "MmSlabIdentity", True),
+        ("_EPROCESS", "EnableProcessImpersonationLogging", True),
+    ],
 )
 
 is_windows_10 = OsDistinguisher(
