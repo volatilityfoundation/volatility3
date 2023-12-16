@@ -1,16 +1,13 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2023 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 
-import logging
-import io
-from typing import Callable, List
+import logging, io, pefile
 from volatility3.framework.symbols import intermed
 from volatility3.framework import renderers, interfaces, exceptions, constants
 from volatility3.framework.configuration import requirements
 from volatility3.plugins.windows import pslist
-from volatility3.framework.symbols.windows import pdbutil
+from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols.windows.extensions import pe
-import pefile
 
 vollog = logging.getLogger(__name__)
 
@@ -86,6 +83,12 @@ class IAT(interfaces.plugins.PluginInterface):
                         else:
                             dll_entry = renderers.NotAvailableValue
 
+                        bound = True
+                        # Initially set to 0 if not bound
+                        time_date_stamp = entry.struct.TimeDateStamp
+                        if not time_date_stamp:
+                            bound = False
+
                         # Iterate over imported functions
                         for imp in entry.imports:
                             import_name = imp.name
@@ -93,6 +96,12 @@ class IAT(interfaces.plugins.PluginInterface):
                                 import_name = imp.name.decode()
                             else:
                                 import_name = renderers.NotAvailableValue()
+                            function_address = (
+                                pe_obj.OPTIONAL_HEADER.ImageBase + imp.address
+                            )
+                            if not function_address:
+                                function_address = renderers.NotAvailableValue
+
                             yield (
                                 0,
                                 (
@@ -103,7 +112,9 @@ class IAT(interfaces.plugins.PluginInterface):
                                         errors="replace",
                                     ),
                                     dll_entry,
+                                    bound,
                                     import_name,
+                                    format_hints.Hex(function_address),
                                 ),
                             )
             except exceptions.InvalidAddressException as excp:
@@ -118,7 +129,14 @@ class IAT(interfaces.plugins.PluginInterface):
         kernel = self.context.modules[self.config["kernel"]]
 
         return renderers.TreeGrid(
-            [("PID", int), ("Process", str), ("Library", str), ("Function", str)],
+            [
+                ("PID", int),
+                ("Name", str),
+                ("Library", str),
+                ("Bound", bool),
+                ("Function", str),
+                ("Address", format_hints.Hex),
+            ],
             self._generator(
                 pslist.PsList.list_processes(
                     context=self.context,
