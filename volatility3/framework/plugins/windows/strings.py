@@ -99,7 +99,6 @@ class Strings(interfaces.plugins.PluginInterface):
             # actually addr. 0xFFF is 4095 e.g. all lower bits set.
             offset_within_page = phys_offset & 0xFFF
 
-
             mapping_entry = revmap.get(
                 phys_offset >> 12,
                 [{"region": "Unallocated", "pid": -1, "offset": 0x00}],
@@ -122,7 +121,6 @@ class Strings(interfaces.plugins.PluginInterface):
                     ),
                 )
 
-            
             prog = line_count / num_strings * 100
             if round(prog, 1) > last_prog:
                 last_prog = round(prog, 1)
@@ -200,15 +198,21 @@ class Strings(interfaces.plugins.PluginInterface):
                     # offset_to_page_within_mapping to ensure that all pages match correctly.
                     # Without this the 2nd, 3rd etc pages would all incorrectly map to the same
                     # virtual offset.
-                    cur_set.append({"region": "Kernel", "pid": -1, "offset": virt_offset + offset_to_page_within_mapping})
+                    cur_set.append(
+                        {
+                            "region": "Kernel",
+                            "pid": -1,
+                            "offset": virt_offset + offset_to_page_within_mapping,
+                        }
+                    )
 
                     # store these results back in the reverse_map
                     reverse_map[physical_page] = cur_set
                 if progress_callback:
                     progress_callback(
                         (virt_offset * 100) / layer.maximum_address,
-                         "Creating reverse kernel map",
-                     )
+                        "Creating reverse kernel map",
+                    )
 
             # TODO: Include kernel modules
 
@@ -252,7 +256,8 @@ class Strings(interfaces.plugins.PluginInterface):
                                     {
                                         "region": "Process",
                                         "pid": process.UniqueProcessId,
-                                        "offset": virt_offset + offset_to_page_within_mapping,
+                                        "offset": virt_offset
+                                        + offset_to_page_within_mapping,
                                     }
                                 )
                                 reverse_map[physical_page] = cur_set
