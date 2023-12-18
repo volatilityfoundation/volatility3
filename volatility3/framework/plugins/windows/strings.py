@@ -90,18 +90,26 @@ class Strings(interfaces.plugins.PluginInterface):
         for phys_offset, string in string_list:
             line_count += 1
 
+            # calculate the offset for this string within a 4096 page so
+            # that this offset can be added to mappings which are all
+            # page aligned. This ensures that a string located at phy
+            # add 0x1e64cd20 would carry the 0xd20 to the virtual offsets
+            # displayed in the plugin output. Without this it would show
+            # only the page that the string was found, rather than the
+            # actually addr. 0xFFF is 4095 e.g. all lower bits set.
+            offset_within_page = phys_offset & 0xFFF
+
+
             mapping_entry = revmap.get(
                 phys_offset >> 12,
                 [{"region": "Unallocated", "pid": -1, "offset": 0x00}],
             )
+
             for item in mapping_entry:
                 # Get the full virtual address not just the page start
                 # If the string is in unalloacted memory, we set the offset to 0x00
                 offset = item.get("offset", 0x00)
-                if offset == 0x00:
-                    virtual_address = 0x00
-                else:
-                    virtual_address = (offset & ~0xFFF) | (phys_offset & 0xFFF)
+                virtual_address = offset + offset_within_page
 
                 yield (
                     0,
@@ -114,6 +122,7 @@ class Strings(interfaces.plugins.PluginInterface):
                     ),
                 )
 
+            
             prog = line_count / num_strings * 100
             if round(prog, 1) > last_prog:
                 last_prog = round(prog, 1)
@@ -160,22 +169,46 @@ class Strings(interfaces.plugins.PluginInterface):
         filter = pslist.PsList.create_pid_filter(pid_list)
 
         layer = context.layers[layer_name]
-        # reverse_map: Dict[int, Set[Tuple[str, int]]] = dict()
-        reverse_map: Dict[int, List[Dict[str, Union[str, int]]]] = dict()
+        reverse_map: Dict[int, Set[Tuple[str, int]]] = dict()
         if isinstance(layer, intel.Intel):
             # We don't care about errors, we just wanted chunks that map correctly
             for mapval in layer.mapping(0x0, layer.maximum_address, ignore_errors=True):
-                offset, _, mapped_offset, mapped_size, maplayer = mapval
-                for val in range(mapped_offset, mapped_offset + mapped_size, 0x1000):
-                    cur_set = reverse_map.get(val >> 12, list())
-                    cur_set.append({"region": "kernel", "pid": -1, "offset": val})
+                (
+                    virt_offset,
+                    _virt_size,
+                    phy_offset,
+                    phy_mapping_size,
+                    _phy_layer_name,
+                ) = mapval
 
-                    reverse_map[offset >> 12] = cur_set
+                # for each page within the mapping we need to store the phy_offset and
+                # the matching virt_offset
+                for offset_to_page_within_mapping in range(0, phy_mapping_size, 0x1000):
+                    # calculate the page number for this phy_offset, e.g. the ">> 12"
+                    # drops the bits that would address an offset within the page.
+                    # This means that all offsets within the same page get the same
+                    # physical_page number.
+                    physical_page = (
+                        phy_mapping_size + offset_to_page_within_mapping
+                    ) >> 12
+
+                    # get the existing mappings for this physical page from the
+                    # reverse map set.
+                    cur_set = reverse_map.get(physical_page, list())
+
+                    # add a mapping for this virtual offset, taking care to add the
+                    # offset_to_page_within_mapping to ensure that all pages match correctly.
+                    # Without this the 2nd, 3rd etc pages would all incorrectly map to the same
+                    # virtual offset.
+                    cur_set.append({"region": "Kernel", "pid": -1, "offset": virt_offset + offset_to_page_within_mapping})
+
+                    # store these results back in the reverse_map
+                    reverse_map[physical_page] = cur_set
                 if progress_callback:
                     progress_callback(
-                        (offset * 100) / layer.maximum_address,
-                        "Creating reverse kernel map",
-                    )
+                        (virt_offset * 100) / layer.maximum_address,
+                         "Creating reverse kernel map",
+                     )
 
             # TODO: Include kernel modules
 
@@ -197,27 +230,36 @@ class Strings(interfaces.plugins.PluginInterface):
 
                     proc_layer = context.layers[proc_layer_name]
                     if isinstance(proc_layer, linear.LinearlyMappedLayer):
+                        # this follows the same pattern as the kernel mappings above.
                         for mapval in proc_layer.mapping(
                             0x0, proc_layer.maximum_address, ignore_errors=True
                         ):
-                            mapped_offset, _, offset, mapped_size, maplayer = mapval
-                            for val in range(
-                                mapped_offset, mapped_offset + mapped_size, 0x1000
+                            (
+                                virt_offset,
+                                _virt_size,
+                                phy_offset,
+                                phy_mapping_size,
+                                _phy_layer_name,
+                            ) = mapval
+                            for offset_to_page_within_mapping in range(
+                                0, phy_mapping_size, 0x1000
                             ):
-                                cur_set = reverse_map.get(mapped_offset >> 12, list())
+                                physical_page = (
+                                    phy_offset + offset_to_page_within_mapping
+                                ) >> 12
+                                cur_set = reverse_map.get(physical_page, list())
                                 cur_set.append(
                                     {
-                                        "region": "process",
+                                        "region": "Process",
                                         "pid": process.UniqueProcessId,
-                                        "offset": mapped_offset,
+                                        "offset": virt_offset + offset_to_page_within_mapping,
                                     }
                                 )
-
-                                reverse_map[offset >> 12] = cur_set
+                                reverse_map[physical_page] = cur_set
                             # FIXME: make the progress for all processes, rather than per-process
                             if progress_callback:
                                 progress_callback(
-                                    (offset * 100) / layer.maximum_address,
+                                    (virt_offset * 100) / proc_layer.maximum_address,
                                     f"Creating mapping for task {process.UniqueProcessId}",
                                 )
 
