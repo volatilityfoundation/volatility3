@@ -261,40 +261,62 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             filter_func=pslist.PsList.create_pid_filter(self.config.get("pid", None)),
         ):
             file_output = "Disabled"
-            if self.config["dump"]:
-                # windows 10 objects (maybe others in the future) are already in virtual memory
-                if proc.vol.layer_name == kernel.layer_name:
-                    vproc = proc
+
+            # windows 10 objects (maybe others in the future) are already in virtual memory
+            # if the proc is built on the same layer as the kernel then it is already
+            # in 'virtual' memory.
+            if proc.vol.layer_name == kernel.layer_name:
+                # proc is already in a virtual mem, so a new object is not needed. it means
+                # that if physical addresses are requested in the output then proc.vol.offset
+                # cannot be used because it will be virtual, so the mapping is needed.
+                vproc = proc
+                if self.config["physical"]:
+                    # the display should be physical addresses, so proc cannot be used. The
+                    # mappings are needed to find where it would be physically.
+                    offset = (_, _, offset, _, _) = list(
+                        memory.mapping(offset=proc.vol.offset, length=0)
+                    )[0]
                 else:
-                    try:
-                        vproc = self.virtual_process_from_physical(
-                            self.context,
-                            kernel.layer_name,
-                            kernel.symbol_table_name,
-                            proc,
-                        )
-                    except exceptions.PagedInvalidAddressException:
-                        vproc = None
+                    # the display should be virtual addresses, so proc can be used
+                    offset = proc.vol.offset
 
-                file_output = "Error outputting file"
-                if vproc:
-                    file_handle = pslist.PsList.process_dump(
-                        self.context,
-                        kernel.symbol_table_name,
-                        pe_table_name,
-                        vproc,
-                        self.open,
-                    )
-
-                    if file_handle:
-                        file_output = file_handle.preferred_filename
-
-            if not self.config["physical"]:
-                offset = proc.vol.offset
+                #  renderers.UnreadableValue()
             else:
-                (_, _, offset, _, _) = list(
-                    memory.mapping(offset=proc.vol.offset, length=0)
-                )[0]
+                # proc is in virtual mem, so a new object needs to be creatd.
+                vproc = self.virtual_process_from_physical(
+                    self.context, kernel.layer_name, kernel.symbol_table_name, proc
+                )
+                if self.config["physical"]:
+                    # the display should be physical addresses, so proc can be used
+                    # as it is
+                    offset = proc.vol.offset
+                else:
+                    # the display should be virtual address, so vproc should be used
+                    # however virtual_process_from_physical is not always able to create
+                    # a vproc, in that case we need to display a UnreadableValue()
+                    if vproc is not None:
+                        offset = vproc.vol.offset
+                    else:
+                        offset = renderers.UnreadableValue()
+
+            if self.config["dump"]:
+                file_handle = pslist.PsList.process_dump(
+                    self.context,
+                    kernel.symbol_table_name,
+                    pe_table_name,
+                    vproc,
+                    self.open,
+                )
+                file_output = "Error outputting file"
+                if file_handle:
+                    file_output = file_handle.preferred_filename
+
+            # format offset for display, but catch errors when UnreadableValue
+            # cannot be formatted
+            try:
+                display_offset = format_hints.Hex(offset)
+            except TypeError:
+                display_offset = offset
 
             try:
                 yield (
@@ -307,7 +329,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                             max_length=proc.ImageFileName.vol.count,
                             errors="replace",
                         ),
-                        format_hints.Hex(offset),
+                        display_offset,
                         proc.ActiveThreads,
                         proc.get_handle_count(),
                         proc.get_session_id(),
