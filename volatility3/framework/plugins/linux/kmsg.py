@@ -64,10 +64,8 @@ class ABCKmsg(ABC):
     ):
         self._context = context
         self._config = config
-        vmlinux = context.modules[self._config["kernel"]]
-        self.layer_name = vmlinux.layer_name  # type: ignore
-        symbol_table_name = vmlinux.symbol_table_name  # type: ignore
-        self.vmlinux = contexts.Module.create(context, symbol_table_name, self.layer_name, 0)  # type: ignore
+        self.vmlinux = context.modules[self._config["kernel"]]
+        self.layer_name = self.vmlinux.layer_name  # type: ignore
         self.long_unsigned_int_size = self.vmlinux.get_type("long unsigned int").size
 
     @classmethod
@@ -358,19 +356,24 @@ class KmsgFiveTen(ABCKmsg):
 
         desc_ring = ringbuffers.desc_ring
         text_data_ring = ringbuffers.text_data_ring
-
         desc_count = 1 << desc_ring.count_bits
-        desc_arr = self.vmlinux.object(
-            object_type="array",
+
+        array_type = self.vmlinux.symbol_table_name + constants.BANG + "array"
+
+        desc_arr = self._context.object(
+            array_type,
             offset=desc_ring.descs,
             subtype=self.vmlinux.get_type("prb_desc"),
             count=desc_count,
+            layer_name=self.layer_name,
         )
-        info_arr = self.vmlinux.object(
-            object_type="array",
+
+        info_arr = self._context.object(
+            array_type,
             offset=desc_ring.infos,
             subtype=self.vmlinux.get_type("printk_info"),
             count=desc_count,
+            layer_name=self.layer_name,
         )
 
         # See kernel/printk/printk_ringbuffer.h
@@ -409,7 +412,7 @@ class Kmsg(plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
