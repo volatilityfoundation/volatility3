@@ -102,14 +102,13 @@ class ABCKmsg(ABC):
                 subclass.__name__,
             )
             kmsg_inst = subclass(context=context, config=config)
-            # More than one class could be executed for an specific kernel
-            # version i.e. Netfilter Ingress hooks
-            # We expect just one implementation to be executed for an specific kernel
             yield from kmsg_inst.run()
+            # So far, it allows only one implementation to be executed for each
+            # specific kernel.
             break
 
         if kmsg_inst is None:
-            vollog.error("Unsupported Netfilter kernel implementation")
+            vollog.error("Unsupported kernel ring buffer implementation")
 
     @abstractmethod
     def run(self) -> Iterator[Tuple[str, str, str, str, str]]:
