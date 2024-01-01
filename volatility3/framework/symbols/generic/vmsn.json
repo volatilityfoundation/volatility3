@@ -1,0 +1,206 @@
+{
+  "symbols": {},
+  "user_types": {
+    "header": {
+      "fields": {
+        "magic": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "unknown": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "group_count": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "groups": {
+          "offset": 12,
+          "type": {
+            "count": 1,
+            "kind": "array",
+            "subtype": {
+              "kind": "struct",
+              "name": "group"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 12
+    },
+    "group": {
+      "fields": {
+        "name": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        },
+        "tags":{
+          "offset": 64,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "tag"
+            }
+          }          
+        }
+      },
+      "kind":"struct",
+      "size": 80
+    },
+    "tag": {
+      "fields":{
+        "flags":{
+          "offset": 0,
+          "type":{
+            "kind": "base",
+            "name":"unsigned char"
+          }
+        },
+        "name_length":{
+          "offset": 1,
+          "type":{
+            "kind": "base",
+            "name":"unsigned char"
+          }
+        },
+        "name": {
+          "offset": 2,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind":"struct",
+      "size":3
+    },
+    "tag_extended_size": {
+      "fields":{
+        "data_size":{
+          "offset": 0,
+          "type":{
+            "kind": "base",
+            "name":"unsigned long"
+          }
+        },
+        "mem_size":{
+          "offset": 4,
+          "type":{
+            "kind": "base",
+            "name":"unsigned long"
+          }
+        },
+        "padding_len":{
+          "offset": 8,
+          "type":{
+            "kind": "base",
+            "name":"unsigned short"
+          }
+        }
+      },
+      "kind":"struct",
+      "size": 10
+    },
+    "tag_extended_size64": {
+      "fields":{
+        "data_size":{
+          "offset": 0,
+          "type":{
+            "kind": "base",
+            "name":"unsigned long long"
+          }
+        },
+        "mem_size":{
+          "offset": 8,
+          "type":{
+            "kind": "base",
+            "name":"unsigned long"
+          }
+        },
+        "padding_len":{
+          "offset": 16,
+          "type":{
+            "kind": "base",
+            "name":"unsigned short"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 18
+    }
+  },
+  "enums": {},
+  "base_types": {
+    "unsigned char": {
+      "endian": "big",
+      "kind": "char",
+      "signed": false,
+      "size": 1
+    },
+    "unsigned short": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 2
+    },
+    "long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 4
+    },
+    "char": {
+      "endian": "little",
+      "kind": "char",
+      "signed": true,
+      "size": 1
+    },
+    "unsigned long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    },
+    "long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 8
+    },
+    "unsigned long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 8
+    },
+    "pointer": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    }
+  },
+  "metadata": {
+    "producer": {
+      "version": "0.0.1",
+      "name": "ikelos-by-hand",
+      "datetime": "2023-12-28T12:44:45"
+    },
+    "format": "6.2.0"
+  }
+}
