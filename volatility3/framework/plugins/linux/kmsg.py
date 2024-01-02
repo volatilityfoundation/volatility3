@@ -115,10 +115,10 @@ class ABCKmsg(ABC):
 
         Returns:
             tuple:
-                facility [str]: The log facility: kern, user, etc. see FACILITIES
-                level [str]: The log level: info, debug, etc. see LEVELS
+                facility [str]: The log facility: kern, user, etc. See FACILITIES
+                level [str]: The log level: info, debug, etc. See LEVELS
                 timestamp [str]: The message timestamp. See nsec_to_sec_str()
-                caller [str]: The Caller ID: CPU(1) or Task(1234). See get_caller()
+                caller [str]: The caller ID: CPU(1) or Task(1234). See get_caller()
                 line [str]: The log message.
         """
 
@@ -131,7 +131,7 @@ class ABCKmsg(ABC):
         run() method.
 
         Returns:
-            bool: True if the kernel being analysed fulfill the class requirements.
+            bool: True if the kernel being analyzed fulfill the class requirements.
         """
 
     def get_string(self, addr: int, length: int) -> str:
