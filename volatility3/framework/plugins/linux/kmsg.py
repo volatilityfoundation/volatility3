@@ -14,7 +14,6 @@ from volatility3.framework import (
     renderers,
 )
 from volatility3.framework.configuration import requirements
-from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
 
 vollog = logging.getLogger(__name__)
@@ -483,7 +482,7 @@ class Kmsg_5_10_to_(ABCKmsg):
             cur_id &= desc_id_mask
 
 
-class Kmsg(plugins.PluginInterface):
+class Kmsg(interfaces.plugins.PluginInterface):
     """Kernel log buffer reader"""
 
     _required_framework_version = (2, 0, 0)
