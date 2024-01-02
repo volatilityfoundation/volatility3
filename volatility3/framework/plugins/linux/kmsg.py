@@ -81,7 +81,7 @@ class ABCKmsg(ABC):
             config: Core configuration
 
         Yields:
-            kmsg records
+            The kmsg records. Same as run()
         """
         vmlinux = context.modules[config["kernel"]]
 
@@ -102,7 +102,7 @@ class ABCKmsg(ABC):
             )
             kmsg_inst = subclass(context=context, config=config)
             yield from kmsg_inst.run()
-            # So far, it allows only one implementation to be executed for each
+            # So far, it only allows a single implementation to be executed for each
             # specific kernel.
             break
 
@@ -111,7 +111,16 @@ class ABCKmsg(ABC):
 
     @abstractmethod
     def run(self) -> Iterator[Tuple[str, str, str, str, str]]:
-        """Walks through the specific kernel implementation."""
+        """Walks through the specific kernel implementation.
+
+        Returns:
+            tuple:
+                facility [str]: The log facility: kern, user, etc. see FACILITIES
+                level [str]: The log level: info, debug, etc. see LEVELS
+                timestamp [str]: The message timestamp. See nsec_to_sec_str()
+                caller [str]: The Caller ID: CPU(1) or Task(1234). See get_caller()
+                line [str]: The log message.
+        """
 
     @classmethod
     @abstractmethod
@@ -121,7 +130,8 @@ class ABCKmsg(ABC):
         The first class returning True will be instantiated and called via the
         run() method.
 
-        :return: True is the kernel being analysed fulfill the class requirements.
+        Returns:
+            bool: True if the kernel being analysed fulfill the class requirements.
         """
 
     def get_string(self, addr: int, length: int) -> str:
