@@ -522,6 +522,9 @@ class ETHREAD(objects.StructType, pool.ExecutiveObject):
         return True
 
     def get_create_time(self):
+        # For Windows XPs
+        if self.has_member("ThreadsProcess"):
+            return conversion.wintime_to_datetime(self.CreateTime.QuadPart >> 3)
         return conversion.wintime_to_datetime(self.CreateTime.QuadPart)
 
     def get_exit_time(self):
