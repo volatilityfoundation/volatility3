@@ -515,6 +515,9 @@ class ETHREAD(objects.StructType, pool.ExecutiveObject):
                 if not isinstance(ctime, datetime.datetime):
                     return False
 
+                if not (1998 < ctime.year < 2030):
+                        return False
+
         except exceptions.InvalidAddressException:
             return False
 
