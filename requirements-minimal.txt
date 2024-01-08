@@ -1,2 +1,2 @@
 # These packages are required for core functionality.
-pefile>=2017.8.1 #foo
+pefile>=2023.2.7 #foo

@@ -47,7 +47,7 @@ class PdbMultiStreamFormat(linear.LinearlyMappedLayer):
     def read_streams(self):
         # Shortcut in case they've already been read
         if self._streams:
-            return
+            return None
 
         # Recover the root table, by recovering the root table index table...
         module = self.context.module(self.pdb_symbol_table, self._base_layer, offset=0)

@@ -678,16 +678,12 @@ class LayerContainer(collections.abc.Mapping):
             name: The name of the layer to delete
         """
         for layer in self._layers:
-            depend_list = [
-                superlayer
-                for superlayer in self._layers
-                if name in self._layers[layer].dependencies
-            ]
-            if depend_list:
+            if name in self._layers[layer].dependencies:
                 raise exceptions.LayerException(
                     self._layers[layer].name,
-                    f"Layer {self._layers[layer].name} is depended upon: {', '.join(depend_list)}",
+                    f"Layer {self._layers[layer].name} is depended upon by {layer}",
                 )
+        # Otherwise, wipe out the layer
         self._layers[name].destroy()
         del self._layers[name]
 

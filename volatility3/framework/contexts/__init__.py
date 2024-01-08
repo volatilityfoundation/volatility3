@@ -272,6 +272,7 @@ class Module(interfaces.context.ModuleInterface):
         symbol_name: str,
         native_layer_name: Optional[str] = None,
         absolute: bool = False,
+        object_type: Optional[Union[str, "interfaces.objects.ObjectInterface"]] = None,
         **kwargs,
     ) -> "interfaces.objects.ObjectInterface":
         """Returns an object based on a specific symbol (containing type and
@@ -284,6 +285,7 @@ class Module(interfaces.context.ModuleInterface):
             symbol_name: Name of the symbol (within the module) to construct
             native_layer_name: Name of the layer in which constructed objects are made (for pointers)
             absolute: whether the symbol's address is absolute or relative to the module
+            object_type: Override for the type from the symobl to use (or if the symbol type is missing)
         """
         if constants.BANG not in symbol_name:
             symbol_name = self.symbol_table_name + constants.BANG + symbol_name
@@ -299,8 +301,13 @@ class Module(interfaces.context.ModuleInterface):
         if not absolute:
             offset += self._offset
 
-        if symbol_val.type is None:
-            raise TypeError(f"Symbol {symbol_val.name} has no associated type")
+        if object_type is None:
+            if symbol_val.type is None:
+                raise TypeError(
+                    f"Symbol {symbol_val.name} has no associated type and no object_type specified"
+                )
+            else:
+                object_type = symbol_val.type
 
         # Ensure we don't use a layer_name other than the module's, why would anyone do that?
         if "layer_name" in kwargs:
@@ -308,7 +315,7 @@ class Module(interfaces.context.ModuleInterface):
 
         # Since type may be a template, we don't just call our own module method
         return self._context.object(
-            object_type=symbol_val.type,
+            object_type=object_type,
             layer_name=self._layer_name,
             offset=offset,
             native_layer_name=native_layer_name or self._native_layer_name,

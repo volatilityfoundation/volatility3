@@ -108,13 +108,13 @@ class PsTree(interfaces.plugins.PluginInterface):
         def yield_processes(pid, descendant: bool = False):
             if pid in process_pids:
                 vollog.debug(f"Pid cycle: already processed pid {pid}")
-                return
+                return None
 
             process_pids.add(pid)
 
             if pid not in self._ancestors and not descendant:
                 vollog.debug(f"Pid cycle: pid {pid} not in filtered tree")
-                return
+                return None
 
             proc, offset = self._processes[pid]
             row = (

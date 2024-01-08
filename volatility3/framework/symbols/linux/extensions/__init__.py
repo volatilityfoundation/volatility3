@@ -5,7 +5,7 @@
 import collections.abc
 import logging
 import socket as socket_module
-from typing import Generator, Iterable, Iterator, Optional, Tuple
+from typing import Generator, Iterable, Iterator, Optional, Tuple, List
 
 from volatility3.framework import constants
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
@@ -13,6 +13,7 @@ from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
 from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
+from volatility3.framework.constants.linux import CAPABILITIES
 from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
@@ -70,11 +71,11 @@ class module(generic.GenericIntelProcess):
     def _get_sect_count(self, grp):
         """Try to determine the number of valid sections"""
         arr = self._context.object(
-            self.get_symbol_table().name + constants.BANG + "array",
+            self.get_symbol_table_name() + constants.BANG + "array",
             layer_name=self.vol.layer_name,
             offset=grp.attrs,
             subtype=self._context.symbol_space.get_type(
-                self.get_symbol_table().name + constants.BANG + "pointer"
+                self.get_symbol_table_name() + constants.BANG + "pointer"
             ),
             count=25,
         )
@@ -91,11 +92,11 @@ class module(generic.GenericIntelProcess):
         else:
             num_sects = self._get_sect_count(self.sect_attrs.grp)
         arr = self._context.object(
-            self.get_symbol_table().name + constants.BANG + "array",
+            self.get_symbol_table_name() + constants.BANG + "array",
             layer_name=self.vol.layer_name,
             offset=self.sect_attrs.attrs.vol.offset,
             subtype=self._context.symbol_space.get_type(
-                self.get_symbol_table().name + constants.BANG + "module_sect_attr"
+                self.get_symbol_table_name() + constants.BANG + "module_sect_attr"
             ),
             count=num_sects,
         )
@@ -103,41 +104,82 @@ class module(generic.GenericIntelProcess):
         for attr in arr:
             yield attr
 
-    def get_symbols(self):
-        if symbols.symbol_table_is_64bit(self._context, self.get_symbol_table().name):
-            prefix = "Elf64_"
-        else:
-            prefix = "Elf32_"
+    def get_elf_table_name(self):
         elf_table_name = intermed.IntermediateSymbolTable.create(
-            self.context,
-            self.config_path,
+            self._context,
+            "elf_symbol_table",
             "linux",
             "elf",
             native_types=None,
             class_types=elf.class_types,
         )
+        return elf_table_name
 
+    def get_symbols(self):
+        """Get symbols of the module
+
+        Yields:
+                A symbol object
+        """
+
+        if not hasattr(self, "_elf_table_name"):
+            self._elf_table_name = self.get_elf_table_name()
+        if symbols.symbol_table_is_64bit(self._context, self.get_symbol_table_name()):
+            prefix = "Elf64_"
+        else:
+            prefix = "Elf32_"
         syms = self._context.object(
-            self.get_symbol_table().name + constants.BANG + "array",
+            self.get_symbol_table_name() + constants.BANG + "array",
             layer_name=self.vol.layer_name,
             offset=self.section_symtab,
             subtype=self._context.symbol_space.get_type(
-                elf_table_name + constants.BANG + prefix + "Sym"
+                self._elf_table_name + constants.BANG + prefix + "Sym"
             ),
             count=self.num_symtab + 1,
         )
         if self.section_strtab:
             for sym in syms:
-                sym.set_cached_strtab(self.section_strtab)
                 yield sym
 
-    def get_symbol(self, wanted_sym_name):
-        """Get value for a given symbol name"""
+    def get_symbols_names_and_addresses(self) -> Tuple[str, int]:
+        """Get names and addresses for each symbol of the module
+
+        Yields:
+                A tuple for each symbol containing the symbol name and its corresponding value
+        """
+
         for sym in self.get_symbols():
-            sym_name = sym.get_name()
-            sym_addr = sym.st_value
+            sym_arr = self._context.object(
+                self.get_symbol_table_name() + constants.BANG + "array",
+                layer_name=self.vol.native_layer_name,
+                offset=self.section_strtab + sym.st_name,
+            )
+            try:
+                sym_name = utility.array_to_string(
+                    sym_arr, 512
+                )  # 512 is the value of KSYM_NAME_LEN kernel constant
+            except exceptions.InvalidAddressException:
+                continue
+            if sym_name != "":
+                # Normalize sym.st_value offset, which is an address pointing to the symbol value
+                mask = self._context.layers[self.vol.layer_name].address_mask
+                sym_address = sym.st_value & mask
+                yield (sym_name, sym_address)
+
+    def get_symbol(self, wanted_sym_name):
+        """Get symbol value for a given symbol name"""
+        for sym_name, sym_address in self.get_symbols_names_and_addresses():
             if wanted_sym_name == sym_name:
-                return sym_addr
+                return sym_address
+
+        return None
+
+    def get_symbol_by_address(self, wanted_sym_address):
+        """Get symbol name for a given symbol address"""
+        for sym_name, sym_address in self.get_symbols_names_and_addresses():
+            if wanted_sym_address == sym_address:
+                return sym_name
+
         return None
 
     @property
@@ -202,7 +244,7 @@ class task_struct(generic.GenericIntelProcess):
     ) -> Generator[Tuple[int, int], None, None]:
         """Returns a list of sections based on the memory manager's view of
         this task's virtual memory."""
-        for vma in self.mm.get_mmap_iter():
+        for vma in self.mm.get_vma_iter():
             start = int(vma.vm_start)
             end = int(vma.vm_end)
 
@@ -308,19 +350,30 @@ class maple_tree(objects.StructType):
         maple_tree_entry,
         parent,
         expected_maple_tree_depth,
-        seen=set(),
+        seen=None,
         current_depth=1,
     ):
         """Recursively parse Maple Tree Nodes and yield all non empty slots"""
+
+        # Create seen set if it does not exist, e.g. on the first call into this recursive function. This
+        # must be None or an existing set of addresses for MTEs that have already been processed or that
+        # should otherwise be ignored. If parsing from the root node for example this should be None on the
+        # first call. If you needed to parse all nodes downwards from part of the tree this should still be
+        # None. If however you wanted to parse from a node, but ignore some parts of the tree below it then
+        # this could be populated with the addresses of the nodes you wish to ignore.
+
+        if seen == None:
+            seen = set()
 
         # protect against unlikely loop
         if maple_tree_entry in seen:
             vollog.warning(
                 f"The mte {hex(maple_tree_entry)} has all ready been seen, no further results will be produced for this node."
             )
-            return
+            return None
         else:
             seen.add(maple_tree_entry)
+
         # check if we have exceeded the expected depth of this maple tree.
         # e.g. when current_depth is larger than expected_maple_tree_depth there may be an issue.
         # it is normal that expected_maple_tree_depth is equal to current_depth.
@@ -329,6 +382,7 @@ class maple_tree(objects.StructType):
                 f"The depth for the maple tree at {hex(self.vol.offset)} is {expected_maple_tree_depth}, however when parsing the nodes "
                 f"a depth of {current_depth} was reached. This is unexpected and may lead to incorrect results."
             )
+
         # parse the mte to extract the pointer value, node type, and leaf status
         pointer = maple_tree_entry & ~(self.MAPLE_NODE_POINTER_MASK)
         node_type = (
@@ -401,7 +455,7 @@ class mm_struct(objects.StructType):
                 "get_mmap_iter called on mm_struct where no mmap member exists."
             )
         if not self.mmap:
-            return
+            return None
         yield self.mmap
 
         seen = {self.mmap.vol.offset}
@@ -577,7 +631,7 @@ class vm_area_struct(objects.StructType):
         return fname
 
     # used by malfind
-    def is_suspicious(self):
+    def is_suspicious(self, proclayer=None):
         ret = False
 
         flags_str = self.get_protection()
@@ -586,6 +640,24 @@ class vm_area_struct(objects.StructType):
             ret = True
         elif flags_str == "r-x" and self.vm_file.dereference().vol.offset == 0:
             ret = True
+        elif proclayer and "x" in flags_str:
+            for i in range(self.vm_start, self.vm_end, 1 << constants.linux.PAGE_SHIFT):
+                try:
+                    if proclayer.is_dirty(i):
+                        vollog.warning(
+                            f"Found malicious (dirty+exec) page at {hex(i)} !"
+                        )
+                        # We do not attempt to find other dirty+exec pages once we have found one
+                        ret = True
+                        break
+                except (
+                    exceptions.PagedInvalidAddressException,
+                    exceptions.InvalidAddressException,
+                ) as excp:
+                    vollog.debug(f"Unable to translate address {hex(i)} : {excp}")
+                    # Abort as it is likely that other addresses in the same range will also fail
+                    ret = False
+                    break
         return ret
 
 
@@ -704,7 +776,7 @@ class list_head(objects.StructType, collections.abc.Iterable):
         try:
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
-            return
+            return None
         if not sentinel:
             yield self._context.object(
                 symbol_type, layer, offset=self.vol.offset - relative_offset
@@ -794,7 +866,7 @@ class mount(objects.StructType):
         """Gets the fs where we are mounted on
 
         Returns:
-            A 'mount *'
+            A mount pointer
         """
         return self.mnt_parent
 
@@ -802,7 +874,7 @@ class mount(objects.StructType):
         """Gets the dentry of the mountpoint
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
 
         return self.mnt_mountpoint
@@ -839,7 +911,7 @@ class mount(objects.StructType):
         """Returns the root of the mounted tree
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
         vfsmnt = self.get_vfsmnt_current()
         dentry = vfsmnt.mnt_root
@@ -850,7 +922,7 @@ class mount(objects.StructType):
         """Returns the parent root of the mounted tree
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
 
         return self.get_mnt_parent().get_dentry_current()
@@ -970,17 +1042,17 @@ class vfsmount(objects.StructType):
         """Helper to make sure it is comparing two pointers to 'vfsmount'.
 
         Depending on the kernel version, the calling object (self) could be
-        a 'vfsmount *' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
+        a 'vfsmount \*' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
         in the framework "auto" dereferencing ability to assure that when we
         reach this point 'self' will be a 'vfsmount' already and self.vol.offset
-        a 'vfsmount *' and not a 'vfsmount **'. The argument must be a 'vfsmount *'.
+        a 'vfsmount \*' and not a 'vfsmount \*\*'. The argument must be a 'vfsmount \*'.
         Typically, it's called from do_get_path().
 
         Args:
-            vfsmount_ptr (vfsmount *): A pointer to a 'vfsmount'
+            vfsmount_ptr (vfsmount \*): A pointer to a 'vfsmount'
 
         Raises:
-            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount *'
+            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount \*'
 
         Returns:
             bool: 'True' if the given argument points to the the same 'vfsmount'
@@ -1010,7 +1082,7 @@ class vfsmount(objects.StructType):
         """Returns the current fs where we are mounted on
 
         Returns:
-            A 'vfsmount *'
+            A vfsmount pointer
         """
         return self.get_mnt_parent()
 
@@ -1018,8 +1090,8 @@ class vfsmount(objects.StructType):
         """Gets the parent fs (vfsmount) to where it's mounted on
 
         Returns:
-            For kernels <  3.3.8: A 'vfsmount *'
-            For kernels >= 3.3.8: A 'vfsmount'
+            For kernels <  3.3.8: A vfsmount pointer
+            For kernels >= 3.3.8: A vfsmount object
         """
         if self._is_kernel_prior_to_struct_mount():
             return self.get_mnt_parent()
@@ -1030,7 +1102,7 @@ class vfsmount(objects.StructType):
         """Returns the root of the mounted tree
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
         if self._is_kernel_prior_to_struct_mount():
             return self.get_mnt_mountpoint()
@@ -1041,7 +1113,7 @@ class vfsmount(objects.StructType):
         """Returns the parent root of the mounted tree
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
         if self._is_kernel_prior_to_struct_mount():
             return self.get_mnt_mountpoint()
@@ -1052,8 +1124,8 @@ class vfsmount(objects.StructType):
         """Gets the mnt_parent member.
 
         Returns:
-            For kernels <  3.3.8: A 'vfsmount *'
-            For kernels >= 3.3.8: A 'mount *'
+            For kernels <  3.3.8: A vfsmount pointer
+            For kernels >= 3.3.8: A mount pointer
         """
         if self._is_kernel_prior_to_struct_mount():
             return self.mnt_parent
@@ -1064,7 +1136,7 @@ class vfsmount(objects.StructType):
         """Gets the dentry of the mountpoint
 
         Returns:
-            A 'dentry *'
+            A dentry pointer
         """
         if self.has_member("mnt_mountpoint"):
             return self.mnt_mountpoint
@@ -1113,7 +1185,7 @@ class vfsmount(objects.StructType):
 class kobject(objects.StructType):
     def reference_count(self):
         refcnt = self.kref.refcount
-        if self.has_member("counter"):
+        if refcnt.has_member("counter"):
             ret = refcnt.counter
         else:
             ret = refcnt.refs.counter
@@ -1199,7 +1271,7 @@ class sock(objects.StructType):
         return self.sk_socket.get_inode()
 
     def get_protocol(self):
-        return
+        return None
 
     def get_state(self):
         # Return the generic socket state
@@ -1211,13 +1283,13 @@ class sock(objects.StructType):
 class unix_sock(objects.StructType):
     def get_name(self):
         if not self.addr:
-            return
+            return None
         sockaddr_un = self.addr.name.cast("sockaddr_un")
         saddr = str(utility.array_to_string(sockaddr_un.sun_path))
         return saddr
 
     def get_protocol(self):
-        return
+        return None
 
     def get_state(self):
         """Return a string representing the sock state."""
@@ -1276,7 +1348,7 @@ class inet_sock(objects.StructType):
         elif hasattr(sk_common, "skc_dport"):
             dport_le = sk_common.skc_dport
         else:
-            return
+            return None
         return socket_module.htons(dport_le)
 
     def get_src_addr(self):
@@ -1294,7 +1366,7 @@ class inet_sock(objects.StructType):
             addr_size = 16
             saddr = self.pinet6.saddr
         else:
-            return
+            return None
         parent_layer = self._context.layers[self.vol.layer_name]
         try:
             addr_bytes = parent_layer.read(saddr.vol.offset, addr_size)
@@ -1302,7 +1374,7 @@ class inet_sock(objects.StructType):
             vollog.debug(
                 f"Unable to read socket src address from {saddr.vol.offset:#x}"
             )
-            return
+            return None
         return socket_module.inet_ntop(family, addr_bytes)
 
     def get_dst_addr(self):
@@ -1323,7 +1395,7 @@ class inet_sock(objects.StructType):
                 daddr = sk_common.skc_v6_daddr
             addr_size = 16
         else:
-            return
+            return None
         parent_layer = self._context.layers[self.vol.layer_name]
         try:
             addr_bytes = parent_layer.read(daddr.vol.offset, addr_size)
@@ -1331,7 +1403,7 @@ class inet_sock(objects.StructType):
             vollog.debug(
                 f"Unable to read socket dst address from {daddr.vol.offset:#x}"
             )
-            return
+            return None
         return socket_module.inet_ntop(family, addr_bytes)
 
 
@@ -1369,7 +1441,7 @@ class netlink_sock(objects.StructType):
 class vsock_sock(objects.StructType):
     def get_protocol(self):
         # The protocol should always be 0 for vsocks
-        return
+        return None
 
     def get_state(self):
         # Return the generic socket state
@@ -1380,7 +1452,7 @@ class packet_sock(objects.StructType):
     def get_protocol(self):
         eth_proto = socket_module.htons(self.num)
         if eth_proto == 0:
-            return
+            return None
         elif eth_proto in ETH_PROTOCOLS:
             return ETH_PROTOCOLS[eth_proto]
         else:
@@ -1406,7 +1478,7 @@ class bt_sock(objects.StructType):
 class xdp_sock(objects.StructType):
     def get_protocol(self):
         # The protocol should always be 0 for xdp_sock
-        return
+        return None
 
     def get_state(self):
         # xdp_sock.state is an enum
@@ -1428,3 +1500,169 @@ class bpf_prog(objects.StructType):
 
         # kernel < 3.18.140
         raise AttributeError("Unable to find the BPF type")
+
+
+class cred(objects.StructType):
+    # struct cred was added in kernels 2.6.29
+    def _get_cred_int_value(self, member: str) -> int:
+        """Helper to obtain the right cred member value for the current kernel.
+
+        Args:
+            member (str): The requested cred member name to obtain its value
+
+        Raises:
+            AttributeError: When the requested cred member doesn't exist
+            AttributeError: When the cred implementation is not supported.
+
+        Returns:
+            int: The cred member value
+        """
+        if not self.has_member(member):
+            raise AttributeError(f"struct cred doesn't have a '{member}' member")
+
+        cred_val = self.member(member)
+        if hasattr(cred_val, "val"):
+            # From kernels 3.5.7 on it is a 'kuid_t' type
+            value = cred_val.val
+        elif isinstance(cred_val, objects.Integer):
+            # From at least 2.6.30 and until 3.5.7 it was a 'uid_t' type which was an 'unsigned int'
+            value = cred_val
+        else:
+            raise AttributeError("Kernel struct cred is not supported")
+
+        return int(value)
+
+    @property
+    def euid(self):
+        """Returns the effective user ID
+
+        Returns:
+            int: the effective user ID value
+        """
+        return self._get_cred_int_value("euid")
+
+
+class kernel_cap_struct(objects.StructType):
+    # struct kernel_cap_struct exists from 2.1.92 <= kernels < 6.3
+    @classmethod
+    def get_last_cap_value(cls) -> int:
+        """Returns the latest capability ID supported by the framework.
+
+        Returns:
+            int: The latest capability ID supported by the framework.
+        """
+        return len(CAPABILITIES) - 1
+
+    def get_kernel_cap_full(self) -> int:
+        """Return the maximum value allowed for this kernel for a capability
+
+        Returns:
+            int: The capability full bitfield mask
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        try:
+            cap_last_cap = vmlinux.object_from_symbol(symbol_name="cap_last_cap")
+        except exceptions.SymbolError:
+            # It should be a kernel < 3.2, let's use our list of capabilities
+            cap_last_cap = self.get_last_cap_value()
+
+        return (1 << cap_last_cap + 1) - 1
+
+    @classmethod
+    def capabilities_to_string(cls, capabilities_bitfield: int) -> List[str]:
+        """Translates a capability bitfield to a list of capability strings.
+
+        Args:
+            capabilities_bitfield (int): The capability bitfield value.
+
+        Returns:
+            List[str]: A list of capability strings.
+        """
+
+        capabilities = []
+        for bit, name in enumerate(CAPABILITIES):
+            if capabilities_bitfield & (1 << bit) != 0:
+                capabilities.append(name)
+
+        return capabilities
+
+    def get_capabilities(self) -> int:
+        """Returns the capability bitfield value
+
+        Returns:
+            int: The capability bitfield value.
+        """
+
+        if not self.has_member("cap"):
+            raise exceptions.VolatilityException(
+                "Unsupported kernel capabilities implementation"
+            )
+
+        if isinstance(self.cap, objects.Array):
+            if len(self.cap) == 1:
+                # At least in the vanilla kernel, from 2.6.24 to 2.6.25
+                # kernel_cap_struct::cap become a two elements array.
+                # However, in some distros or custom kernel can technically
+                # be _KERNEL_CAPABILITY_U32S = _LINUX_CAPABILITY_U32S_1
+                # Leaving this code here for the sake of ensuring completeness.
+                cap_value = self.cap[0]
+            elif len(self.cap) == 2:
+                # In 2.6.25.x <= kernels < 6.3 kernel_cap_struct::cap is a two
+                # elements __u32 array that constitutes a 64bit bitfield.
+                cap_value = (self.cap[1] << 32) | self.cap[0]
+            else:
+                raise exceptions.VolatilityException(
+                    "Unsupported kernel capabilities implementation"
+                )
+        else:
+            # In kernels < 2.6.25.x kernel_cap_struct::cap is a __u32
+            cap_value = self.cap
+
+        return cap_value & self.get_kernel_cap_full()
+
+    def enumerate_capabilities(self) -> List[str]:
+        """Returns the list of capability strings.
+
+        Returns:
+            List[str]: The list of capability strings.
+        """
+        capabilities_value = self.get_capabilities()
+        return self.capabilities_to_string(capabilities_value)
+
+    def has_capability(self, capability: str) -> bool:
+        """Checks if the given capability string is enabled.
+
+        Args:
+            capability (str): A string representing the capability i.e. dac_read_search
+
+        Raises:
+            AttributeError: If the given capability is unknown to the framework.
+
+        Returns:
+            bool: "True" if the given capability is enabled.
+        """
+        if capability not in CAPABILITIES:
+            raise AttributeError(f"Unknown capability with name '{capability}'")
+
+        cap_value = 1 << CAPABILITIES.index(capability)
+        return cap_value & self.get_capabilities() != 0
+
+
+class kernel_cap_t(kernel_cap_struct):
+    # In kernels 6.3 kernel_cap_struct became the kernel_cap_t typedef
+    def get_capabilities(self) -> int:
+        """Returns the capability bitfield value
+
+        Returns:
+            int: The capability bitfield value.
+        """
+
+        if self.has_member("val"):
+            # In kernels >= 6.3 kernel_cap_t::val is a u64
+            cap_value = self.val
+        else:
+            raise exceptions.VolatilityException(
+                "Unsupported kernel capabilities implementation"
+            )
+
+        return cap_value & self.get_kernel_cap_full()

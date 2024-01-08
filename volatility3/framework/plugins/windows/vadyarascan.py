@@ -18,46 +18,25 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
     """Scans all the Virtual Address Descriptor memory maps using yara."""
 
     _required_framework_version = (2, 4, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [
+        # create a list of requirements for vadyarascan
+        vadyarascan_requirements = [
             requirements.ModuleRequirement(
                 name="kernel",
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
-            ),
-            requirements.BooleanRequirement(
-                name="wide",
-                description="Match wide (unicode) strings",
-                default=False,
-                optional=True,
-            ),
-            requirements.StringRequirement(
-                name="yara_rules", description="Yara rules (as a string)", optional=True
-            ),
-            requirements.URIRequirement(
-                name="yara_file", description="Yara rules (as a file)", optional=True
-            ),
-            # This additional requirement is to follow suit with upstream, who feel that compiled rules could potentially be used to execute malicious code
-            # As such, there's a separate option to run compiled files, as happened with yara-3.9 and later
-            requirements.URIRequirement(
-                name="yara_compiled_file",
-                description="Yara compiled rules (as a file)",
-                optional=True,
-            ),
-            requirements.IntRequirement(
-                name="max_size",
-                default=0x40000000,
-                description="Set the maximum size (default is 1GB)",
-                optional=True,
             ),
             requirements.PluginRequirement(
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="yarascanner", component=yarascan.YaraScanner, version=(2, 0, 0)
+            ),
+            requirements.PluginRequirement(
+                name="yarascan", plugin=yarascan.YaraScan, version=(1, 2, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -66,6 +45,12 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 optional=True,
             ),
         ]
+
+        # get base yarascan requirements for command line options
+        yarascan_requirements = yarascan.YaraScan.get_yarascan_option_requirements()
+
+        # return the combined requirements
+        return yarascan_requirements + vadyarascan_requirements
 
     def _generator(self):
         kernel = self.context.modules[self.config["kernel"]]

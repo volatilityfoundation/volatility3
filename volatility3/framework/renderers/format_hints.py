@@ -59,7 +59,8 @@ class MultiTypeData(bytes):
 
     def __eq__(self, other):
         return (
-            super(self) == super(other)
+            isinstance(other, self.__class__)
+            and super() == super(self.__class__, other)
             and self.converted_int == other.converted_int
             and self.encoding == other.encoding
             and self.split_nulls == other.split_nulls
