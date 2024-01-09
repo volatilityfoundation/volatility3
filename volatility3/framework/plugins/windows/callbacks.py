@@ -157,7 +157,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
         )
 
         if callback_count == 0:
-            return
+            return None
 
         fast_refs = ntkrnlmp.object(
             object_type="array",
@@ -199,7 +199,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
         )
 
         if callback_count == 0:
-            return
+            return None
 
         callback_list = ntkrnlmp.object(object_type="_LIST_ENTRY", offset=symbol_offset)
         for callback in callback_list.to_list(full_type_name, "Link"):
@@ -256,7 +256,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
                     symbol_status = "exists"
                 vollog.debug(f"symbol {symbol_name} {symbol_status}.")
 
-            return
+            return None
 
     @classmethod
     def list_bugcheck_reason_callbacks(
@@ -287,7 +287,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
             ).address
         except exceptions.SymbolError:
             vollog.debug("Cannot find KeBugCheckReasonCallbackListHead")
-            return
+            return None
 
         full_type_name = (
             callback_table_name + constants.BANG + "_KBUGCHECK_REASON_CALLBACK_RECORD"
@@ -343,7 +343,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
             list_offset = ntkrnlmp.get_symbol("KeBugCheckCallbackListHead").address
         except exceptions.SymbolError:
             vollog.debug("Cannot find KeBugCheckCallbackListHead")
-            return
+            return None
 
         full_type_name = (
             callback_table_name + constants.BANG + "_KBUGCHECK_CALLBACK_RECORD"

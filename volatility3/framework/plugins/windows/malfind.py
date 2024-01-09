@@ -110,7 +110,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                     proc_id, excp.invalid_address, excp.layer_name
                 )
             )
-            return
+            return None
 
         proc_layer = context.layers[proc_layer_name]
 

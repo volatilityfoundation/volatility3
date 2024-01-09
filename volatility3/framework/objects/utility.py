@@ -44,8 +44,9 @@ def array_of_pointers(
         raise TypeError(
             "Subtype must be a valid template (or string name of an object template)"
         )
+    # We have to clone the pointer class, or we'll be defining the pointer subtype for all future pointers
     subtype_pointer = context.symbol_space.get_type(
         symbol_table + constants.BANG + "pointer"
-    )
+    ).clone()
     subtype_pointer.update_vol(subtype=subtype)
     return array.cast("array", count=count, subtype=subtype_pointer)

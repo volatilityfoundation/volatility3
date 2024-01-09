@@ -149,9 +149,9 @@ class Strings(interfaces.plugins.PluginInterface):
             for mapval in layer.mapping(0x0, layer.maximum_address, ignore_errors=True):
                 offset, _, mapped_offset, mapped_size, maplayer = mapval
                 for val in range(mapped_offset, mapped_offset + mapped_size, 0x1000):
-                    cur_set = reverse_map.get(mapped_offset >> 12, set())
+                    cur_set = reverse_map.get(val >> 12, set())
                     cur_set.add(("kernel", offset))
-                    reverse_map[mapped_offset >> 12] = cur_set
+                    reverse_map[val >> 12] = cur_set
                 if progress_callback:
                     progress_callback(
                         (offset * 100) / layer.maximum_address,

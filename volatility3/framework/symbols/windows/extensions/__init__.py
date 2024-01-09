@@ -91,7 +91,7 @@ class MMVAD_SHORT(objects.StructType):
 
         if vad_address in visited:
             vollog.log(constants.LOGLEVEL_VVV, "VAD node already seen!")
-            return
+            return None
 
         visited.add(vad_address)
         tag = self.get_tag()
@@ -111,7 +111,7 @@ class MMVAD_SHORT(objects.StructType):
                 constants.LOGLEVEL_VVV,
                 f"Skipping VAD at {self.vol.offset} depth {depth} with tag {tag}",
             )
-            return
+            return None
 
         if target:
             vad_object = self.cast(target)
@@ -703,7 +703,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             ):
                 yield entry
         except exceptions.InvalidAddressException:
-            return
+            return None
 
     def init_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Generator for DLLs in the order that they were initialized"""
@@ -716,7 +716,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             ):
                 yield entry
         except exceptions.InvalidAddressException:
-            return
+            return None
 
     def mem_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Generator for DLLs in the order that they appear in memory"""
@@ -729,7 +729,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             ):
                 yield entry
         except exceptions.InvalidAddressException:
-            return
+            return None
 
     def get_handle_count(self):
         try:
@@ -879,11 +879,11 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
         try:
             is_valid = trans_layer.is_valid(self.vol.offset)
             if not is_valid:
-                return
+                return None
 
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
-            return
+            return None
 
         if not sentinel:
             yield self._context.object(
@@ -898,7 +898,7 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
             obj_offset = link.vol.offset - relative_offset
 
             if not trans_layer.is_valid(obj_offset):
-                return
+                return None
 
             obj = self._context.object(
                 symbol_type,
@@ -913,7 +913,7 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
             try:
                 link = getattr(link, direction).dereference()
             except exceptions.InvalidAddressException:
-                return
+                return None
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
@@ -943,10 +943,10 @@ class TOKEN(objects.StructType):
                     sid = sid_and_attr.Sid.dereference().cast("_SID")
                     # catch invalid pointers (UserAndGroupCount is too high)
                     if sid is None:
-                        return
+                        return None
                     # this mimics the windows API IsValidSid
                     if sid.Revision & 0xF != 1 or sid.SubAuthorityCount > 15:
-                        return
+                        return None
                     id_auth = ""
                     for i in sid.IdentifierAuthority.Value:
                         id_auth = i

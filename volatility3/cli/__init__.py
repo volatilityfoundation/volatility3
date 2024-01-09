@@ -662,7 +662,7 @@ class CommandLine:
             def close(self):
                 # Don't overcommit
                 if self.closed:
-                    return
+                    return None
 
                 self.seek(0)
 
@@ -712,7 +712,7 @@ class CommandLine:
                 """Closes and commits the file (by moving the temporary file to the correct name"""
                 # Don't overcommit
                 if self._file.closed:
-                    return
+                    return None
 
                 self._file.close()
                 output_filename = self._get_final_filename()
