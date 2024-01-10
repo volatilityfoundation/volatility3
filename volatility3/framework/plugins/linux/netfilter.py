@@ -55,16 +55,16 @@ class AbstractNetfilter(ABC):
         PROTO_NOT_IMPLEMENTED,  # NFPROTO_UNSPEC
         Proto(name="INET", hooks=NF_INET_HOOKS),  # From kernels 3.14
         Proto(name="IPV4", hooks=NF_INET_HOOKS),
-        Proto(name="ARP", hooks=("IN", "OUT", "FORWARD")),
+        Proto(name="ARP", hooks=NF_ARP_HOOKS),
         PROTO_NOT_IMPLEMENTED,
-        Proto(name="NETDEV", hooks=("INGRESS", "EGRESS")),
+        Proto(name="NETDEV", hooks=NF_NETDEV_HOOKS),
         PROTO_NOT_IMPLEMENTED,
         Proto(name="BRIDGE", hooks=NF_INET_HOOKS),
         PROTO_NOT_IMPLEMENTED,
         PROTO_NOT_IMPLEMENTED,
         Proto(name="IPV6", hooks=NF_INET_HOOKS),
         PROTO_NOT_IMPLEMENTED,
-        Proto(name="DECNET", hooks=NF_INET_HOOKS),  # Removed in kernel 6.1
+        Proto(name="DECNET", hooks=NF_DEC_HOOKS),  # Removed in kernel 6.1
     )
     NF_MAX_HOOKS = LARGEST_HOOK_NUMBER + 1
 
