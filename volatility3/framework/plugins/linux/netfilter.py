@@ -136,11 +136,13 @@ class AbstractNetfilter(ABC):
         allow  customization of the code to the specific data structure used in a
         particular kernel implementation
 
-            get_hooks_container_by_protocol(net, proto_name)
+            get_hooks_container(net, proto_name, hook_name)
                 It returns the data structure used in a specific kernel implementation
                 to store the hooks for a respective namespace and protocol, basically:
                     For Ingress hooks:
                         network_namespace[] -> net_device[] -> nf_hooks_ingress[]
+                    For egress hooks:
+                        network_namespace[] -> net_device[] -> nf_hooks_egress[]
                     For all the other Netfilter hooks:
                         <= 4.2.8
                             nf_hooks[]
@@ -148,7 +150,7 @@ class AbstractNetfilter(ABC):
                             network_namespace[] -> nf.hooks[]
 
             get_hook_ops(hook_container, proto_idx, hook_idx)
-                Give the 'hook_container' got in get_hooks_container_by_protocol(), it
+                Give the 'hook_container' got in get_hooks_container(), it
                 returns an iterable of 'nf_hook_ops' elements for a respective protocol
                 and hook type.
 
@@ -163,7 +165,7 @@ class AbstractNetfilter(ABC):
         """
         for netns, net in self.get_net_namespaces():
             for proto_idx, proto_name, hook_idx, hook_name in self._proto_hook_loop():
-                hooks_container = self.get_hooks_container_by_protocol(net, proto_name)
+                hooks_container = self.get_hooks_container(net, proto_name, hook_name)
 
                 for hook_container in hooks_container:
                     for hook_ops in self.get_hook_ops(
@@ -270,7 +272,7 @@ class AbstractNetfilter(ABC):
             net_ns_id = net.ns.inum
             yield net_ns_id, net
 
-    def get_hooks_container_by_protocol(self, net, proto_name):
+    def get_hooks_container(self, net, proto_name, hook_name):
         """Returns the data structure used in a specific kernel implementation to store
         the hooks for a respective namespace and protocol.
 
@@ -281,7 +283,7 @@ class AbstractNetfilter(ABC):
         yield net.nf.hooks
 
     def get_hook_ops(self, hook_container, proto_idx, hook_idx):
-        """Given the hook_container obtained from get_hooks_container_by_protocol(), it
+        """Given the hook_container obtained from get_hooks_container(), it
         returns an iterable of 'nf_hook_ops' elements for a corresponding protocol
         and hook type.
 
@@ -338,7 +340,7 @@ class NetfilterImp_to_4_3(AbstractNetfilter):
         netns, net = renderers.NotAvailableValue(), renderers.NotAvailableValue()
         yield netns, net
 
-    def get_hooks_container_by_protocol(self, net, proto_name):
+    def get_hooks_container(self, net, proto_name, hook_name):
         nf_hooks = self.vmlinux.object_from_symbol("nf_hooks")
         if not nf_hooks:
             return
@@ -508,7 +510,7 @@ class NetfilterImp_4_16_to_latest(NetfilterImp_4_14_to_4_16):
             and vmlinux.get_type("netns_nf").has_member("hooks_ipv4")
         )
 
-    def get_hooks_container_by_protocol(self, net, proto_name):
+    def get_hooks_container(self, net, proto_name, hook_name):
         try:
             if proto_name == "IPV4":
                 net_nf_hooks = net.nf.hooks_ipv4
@@ -556,20 +558,19 @@ class AbstractNetfilterNetDev(AbstractNetfilter):
     def subscribed_protocols(self):
         return ("NETDEV",)
 
-    def get_hooks_container_by_protocol(self, net, proto_name):
-        if proto_name != "NETDEV":
-            return
-
+    def get_hooks_container(self, net, proto_name, hook_name):
         net_device_type = self.vmlinux.get_type("net_device")
         net_device_name = self.get_symbol_fullname("net_device")
         for net_device in net.dev_base_head.to_list(net_device_name, "dev_list"):
-            if net_device_type.has_member("nf_hooks_ingress"):
-                # CONFIG_NETFILTER_INGRESS=y
-                yield net_device.nf_hooks_ingress
+            if hook_name == "INGRESS":
+                if net_device_type.has_member("nf_hooks_ingress"):
+                    # CONFIG_NETFILTER_INGRESS=y
+                    yield net_device.nf_hooks_ingress
 
-            if net_device_type.has_member("nf_hooks_egress"):
-                # CONFIG_NETFILTER_EGRESS=y
-                yield net_device.nf_hooks_egress
+            elif hook_name == "EGRESS":
+                if net_device_type.has_member("nf_hooks_egress"):
+                    # CONFIG_NETFILTER_EGRESS=y
+                    yield net_device.nf_hooks_egress
 
 
 class NetfilterNetDevImp_4_2_to_4_9(AbstractNetfilterNetDev):
