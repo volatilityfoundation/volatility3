@@ -572,7 +572,7 @@ class AbstractNetfilterNetDev(AbstractNetfilter):
                 yield net_device.nf_hooks_egress
 
 
-class NetfilterIngressImp_4_2_to_4_9(AbstractNetfilterNetDev):
+class NetfilterNetDevImp_4_2_to_4_9(AbstractNetfilterNetDev):
     """This is the first version of Netfilter Ingress hooks which was implemented using
     a doubly-linked list of 'nf_hook_ops'.
         struct list_head nf_hooks_ingress;
@@ -595,7 +595,7 @@ class NetfilterIngressImp_4_2_to_4_9(AbstractNetfilterNetDev):
         return nf_hooks_ingress.to_list(nf_hook_ops_name, "list")
 
 
-class NetfilterIngressImp_4_9_to_4_14(AbstractNetfilterNetDev):
+class NetfilterNetDevImp_4_9_to_4_14(AbstractNetfilterNetDev):
     """In 4.9 it was changed to a simple singly-linked list.
     struct nf_hook_entry * nf_hooks_ingress;
     """
@@ -623,7 +623,7 @@ class NetfilterIngressImp_4_9_to_4_14(AbstractNetfilterNetDev):
             nf_hooks_ingress_ptr = nf_hooks_ingress_ptr.next
 
 
-class NetfilterIngressImp_4_14_to_latest(AbstractNetfilterNetDev):
+class NetfilterNetDevImp_4_14_to_latest(AbstractNetfilterNetDev):
     """In 4.14 the hook list was converted to an array of pointers inside the struct
     'nf_hook_entries':
     struct nf_hook_entries * nf_hooks_ingress;
