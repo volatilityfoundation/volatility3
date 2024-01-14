@@ -46,12 +46,6 @@ class Malfind(interfaces.plugins.PluginInterface):
             requirements.VersionRequirement(
                 name="vadinfo", component=vadinfo.VadInfo, version=(2, 0, 0)
             ),
-            requirements.BooleanRequirement(
-                name="refined",
-                description="Refine the output. Only show regions with an MZ header or that start with well known opcode combinations (i.e. PUSH EBP). WARNING: This can cause you to overlook regions with wiped headers or shell code blocks starting with NOP sleds, etc.. However, it will in general result in less noisy output.",
-                default=False,
-                optional=True,
-            ),
         ]
 
     @classmethod
@@ -144,9 +138,6 @@ class Malfind(interfaces.plugins.PluginInterface):
                 yield vad, data
 
     def _generator(self, procs):
-        # set refined criteria
-        refined_criteria = [b"MZ", b"\x55\x8B", b"\x55\x48", b"\x55\x89"]
-
         # determine if we're on a 32 or 64 bit kernel
         kernel = self.context.modules[self.config["kernel"]]
 
@@ -155,14 +146,21 @@ class Malfind(interfaces.plugins.PluginInterface):
         )
 
         for proc in procs:
+            # by default, "Notes" column will be set to none
+            notes = "None" 
             process_name = utility.array_to_string(proc.ImageFileName)
 
             for vad, data in self.list_injections(
                 self.context, kernel.layer_name, kernel.symbol_table_name, proc
             ):
-                # check if refined option was passed
-                if self.config["refined"] and data[0:2] not in refined_criteria:
-                    continue
+                # Check for unique headers and update "Notes" column if criteria is met
+                match data[0:2]:
+                    case b"MZ" | b"\x55\x8B":
+                        notes = "MZ header"
+                    case b"\x55\x8B":
+                        notes = "PE header"
+                    case b"\x55\x48" | b"\x55\x89":
+                        notes = "Function prologue"
 
                 # if we're on a 64 bit kernel, we may still need 32 bit disasm due to wow64
                 if is_32bit_arch or proc.get_is_wow64():
@@ -209,6 +207,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                         vad.get_commit_charge(),
                         vad.get_private_memory(),
                         file_output,
+                        notes,
                         format_hints.HexBytes(data),
                         disasm,
                     ),
@@ -229,6 +228,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                 ("CommitCharge", int),
                 ("PrivateMemory", int),
                 ("File output", str),
+                ("Notes", str),
                 ("Hexdump", format_hints.HexBytes),
                 ("Disasm", interfaces.renderers.Disassembly),
             ],
