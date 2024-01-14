@@ -4,9 +4,20 @@
 
 import collections
 import collections.abc
+import datetime
 import enum
 import logging
-from typing import Any, Dict, Iterable, Iterator, TypeVar, List
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    Optional,
+    Tuple,
+    TypeVar,
+    List,
+)
 
 from volatility3.framework import constants, exceptions, interfaces, objects
 
@@ -112,6 +123,42 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         # Reset the resolved list, since we're removing some symbols
         self._resolved = {}
         del self._dict[key]
+
+    def verify_table_versions(
+        self,
+        producer: str,
+        validator: Callable[[Optional[Tuple], Optional[datetime.datetime]], bool],
+        tables: List[str] = None,
+    ) -> bool:
+        """Verifies the producer metadata and version of tables
+
+        Args:
+            producer: String name of a table producer to have validation performed
+            validator: callable that takes an optional version and an optional datetime that returns False if table is invalid
+
+        Returns:
+            False if an invalid table was found or True if no invalid table was found
+        """
+        if tables is None:
+            tables = self._dict.keys()
+        for table_name in tables:
+            table = self._dict[table_name]
+            if not table.producer:
+                vollog.debug(
+                    f"Symbol table {table_name} could not be validated because no producer metadata was found"
+                )
+                continue
+            if table.producer.name == producer:
+                # Run the verification
+                if not validator(
+                    table.producer.version,
+                    table.producer.datetime,
+                ):
+                    vollog.debug(f"Symbol table {table_name} does not pass validator")
+                    return False
+            else:
+                continue
+        return True
 
     ### Resolution functions
 

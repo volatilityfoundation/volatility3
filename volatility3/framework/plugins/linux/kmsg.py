@@ -10,10 +10,12 @@ from typing import Generator, Iterator, List, Tuple
 from volatility3.framework import (
     class_subclasses,
     constants,
+    exceptions,
     interfaces,
     renderers,
 )
 from volatility3.framework.configuration import requirements
+from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
 
 vollog = logging.getLogger(__name__)
@@ -495,7 +497,7 @@ class Kmsg_5_10_to_(ABCKmsg):
 class Kmsg(interfaces.plugins.PluginInterface):
     """Kernel log buffer reader"""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (2, 6, 0)
 
     _version = (1, 0, 2)
 
@@ -514,6 +516,13 @@ class Kmsg(interfaces.plugins.PluginInterface):
             yield (0, values)
 
     def run(self):
+        if not self.context.symbol_space.verify_table_versions(
+            "dwarf2json", lambda version, _: (not version) or version > (0, 4, 1)
+        ):
+            raise exceptions.SymbolSpaceError(
+                "Invalid symbol table, please ensure the ISF table produced by dwarf2json was produced using a version > 0.4.1"
+            )
+
         return renderers.TreeGrid(
             [
                 ("facility", str),
