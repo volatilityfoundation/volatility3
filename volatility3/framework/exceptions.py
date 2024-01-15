@@ -117,6 +117,10 @@ class MissingModuleException(VolatilityException):
         self.module = module
 
 
+class RenderException(VolatilityException):
+    """Thrown if there is an error during rendering"""
+
+
 class OfflineException(VolatilityException):
     """Throw when a remote resource is requested but Volatility is in offline mode"""
 
