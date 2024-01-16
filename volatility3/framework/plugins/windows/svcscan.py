@@ -153,7 +153,6 @@ class SvcScan(interfaces.plugins.PluginInterface):
             layer_name=kernel.layer_name,
             symbol_table=kernel.symbol_table_name,
             filter_string="machine\\system",
-            hive_offsets=None,
         ):
             # Get ControlSet\Services.
             try:
