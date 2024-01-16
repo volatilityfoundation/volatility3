@@ -147,7 +147,9 @@ class SvcScan(interfaces.plugins.PluginInterface):
     def _get_service_key(self, kernel):
         for hive in hivelist.HiveList.list_hives(
             context=self.context,
-            base_config_path=self.config_path,
+            base_config_path=interfaces.configuration.path_join(
+                self.config_path, "hivelist"
+            ),
             layer_name=kernel.layer_name,
             symbol_table=kernel.symbol_table_name,
             filter_string="machine\\system",
