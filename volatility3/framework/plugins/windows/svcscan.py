@@ -4,9 +4,16 @@
 
 import logging
 import os
-from typing import Dict, List, NamedTuple, Union
+from typing import Dict, List, NamedTuple, Optional, Tuple, Union, cast
 
-from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
+from volatility3.framework import (
+    constants,
+    exceptions,
+    interfaces,
+    objects,
+    renderers,
+    symbols,
+)
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import scanners
 from volatility3.framework.renderers import format_hints
@@ -76,6 +83,28 @@ class SvcScan(interfaces.plugins.PluginInterface):
             binary_info.dll,
         )
 
+    # These checks must be completed from newest -> oldest OS version.
+    _win_version_file_map: List[Tuple[versions.OsDistinguisher, bool, str]] = [
+        (versions.is_win10_25398_or_later, True, "services-win10-25398-x64"),
+        (versions.is_win10_19041_or_later, True, "services-win10-19041-x64"),
+        (versions.is_win10_19041_or_later, False, "services-win10-19041-x86"),
+        (versions.is_win10_18362_or_later, True, "services-win10-18362-x64"),
+        (versions.is_win10_18362_or_later, False, "services-win10-18362-x86"),
+        (versions.is_win10_17763_or_later, False, "services-win10-17763-x86"),
+        (versions.is_win10_16299_or_later, True, "services-win10-16299-x64"),
+        (versions.is_win10_16299_or_later, False, "services-win10-16299-x86"),
+        (versions.is_win10_15063, True, "services-win10-15063-x64"),
+        (versions.is_win10_15063, False, "services-win10-15063-x86"),
+        (versions.is_win10_up_to_15063, True, "services-win8-x64"),
+        (versions.is_win10_up_to_15063, False, "services-win8-x86"),
+        (versions.is_windows_8_or_later, True, "services-win8-x64"),
+        (versions.is_windows_8_or_later, True, "services-win8-x86"),
+        (versions.is_vista_or_later, True, "services-vista-x64"),
+        (versions.is_vista_or_later, False, "services-vista-x86"),
+        (versions.is_windows_xp, False, "services-xp-x86"),
+        (versions.is_xp_or_2003, True, "services-xp-2003-x64"),
+    ]
+
     @staticmethod
     def create_service_table(
         context: interfaces.context.ContextInterface,
@@ -96,97 +125,14 @@ class SvcScan(interfaces.plugins.PluginInterface):
         native_types = context.symbol_space[symbol_table].natives
         is_64bit = symbols.symbol_table_is_64bit(context, symbol_table)
 
-        if (
-            versions.is_windows_xp(context=context, symbol_table=symbol_table)
-            and not is_64bit
-        ):
-            symbol_filename = "services-xp-x86"
-        elif (
-            versions.is_xp_or_2003(context=context, symbol_table=symbol_table)
-            and is_64bit
-        ):
-            symbol_filename = "services-xp-2003-x64"
-        elif (
-            versions.is_win10_25398_or_later(context=context, symbol_table=symbol_table)
-            and is_64bit
-        ):
-            symbol_filename = "services-win10-25398-x64"
-        elif (
-            versions.is_win10_19041_or_later(context=context, symbol_table=symbol_table)
-            and is_64bit
-        ):
-            symbol_filename = "services-win10-19041-x64"
-        elif (
-            versions.is_win10_19041_or_later(context=context, symbol_table=symbol_table)
-            and not is_64bit
-        ):
-            symbol_filename = "services-win10-19041-x86"
-        elif (
-            versions.is_win10_18362_or_later(context=context, symbol_table=symbol_table)
-            and is_64bit
-        ):
-            symbol_filename = "services-win10-18362-x64"
-        elif (
-            versions.is_win10_18362_or_later(context=context, symbol_table=symbol_table)
-            and not is_64bit
-        ):
-            symbol_filename = "services-win10-18362-x86"
-        elif (
-            versions.is_win10_16299_or_later(context=context, symbol_table=symbol_table)
-            and is_64bit
-        ):
-            symbol_filename = "services-win10-16299-x64"
-        elif (
-            versions.is_win10_17763_or_later(context=context, symbol_table=symbol_table)
-            and not is_64bit
-        ):
-            symbol_filename = "services-win10-17763-x86"
-        elif (
-            versions.is_win10_16299_or_later(context=context, symbol_table=symbol_table)
-            and not is_64bit
-        ):
-            symbol_filename = "services-win10-16299-x86"
-        elif (
-            versions.is_win10_15063(context=context, symbol_table=symbol_table)
-            and is_64bit
-        ):
-            symbol_filename = "services-win10-15063-x64"
-        elif (
-            versions.is_win10_15063(context=context, symbol_table=symbol_table)
-            and not is_64bit
-        ):
-            symbol_filename = "services-win10-15063-x86"
-        elif (
-            versions.is_win10_up_to_15063(context=context, symbol_table=symbol_table)
-            and is_64bit
-        ):
-            symbol_filename = "services-win8-x64"
-        elif (
-            versions.is_win10_up_to_15063(context=context, symbol_table=symbol_table)
-            and not is_64bit
-        ):
-            symbol_filename = "services-win8-x86"
-        elif (
-            versions.is_windows_8_or_later(context=context, symbol_table=symbol_table)
-            and is_64bit
-        ):
-            symbol_filename = "services-win8-x64"
-        elif (
-            versions.is_windows_8_or_later(context=context, symbol_table=symbol_table)
-            and not is_64bit
-        ):
-            symbol_filename = "services-win8-x86"
-        elif (
-            versions.is_vista_or_later(context=context, symbol_table=symbol_table)
-            and is_64bit
-        ):
-            symbol_filename = "services-vista-x64"
-        elif (
-            versions.is_vista_or_later(context=context, symbol_table=symbol_table)
-            and not is_64bit
-        ):
-            symbol_filename = "services-vista-x86"
-        else:
+        try:
+            symbol_filename = next(
+                filename
+                for version_check, for_64bit, filename in SvcScan._win_version_file_map
+                if is_64bit == for_64bit
+                and version_check(context=context, symbol_table=symbol_table)
+            )
+        except StopIteration:
             raise NotImplementedError("This version of Windows is not supported!")
 
         return intermed.IntermediateSymbolTable.create(
