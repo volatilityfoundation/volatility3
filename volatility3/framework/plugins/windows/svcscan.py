@@ -32,7 +32,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
     """Scans for windows services."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
