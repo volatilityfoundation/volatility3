@@ -165,6 +165,10 @@ class SvcScan(interfaces.plugins.PluginInterface):
                         objects.StructType, hive.get_key(r"ControlSet001\Services")
                     )
                 except (KeyError, exceptions.InvalidAddressException):
+                    vollog.log(
+                        constants.LOGLEVEL_VVVV,
+                        "Could not retrieve any control set from SYSTEM hive",
+                    )
                     pass
 
             return None
