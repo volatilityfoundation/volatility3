@@ -144,7 +144,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
             native_types=native_types,
         )
 
-    def _get_service_key(self, kernel):
+    def _get_service_key(self, kernel) -> Optional[objects.StructType]:
         for hive in hivelist.HiveList.list_hives(
             context=self.context,
             base_config_path=interfaces.configuration.path_join(
@@ -156,10 +156,14 @@ class SvcScan(interfaces.plugins.PluginInterface):
         ):
             # Get ControlSet\Services.
             try:
-                return hive.get_key(r"CurrentControlSet\Services")
+                return cast(
+                    objects.StructType, hive.get_key(r"CurrentControlSet\Services")
+                )
             except (KeyError, exceptions.InvalidAddressException):
                 try:
-                    return hive.get_key(r"ControlSet001\Services")
+                    return cast(
+                        objects.StructType, hive.get_key(r"ControlSet001\Services")
+                    )
                 except (KeyError, exceptions.InvalidAddressException):
                     pass
 
