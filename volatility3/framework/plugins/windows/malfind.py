@@ -140,6 +140,9 @@ class Malfind(interfaces.plugins.PluginInterface):
     def _generator(self, procs):
         # determine if we're on a 32 or 64 bit kernel
         kernel = self.context.modules[self.config["kernel"]]
+        
+        # set refined criteria to know when to add to "Notes" column
+        refined_criteria = [b"MZ", b"\x55\x8B", b"\x55\x48", b"\x55\x89"]
 
         is_32bit_arch = not symbols.symbol_table_is_64bit(
             self.context, kernel.symbol_table_name
@@ -154,12 +157,12 @@ class Malfind(interfaces.plugins.PluginInterface):
                 self.context, kernel.layer_name, kernel.symbol_table_name, proc
             ):
                 # Check for unique headers and update "Notes" column if criteria is met
-                match data[0:2]:
-                    case b"MZ" | b"\x55\x8B":
+                if data[0:2] in refined_criteria:
+                    if data[0:2] == b"MZ":
                         notes = "MZ header"
-                    case b"\x55\x8B":
+                    elif data[0:2] == b"\x55\x8B":
                         notes = "PE header"
-                    case b"\x55\x48" | b"\x55\x89":
+                    else:
                         notes = "Function prologue"
 
                 # if we're on a 64 bit kernel, we may still need 32 bit disasm due to wow64
