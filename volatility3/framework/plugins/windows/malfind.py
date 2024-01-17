@@ -140,7 +140,7 @@ class Malfind(interfaces.plugins.PluginInterface):
     def _generator(self, procs):
         # determine if we're on a 32 or 64 bit kernel
         kernel = self.context.modules[self.config["kernel"]]
-        
+
         # set refined criteria to know when to add to "Notes" column
         refined_criteria = [b"MZ", b"\x55\x8B", b"\x55\x48", b"\x55\x89"]
 
@@ -150,7 +150,7 @@ class Malfind(interfaces.plugins.PluginInterface):
 
         for proc in procs:
             # by default, "Notes" column will be set to none
-            notes = "None" 
+            notes = "None"
             process_name = utility.array_to_string(proc.ImageFileName)
 
             for vad, data in self.list_injections(
