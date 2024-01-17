@@ -55,11 +55,11 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 optional=True,
             ),
             requirements.StringRequirement(
-                name="regex", description="Dump files matching REGEX", optional=True
+                name="filter", description="Dump files matching regular expression FILTER", optional=True
             ),
             requirements.BooleanRequirement(
                 name="ignore-case",
-                description="Ignore case in pattern match",
+                description="Ignore case in filter match",
                 default=False,
                 optional=True,
             ),
@@ -218,11 +218,11 @@ class DumpFiles(interfaces.plugins.PluginInterface):
 
     def _generator(self, procs: List, offsets: List):
         kernel = self.context.modules[self.config["kernel"]]
-        if self.config["regex"]:
-            if self.config["ignore-case"]:
-                file_re = re.compile(self.config["regex"], re.I)
-            else:
-                file_re = re.compile(self.config["regex"])
+        file_re = None
+        if self.config["filter"]:
+            flags = re.I if self.config["ignore-case"] else 0
+            file_re = re.compile(self.config["filter"], flags)
+
 
         if procs:
             # The handles plugin doesn't expose any staticmethod/classmethod, and it also requires stashing
@@ -259,7 +259,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                         if obj_type == "File":
                             file_obj = entry.Body.cast("_FILE_OBJECT")
 
-                            if self.config["regex"]:
+                            if file_re:
                                 name = file_obj.file_name_with_device()
                                 if isinstance(name, UnreadableValue):
                                     continue
@@ -295,7 +295,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                         if not file_obj.is_valid():
                             continue
 
-                        if self.config["regex"]:
+                        if file_re:
                             name = file_obj.file_name_with_device()
                             if isinstance(name, UnreadableValue):
                                 continue
@@ -344,6 +344,9 @@ class DumpFiles(interfaces.plugins.PluginInterface):
         # a list of processes matching the pid filter. all files for these process(es) will be dumped.
         procs = list()
         kernel = self.context.modules[self.config["kernel"]]
+
+        if self.config["filter"] and (self.config["virtaddr"] or self.config["physaddr"]):
+            raise ValueError("Cannot use filter flag with an address flag")
 
         if self.config.get("virtaddr", None) is not None:
             offsets.append((self.config["virtaddr"], True))
