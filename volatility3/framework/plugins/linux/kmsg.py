@@ -15,7 +15,6 @@ from volatility3.framework import (
     renderers,
 )
 from volatility3.framework.configuration import requirements
-from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
 
 vollog = logging.getLogger(__name__)

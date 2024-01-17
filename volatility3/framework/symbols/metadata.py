@@ -26,11 +26,11 @@ class ProducerMetadata(interfaces.symbols.MetadataInterface):
             return None
         if all([x in "0123456789." for x in version]):
             return tuple([int(x) for x in version.split(".")])
-        else:
-            vollog.log(
-                constants.LOGLEVEL_VVVV,
-                f"Metadata version contains unexpected characters: '{version}'",
-            )
+        vollog.log(
+            constants.LOGLEVEL_VVVV,
+            f"Metadata version contains unexpected characters: '{version}'",
+        )
+        return None
 
     @property
     def datetime(self) -> Optional[datetime.datetime]:
