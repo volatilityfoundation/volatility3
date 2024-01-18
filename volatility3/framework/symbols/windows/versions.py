@@ -155,7 +155,7 @@ is_win10_17763_or_later = OsDistinguisher(
     version_check=lambda x: x >= (10, 0, 17763),
     fallback_checks=[
         ("_EPROCESS", "TrustletIdentity", False),
-        ("ParentSecurityDomain", None, False),
+        ("ParentSecurityDomain", None, True),
     ],
 )
 
