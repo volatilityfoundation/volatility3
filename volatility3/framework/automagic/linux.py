@@ -216,7 +216,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
             # We count the number of high bits equal to 1, which gives us the kernel space address mask and ultimately TCR_EL1.T1SZ.
             va_bits = (linux_banner_address ^ (2**64 - 1)).bit_length() + 1
 
-        if page_size_bit != 0 and va_bits != None:
+        if page_size_bit != 0:
             page_size_bit_map = {1: 4, 2: 16, 3: 64}
             page_size = page_size_bit_map[page_size_bit]
             tcr_el1_tnsz = 64 - va_bits
