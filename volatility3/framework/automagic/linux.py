@@ -165,6 +165,8 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
             vollog.debug("Intel image found")
             return layer
 
+        return None
+
     @classmethod
     def aarch64_stacker(
         cls,
@@ -244,6 +246,8 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                 vollog.debug(f"Kernel DTB was found at: 0x{dtb:0x}")
                 vollog.debug("AArch64 image found")
                 return layer
+
+        return None
 
     @classmethod
     def verify_translation_by_banner(
