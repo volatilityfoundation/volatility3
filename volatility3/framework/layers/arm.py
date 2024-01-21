@@ -136,6 +136,7 @@ class AArch64(linear.LinearlyMappedLayer):
             ]
             indexes[0] = (va_bit_size - 1, indexes[0][1])
             ttb_lookups_descriptors.append(indexes)
+
         return ttb_lookups_descriptors
 
     def _translate(self, virtual_offset: int) -> Tuple[int, int, str]:
@@ -169,10 +170,9 @@ class AArch64(linear.LinearlyMappedLayer):
             )
 
         lookup_descriptor = self._ttb_lookups_descriptors[ttb_selector]
-
         table_address = self._page_map_offset
         level = 0
-        max_level = len(lookup_descriptor)
+        max_level = len(lookup_descriptor) - 1
 
         for high_bit, low_bit in lookup_descriptor:
             index = self._mask(virtual_offset, high_bit, low_bit)
@@ -184,41 +184,7 @@ class AArch64(linear.LinearlyMappedLayer):
                 ),
                 byteorder="little",
             )
-
-            # [1], see D8.3, page 5852
-            descriptor_type = self._mask(descriptor, 1, 0)
-            # Table descriptor
-            if level < max_level and descriptor_type == 0b11:
-                table_address = (
-                    self._mask(
-                        descriptor,
-                        self._descriptors_bits[ttb_selector][0],
-                        self._descriptors_bits[ttb_selector][1],
-                    )
-                    << self._descriptors_bits[ttb_selector][1]
-                )
-            # Block descriptor
-            elif level < max_level and descriptor_type == 0b01:
-                table_address = (
-                    self._mask(
-                        descriptor,
-                        self._descriptors_bits[ttb_selector][0],
-                        low_bit,
-                    )
-                    << low_bit
-                )
-                break
-            # Page descriptor
-            elif level == max_level and descriptor_type == 0b11:
-                break
-            # Invalid descriptor || Reserved descriptor (level 3)
-            else:
-                raise exceptions.PagedInvalidAddressException(
-                    layer_name=self.name,
-                    invalid_address=virtual_offset,
-                    invalid_bits=low_bit,
-                    entry=descriptor,
-                )
+            ta_51_x = None
 
             # [1], see D8.3, page 5852
             if self._is_52bits[ttb_selector]:
@@ -233,8 +199,52 @@ class AArch64(linear.LinearlyMappedLayer):
                     ta_51_x_bits[1],
                 )
                 ta_51_x = ta_51_x << (52 - ta_51_x.bit_length())
-                table_address = ta_51_x | table_address
 
+            # [1], see D8.3, page 5852
+            descriptor_type = self._mask(descriptor, 1, 0)
+            # Table descriptor
+            if level < max_level and descriptor_type == 0b11:
+                table_address = (
+                    self._mask(
+                        descriptor,
+                        self._descriptors_bits[ttb_selector][0],
+                        self._descriptors_bits[ttb_selector][1],
+                    )
+                    << self._descriptors_bits[ttb_selector][1]
+                )
+                table_address = ta_51_x | table_address if ta_51_x else table_address
+            # Block descriptor
+            elif level < max_level and descriptor_type == 0b01:
+                table_address = (
+                    self._mask(
+                        descriptor,
+                        self._descriptors_bits[ttb_selector][0],
+                        low_bit,
+                    )
+                    << low_bit
+                )
+                table_address = ta_51_x | table_address if ta_51_x else table_address
+                break
+            # Page descriptor
+            elif level == max_level and descriptor_type == 0b11:
+                table_address = (
+                    self._mask(
+                        descriptor,
+                        self._descriptors_bits[ttb_selector][0],
+                        self._descriptors_bits[ttb_selector][1],
+                    )
+                    << self._descriptors_bits[ttb_selector][1]
+                )
+                table_address = ta_51_x | table_address if ta_51_x else table_address
+                break
+            # Invalid descriptor || Reserved descriptor (level 3)
+            else:
+                raise exceptions.PagedInvalidAddressException(
+                    layer_name=self.name,
+                    invalid_address=virtual_offset,
+                    invalid_bits=low_bit,
+                    entry=descriptor,
+                )
             level += 1
 
         if AARCH64_TRANSLATION_DEBUGGING:
