@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import Optional, Tuple, Type
+from typing import Optional, Tuple, Type, Union, Literal
 
 from volatility3.framework import constants, interfaces, exceptions
 from volatility3.framework.automagic import symbol_cache, symbol_finder
@@ -118,7 +118,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         new_layer_name: str,
         banner: str,
         progress_callback: constants.ProgressCallback = None,
-    ):
+    ) -> Union[intel.Intel, intel.Intel32e, None]:
         layer_class: Type = intel.Intel
         if "init_top_pgt" in table.symbols:
             layer_class = intel.Intel32e
@@ -176,7 +176,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         new_layer_name: str,
         banner: bytes,
         progress_callback: constants.ProgressCallback = None,
-    ):
+    ) -> Optional[arm.AArch64]:
         layer_class = arm.AArch64
         kaslr_shift, aslr_shift = cls.find_aslr(
             context,
@@ -253,10 +253,12 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         layer_name: str,
         linux_banner_address: int,
         target_banner: bytes,
-    ):
+    ) -> Literal[True]:
         """Determine if a stacked layer is correct or a false positive, by callind the underlying
         _translate method against the linux_banner symbol virtual address. Then, compare it with
-        the detected banner to verify the correct translation."""
+        the detected banner to verify the correct translation.
+        This will directly raise an exception, as any failed attempt indicates a wrong layer selection.
+        """
 
         test_banner_equality = True
         try:

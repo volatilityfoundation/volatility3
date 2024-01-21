@@ -369,7 +369,7 @@ class AArch64(linear.LinearlyMappedLayer):
 
     def _get_virtual_addr_ranges(
         self,
-    ) -> Tuple[list[int, int, int], list[int, int, int]]:
+    ) -> List[Tuple[int]]:
         """Returns the virtual address space ranges as [(LOW_START, LOW_END), (HIGH_START, HIGH_END)]"""
         # [2], see source/arch/arm64/include/asm/memory.h#L62
         ttb0_start = 0
