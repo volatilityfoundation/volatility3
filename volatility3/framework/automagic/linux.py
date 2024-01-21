@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import Optional, Tuple, Type, Union, Literal
+from typing import Optional, Tuple, Type, Union
 
 from volatility3.framework import constants, interfaces, exceptions
 from volatility3.framework.automagic import symbol_cache, symbol_finder
@@ -253,7 +253,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         layer_name: str,
         linux_banner_address: int,
         target_banner: bytes,
-    ) -> Literal[True]:
+    ) -> bool:
         """Determine if a stacked layer is correct or a false positive, by callind the underlying
         _translate method against the linux_banner symbol virtual address. Then, compare it with
         the detected banner to verify the correct translation.
