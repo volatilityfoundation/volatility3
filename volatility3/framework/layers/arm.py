@@ -32,7 +32,10 @@ class AArch64Exception(exceptions.LayerException):
 
 
 class AArch64(linear.LinearlyMappedLayer):
-    """Translation Layer for the Arm AArch64 memory mapping."""
+    """Translation Layer for the Arm AArch64 memory mapping.
+
+    This layer can be instantiated in two contexts : Low space (user land), High space (kernel land).
+    """
 
     _direct_metadata = collections.ChainMap(
         {"architecture": "AArch64"},
