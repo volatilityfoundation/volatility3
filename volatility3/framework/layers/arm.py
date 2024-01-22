@@ -51,6 +51,13 @@ class AArch64(linear.LinearlyMappedLayer):
     _maxphyaddr = 64
     _maxvirtaddr = _maxphyaddr
 
+    # [1], see D8.2.7 to D8.2.9, starting at page 5828
+    _granules_indexes = {
+        4: [(51, 48), (47, 39), (38, 30), (29, 21), (20, 12)],
+        16: [(51, 47), (46, 36), (35, 25), (24, 14)],
+        64: [(51, 42), (41, 29), (28, 16)],
+    }
+
     def __init__(
         self,
         context: interfaces.context.ContextInterface,
