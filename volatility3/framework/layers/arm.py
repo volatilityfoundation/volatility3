@@ -112,34 +112,59 @@ class AArch64(linear.LinearlyMappedLayer):
         if self._layer_debug:
             self._print_layer_debug_informations()
 
-        if AARCH64_DEBUGGING:
-            vollog.debug(f"Base layer : {self._base_layer}")
-            vollog.debug(
-                f"Virtual address space : {'kernel' if self._virtual_addr_space else 'user'}"
-            )
-            vollog.debug(
-                f"Virtual addresses spaces ranges : {[tuple([hex(y) for y in x]) for x in self._get_virtual_addr_ranges()]}"
-            )
-            vollog.debug(f"Pages sizes : {self._ttbs_granules}")
-            vollog.debug(f"TnSZ values : {self._ttbs_bitsizes}")
-            vollog.debug(f"Page map offset : {hex(self._page_map_offset)}")
-            vollog.debug(f"Descriptors mappings : {self._ttb_lookups_descriptors}")
+    def _print_layer_debug_informations(self) -> None:
+        vollog.debug(f"Base layer : {self._base_layer}")
+        vollog.debug(
+            f"Virtual address space : {'kernel' if self._virtual_addr_space else 'user'}"
+        )
+        vollog.debug(
+            f"Virtual addresses space range : {tuple([hex(x) for x in self._get_virtual_addr_range()])}"
+        )
+        vollog.debug(f"Page size : {self._ttb_granule}")
+        vollog.debug(
+            f"T{self._virtual_addr_space}SZ : {self._ttbs_tnsz[self._virtual_addr_space]}"
+        )
+        vollog.debug(f"Page map offset : {hex(self._page_map_offset)}")
+        vollog.debug(f"Translation mappings : {self._ttb_lookup_indexes}")
 
-    def _determine_ttbs_lookup_descriptors(self) -> List[int]:
-        """Returns the bits to extract from a translation address (highs and lows)"""
-        ttb_lookups_descriptors = []
+        return None
 
-        for ttb, ttb_granule in enumerate(self._ttbs_granules):
-            va_bit_size = self._ttbs_bitsizes[ttb]
-            indexes = [
-                index
-                for index in self._granules_indexes[ttb_granule]
-                if va_bit_size > index[1]
-            ]
-            indexes[0] = (va_bit_size - 1, indexes[0][1])
-            ttb_lookups_descriptors.append(indexes)
+    @classmethod
+    def _determine_ttb_descriptor_bits(
+        cls, ttb_granule: int, ttb_lookup_indexes: int, is_52bits: bool
+    ) -> Tuple[int]:
+        """Returns the descriptor bits to extract from a descriptor (high and low)
 
-        return ttb_lookups_descriptors
+        Example with granule = 4 kB without 52 bits :
+            (47,12)
+        Example with granule = 16 kB and 52 bits :
+            (49,14)
+        """
+
+        # [1], see D8.3, page 5852
+        return (
+            49 if ttb_granule in [4, 16] and is_52bits else 47,
+            ttb_lookup_indexes[-1][1],
+        )
+
+    @classmethod
+    def _determine_ttb_lookup_indexes(
+        cls, ttb_granule: int, ttb_bitsize: int
+    ) -> List[Tuple[int]]:
+        """Returns the bits to extract from a translation address (highs and lows)
+
+        Example with bitsize = 47 and granule = 4 kB :
+            indexes = [(51, 48), (47, 39), (38, 30), (29, 21), (20, 12)]
+            result = [(46, 39), (38, 30), (29, 21), (20, 12)]
+        """
+        indexes = [
+            index
+            for index in cls._granules_indexes[ttb_granule]
+            if ttb_bitsize > index[1]
+        ]
+        indexes[0] = (ttb_bitsize - 1, indexes[0][1])
+
+        return indexes
 
     def _translate(self, virtual_offset: int) -> Tuple[int, int, str]:
         """Translates a specific offset based on paging tables.
