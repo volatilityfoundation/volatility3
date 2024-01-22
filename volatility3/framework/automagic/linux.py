@@ -198,9 +198,8 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         if "_kernel_flags_le_lo32" in table.symbols:
             kernel_flags |= table.get_symbol("_kernel_flags_le_lo32").address
 
-        # TODO: There is no simple way to determine TTB0 page size for now, so assume TTB0 and TTB1 have the same (which is most likely).
         # https://www.kernel.org/doc/Documentation/arm64/booting.txt
-        page_size_bit = (kernel_flags >> 1) & 3
+        page_size_kernel_space_bit = (kernel_flags >> 1) & 3
         linux_banner_address = table.get_symbol("linux_banner").address + aslr_shift
 
         # v6.7/source/arch/arm64/include/asm/memory.h#L186 - v5.7/source/arch/arm64/include/asm/memory.h#L160
@@ -214,14 +213,13 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
             )
         else:
             # TODO: If KASAN space is large enough, it *might* push kernel addresses higher and generate inaccurate results ?
-            # TODO: There is no simple way to determine T0SZ for now, so assume T1SZ and T0SZ are the same (which is most likely).
             # We count the number of high bits equal to 1, which gives us the kernel space address mask and ultimately TCR_EL1.T1SZ.
             va_bits = (linux_banner_address ^ (2**64 - 1)).bit_length() + 1
 
-        if page_size_bit != 0:
-            page_size_bit_map = {1: 4, 2: 16, 3: 64}
-            page_size = page_size_bit_map[page_size_bit]
-            tcr_el1_tnsz = 64 - va_bits
+        if 1 <= page_size_kernel_space_bit <= 3:
+            # 4 || 16 || 64
+            page_size_kernel_space = 4**page_size_kernel_space_bit
+            tcr_el1_t1sz = 64 - va_bits
 
             context.config[cls.join(config_path, "page_map_offset")] = dtb
             context.config[cls.join(config_path, "page_map_offset_kernel")] = dtb
