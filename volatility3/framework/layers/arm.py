@@ -13,8 +13,6 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import linear
 
 vollog = logging.getLogger(__name__)
-AARCH64_TRANSLATION_DEBUGGING = False
-AARCH64_DEBUGGING = False
 
 """
 Webography :
@@ -60,6 +58,8 @@ class AArch64(linear.LinearlyMappedLayer):
         super().__init__(
             context=context, config_path=config_path, name=name, metadata=metadata
         )
+        self._layer_debug = self.config.get("layer_debug", False)
+        self._translation_debug = self.config.get("translation_debug", False)
         self._base_layer = self.config["memory_layer"]
         # self._swap_layers = []  # TODO
         self._page_map_offset = self.config["page_map_offset"]
@@ -109,6 +109,8 @@ class AArch64(linear.LinearlyMappedLayer):
             self._bits_per_register,
             self._context_maxvirtaddr,
         )
+        if self._layer_debug:
+            self._print_layer_debug_informations()
 
         if AARCH64_DEBUGGING:
             vollog.debug(f"Base layer : {self._base_layer}")
@@ -247,7 +249,7 @@ class AArch64(linear.LinearlyMappedLayer):
                 )
             level += 1
 
-        if AARCH64_TRANSLATION_DEBUGGING:
+        if self._translation_debug:
             vollog.debug(
                 f"Virtual {hex(virtual_offset)} lives in page frame {hex(table_address)} at offset {hex(self._mask(virtual_offset, low_bit-1, 0))}",
             )
