@@ -81,47 +81,33 @@ class AArch64(linear.LinearlyMappedLayer):
         ]
 
         # Context : TTB0 (user) or TTB1 (kernel)
-        self._virtual_addr_space = (
+        self._virtual_addr_space = int(
             self._page_map_offset == self.config["page_map_offset_kernel"]
         )
-        self._ttbs_tnsz = [self._tcr_el1_tnsz, self._tcr_el1_tnsz]
 
         # [1], see D8.1.9, page 5818
-        self._ttbs_bitsizes = [64 - self._ttbs_tnsz[0], 64 - self._ttbs_tnsz[1]]
-        self._ttbs_granules = [self._page_size, self._page_size]
+        self._ttb_bitsize = 64 - self._ttbs_tnsz[self._virtual_addr_space]
+        self._ttb_granule = self._ttbs_granules[self._virtual_addr_space]
 
-        self._is_52bits = [
-            True if self._ttbs_tnsz[ttb] < 16 else False for ttb in range(2)
-        ]
+        self._is_52bits = (
+            True if self._ttbs_tnsz[self._virtual_addr_space] < 16 else False
+        )
 
-        # [1], see D8.2.7 to D8.2.9, starting at page 5828
-        self._granules_indexes = {
-            4: [(51, 48), (47, 39), (38, 30), (29, 21), (20, 12)],
-            16: [(51, 47), (46, 36), (35, 25), (24, 14)],
-            64: [(51, 42), (41, 29), (28, 16)],
-        }
-        self._ttb_lookups_descriptors = self._determine_ttbs_lookup_descriptors()
+        self._ttb_lookup_indexes = self._determine_ttb_lookup_indexes(
+            self._ttb_granule, self._ttb_bitsize
+        )
+        self._ttb_descriptor_bits = self._determine_ttb_descriptor_bits(
+            self._ttb_granule, self._ttb_lookup_indexes, self._is_52bits
+        )
 
-        # [1], see D8.3, page 5852
-        self._descriptors_bits = [
-            (
-                49
-                if self._ttbs_granules[ttb] in [4, 16] and self._is_52bits[ttb]
-                else 47,
-                self._ttb_lookups_descriptors[ttb][-1][1],
-            )
-            for ttb in range(2)
-        ]
-
-        self._virtual_addr_range = self._get_virtual_addr_ranges()[
+        self._virtual_addr_range = self._get_virtual_addr_range()[
             self._virtual_addr_space
         ]
 
-        self._context_maxvirtaddr = self._ttbs_bitsizes[self._virtual_addr_space]
         self._canonical_prefix = self._mask(
             (1 << self._bits_per_register) - 1,
             self._bits_per_register,
-            self._context_maxvirtaddr,
+            self._ttb_bitsize,
         )
         if self._layer_debug:
             self._print_layer_debug_informations()
@@ -185,12 +171,11 @@ class AArch64(linear.LinearlyMappedLayer):
                 invalid_address=virtual_offset,
             )
 
-        lookup_descriptor = self._ttb_lookups_descriptors[ttb_selector]
         table_address = self._page_map_offset
         level = 0
-        max_level = len(lookup_descriptor) - 1
+        max_level = len(self._ttb_lookup_indexes) - 1
 
-        for high_bit, low_bit in lookup_descriptor:
+        for high_bit, low_bit in self._ttb_lookup_indexes:
             index = self._mask(virtual_offset, high_bit, low_bit)
 
             # TODO: Adapt endianness ?
@@ -203,10 +188,10 @@ class AArch64(linear.LinearlyMappedLayer):
             ta_51_x = None
 
             # [1], see D8.3, page 5852
-            if self._is_52bits[ttb_selector]:
-                if self._ttbs_granules[ttb_selector] in [4, 16]:
+            if self._is_52bits:
+                if self._ttb_granule in [4, 16]:
                     ta_51_x_bits = (9, 8)
-                elif self._ttbs_granules[ttb_selector] == 64:
+                elif self._ttb_granule == 64:
                     ta_51_x_bits = (15, 12)
 
                 ta_51_x = self._mask(
@@ -223,10 +208,10 @@ class AArch64(linear.LinearlyMappedLayer):
                 table_address = (
                     self._mask(
                         descriptor,
-                        self._descriptors_bits[ttb_selector][0],
-                        self._descriptors_bits[ttb_selector][1],
+                        self._ttb_descriptor_bits[0],
+                        self._ttb_descriptor_bits[1],
                     )
-                    << self._descriptors_bits[ttb_selector][1]
+                    << self._ttb_descriptor_bits[1]
                 )
                 table_address = ta_51_x | table_address if ta_51_x else table_address
             # Block descriptor
@@ -234,7 +219,7 @@ class AArch64(linear.LinearlyMappedLayer):
                 table_address = (
                     self._mask(
                         descriptor,
-                        self._descriptors_bits[ttb_selector][0],
+                        self._ttb_descriptor_bits[0],
                         low_bit,
                     )
                     << low_bit
@@ -246,10 +231,10 @@ class AArch64(linear.LinearlyMappedLayer):
                 table_address = (
                     self._mask(
                         descriptor,
-                        self._descriptors_bits[ttb_selector][0],
-                        self._descriptors_bits[ttb_selector][1],
+                        self._ttb_descriptor_bits[0],
+                        self._ttb_descriptor_bits[1],
                     )
-                    << self._descriptors_bits[ttb_selector][1]
+                    << self._ttb_descriptor_bits[1]
                 )
                 table_address = ta_51_x | table_address if ta_51_x else table_address
                 break
@@ -378,13 +363,7 @@ class AArch64(linear.LinearlyMappedLayer):
                 if isinstance(excp, exceptions.PagedInvalidAddressException):
                     mask = (1 << excp.invalid_bits) - 1
                 else:
-                    mask = (
-                        1
-                        << (
-                            self._ttbs_granules[self._virtual_addr_space].bit_length()
-                            - 1
-                        )
-                    ) - 1
+                    mask = (1 << (self._ttb_granule.bit_length() - 1)) - 1
                 length_diff = mask + 1 - (offset & mask)
                 length -= length_diff
                 offset += length_diff
@@ -393,19 +372,22 @@ class AArch64(linear.LinearlyMappedLayer):
                 length -= chunk_size
                 offset += chunk_size
 
-    def _get_virtual_addr_ranges(
+    def _get_virtual_addr_range(
         self,
-    ) -> List[Tuple[int]]:
-        """Returns the virtual address space ranges as [(LOW_START, LOW_END), (HIGH_START, HIGH_END)]"""
-        # [2], see source/arch/arm64/include/asm/memory.h#L62
-        ttb0_start = 0
-        ttb0_size = 1 << (self._ttbs_bitsizes[0] - 1)
-        ttb0_end = ttb0_start + (ttb0_size - 1)
-        ttb1_end = 2**64 - 1
-        ttb1_size = 1 << (self._ttbs_bitsizes[1] - 1)
-        ttb1_start = ttb1_end - (ttb1_size - 1)
+    ) -> Tuple[int]:
+        """Returns the virtual address space range for the current context (user or kernel space)"""
 
-        return [(ttb0_start, ttb0_end), (ttb1_start, ttb1_end)]
+        # [2], see source/arch/arm64/include/asm/memory.h#L62
+        if self._virtual_addr_space == 0:
+            ttb_start = 0
+            ttb_size = 1 << (self._ttb_bitsize - 1)
+            ttb_end = ttb_start + (ttb_size - 1)
+        else:
+            ttb_end = 2**64 - 1
+            ttb_size = 1 << (self._ttb_bitsize - 1)
+            ttb_start = ttb_end - (ttb_size - 1)
+
+        return (ttb_start, ttb_end)
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns whether the address offset can be translated to a valid
