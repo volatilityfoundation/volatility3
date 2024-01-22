@@ -73,8 +73,12 @@ class AArch64(linear.LinearlyMappedLayer):
         self._base_layer = self.config["memory_layer"]
         # self._swap_layers = []  # TODO
         self._page_map_offset = self.config["page_map_offset"]
-        self._tcr_el1_tnsz = self.config["tcr_el1_tnsz"]
-        self._page_size = self.config["page_size"]
+        self._page_map_offset_kernel = self.config["page_map_offset_kernel"]
+        self._ttbs_tnsz = [self.config["tcr_el1_t0sz"], self.config["tcr_el1_t1sz"]]
+        self._ttbs_granules = [
+            self.config["page_size_user_space"],
+            self.config["page_size_kernel_space"],
+        ]
 
         # Context : TTB0 (user) or TTB1 (kernel)
         self._virtual_addr_space = (
