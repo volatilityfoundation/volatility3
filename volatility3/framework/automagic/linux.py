@@ -265,7 +265,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         linux_banner_address: int,
         target_banner: bytes,
     ) -> bool:
-        """Determine if a stacked layer is correct or a false positive, by callind the underlying
+        """Determine if a stacked layer is correct or a false positive, by calling the underlying
         _translate method against the linux_banner symbol virtual address. Then, compare it with
         the detected banner to verify the correct translation.
         This will directly raise an exception, as any failed attempt indicates a wrong layer selection.

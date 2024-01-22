@@ -354,7 +354,7 @@ class AArch64(linear.LinearlyMappedLayer):
                 - translate a virtual offset to a physical offset
                 - determine the page size the virtual offset lives in (page_size)
                 - based on the position of the offset in the page, calculate how many bytes to add to get to the end of the page (chunk_size)
-                - add the chunk_size to the virtual offset, so that we can point to the start of the next page frame
+                - add the chunk_size to the virtual offset, so that we can point to the start of the next page
 
             Example (assume page size is 4096):
             -> 0xffff800000f92140 lives in page 0xfffffc0000170640 at offset 0x140, which maps to page frame 0x45c19000 at offset 0x140
