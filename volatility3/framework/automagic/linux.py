@@ -221,11 +221,20 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
             page_size_kernel_space = 4**page_size_kernel_space_bit
             tcr_el1_t1sz = 64 - va_bits
 
+            # Kernel space page size is considered equal to the user space page size
+            # T1SZ is considered equal to T0SZ
             context.config[cls.join(config_path, "page_map_offset")] = dtb
             context.config[cls.join(config_path, "page_map_offset_kernel")] = dtb
-            context.config[cls.join(config_path, "tcr_el1_tnsz")] = tcr_el1_tnsz
-            context.config[cls.join(config_path, "page_size")] = page_size
+            context.config[cls.join(config_path, "tcr_el1_t1sz")] = tcr_el1_t1sz
+            context.config[cls.join(config_path, "tcr_el1_t0sz")] = tcr_el1_t1sz
+            context.config[
+                cls.join(config_path, "page_size_kernel_space")
+            ] = page_size_kernel_space
+            context.config[
+                cls.join(config_path, "page_size_user_space")
+            ] = page_size_kernel_space
 
+            # Build layer
             layer = layer_class(
                 context,
                 config_path=config_path,
