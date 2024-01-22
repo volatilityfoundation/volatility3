@@ -466,10 +466,54 @@ class AArch64(linear.LinearlyMappedLayer):
             requirements.TranslationLayerRequirement(
                 name="memory_layer", optional=False
             ),
-            requirements.IntRequirement(name="page_map_offset", optional=False),
-            requirements.IntRequirement(name="page_map_offset_kernel", optional=False),
-            requirements.IntRequirement(name="tcr_el1_tnsz", optional=False),
-            requirements.IntRequirement(name="page_size", optional=False),
-            requirements.IntRequirement(name="kernel_virtual_offset", optional=True),
-            requirements.StringRequirement(name="kernel_banner", optional=True),
+            requirements.IntRequirement(
+                name="page_map_offset",
+                optional=False,
+                description='DTB of the target context (either "kernel space" or "user space process").',
+            ),
+            requirements.IntRequirement(
+                name="page_map_offset_kernel",
+                optional=False,
+                description="DTB of the kernel space, it is primarily used to determine the target context of the layer (page_map_offset == page_map_offset_kernel). Conveniently calculated by LinuxStacker.",
+            ),
+            requirements.IntRequirement(
+                name="tcr_el1_t0sz",
+                optional=False,
+                description="The size offset of the memory region addressed by TTBR0_EL1. Conveniently calculated by LinuxStacker.",
+            ),
+            requirements.IntRequirement(
+                name="tcr_el1_t1sz",
+                optional=False,
+                description="The size offset of the memory region addressed by TTBR1_EL1. Conveniently calculated by LinuxStacker.",
+            ),
+            requirements.IntRequirement(
+                name="page_size_user_space",
+                optional=False,
+                description="Page size used by the user address space. Conveniently calculated by LinuxStacker.",
+            ),
+            requirements.IntRequirement(
+                name="page_size_kernel_space",
+                optional=False,
+                description="Page size used by the kernel address space. Conveniently calculated by LinuxStacker.",
+            ),
+            requirements.BooleanRequirement(
+                name="layer_debug",
+                optional=True,
+                description="Specify if debugging informations about the layer should be printed to user.",
+                default=False,
+            ),
+            requirements.BooleanRequirement(
+                name="translation_debug",
+                optional=True,
+                description="Specify if translation debugging informations should be printed to user.",
+                default=False,
+            ),
+            requirements.IntRequirement(
+                name="kernel_virtual_offset", optional=True, description="ASLR offset"
+            ),
+            requirements.StringRequirement(
+                name="kernel_banner",
+                optional=True,
+                description="Linux banner (/proc/version)",
+            ),
         ]
