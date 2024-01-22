@@ -448,20 +448,20 @@ class AArch64(linear.LinearlyMappedLayer):
     def maximum_address(cls) -> int:
         return (1 << cls._maxvirtaddr) - 1
 
-    def __canonicalize(self, addr: int) -> int:
+    def canonicalize(self, addr: int) -> int:
         """Canonicalizes an address by performing an appropiate sign extension on the higher addresses"""
-        if self._bits_per_register <= self._context_maxvirtaddr:
+        if self._bits_per_register <= self._ttb_bitsize:
             return addr & self.address_mask
-        elif addr < (1 << self._context_maxvirtaddr - 1):
+        elif addr < (1 << self._ttb_bitsize - 1):
             return addr
-        return self._mask(addr, self._context_maxvirtaddr, 0) + self._canonical_prefix
+        return self._mask(addr, self._ttb_bitsize, 0) + self._canonical_prefix
 
-    def __decanonicalize(self, addr: int) -> int:
+    def decanonicalize(self, addr: int) -> int:
         """Removes canonicalization to ensure an adress fits within the correct range if it has been canonicalized
 
         This will produce an address outside the range if the canonicalization is incorrect
         """
-        if addr < (1 << self._context_maxvirtaddr - 1):
+        if addr < (1 << self._ttb_bitsize - 1):
             return addr
         return addr ^ self._canonical_prefix
 
