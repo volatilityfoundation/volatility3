@@ -365,7 +365,7 @@ class maple_tree(objects.StructType):
         # None. If however you wanted to parse from a node, but ignore some parts of the tree below it then
         # this could be populated with the addresses of the nodes you wish to ignore.
 
-        if seen == None:
+        if seen is None:
             seen = set()
 
         # protect against unlikely loop
@@ -1265,7 +1265,7 @@ class net_device(objects.StructType):
         return self._format_as_mac_address(hwaddr)
 
     def _get_flag_choices(self) -> Dict:
-        """Return the net_deivce flags as a list of strings"""
+        """Return the net_device flags as a list of strings"""
         vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         try:
             # kernels >= 3.15
@@ -1326,6 +1326,7 @@ class net_device(objects.StructType):
             return "INVALID"
 
         return IF_OPER_STATES[self.operstate]
+
 
 class in_device(objects.StructType):
     def get_addresses(self):
