@@ -1260,7 +1260,7 @@ class net_device(objects.StructType):
             vollog.debug(
                 f"Unable to read network inteface mac address from {self.dev_addr:#x}"
             )
-            return
+            return None
 
         return self._format_as_mac_address(hwaddr)
 
