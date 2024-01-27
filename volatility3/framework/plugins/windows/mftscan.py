@@ -53,7 +53,6 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         # get each of the individual Field Sets
         mft_object = symbol_table + constants.BANG + "MFT_ENTRY"
         attribute_object = symbol_table + constants.BANG + "ATTRIBUTE"
-        header_object = symbol_table + constants.BANG + "ATTR_HEADER"
         si_object = symbol_table + constants.BANG + "STANDARD_INFORMATION_ENTRY"
         fn_object = symbol_table + constants.BANG + "FILE_NAME_ENTRY"
 
