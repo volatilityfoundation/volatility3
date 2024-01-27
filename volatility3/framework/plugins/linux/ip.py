@@ -9,7 +9,7 @@ from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
 
 
-class Ifconfig(plugins.PluginInterface):
+class Addr(plugins.PluginInterface):
     """Lists network interface information for all devices"""
 
     _required_framework_version = (2, 0, 0)
@@ -29,6 +29,7 @@ class Ifconfig(plugins.PluginInterface):
     def _gather_net_dev_info(self, net_dev):
         mac_addr = net_dev.get_mac_address()
         promisc = net_dev.promisc
+        operational_state = net_dev.get_operational_state()
         iface_name = utility.array_to_string(net_dev.name)
         iface_ifindex = net_dev.ifindex
         try:
@@ -42,15 +43,15 @@ class Ifconfig(plugins.PluginInterface):
             prefix_len = in_ifaddr.get_prefix_len()
             scope_type = in_ifaddr.get_scope_type()
             ip_addr = in_ifaddr.get_address()
-            yield net_ns_id, iface_ifindex, iface_name, mac_addr, promisc, ip_addr, prefix_len, scope_type
+            yield net_ns_id, iface_ifindex, iface_name, mac_addr, promisc, ip_addr, prefix_len, scope_type, operational_state
 
         # Interface IPv6 Addresses
-        ip6_ptr = net_dev.ip6_ptr.dereference().cast("inet6_dev")
-        for inet6_ifaddr in ip6_ptr.get_addresses():
+        inet6_dev = net_dev.ip6_ptr.dereference().cast("inet6_dev")
+        for inet6_ifaddr in inet6_dev.get_addresses():
             prefix_len = inet6_ifaddr.get_prefix_len()
             scope_type = inet6_ifaddr.get_scope_type()
             ip6_addr = inet6_ifaddr.get_address()
-            yield net_ns_id, iface_ifindex, iface_name, mac_addr, promisc, ip6_addr, prefix_len, scope_type
+            yield net_ns_id, iface_ifindex, iface_name, mac_addr, promisc, ip6_addr, prefix_len, scope_type, operational_state
 
     def _generator(self):
         vmlinux = self.context.modules[self.config["kernel"]]
@@ -75,6 +76,7 @@ class Ifconfig(plugins.PluginInterface):
             ("IP", str),
             ("Prefix", int),
             ("Scope Type", str),
+            ("State", str),
         ]
 
         return renderers.TreeGrid(headers, self._generator())

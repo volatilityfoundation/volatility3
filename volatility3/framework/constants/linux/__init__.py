@@ -291,5 +291,37 @@ IFA_HOST = IPV6_ADDR_LOOPBACK
 IFA_LINK = IPV6_ADDR_LINKLOCAL
 IFA_SITE = IPV6_ADDR_SITELOCAL
 
-# Promiscous mode
-IFF_PROMISC = 0x100
+# Only for kernels < 3.15 when the net_device_flags enum didn't exist
+# ref include/uapi/linux/if.h
+NET_DEVICE_FLAGS = {
+    "IFF_UP": 0x1,
+    "IFF_BROADCAST": 0x2,
+    "IFF_DEBUG": 0x4,
+    "IFF_LOOPBACK": 0x8,
+    "IFF_POINTOPOINT": 0x10,
+    "IFF_NOTRAILERS": 0x20,
+    "IFF_RUNNING": 0x40,
+    "IFF_NOARP": 0x80,
+    "IFF_PROMISC": 0x100,
+    "IFF_ALLMULTI": 0x200,
+    "IFF_MASTER": 0x400,
+    "IFF_SLAVE": 0x800,
+    "IFF_MULTICAST": 0x1000,
+    "IFF_PORTSEL": 0x2000,
+    "IFF_AUTOMEDIA": 0x4000,
+    "IFF_DYNAMIC": 0x8000,
+    "IFF_LOWER_UP": 0x10000,
+    "IFF_DORMANT": 0x20000,
+    "IFF_ECHO": 0x40000,
+}
+
+# RFC 2863 operational status. Kernels >= 2.6.17. See IF_OPER_* in include/uapi/linux/if.h
+IF_OPER_STATES = (
+    "UNKNOWN",
+    "NOTPRESENT",
+    "DOWN",
+    "LOWERLAYERDOWN",
+    "TESTING",
+    "DORMANT",
+    "UP",
+)

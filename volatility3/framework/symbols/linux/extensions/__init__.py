@@ -4,9 +4,8 @@
 
 import collections.abc
 import logging
-import struct
 import socket as socket_module
-from typing import Generator, Iterable, Iterator, Optional, Tuple, List
+from typing import Generator, Iterable, Iterator, Optional, Tuple, List, Dict
 
 from volatility3.framework import constants
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
@@ -14,8 +13,10 @@ from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
 from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
-from volatility3.framework.constants.linux import CAPABILITIES, IFF_PROMISC
+from volatility3.framework.constants.linux import CAPABILITIES, NET_DEVICE_FLAGS
 from volatility3.framework.constants.linux import IFA_HOST, IFA_LINK, IFA_SITE
+from volatility3.framework.constants.linux import IF_OPER_STATES
+from volatility3.framework.renderers import conversion
 from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
@@ -1236,24 +1237,25 @@ class net(objects.StructType):
 
 
 class net_device(objects.StructType):
-    @staticmethod
-    def _format_as_mac_address(hwaddr):
-        return ":".join([f"{x:02x}" for x in hwaddr[:6]])
+    def _format_as_mac_address(self, hwaddr):
+        return ":".join([f"{x:02x}" for x in hwaddr[: self.addr_len]])
 
-    def get_mac_address(self):
+    def get_mac_address(self) -> str:
         """Get the MAC address of this network interface.
 
         Returns:
             str: the MAC address of this network interface.
         """
         if self.has_member("perm_addr"):
+            null_mac_addr_bytes = b"\x00" * self.addr_len
+            null_mac_addr = self._format_as_mac_address(null_mac_addr_bytes)
             mac_addr = self._format_as_mac_address(self.perm_addr)
-            if mac_addr != "00:00:00:00:00:00":
+            if mac_addr != null_mac_addr:
                 return mac_addr
 
         parent_layer = self._context.layers[self.vol.layer_name]
         try:
-            hwaddr = parent_layer.read(self.dev_addr, 6)
+            hwaddr = parent_layer.read(self.dev_addr, self.addr_len, pad=True)
         except exceptions.InvalidAddressException:
             vollog.debug(
                 f"Unable to read network inteface mac address from {self.dev_addr:#x}"
@@ -1262,6 +1264,31 @@ class net_device(objects.StructType):
 
         return self._format_as_mac_address(hwaddr)
 
+    def _get_flag_choices(self) -> Dict:
+        """Return the net_deivce flags as a list of strings"""
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        try:
+            # kernels >= 3.15
+            net_device_flags_enum = vmlinux.get_enumeration("net_device_flags")
+            choices = net_device_flags_enum.choices
+        except exceptions.SymbolError:
+            # kernels < 3.15
+            choices = NET_DEVICE_FLAGS
+
+        return choices
+
+    def _get_net_device_flag_value(self, name):
+        """Return the net_deivce flag value based on the flag name"""
+        return self._get_flag_choices()[name]
+
+    def get_flag_names(self) -> List[str]:
+        """Return the net_deivce flags as a list of strings
+
+        Returns:
+            List[str]: A list of flag names
+        """
+        return list(self._get_flag_choices())
+
     @property
     def promisc(self):
         """Return if this network interface is in promiscuous mode.
@@ -1269,9 +1296,9 @@ class net_device(objects.StructType):
         Returns:
             bool: True if this network interface is in promiscuous mode. Otherwise, False
         """
-        return self.flags & IFF_PROMISC == IFF_PROMISC
+        return self.flags & self._get_net_device_flag_value("IFF_PROMISC") != 0
 
-    def get_net_namespace_id(self):
+    def get_net_namespace_id(self) -> int:
         """Return the network namespace id for this network interface.
 
         Returns:
@@ -1288,6 +1315,17 @@ class net_device(objects.StructType):
 
         return net_ns_id
 
+    def get_operational_state(self) -> str:
+        """Return the netwok device oprational state (RFC 2863) string
+
+        Returns:
+            str: A string with the operational state
+        """
+        if self.operstate >= len(IF_OPER_STATES):
+            vollog.warning(f"Invalid net_device operational state '{self.operstate}'")
+            return "INVALID"
+
+        return IF_OPER_STATES[self.operstate]
 
 class in_device(objects.StructType):
     def get_addresses(self):
@@ -1320,7 +1358,7 @@ class inet6_dev(objects.StructType):
             return
 
         symbol_space = self._context.symbol_space
-        table_name = self.vol.type_name.split(constants.BANG)[0]
+        table_name = self.get_symbol_table_name()
         inet6_ifaddr_symname = table_name + constants.BANG + "inet6_ifaddr"
         if not symbol_space.has_type(inet6_ifaddr_symname) or not symbol_space.get_type(
             inet6_ifaddr_symname
@@ -1351,7 +1389,7 @@ class in_ifaddr(objects.StructType):
         Returns:
             str: the IPv4 scope type.
         """
-        table_name = self.vol.type_name.split(constants.BANG)[0]
+        table_name = self.get_symbol_table_name()
         rt_scope_enum = self._context.symbol_space.get_enumeration(
             table_name + constants.BANG + "rt_scope_t"
         )
@@ -1368,8 +1406,7 @@ class in_ifaddr(objects.StructType):
         Returns:
             str: the IPv4 address
         """
-        ipv4_bytes = struct.pack("<I", self.ifa_address)
-        return socket_module.inet_ntop(socket_module.AF_INET, ipv4_bytes)
+        return conversion.convert_ipv4(self.ifa_address)
 
     def get_prefix_len(self):
         """Get the IPv4 address prefix len
@@ -1402,21 +1439,7 @@ class inet6_ifaddr(objects.StructType):
         Returns:
             str: the IPv6 address
         """
-        symbol_space = self._context.symbol_space
-        table_name = self.vol.type_name.split(constants.BANG)[0]
-        in6_addr_symname = table_name + constants.BANG + "in6_addr"
-        in6_addr_size = symbol_space.get_type(in6_addr_symname).size
-
-        parent_layer = self._context.layers[self.vol.layer_name]
-        try:
-            ip6_addr_bytes = parent_layer.read(self.addr.vol.offset, in6_addr_size)
-        except exceptions.InvalidAddressException:
-            vollog.debug(
-                f"Unable to read network IPv6 address from {self.addr.vol.offset:#x}"
-            )
-            return
-
-        return socket_module.inet_ntop(socket_module.AF_INET6, ip6_addr_bytes)
+        return conversion.convert_ipv6(self.addr.in6_u.u6_addr32)
 
     def get_prefix_len(self):
         """Get the IPv6 address prefix len
