@@ -175,7 +175,6 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
 
 class ADS(interfaces.plugins.PluginInterface):
-
     """Scans for Alternate Data Stream"""
 
     _required_framework_version = (2, 0, 0)

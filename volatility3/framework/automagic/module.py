@@ -34,9 +34,9 @@ class KernelModule(interfaces.automagic.AutomagicInterface):
             return None
         # The requirement is unfulfilled and is a ModuleRequirement
 
-        context.config[
-            interfaces.configuration.path_join(new_config_path, "class")
-        ] = "volatility3.framework.contexts.Module"
+        context.config[interfaces.configuration.path_join(new_config_path, "class")] = (
+            "volatility3.framework.contexts.Module"
+        )
 
         for req in requirement.requirements:
             if (

@@ -768,12 +768,10 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
             raise IndexError(f"Member not present in array template: {child}")
 
     @overload
-    def __getitem__(self, i: int) -> interfaces.objects.Template:
-        ...
+    def __getitem__(self, i: int) -> interfaces.objects.Template: ...
 
     @overload
-    def __getitem__(self, s: slice) -> List[interfaces.objects.Template]:
-        ...
+    def __getitem__(self, s: slice) -> List[interfaces.objects.Template]: ...
 
     def __getitem__(self, i):
         """Returns the i-th item from the array."""
