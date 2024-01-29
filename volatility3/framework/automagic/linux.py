@@ -233,12 +233,12 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         for i, page_size_kernel_space in enumerate(page_size_kernel_space_candidates):
             # Kernel space page size is considered equal to the user space page size
             # T1SZ is considered equal to T0SZ
-            context.config[
-                cls.join(config_path, "page_size_kernel_space")
-            ] = page_size_kernel_space
-            context.config[
-                cls.join(config_path, "page_size_user_space")
-            ] = page_size_kernel_space
+            context.config[cls.join(config_path, "page_size_kernel_space")] = (
+                page_size_kernel_space
+            )
+            context.config[cls.join(config_path, "page_size_user_space")] = (
+                page_size_kernel_space
+            )
 
             # Build layer
             layer = layer_class(
