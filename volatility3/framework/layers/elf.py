@@ -115,9 +115,9 @@ class Elf64Stacker(interfaces.automagic.StackerLayerInterface):
             vollog.log(constants.LOGLEVEL_VVVV, f"Exception: {excp}")
             return None
         new_name = context.layers.free_layer_name("Elf64Layer")
-        context.config[
-            interfaces.configuration.path_join(new_name, "base_layer")
-        ] = layer_name
+        context.config[interfaces.configuration.path_join(new_name, "base_layer")] = (
+            layer_name
+        )
 
         try:
             return Elf64Layer(context, new_name, new_name)

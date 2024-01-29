@@ -389,9 +389,11 @@ class JsonRenderer(CLIRenderer):
         interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
         format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
         bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
-        datetime.datetime: lambda x: x.isoformat()
-        if not isinstance(x, interfaces.renderers.BaseAbsentValue)
-        else None,
+        datetime.datetime: lambda x: (
+            x.isoformat()
+            if not isinstance(x, interfaces.renderers.BaseAbsentValue)
+            else None
+        ),
         "default": lambda x: x,
     }
 
