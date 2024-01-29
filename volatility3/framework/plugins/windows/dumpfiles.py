@@ -55,7 +55,9 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 optional=True,
             ),
             requirements.StringRequirement(
-                name="filter", description="Dump files matching regular expression FILTER", optional=True
+                name="filter",
+                description="Dump files matching regular expression FILTER",
+                optional=True,
             ),
             requirements.BooleanRequirement(
                 name="ignore-case",
@@ -223,7 +225,6 @@ class DumpFiles(interfaces.plugins.PluginInterface):
             flags = re.I if self.config["ignore-case"] else 0
             file_re = re.compile(self.config["filter"], flags)
 
-
         if procs:
             # The handles plugin doesn't expose any staticmethod/classmethod, and it also requires stashing
             # private variables, so we need an instance (for now, anyway). We _could_ call Handles._generator()
@@ -345,7 +346,9 @@ class DumpFiles(interfaces.plugins.PluginInterface):
         procs = list()
         kernel = self.context.modules[self.config["kernel"]]
 
-        if self.config["filter"] and (self.config["virtaddr"] or self.config["physaddr"]):
+        if self.config["filter"] and (
+            self.config["virtaddr"] or self.config["physaddr"]
+        ):
             raise ValueError("Cannot use filter flag with an address flag")
 
         if self.config.get("virtaddr", None) is not None:
