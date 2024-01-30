@@ -42,6 +42,11 @@ class Modules(interfaces.plugins.PluginInterface):
                 default=False,
                 optional=True,
             ),
+            requirements.IntRequirement(
+                name="base",
+                description="Extract a single module with BASE address(hex)",
+                optional=True,
+            ),
             requirements.StringRequirement(
                 name="name",
                 description="module name/sub string",
@@ -73,7 +78,7 @@ class Modules(interfaces.plugins.PluginInterface):
                 continue
 
             file_output = "Disabled"
-            if self.config["dump"]:
+            if self.config["dump"] or (self.config["base"] and self.config["base"] == mod.DllBase):
                 file_handle = dlllist.DllList.dump_pe(
                     self.context, pe_table_name, mod, self.open
                 )
@@ -220,6 +225,9 @@ class Modules(interfaces.plugins.PluginInterface):
             yield mod
 
     def run(self):
+        if self.config["dump"] and self.config["base"]:
+            raise ValueError("--dump cannot be used with --base")
+        
         return renderers.TreeGrid(
             [
                 ("Offset", format_hints.Hex),
