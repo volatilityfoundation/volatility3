@@ -169,9 +169,8 @@ class SvcScan(interfaces.plugins.PluginInterface):
                         constants.LOGLEVEL_VVVV,
                         "Could not retrieve any control set from SYSTEM hive",
                     )
-                    pass
 
-            return None
+        return None
 
     @staticmethod
     def _get_service_dll(
