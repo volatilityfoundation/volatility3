@@ -190,7 +190,9 @@ class ModScan(interfaces.plugins.PluginInterface):
                 FullDllName = ""
 
             file_output = "Disabled"
-            if self.config["dump"] or (self.config["base"] and self.config["base"] == mod.DllBase):
+            if self.config["dump"] or (
+                self.config["base"] and self.config["base"] == mod.DllBase
+            ):
                 session_layer_name = self.find_session_layer(
                     self.context, session_layers, mod.DllBase
                 )
