@@ -5,6 +5,7 @@
 
 Linux-specific values that aren't found in debug symbols
 """
+from enum import Enum
 
 KERNEL_NAME = "__kernel__"
 
@@ -315,13 +316,15 @@ NET_DEVICE_FLAGS = {
     "IFF_ECHO": 0x40000,
 }
 
-# RFC 2863 operational status. Kernels >= 2.6.17. See IF_OPER_* in include/uapi/linux/if.h
-IF_OPER_STATES = (
-    "UNKNOWN",
-    "NOTPRESENT",
-    "DOWN",
-    "LOWERLAYERDOWN",
-    "TESTING",
-    "DORMANT",
-    "UP",
-)
+
+# Kernels >= 2.6.17. See IF_OPER_* in include/uapi/linux/if.h
+class IF_OPER_STATES(Enum):
+    """RFC 2863 - Network interface operational status"""
+
+    UNKNOWN = 0
+    NOTPRESENT = 1
+    DOWN = 2
+    LOWERLAYERDOWN = 3
+    TESTING = 4
+    DORMANT = 5
+    UP = 6

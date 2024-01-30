@@ -16,7 +16,7 @@ from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_ST
 from volatility3.framework.constants.linux import CAPABILITIES, NET_DEVICE_FLAGS
 from volatility3.framework.constants.linux import IFA_HOST, IFA_LINK, IFA_SITE
 from volatility3.framework.constants.linux import IF_OPER_STATES
-from volatility3.framework.renderers import conversion
+from volatility3.framework.renderers import conversion, UnparsableValue
 from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
@@ -1321,11 +1321,11 @@ class net_device(objects.StructType):
         Returns:
             str: A string with the operational state
         """
-        if self.operstate >= len(IF_OPER_STATES):
+        try:
+            return IF_OPER_STATES(self.operstate).name
+        except ValueError:
             vollog.warning(f"Invalid net_device operational state '{self.operstate}'")
-            return "INVALID"
-
-        return IF_OPER_STATES[self.operstate]
+            return UnparsableValue()
 
 
 class in_device(objects.StructType):
