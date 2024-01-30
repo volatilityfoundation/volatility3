@@ -1279,7 +1279,7 @@ class net_device(objects.StructType):
 
     def _get_net_device_flag_value(self, name):
         """Return the net_device flag value based on the flag name"""
-        return self._get_flag_choices()[name]
+        return self._get_flag_choices().get(name, UnparsableValue())
 
     def get_flag_names(self) -> List[str]:
         """Return the net_device flags as a list of strings
