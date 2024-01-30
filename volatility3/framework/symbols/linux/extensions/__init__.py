@@ -1278,11 +1278,11 @@ class net_device(objects.StructType):
         return choices
 
     def _get_net_device_flag_value(self, name):
-        """Return the net_deivce flag value based on the flag name"""
+        """Return the net_device flag value based on the flag name"""
         return self._get_flag_choices()[name]
 
     def get_flag_names(self) -> List[str]:
-        """Return the net_deivce flags as a list of strings
+        """Return the net_device flags as a list of strings
 
         Returns:
             List[str]: A list of flag names
