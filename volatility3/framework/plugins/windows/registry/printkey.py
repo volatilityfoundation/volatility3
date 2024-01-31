@@ -193,9 +193,9 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     vollog.debug(
                         "Couldn't read registry value type, so data is unreadable"
                     )
-                    value_data: Union[
-                        interfaces.renderers.BaseAbsentValue, bytes
-                    ] = renderers.UnreadableValue()
+                    value_data: Union[interfaces.renderers.BaseAbsentValue, bytes] = (
+                        renderers.UnreadableValue()
+                    )
                 else:
                     try:
                         value_data = node.decode_data()

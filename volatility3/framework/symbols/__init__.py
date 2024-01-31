@@ -35,9 +35,9 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
 
     def __init__(self) -> None:
         super().__init__()
-        self._dict: Dict[
-            str, interfaces.symbols.BaseSymbolTableInterface
-        ] = collections.OrderedDict()
+        self._dict: Dict[str, interfaces.symbols.BaseSymbolTableInterface] = (
+            collections.OrderedDict()
+        )
         # Permanently cache all resolved symbols
         self._resolved: Dict[str, interfaces.objects.Template] = {}
         self._resolved_symbols: Dict[str, interfaces.objects.Template] = {}
@@ -73,9 +73,9 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         self, offset: int, size: int = 0, table_name: str = None
     ) -> Iterable[str]:
         """Returns all symbols that exist at a specific relative address."""
-        table_list: Iterable[
-            interfaces.symbols.BaseSymbolTableInterface
-        ] = self._dict.values()
+        table_list: Iterable[interfaces.symbols.BaseSymbolTableInterface] = (
+            self._dict.values()
+        )
         if table_name is not None:
             if table_name in self._dict:
                 table_list = [self._dict[table_name]]
@@ -179,15 +179,15 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
                         if child.vol.type_name not in self._resolved:
                             traverse_list.append(child.vol.type_name)
                             try:
-                                self._resolved[
-                                    child.vol.type_name
-                                ] = self._weak_resolve(
-                                    SymbolType.TYPE, child.vol.type_name
+                                self._resolved[child.vol.type_name] = (
+                                    self._weak_resolve(
+                                        SymbolType.TYPE, child.vol.type_name
+                                    )
                                 )
                             except exceptions.SymbolError:
-                                self._resolved[
-                                    child.vol.type_name
-                                ] = self.UnresolvedTemplate(child.vol.type_name)
+                                self._resolved[child.vol.type_name] = (
+                                    self.UnresolvedTemplate(child.vol.type_name)
+                                )
                         # Stash the replacement
                         replacements.add((traverser, child))
                     elif child.children:
