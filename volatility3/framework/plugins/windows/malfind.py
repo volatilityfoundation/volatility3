@@ -142,15 +142,20 @@ class Malfind(interfaces.plugins.PluginInterface):
         kernel = self.context.modules[self.config["kernel"]]
 
         # set refined criteria to know when to add to "Notes" column
-        refined_criteria = [b"MZ", b"\x55\x8B", b"\x55\x48", b"\x55\x89"]
+        refined_criteria = {
+            b"MZ": "MZ header",
+            b"\x55\x8B": "PE header",
+            b"\x55\x48": "Function prologue",
+            b"\x55\x89": "Function prologue",
+        }
 
         is_32bit_arch = not symbols.symbol_table_is_64bit(
             self.context, kernel.symbol_table_name
         )
 
         for proc in procs:
-            # by default, "Notes" column will be set to none
-            notes = "None"
+            # by default, "Notes" column will be set to N/A
+            notes = renderers.NotApplicableValue()
             process_name = utility.array_to_string(proc.ImageFileName)
 
             for vad, data in self.list_injections(
@@ -158,12 +163,7 @@ class Malfind(interfaces.plugins.PluginInterface):
             ):
                 # Check for unique headers and update "Notes" column if criteria is met
                 if data[0:2] in refined_criteria:
-                    if data[0:2] == b"MZ":
-                        notes = "MZ header"
-                    elif data[0:2] == b"\x55\x8B":
-                        notes = "PE header"
-                    else:
-                        notes = "Function prologue"
+                    notes = refined_criteria[data[0:2]]
 
                 # if we're on a 64 bit kernel, we may still need 32 bit disasm due to wow64
                 if is_32bit_arch or proc.get_is_wow64():
