@@ -75,7 +75,7 @@ class Lsmod(plugins.PluginInterface):
             try:
                 kmod = kmod.next
             except exceptions.InvalidAddressException:
-                return
+                return None
         return  # Generation finished
 
     def _generator(self):

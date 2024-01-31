@@ -108,12 +108,12 @@ class Cachedump(interfaces.plugins.PluginInterface):
                 vollog.warning("Unable to locate SYSTEM hive")
             if sechive is None:
                 vollog.warning("Unable to locate SECURITY hive")
-            return
+            return None
 
         bootkey = hashdump.Hashdump.get_bootkey(syshive)
         if not bootkey:
             vollog.warning("Unable to find bootkey")
-            return
+            return None
 
         kernel = self.context.modules[self.config["kernel"]]
 
@@ -124,17 +124,17 @@ class Cachedump(interfaces.plugins.PluginInterface):
         lsakey = lsadump.Lsadump.get_lsa_key(sechive, bootkey, vista_or_later)
         if not lsakey:
             vollog.warning("Unable to find lsa key")
-            return
+            return None
 
         nlkm = self.get_nlkm(sechive, lsakey, vista_or_later)
         if not nlkm:
             vollog.warning("Unable to find nlkma key")
-            return
+            return None
 
         cache = hashdump.Hashdump.get_hive_key(sechive, "Cache")
         if not cache:
             vollog.warning("Unable to find cache key")
-            return
+            return None
 
         for cache_item in cache.get_values():
             if cache_item.Name == "NL$Control":

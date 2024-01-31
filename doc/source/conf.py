@@ -27,7 +27,7 @@ def setup(app):
 
     source_dir = os.path.abspath(os.path.dirname(__file__))
     sphinx.ext.apidoc.main(
-        argv=["-e", "-M", "-f", "-T", "-o", source_dir, volatility_directory]
+        ["-e", "-M", "-f", "-T", "-o", source_dir, volatility_directory]
     )
 
     # Go through the volatility3.framework.plugins files and change them to volatility3.plugins
@@ -169,7 +169,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "Volatility 3"
-copyright = "2012-2022, Volatility Foundation"
+copyright = "2012-2024, Volatility Foundation"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

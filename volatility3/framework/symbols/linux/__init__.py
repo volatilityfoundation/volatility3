@@ -29,10 +29,11 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("files_struct", extensions.files_struct)
         self.set_type_class("kobject", extensions.kobject)
         self.set_type_class("cred", extensions.cred)
-        self.set_type_class("kernel_cap_struct", extensions.kernel_cap_struct)
         # Might not exist in the current symbols
         self.optional_set_type_class("module", extensions.module)
         self.optional_set_type_class("bpf_prog", extensions.bpf_prog)
+        self.optional_set_type_class("kernel_cap_struct", extensions.kernel_cap_struct)
+        self.optional_set_type_class("kernel_cap_t", extensions.kernel_cap_t)
 
         # Mount
         self.set_type_class("vfsmount", extensions.vfsmount)
@@ -243,17 +244,17 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
     ):
         # task.files can be null
         if not task.files:
-            return
+            return None
 
         fd_table = task.files.get_fds()
         if fd_table == 0:
-            return
+            return None
 
         max_fds = task.files.get_max_fds()
 
         # corruption check
         if max_fds > 500000:
-            return
+            return None
 
         file_type = symbol_table + constants.BANG + "file"
 
@@ -378,7 +379,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         """
 
         if not addr:
-            return
+            return None
 
         type_dec = vmlinux.get_type(type_name)
         member_offset = type_dec.relative_child_offset(member_name)

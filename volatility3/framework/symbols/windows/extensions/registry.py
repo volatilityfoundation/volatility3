@@ -162,7 +162,7 @@ class CM_KEY_NODE(objects.StructType):
         try:
             signature = node.cast("string", max_length=2, encoding="latin-1")
         except (exceptions.InvalidAddressException, RegistryFormatException):
-            return
+            return None
 
         listjump = None
         if signature == "ri":
@@ -220,7 +220,7 @@ class CM_KEY_NODE(objects.StructType):
                         yield node
         except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
             vollog.debug(f"Invalid address in get_values iteration: {excp}")
-            return
+            return None
 
     def get_name(self) -> interfaces.objects.ObjectInterface:
         """Gets the name for the current key node"""
