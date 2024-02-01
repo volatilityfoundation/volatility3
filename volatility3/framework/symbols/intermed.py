@@ -303,7 +303,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             requirements.StringRequirement(
                 "isf_url",
                 description="JSON file containing the symbols encoded in the Intermediate Symbol Format",
-            ),
+            )
         ]
 
 
@@ -804,3 +804,9 @@ class Version8Format(Version7Format):
             size=type_definition["size"],
             members=members,
         )
+
+
+class Version9Format(Version8Format):
+    """Version that supports C++ structures and demangles them better"""
+
+    version = (6, 3, 0)

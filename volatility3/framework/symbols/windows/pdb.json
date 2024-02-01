@@ -1240,6 +1240,223 @@
       "kind": "struct",
       "size": 4
     },
+    "LF_NESTTYPE": {
+      "fields": {
+        "index": {
+          "offset": 2,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "name": {
+          "offset": 6,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 6
+    },
+    "LF_MFUNC_ID": {
+      "fields": {
+        "parent_type": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "type": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "name": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 8
+    },
+    "LF_MFUNCTION": {
+      "fields": {
+        "return_value_type": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "class_type": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "this_type": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "call_type": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "reserved": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "paramcount": {
+          "offset": 14,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "arglist": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        },
+        "adjuster": {
+          "offset": 20,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 24
+    },
+    "LF_METHOD": {
+      "fields": {
+        "count": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "mlist": {
+          "offset": 2,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "name": {
+          "offset": 6,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 6
+    },
+    "LF_ONEMETHOD": {
+      "fields": {
+        "attributes": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "index": {
+          "offset": 2,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "name": {
+          "offset": 6,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 6
+    },
+    "LF_BCLASS": {
+      "fields": {
+        "attributes": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "field_type": {
+          "offset": 2,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "offset": {
+          "offset": 6,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 6
+    },
+    "LF_STMEMBER": {
+      "fields": {
+        "attributes": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "index": {
+          "offset": 2,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "name": {
+          "offset": 6,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 6
+    },
     "LF_STRUCTURE": {
       "fields": {
         "count": {
