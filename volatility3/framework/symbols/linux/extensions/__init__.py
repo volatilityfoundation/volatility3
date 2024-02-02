@@ -408,7 +408,7 @@ class maple_tree(objects.StructType):
         # None. If however you wanted to parse from a node, but ignore some parts of the tree below it then
         # this could be populated with the addresses of the nodes you wish to ignore.
 
-        if seen == None:
+        if seen is None:
             seen = set()
 
         # protect against unlikely loop

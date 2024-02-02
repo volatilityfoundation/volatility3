@@ -206,9 +206,9 @@ def _zipwalk(path: str):
             if not file.is_dir():
                 dirlist = zip_results.get(os.path.dirname(file.filename), [])
                 dirlist.append(os.path.basename(file.filename))
-                zip_results[
-                    os.path.join(path, os.path.dirname(file.filename))
-                ] = dirlist
+                zip_results[os.path.join(path, os.path.dirname(file.filename))] = (
+                    dirlist
+                )
     for value in zip_results:
         yield value, zip_results[value]
 

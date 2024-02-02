@@ -277,9 +277,9 @@ class Intel(linear.LinearlyMappedLayer):
         This allows translation layers to provide maps of contiguous
         regions in one layer
         """
-        stashed_offset = (
-            stashed_mapped_offset
-        ) = stashed_size = stashed_mapped_size = stashed_map_layer = None
+        stashed_offset = stashed_mapped_offset = stashed_size = stashed_mapped_size = (
+            stashed_map_layer
+        ) = None
         for offset, size, mapped_offset, mapped_size, map_layer in self._mapping(
             offset, length, ignore_errors
         ):
