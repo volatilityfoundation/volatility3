@@ -99,7 +99,7 @@ class module(generic.GenericIntelProcess):
                 return self.init_layout.base
             elif self.has_member("module_init"):
                 return self.module_init
-        raise AttributeError("module -> get_module_core: Unable to get module init")
+        raise AttributeError("module -> get_module_init: Unable to get module init")
 
     def get_name(self):
         """Get the name of the module as a string"""
