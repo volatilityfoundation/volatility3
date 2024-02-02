@@ -26,42 +26,79 @@ vollog = logging.getLogger(__name__)
 
 
 class module(generic.GenericIntelProcess):
+    def _get_mod_mem_type(self):
+        """Attempt to get the mod_mem_type enum once to allow repeated access from other functions"""
+        if not self.has_member("mod_mem_type"):
+            try:
+                vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(
+                    self._context, self
+                )
+                # mod_mem_type and module_memory were added in kernel 6.4 which replaces
+                # module_layout for storing the information around core_layout etc.
+                # see commit ac3b43283923440900b4f36ca5f9f0b1ca43b70e for more information
+                self.mod_mem_type = vmlinux.get_enumeration("mod_mem_type").choices
+            except exceptions.SymbolError:
+                vollog.debug(
+                    f"Unable to find mod_mem_type enum. This is expected on kernels <6.4 but may cause issues with later kernels"
+                )
+                self.mod_mem_type = None
+
     def get_module_base(self):
-        if self.has_member("core_layout"):
-            return self.core_layout.base
+        self._get_mod_mem_type()
+        if self.mod_mem_type:
+            return self.mem[self.mod_mem_type["MOD_TEXT"]].base
         else:
-            return self.module_core
+            if self.has_member("core_layout"):
+                return self.core_layout.base
+            else:
+                return self.module_core
 
     def get_init_size(self):
-        if self.has_member("init_layout"):
-            return self.init_layout.size
-        elif self.has_member("init_size"):
-            return self.init_size
+        self._get_mod_mem_type()
+        if self.mod_mem_type:
+            return self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].size
+        else:
+            if self.has_member("init_layout"):
+                return self.init_layout.size
+            elif self.has_member("init_size"):
+                return self.init_size
         raise AttributeError(
             "module -> get_init_size: Unable to determine .init section size of module"
         )
 
     def get_core_size(self):
-        if self.has_member("core_layout"):
-            return self.core_layout.size
-        elif self.has_member("core_size"):
-            return self.core_size
+        self._get_mod_mem_type()
+        if self.mod_mem_type:
+            return self.mem[self.mod_mem_type["MOD_TEXT"]].size
+        else:
+            if self.has_member("core_layout"):
+                return self.core_layout.size
+            elif self.has_member("core_size"):
+                return self.core_size
         raise AttributeError(
             "module -> get_core_size: Unable to determine core size of module"
         )
 
     def get_module_core(self):
-        if self.has_member("core_layout"):
-            return self.core_layout.base
-        elif self.has_member("module_core"):
-            return self.module_core
+        self._get_mod_mem_type()
+        if self.mod_mem_type:
+            return self.mem[self.mod_mem_type["MOD_TEXT"]].base
+        else:
+            if self.has_member("core_layout"):
+                return self.core_layout.base
+            elif self.has_member("module_core"):
+                return self.module_core
         raise AttributeError("module -> get_module_core: Unable to get module core")
 
     def get_module_init(self):
-        if self.has_member("init_layout"):
-            return self.init_layout.base
-        elif self.has_member("module_init"):
-            return self.module_init
+        self._get_mod_mem_type()
+        if self.mod_mem_type:
+            return self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].base
+        else:
+            if self.has_member("init_layout"):
+                return self.init_layout.base
+            elif self.has_member("module_init"):
+                return self.module_init
         raise AttributeError("module -> get_module_core: Unable to get module init")
 
     def get_name(self):
