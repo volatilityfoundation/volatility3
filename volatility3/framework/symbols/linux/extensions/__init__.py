@@ -56,7 +56,11 @@ class module(generic.GenericIntelProcess):
     def get_init_size(self):
         self._get_mod_mem_type()
         if self.mod_mem_type:
-            return self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].size
+            return (
+                self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].size
+                + self.mem[self.mod_mem_type["MOD_INIT_DATA"]].size
+                + self.mem[self.mod_mem_type["MOD_INIT_RODATA"]].size
+            )
         else:
             if self.has_member("init_layout"):
                 return self.init_layout.size
@@ -69,7 +73,12 @@ class module(generic.GenericIntelProcess):
     def get_core_size(self):
         self._get_mod_mem_type()
         if self.mod_mem_type:
-            return self.mem[self.mod_mem_type["MOD_TEXT"]].size
+            return (
+                self.mem[self.mod_mem_type["MOD_TEXT"]].size
+                + self.mem[self.mod_mem_type["MOD_DATA"]].size
+                + self.mem[self.mod_mem_type["MOD_RODATA"]].size
+                + self.mem[self.mod_mem_type["MOD_RO_AFTER_INIT"]].size
+            )
         else:
             if self.has_member("core_layout"):
                 return self.core_layout.size
