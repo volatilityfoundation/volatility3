@@ -21,6 +21,7 @@ from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import generic, linux, intermed
+from volatility3.framework.symbols.wrappers import Flags
 from volatility3.framework.symbols.linux.extensions import elf
 
 vollog = logging.getLogger(__name__)
@@ -1237,6 +1238,14 @@ class net(objects.StructType):
 
 
 class net_device(objects.StructType):
+    def get_device_name(self) -> str:
+        """Return the network device name
+
+        Returns:
+            str: The network device name
+        """
+        return utility.array_to_string(self.name)
+
     def _format_as_mac_address(self, hwaddr):
         return ":".join([f"{x:02x}" for x in hwaddr[: self.addr_len]])
 
@@ -1281,13 +1290,105 @@ class net_device(objects.StructType):
         """Return the net_device flag value based on the flag name"""
         return self._get_flag_choices().get(name, UnparsableValue())
 
+    def _get_netdev_state_t(self):
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        try:
+            # At least from kernels 2.6.30
+            return vmlinux.get_enumeration("netdev_state_t")
+        except exceptions.SymbolError:
+            raise exceptions.VolatilityException(
+                "Unsupported kernel or wrong ISF. Cannot find 'netdev_state_t' enumeration"
+            )
+
+    def is_running(self) -> bool:
+        """Test if the network device has been brought up
+        Based on netif_running()
+
+        Returns:
+            bool: True if the device is UP
+        """
+        netdev_state_t_enum = self._get_netdev_state_t()
+
+        # It should be safe. netdev_state_t::__LINK_STATE_START has been available since
+        # at least kernels 2.6.30
+        return (
+            self.state & (1 << netdev_state_t_enum.choices["__LINK_STATE_START"]) != 0
+        )
+
+    def is_carrier_ok(self) -> bool:
+        """Check if carrier is present on network device
+        Based on netif_carrier_ok()
+
+        Returns:
+            bool: True if carrier present
+        """
+        netdev_state_t_enum = self._get_netdev_state_t()
+
+        # It should be safe. netdev_state_t::__LINK_STATE_NOCARRIER has been available
+        # since at least kernels 2.6.30
+        return (
+            self.state & (1 << netdev_state_t_enum.choices["__LINK_STATE_NOCARRIER"])
+            == 0
+        )
+
+    def is_dormant(self) -> bool:
+        """Check if the network device is dormant
+        Based on netif_dormant(()
+
+        Returns:
+            bool: True if the network device is dormant
+        """
+        netdev_state_t_enum = self._get_netdev_state_t()
+
+        # It should be safe. netdev_state_t::__LINK_STATE_DORMANT has been available
+        # since at least kernels 2.6.30
+        return (
+            self.state & (1 << netdev_state_t_enum.choices["__LINK_STATE_DORMANT"]) != 0
+        )
+
+    def is_operational(self) -> bool:
+        """Test if the carrier is operational
+        Based on netif_oper_up()
+
+        Returns:
+            bool: True if the device is UP
+        """
+
+        return self.get_operational_state() in ("UP", "UNKNOWN")
+
     def get_flag_names(self) -> List[str]:
-        """Return the net_device flags as a list of strings
+        """Return the net_device flags as a list of strings.
+        This is the combination of flags exported through kernel APIs to userspace.
+        Based on dev_get_flags()
 
         Returns:
             List[str]: A list of flag names
         """
-        return list(self._get_flag_choices())
+        choices = self._get_flag_choices()
+        clear_flags = choices.get("IFF_PROMISC", 0)
+        clear_flags |= choices.get("IFF_ALLMULTI", 0)
+        clear_flags |= choices.get("IFF_RUNNING", 0)
+        clear_flags |= choices.get("IFF_LOWER_UP", 0)
+        clear_flags |= choices.get("IFF_DORMANT", 0)
+
+        clear_gflags = choices.get("IFF_PROMISC", 0)
+        clear_gflags |= choices.get("IFF_ALLMULTI)", 0)
+
+        flags = (self.flags & ~clear_flags) | (self.gflags & ~clear_gflags)
+
+        if self.is_running():
+            if self.is_operational():
+                flags |= choices.get("IFF_RUNNING", 0)
+            if self.is_carrier_ok():
+                flags |= choices.get("IFF_LOWER_UP", 0)
+            if self.is_dormant():
+                flags |= choices.get("IFF_DORMANT", 0)
+
+        net_device_flags_enum_flags = Flags(choices)
+        net_device_flags = net_device_flags_enum_flags(flags)
+
+        # It's preferable to provide a deterministic list of items. i.e. for testing
+        return sorted(net_device_flags)
 
     @property
     def promisc(self):
@@ -1326,6 +1427,22 @@ class net_device(objects.StructType):
         except ValueError:
             vollog.warning(f"Invalid net_device operational state '{self.operstate}'")
             return UnparsableValue()
+
+    def get_qdisc_name(self) -> str:
+        """Return the network device queuing discipline (qdisc) name
+
+        Returns:
+            str: A string with the queuing discipline (qdisc) name
+        """
+        return utility.array_to_string(self.qdisc.ops.id)
+
+    def get_queue_length(self) -> int:
+        """Return the netwrok device transmision qeueue length (qlen)
+
+        Returns:
+            int: the netwrok device transmision qeueue length (qlen)
+        """
+        return self.tx_queue_len
 
 
 class in_device(objects.StructType):

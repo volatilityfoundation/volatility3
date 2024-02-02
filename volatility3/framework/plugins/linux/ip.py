@@ -6,7 +6,6 @@ from typing import List
 from volatility3.framework import interfaces, renderers, constants
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
-from volatility3.framework.objects import utility
 
 
 class Addr(plugins.PluginInterface):
@@ -30,7 +29,7 @@ class Addr(plugins.PluginInterface):
         mac_addr = net_dev.get_mac_address()
         promisc = net_dev.promisc
         operational_state = net_dev.get_operational_state()
-        iface_name = utility.array_to_string(net_dev.name)
+        iface_name = net_dev.get_device_name()
         iface_ifindex = net_dev.ifindex
         try:
             net_ns_id = net_dev.get_net_namespace_id()
@@ -77,6 +76,94 @@ class Addr(plugins.PluginInterface):
             ("Prefix", int),
             ("Scope Type", str),
             ("State", str),
+        ]
+
+        return renderers.TreeGrid(headers, self._generator())
+
+
+class Link(plugins.PluginInterface):
+    """Lists information about network interfaces similar to `ip link show`"""
+
+    _required_framework_version = (2, 0, 0)
+    _version = (1, 0, 0)
+
+    @classmethod
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+        return [
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            )
+        ]
+
+    def _gather_net_dev_link_info(self, net_device):
+        mac_addr = net_device.get_mac_address()
+        operational_state = net_device.get_operational_state()
+        iface_name = net_device.get_device_name()
+        mtu = net_device.mtu
+        qdisc_name = net_device.get_qdisc_name()
+        qlen = net_device.get_queue_length()
+
+        # Format flags to string. Drop IFF_ to match iproute2 'ip link' output.
+        # Also, note that iproute2 removes IFF_RUNNING, see print_link_flags()
+        flags_list = [
+            flag.replace("IFF_", "")
+            for flag in net_device.get_flag_names()
+            if flag != "IFF_RUNNING"
+        ]
+        flags_str = ",".join(flags_list)
+
+        yield iface_name, mac_addr, operational_state, mtu, qdisc_name, qlen, flags_str
+
+    @classmethod
+    def list_net_devices(
+        cls,
+        vmlinux: interfaces.context.ModuleInterface,
+    ) -> (interfaces.objects.ObjectInterface, interfaces.objects.ObjectInterface):
+        """Lists network devices
+
+        Args:
+            vmlinux (ModuleInterface): The kernel symbols object
+
+        Yields:
+            tuple:
+                net: Network namespace
+                net_device: Network device structure
+        """
+        table_name = vmlinux.symbol_table_name
+        net_type_symname = table_name + constants.BANG + "net"
+        net_device_symname = table_name + constants.BANG + "net_device"
+
+        # 'net_namespace_list' exists from kernels >= 2.6.24
+        net_namespace_list = vmlinux.object_from_symbol("net_namespace_list")
+        for net in net_namespace_list.to_list(net_type_symname, "list"):
+            for net_device in net.dev_base_head.to_list(net_device_symname, "dev_list"):
+                yield net, net_device
+
+    def _generator(self):
+        vmlinux = self.context.modules[self.config["kernel"]]
+
+        for net_dev, net_device in self.list_net_devices(vmlinux):
+            for device_link_info in self._gather_net_dev_link_info(net_device):
+                try:
+                    net_ns_id = net_dev.get_net_namespace_id()
+                except AttributeError:
+                    net_ns_id = renderers.NotAvailableValue()
+
+                fields = [net_ns_id, *device_link_info]
+                yield (0, fields)
+
+    def run(self):
+        headers = [
+            ("NS", int),
+            ("Interface", str),
+            ("MAC", str),
+            ("State", str),
+            ("MTU", int),
+            ("Qdisc", str),
+            ("Qlen", int),
+            ("Flags", str),
         ]
 
         return renderers.TreeGrid(headers, self._generator())
