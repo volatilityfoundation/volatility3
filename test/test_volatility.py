@@ -6,6 +6,7 @@
 #
 
 import os
+import re
 import subprocess
 import sys
 import shutil
@@ -328,6 +329,22 @@ def test_linux_tty_check(image, volatility, python):
 
     assert out.find(b"__kernel__") != -1
     assert out.count(b"\n") >= 5
+    assert rc == 0
+
+
+def test_linux_ip_addr(image, volatility, python):
+    rc, out, err = runvol_plugin("linux.ip.Addr", image, volatility, python)
+    out = out.lower()
+
+    assert re.search(
+        rb"2\s+eth0\s+00:0c:29:8f:ed:ca\s+false\s+192.168.201.161\s+24\s+global\s+up",
+        out,
+    )
+    assert re.search(
+        rb"2\s+eth0\s+00:0c:29:8f:ed:ca\s+false\s+fe80::20c:29ff:fe8f:edca\s+64\s+link\s+up",
+        out,
+    )
+    assert out.count(b"\n") >= 8
     assert rc == 0
 
 
