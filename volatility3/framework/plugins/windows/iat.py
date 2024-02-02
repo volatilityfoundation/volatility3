@@ -50,7 +50,7 @@ class IAT(interfaces.plugins.PluginInterface):
                 )
 
                 if proc_layer_name is None:
-                    raise TypeError("Layer must be a string not None")
+                    raise TypeError("add_process_layer failed")
 
                 pe_table_name = intermed.IntermediateSymbolTable.create(
                     self.context,
