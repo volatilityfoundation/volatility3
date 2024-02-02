@@ -104,6 +104,10 @@ class Link(plugins.PluginInterface):
         mtu = net_device.mtu
         qdisc_name = net_device.get_qdisc_name()
         qlen = net_device.get_queue_length()
+        try:
+            net_ns_id = net_device.get_net_namespace_id()
+        except AttributeError:
+            net_ns_id = renderers.NotAvailableValue()
 
         # Format flags to string. Drop IFF_ to match iproute2 'ip link' output.
         # Also, note that iproute2 removes IFF_RUNNING, see print_link_flags()
@@ -114,45 +118,20 @@ class Link(plugins.PluginInterface):
         ]
         flags_str = ",".join(flags_list)
 
-        yield iface_name, mac_addr, operational_state, mtu, qdisc_name, qlen, flags_str
-
-    @classmethod
-    def list_net_devices(
-        cls,
-        vmlinux: interfaces.context.ModuleInterface,
-    ) -> (interfaces.objects.ObjectInterface, interfaces.objects.ObjectInterface):
-        """Lists network devices
-
-        Args:
-            vmlinux (ModuleInterface): The kernel symbols object
-
-        Yields:
-            tuple:
-                net: Network namespace
-                net_device: Network device structure
-        """
-        table_name = vmlinux.symbol_table_name
-        net_type_symname = table_name + constants.BANG + "net"
-        net_device_symname = table_name + constants.BANG + "net_device"
-
-        # 'net_namespace_list' exists from kernels >= 2.6.24
-        net_namespace_list = vmlinux.object_from_symbol("net_namespace_list")
-        for net in net_namespace_list.to_list(net_type_symname, "list"):
-            for net_device in net.dev_base_head.to_list(net_device_symname, "dev_list"):
-                yield net, net_device
+        yield net_ns_id, iface_name, mac_addr, operational_state, mtu, qdisc_name, qlen, flags_str
 
     def _generator(self):
         vmlinux = self.context.modules[self.config["kernel"]]
 
-        for net_dev, net_device in self.list_net_devices(vmlinux):
-            for device_link_info in self._gather_net_dev_link_info(net_device):
-                try:
-                    net_ns_id = net_dev.get_net_namespace_id()
-                except AttributeError:
-                    net_ns_id = renderers.NotAvailableValue()
+        net_type_symname = vmlinux.symbol_table_name + constants.BANG + "net"
+        net_device_symname = vmlinux.symbol_table_name + constants.BANG + "net_device"
 
-                fields = [net_ns_id, *device_link_info]
-                yield (0, fields)
+        # 'net_namespace_list' exists from kernels >= 2.6.24
+        net_namespace_list = vmlinux.object_from_symbol("net_namespace_list")
+        for net_ns in net_namespace_list.to_list(net_type_symname, "list"):
+            for net_dev in net_ns.dev_base_head.to_list(net_device_symname, "dev_list"):
+                for fields in self._gather_net_dev_link_info(net_dev):
+                    yield 0, fields
 
     def run(self):
         headers = [
