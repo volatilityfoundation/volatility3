@@ -1,3 +1,7 @@
+# This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
+#
+
 from typing import Iterable, Generator, List, Tuple
 
 from volatility3.framework import constants, interfaces, renderers
