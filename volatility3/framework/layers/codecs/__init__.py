@@ -1,6 +1,13 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
-#
+
+
+# Temporary comment: 
+# Both decompression algorithm are implemented differently. 
+# The LZ77+Huffman decompression algorithm is largely inspired from the velocidex implementation.
+# Need to know if we choose to raise an exeception inside the decompression algorithm (like plain LZ77) or along with the result (like the Huffman+LZ77)
+# Both methods are presented here but this will need some discussions in the PR to choose a convention.
+
 import struct, logging
 from typing import Tuple, List, Union
 vollog = logging.getLogger(__name__)
@@ -198,6 +205,11 @@ def lz77_huffman_decompress_chunck(in_idx: int,
 
 
 def lz77_huffman_decompress(input: bytes, output_size: int) -> Tuple[bytes, Union[None, Exception]]:
+    """
+    Refs : 
+        - https://learn.microsoft.com/en-us/windows/win32/cmpapi/using-the-compression-api
+        - https://raw.githubusercontent.com/Velocidex/go-prefetch/master/lzxpress.go
+    """
     output = bytearray(output_size)
     err = None
 
@@ -208,8 +220,8 @@ def lz77_huffman_decompress(input: bytes, output_size: int) -> Tuple[bytes, Unio
     out_idx = 0
 
     while True:
-        # How much data belongs in the current chunk. Chunks
-        # are split into maximum 65536 bytes.
+        # How much data belongs in the current chunk.
+        # Chunks are split into maximum 65536 bytes.
         chunk_size = output_size - out_idx
         if chunk_size > 65536:
             chunk_size = 65536
@@ -223,6 +235,10 @@ def lz77_huffman_decompress(input: bytes, output_size: int) -> Tuple[bytes, Unio
     return output, None
 
 def lz77_plain_decompress(in_buf):
+    """
+    Refs : 
+        - https://learn.microsoft.com/en-us/windows/win32/cmpapi/using-the-compression-api
+    """
     out_idx = 0
     in_idx = 0
     nibble_idx = 0
@@ -287,6 +303,5 @@ def lz77_plain_decompress(in_buf):
                     raise ValueError('CorruptedData')
                 out_buf.append(out_buf[out_idx - offset])
                 out_idx += 1
-
     return bytes(out_buf)
 
