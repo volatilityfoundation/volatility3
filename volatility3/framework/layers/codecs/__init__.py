@@ -2,14 +2,15 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 
 
-# Temporary comment: 
-# Both decompression algorithm are implemented differently. 
+# Temporary comment:
+# Both decompression algorithm are implemented differently.
 # The LZ77+Huffman decompression algorithm is largely inspired from the velocidex implementation.
 # Need to know if we choose to raise an exeception inside the decompression algorithm (like plain LZ77) or along with the result (like the Huffman+LZ77)
 # Both methods are presented here but this will need some discussions in the PR to choose a convention.
 
 import struct, logging
 from typing import Tuple, List, Union
+
 vollog = logging.getLogger(__name__)
 
 
@@ -18,8 +19,8 @@ class BitStream:
         self.source = source
         self.index = in_pos + 4
         # read UInt16 little endian
-        mask = struct.unpack_from('<H', source, in_pos)[0] << 16
-        mask += struct.unpack_from('<H', source, in_pos + 2)[0]
+        mask = struct.unpack_from("<H", source, in_pos)[0] << 16
+        mask += struct.unpack_from("<H", source, in_pos + 2)[0]
         self.mask = mask
         self.bits = 32
 
@@ -27,15 +28,18 @@ class BitStream:
         if n == 0:
             return 0
         return self.mask >> (32 - n)
-        
+
     def skip(self, n: int) -> Union[None, Exception]:
-        self.mask = ((self.mask << n) & 0xFFFFFFFF)
+        self.mask = (self.mask << n) & 0xFFFFFFFF
         self.bits -= n
         if self.bits < 16:
             if self.index + 2 > len(self.source):
                 return Exception("EOF Error")
             # read UInt16 little endian
-            self.mask += ((struct.unpack_from('<H', self.source, self.index)[0]) << (16 - self.bits)) & 0xFFFFFFFF 
+            self.mask += (
+                (struct.unpack_from("<H", self.source, self.index)[0])
+                << (16 - self.bits)
+            ) & 0xFFFFFFFF
             self.index += 2
             self.bits += 16
 
@@ -43,6 +47,8 @@ class BitStream:
 
     def __str__(self):
         return f"{self.id}: symbol {self.symbol} length {self.length}"
+
+
 class PREFIX_CODE_NODE:
     def __init__(self):
         self.id = 0
@@ -52,6 +58,7 @@ class PREFIX_CODE_NODE:
 
     def __str__(self):
         return f"Node {self.id}: symbol {self.symbol} leaf {self.leaf}"
+
 
 class PREFIX_CODE_SYMBOL:
     def __init__(self):
@@ -63,7 +70,9 @@ class PREFIX_CODE_SYMBOL:
         return f"Symbol {self.id}: symbol {self.symbol} length {self.length}"
 
 
-def prefix_code_tree_add_leaf(treeNodes: List[PREFIX_CODE_NODE], leafIndex: int, mask: int, bits: int) -> int:
+def prefix_code_tree_add_leaf(
+    treeNodes: List[PREFIX_CODE_NODE], leafIndex: int, mask: int, bits: int
+) -> int:
     node = treeNodes[0]
     i = leafIndex + 1
     childIndex = None
@@ -77,9 +86,10 @@ def prefix_code_tree_add_leaf(treeNodes: List[PREFIX_CODE_NODE], leafIndex: int,
             i += 1
         node = node.child[childIndex]
 
-    node.child[mask&1] = treeNodes[leafIndex]
+    node.child[mask & 1] = treeNodes[leafIndex]
 
     return i
+
 
 def prefix_code_tree_rebuild(input: bytes) -> PREFIX_CODE_NODE:
     treeNodes = [PREFIX_CODE_NODE() for _ in range(1024)]
@@ -88,15 +98,15 @@ def prefix_code_tree_rebuild(input: bytes) -> PREFIX_CODE_NODE:
     for i in range(256):
         value = input[i]
 
-        symbolInfo[2*i].id = 2 * i
-        symbolInfo[2*i].symbol = 2 * i
-        symbolInfo[2*i].length = value & 0xf
+        symbolInfo[2 * i].id = 2 * i
+        symbolInfo[2 * i].symbol = 2 * i
+        symbolInfo[2 * i].length = value & 0xF
 
         value >>= 4
 
-        symbolInfo[2*i+1].id = 2*i + 1
-        symbolInfo[2*i+1].symbol = 2*i + 1
-        symbolInfo[2*i+1].length = value & 0xf
+        symbolInfo[2 * i + 1].id = 2 * i + 1
+        symbolInfo[2 * i + 1].symbol = 2 * i + 1
+        symbolInfo[2 * i + 1].length = value & 0xF
 
     symbolInfo = sorted(symbolInfo, key=lambda x: (x.length, x.symbol))
 
@@ -123,7 +133,10 @@ def prefix_code_tree_rebuild(input: bytes) -> PREFIX_CODE_NODE:
 
     return root
 
-def prefix_code_tree_decode_symbol(bstr: BitStream, root: PREFIX_CODE_NODE) -> Tuple[int, Union[None, Exception]]:
+
+def prefix_code_tree_decode_symbol(
+    bstr: BitStream, root: PREFIX_CODE_NODE
+) -> Tuple[int, Union[None, Exception]]:
     node = root
     i = 0
     while True:
@@ -142,27 +155,26 @@ def prefix_code_tree_decode_symbol(bstr: BitStream, root: PREFIX_CODE_NODE) -> T
             break
     return node.symbol, None
 
-def lz77_huffman_decompress_chunck(in_idx: int, 
-                                   input: bytes, 
-                                   out_idx: int, 
-                                   output: bytearray, 
-                                   chunk_size: int) -> Tuple[int, int, Union[None, Exception]]:
-    
+
+def lz77_huffman_decompress_chunck(
+    in_idx: int, input: bytes, out_idx: int, output: bytearray, chunk_size: int
+) -> Tuple[int, int, Union[None, Exception]]:
+
     # Ensure there are at least 256 bytes available to read
     if in_idx + 256 > len(input):
         return 0, 0, Exception("EOF Error")
 
     root = prefix_code_tree_rebuild(input[in_idx:])
-    bstr = BitStream(input, in_idx+256)
+    bstr = BitStream(input, in_idx + 256)
 
     i = out_idx
 
     while i < out_idx + chunk_size:
         symbol, err = prefix_code_tree_decode_symbol(bstr, root)
-        
+
         if err is not None:
             return int(bstr.index), i, err
-        
+
         if symbol < 256:
             output[i] = symbol
             i += 1
@@ -181,32 +193,34 @@ def lz77_huffman_decompress_chunck(in_idx: int,
             if length == 15:
                 length = bstr.source[bstr.index] + 15
                 bstr.index += 1
-                
+
                 if length == 270:
-                    length = struct.unpack_from('<H', bstr.source, bstr.index)[0]
+                    length = struct.unpack_from("<H", bstr.source, bstr.index)[0]
                     bstr.index += 2
 
             err = bstr.skip(symbol)
             if err is not None:
                 return int(bstr.index), i, err
-            
+
             length += 3
             while length > 0:
                 if i + offset < 0:
                     vollog.warning("Some data could not be decompressed.")
                     return int(bstr.index), i, Exception("Decompression Error")
-                
+
                 output[i] = output[i + offset]
                 i += 1
                 length -= 1
-                if length==0:
+                if length == 0:
                     break
     return int(bstr.index), i, None
 
 
-def lz77_huffman_decompress(input: bytes, output_size: int) -> Tuple[bytes, Union[None, Exception]]:
+def lz77_huffman_decompress(
+    input: bytes, output_size: int
+) -> Tuple[bytes, Union[None, Exception]]:
     """
-    Refs : 
+    Refs :
         - https://learn.microsoft.com/en-us/windows/win32/cmpapi/using-the-compression-api
         - https://raw.githubusercontent.com/Velocidex/go-prefetch/master/lzxpress.go
     """
@@ -227,16 +241,18 @@ def lz77_huffman_decompress(input: bytes, output_size: int) -> Tuple[bytes, Unio
             chunk_size = 65536
 
         in_idx, out_idx, err = lz77_huffman_decompress_chunck(
-            in_idx, input, out_idx, output, chunk_size)
+            in_idx, input, out_idx, output, chunk_size
+        )
         if err is not None:
             return output, err
         if out_idx >= len(output) or in_idx >= len(input):
             break
     return output, None
 
+
 def lz77_plain_decompress(in_buf):
     """
-    Refs : 
+    Refs :
         - https://learn.microsoft.com/en-us/windows/win32/cmpapi/using-the-compression-api
     """
     out_idx = 0
@@ -250,7 +266,7 @@ def lz77_plain_decompress(in_buf):
 
     while in_idx < len(in_buf):
         if flag_count == 0:
-            flags = struct.unpack('<I', in_buf[in_idx:in_idx+4])[0]
+            flags = struct.unpack("<I", in_buf[in_idx : in_idx + 4])[0]
             in_idx += 4
             flag_count = 32
 
@@ -263,8 +279,8 @@ def lz77_plain_decompress(in_buf):
         else:
             if in_idx == len(in_buf):
                 return bytes(out_buf)
-            
-            length = struct.unpack('<H', in_buf[in_idx:in_idx+2])[0]
+
+            length = struct.unpack("<H", in_buf[in_idx : in_idx + 2])[0]
             in_idx += 2
 
             offset = (length // 8) + 1
@@ -284,15 +300,15 @@ def lz77_plain_decompress(in_buf):
                     in_idx += 1
 
                     if length == 255:
-                        length = struct.unpack('<H', in_buf[in_idx:in_idx+2])[0]
+                        length = struct.unpack("<H", in_buf[in_idx : in_idx + 2])[0]
                         in_idx += 2
 
                         if length == 0:
-                            length = struct.unpack('<I', in_buf[in_idx:in_idx+4])[0]
+                            length = struct.unpack("<I", in_buf[in_idx : in_idx + 4])[0]
                             in_idx += 4
 
                         if length < 15 + 7:
-                            raise ValueError('CorruptedData')
+                            raise ValueError("CorruptedData")
                         length -= 15 + 7
                     length += 15
                 length += 7
@@ -300,8 +316,7 @@ def lz77_plain_decompress(in_buf):
 
             for _ in range(length):
                 if offset > out_idx:
-                    raise ValueError('CorruptedData')
+                    raise ValueError("CorruptedData")
                 out_buf.append(out_buf[out_idx - offset])
                 out_idx += 1
     return bytes(out_buf)
-
