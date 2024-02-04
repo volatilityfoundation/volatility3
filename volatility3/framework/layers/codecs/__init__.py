@@ -80,7 +80,7 @@ def prefix_code_tree_add_leaf(
     while bits > 1:
         bits -= 1
         childIndex = (mask >> bits) & 1
-        if node.child[childIndex] == None:
+        if not node.child[childIndex]:
             node.child[childIndex] = treeNodes[i]
             treeNodes[i].leaf = False
             i += 1
@@ -138,7 +138,6 @@ def prefix_code_tree_decode_symbol(
     bstr: BitStream, root: PREFIX_CODE_NODE
 ) -> Tuple[int, Union[None, Exception]]:
     node = root
-    i = 0
     while True:
         bit = bstr.lookup(1)
         err = bstr.skip(1)
@@ -147,10 +146,9 @@ def prefix_code_tree_decode_symbol(
             return 0, err
 
         node = node.child[bit]
-        if node == None:
+        if not node:
             vollog.warning("Corruption detected when decompressing the data.")
             return 0, Exception("Corruption detected")
-
         if node.leaf:
             break
     return node.symbol, None
