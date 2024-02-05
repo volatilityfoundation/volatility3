@@ -173,8 +173,8 @@ class XenCoreDumpStacker(elf.Elf64Stacker):
             vollog.log(constants.LOGLEVEL_VVVV, f"Exception: {excp}")
             return None
         new_name = context.layers.free_layer_name("XenCoreDumpLayer")
-        context.config[
-            interfaces.configuration.path_join(new_name, "base_layer")
-        ] = layer_name
+        context.config[interfaces.configuration.path_join(new_name, "base_layer")] = (
+            layer_name
+        )
 
         return XenCoreDumpLayer(context, new_name, new_name)

@@ -1,6 +1,7 @@
 # This file is Copyright 2021 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import re
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -9,12 +10,10 @@ from typing import Generator, Iterator, List, Tuple
 from volatility3.framework import (
     class_subclasses,
     constants,
-    contexts,
     interfaces,
     renderers,
 )
 from volatility3.framework.configuration import requirements
-from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
 
 vollog = logging.getLogger(__name__)
@@ -82,7 +81,7 @@ class ABCKmsg(ABC):
             config: Core configuration
 
         Yields:
-            kmsg records
+            The kmsg records. Same as run()
         """
         vmlinux = context.modules[config["kernel"]]
 
@@ -102,18 +101,26 @@ class ABCKmsg(ABC):
                 subclass.__name__,
             )
             kmsg_inst = subclass(context=context, config=config)
-            # More than one class could be executed for an specific kernel
-            # version i.e. Netfilter Ingress hooks
-            # We expect just one implementation to be executed for an specific kernel
             yield from kmsg_inst.run()
+            # So far, it only allows a single implementation to be executed for each
+            # specific kernel.
             break
 
         if kmsg_inst is None:
-            vollog.error("Unsupported Netfilter kernel implementation")
+            vollog.error("Unsupported kernel ring buffer implementation")
 
     @abstractmethod
     def run(self) -> Iterator[Tuple[str, str, str, str, str]]:
-        """Walks through the specific kernel implementation."""
+        """Walks through the specific kernel implementation.
+
+        Returns:
+            tuple:
+                facility [str]: The log facility: kern, user, etc. See FACILITIES
+                level [str]: The log level: info, debug, etc. See LEVELS
+                timestamp [str]: The message timestamp. See nsec_to_sec_str()
+                caller [str]: The caller ID: CPU(1) or Task(1234). See get_caller()
+                line [str]: The log message.
+        """
 
     @classmethod
     @abstractmethod
@@ -123,7 +130,8 @@ class ABCKmsg(ABC):
         The first class returning True will be instantiated and called via the
         run() method.
 
-        :return: True is the kernel being analysed fulfill the class requirements.
+        Returns:
+            bool: True if the kernel being analyzed fulfill the class requirements.
         """
 
     def get_string(self, addr: int, length: int) -> str:
@@ -143,7 +151,7 @@ class ABCKmsg(ABC):
         return "%lu.%06lu" % (nsec / 1000000000, (nsec % 1000000000) / 1000)
 
     def get_timestamp_in_sec_str(self, obj) -> str:
-        # obj could be printk_log or printk_info
+        # obj could be log, printk_log or printk_info
         return self.nsec_to_sec_str(obj.ts_nsec)
 
     def get_caller(self, obj):
@@ -153,7 +161,7 @@ class ABCKmsg(ABC):
         if obj.has_member("caller_id"):
             return self.get_caller_text(obj.caller_id)
         else:
-            return ""
+            return renderers.NotAvailableValue()
 
     def get_caller_text(self, caller_id):
         caller_name = "CPU" if caller_id & 0x80000000 else "Task"
@@ -161,7 +169,7 @@ class ABCKmsg(ABC):
         return caller
 
     def get_prefix(self, obj) -> Tuple[int, int, str, str]:
-        # obj could be printk_log or printk_info
+        # obj could be log, printk_log or printk_info
         return (
             obj.facility,
             obj.level,
@@ -186,39 +194,90 @@ class ABCKmsg(ABC):
             return str(facility)
 
 
-class KmsgLegacy(ABCKmsg):
-    """Linux kernels prior to v5.10, the ringbuffer is initially kept in
-    __log_buf, and log_buf is a pointer to the former. __log_buf is declared as
-    a char array but it actually contains an array of printk_log structs.
-    The length of this array is defined in the kernel KConfig configuration via
-    the CONFIG_LOG_BUF_SHIFT value as a power of 2.
-    This can also be modified by the log_buf_len kernel boot parameter.
-    In SMP systems with more than 64 CPUs this ringbuffer size is dynamically
-    allocated according the number of CPUs based on the value of
-    CONFIG_LOG_CPU_MAX_BUF_SHIFT, and the log_buf pointer is updated
-    consequently to the new buffer.
-    In that case, the original static buffer in __log_buf is unused.
+class Kmsg_pre_3_5(ABCKmsg):
+    """The kernel ring buffer (log_buf) is a char array that sequentially stores
+    log lines, each separated by newline (LF) characters. i.e:
+        <6>[ 9565.250411] line1!\n<6>[ 9565.250412] line2\n...
     """
 
     @classmethod
     def symtab_checks(cls, vmlinux) -> bool:
-        return vmlinux.has_type("printk_log")
+        return (
+            vmlinux.has_symbol("log_end")
+            and not vmlinux.has_symbol("log_first_idx")
+            and not (
+                vmlinux.has_type("log")
+                and vmlinux.get_type("log").has_member("ts_nsec")
+            )
+        )
 
-    def get_text_from_printk_log(self, msg) -> str:
-        msg_offset = msg.vol.offset + self.vmlinux.get_type("printk_log").size
+    def run(self) -> Iterator[Tuple[str, str, str, str, str]]:
+        log_buf_ptr = self.vmlinux.object_from_symbol(symbol_name="log_buf")
+        log_buf_len = self.vmlinux.object_from_symbol(symbol_name="log_buf_len")
+        log_buf = utility.pointer_to_string(log_buf_ptr, count=log_buf_len)
+        log_end = self.vmlinux.object_from_symbol(symbol_name="log_end")
+
+        if log_end > log_buf_len:
+            start = log_end - log_buf_len
+            first_half = log_buf[start:]
+            second_half = log_buf[:start]
+            log_buf = first_half + second_half
+
+        log_buf_lines = log_buf.splitlines()
+
+        for log_buf_line in log_buf_lines:
+            m = re.match(r"<(\d+)>\[\s*(\d+\.\d+)\]\s(.*?)$", log_buf_line)
+            if not m:
+                # If there was a wrap-around in the ring buffer, it will find
+                # remnants at the top. As those remnants do not conform to the
+                # expected line format, they are discarded
+                continue
+
+            level_facility_str, timestamp_str, line = m.groups()
+            level_facility = int(level_facility_str)
+            # The lower 3 bit are the log level, the rest are the log facility
+            level = level_facility & 7
+            facility = level_facility >> 3
+            level_txt = self.get_level_text(level)
+            facility_txt = self.get_facility_text(facility)
+            caller = renderers.NotAvailableValue()
+            yield facility_txt, level_txt, timestamp_str, caller, line
+
+
+class Kmsg_3_5_to_3_11(ABCKmsg):
+    """While 'log_buf' is declared as a pointer and '__log_buf' as a char array,
+    it essentially holds an array of 'log' structs.
+    """
+
+    @classmethod
+    def symtab_checks(cls, vmlinux) -> bool:
+        return (
+            vmlinux.has_type("log")
+            and vmlinux.get_type("log").has_member("ts_nsec")
+            and vmlinux.has_symbol("log_first_idx")
+        )
+
+    def _get_log_struct_name(self):
+        return "log"
+
+    def get_text_from_log(self, msg) -> str:
+        log_struct_name = self._get_log_struct_name()
+        log_struct_size = self.vmlinux.get_type(log_struct_name).size
+        msg_offset = msg.vol.offset + log_struct_size
         return self.get_string(msg_offset, msg.text_len)
 
     def get_log_lines(self, msg) -> Generator[str, None, None]:
         if msg.text_len > 0:
-            text = self.get_text_from_printk_log(msg)
+            text = self.get_text_from_log(msg)
             yield from text.splitlines()
 
     def get_dict_lines(self, msg) -> Generator[str, None, None]:
         if msg.dict_len == 0:
             return None
-        dict_offset = (
-            msg.vol.offset + self.vmlinux.get_type("printk_log").size + msg.text_len
-        )
+
+        log_struct_name = self._get_log_struct_name()
+        log_struct_size = self.vmlinux.get_type(log_struct_name).size
+        dict_offset = msg.vol.offset + log_struct_size + msg.text_len
         dict_data = self._context.layers[self.layer_name].read(
             dict_offset, msg.dict_len
         )
@@ -226,29 +285,41 @@ class KmsgLegacy(ABCKmsg):
             yield " " + chunk.decode()
 
     def run(self) -> Iterator[Tuple[str, str, str, str, str]]:
-        log_buf_ptr = self.vmlinux.object_from_symbol(symbol_name="log_buf")
-        if log_buf_ptr == 0:
-            # This is weird, let's fallback to check the static ringbuffer.
-            log_buf_ptr = self.vmlinux.object_from_symbol(
-                symbol_name="__log_buf"
-            ).vol.offset
-            if log_buf_ptr == 0:
-                raise ValueError("Log buffer is not available")
+        # First, the ring buffer size is determined in the kernel configuration
+        # by CONFIG_LOG_BUF_SHIFT. This static buffer is held in the '__log_buf'
+        # global variable, with 'log_buf' serving as a pointer to it.
+        # The user can also update this size using 'log_buf_len' in the
+        # kernel boot parameters. Additionally, in SMP systems with over 64 CPUs,
+        # the ring buffer size dynamically allocates based on the number of CPUs,
+        # following CONFIG_LOG_CPU_MAX_BUF_SHIFT.
+        # In the last two cases mentioned above, the 'log_buf' pointer is
+        # updated to this new buffer. The original static buffer in '__log_buf'
+        # remains unused. Therefore, it is crucial to read from 'log_buf' rather
+        # than '__log_buf'.
 
-        log_first_idx = int(
-            self.vmlinux.object_from_symbol(symbol_name="log_first_idx")
-        )
+        log_buf_ptr = self.vmlinux.object_from_symbol("log_buf")
+        log_buf_len = self.vmlinux.object_from_symbol("log_buf_len")
+
+        log_first_idx = int(self.vmlinux.object_from_symbol("log_first_idx"))
+        log_next_idx = int(self.vmlinux.object_from_symbol("log_next_idx"))
+
+        log_struct_name = self._get_log_struct_name()
+
         cur_idx = log_first_idx
-        end_idx = None  # We don't need log_next_idx here. See below msg.len == 0
-        while cur_idx != end_idx:
-            end_idx = log_first_idx
+        if log_first_idx < log_next_idx:
+            end_idx = log_next_idx
+        else:
+            end_idx = log_buf_len
+
+        while cur_idx < end_idx:
             msg_offset = log_buf_ptr + cur_idx  # type: ignore
-            msg = self.vmlinux.object(object_type="printk_log", offset=msg_offset)
+            msg = self.vmlinux.object(object_type=log_struct_name, offset=msg_offset)
             if msg.len == 0:
-                # As per kernel/printk/printk.c:
+                # As per kernel/printk.c:
                 # A length == 0 for the next message indicates a wrap-around to
                 # the beginning of the buffer.
                 cur_idx = 0
+                end_idx = log_next_idx
             else:
                 facility, level, timestamp, caller = self.get_prefix(msg)
                 level_txt = self.get_level_text(level)
@@ -262,39 +333,53 @@ class KmsgLegacy(ABCKmsg):
                 cur_idx += msg.len
 
 
-class KmsgFiveTen(ABCKmsg):
-    """In 5.10 the kernel ringbuffer implementation changed.
+class Kmsg_3_11_to_5_10(Kmsg_3_5_to_3_11):
+    """Starting from version 3.11, the struct 'log' was renamed to 'printk_log'.
+    While 'log_buf' is declared as a pointer and '__log_buf' as a char array,
+    it essentially holds an array of 'printk_log' structs.
+    """
+
+    @classmethod
+    def symtab_checks(cls, vmlinux) -> bool:
+        return vmlinux.has_type("printk_log")
+
+    def _get_log_struct_name(self):
+        return "printk_log"
+
+
+class Kmsg_5_10_to_(ABCKmsg):
+    """In 5.10 the kernel ring buffer implementation changed.
     Previously only one process should read /proc/kmsg and it is permanently
     open and periodically read by the syslog daemon.
     A high level structure 'printk_ringbuffer' was added to represent the printk
-    ringbuffer which actually contains two ringbuffers. The descriptor ring
+    ring buffer which actually contains two ring buffers. The descriptor ring
     'desc_ring' contains the records' metadata, text offsets and states.
     The data block ring 'text_data_ring' contains the records' text strings.
     A pointer to the high level structure is kept in the prb pointer which is
-    initialized to a static ringbuffer.
+    initialized to a static ring buffer.
 
     .. code-block:: c
 
         static struct printk_ringbuffer *prb = &printk_rb_static;
 
-    In SMP systems with more than 64 CPUs this ringbuffer size is dynamically
+    In SMP systems with more than 64 CPUs this ring buffer size is dynamically
     allocated according the number of CPUs based on the value of
     CONFIG_LOG_CPU_MAX_BUF_SHIFT. The prb pointer is updated consequently to
-    this dynamic ringbuffer in setup_log_buf().
+    this dynamic ring buffer in setup_log_buf().
 
     .. code-block:: c
 
         prb = &printk_rb_dynamic;
 
-    Behind scenes, log_buf is still used as external buffer.
-    When the static printk_ringbuffer struct is initialized, _DEFINE_PRINTKRB
-    sets text_data_ring.data pointer to the address in log_buf which points to
-    the static buffer __log_buff.
-    If a dynamic ringbuffer takes place, setup_log_buf() sets
-    text_data_ring.data of printk_rb_dynamic to the new allocated external
-    buffer via the prb_init function.
-    In that case, the original external static buffer in __log_buf and
-    printk_rb_static are unused.
+    Behind scenes, 'log_buf' is still used as external buffer.
+    When the static 'printk_ringbuffer' struct is initialized, _DEFINE_PRINTKRB
+    sets text_data_ring.data pointer to the address in 'log_buf' which points
+    to the static buffer '__log_buf'.
+    If a dynamic ring buffer takes place, setup_log_buf() sets
+    text_data_ring.data of 'printk_rb_dynamic' to the new allocated external
+    buffer via the 'prb_init' function.
+    In that case, the original external static buffer in '__log_buf' and
+    'printk_rb_static' are unused.
 
     .. code-block:: c
 
@@ -352,7 +437,7 @@ class KmsgFiveTen(ABCKmsg):
 
     def run(self) -> Iterator[Tuple[str, str, str, str, str]]:
         # static struct printk_ringbuffer *prb = &printk_rb_static;
-        ringbuffers = self.vmlinux.object_from_symbol(symbol_name="prb").dereference()
+        ringbuffers = self.vmlinux.object_from_symbol("prb").dereference()
 
         desc_ring = ringbuffers.desc_ring
         text_data_ring = ringbuffers.text_data_ring
@@ -407,12 +492,12 @@ class KmsgFiveTen(ABCKmsg):
             cur_id &= desc_id_mask
 
 
-class Kmsg(plugins.PluginInterface):
+class Kmsg(interfaces.plugins.PluginInterface):
     """Kernel log buffer reader"""
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 1)
+    _version = (1, 0, 2)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

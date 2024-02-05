@@ -20,7 +20,6 @@ try:
 except ImportError:
     HAS_GCSFS = False
 
-from volatility3.framework import exceptions
 from volatility3.framework.layers import resources
 
 vollog = logging.getLogger(__file__)

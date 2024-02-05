@@ -150,12 +150,12 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                 clazz = self.symbol_class
                 # Set the discovered options
                 path_join = interfaces.configuration.path_join
-                context.config[
-                    path_join(config_path, requirement.name, "class")
-                ] = clazz
-                context.config[
-                    path_join(config_path, requirement.name, "isf_url")
-                ] = isf_path
+                context.config[path_join(config_path, requirement.name, "class")] = (
+                    clazz
+                )
+                context.config[path_join(config_path, requirement.name, "isf_url")] = (
+                    isf_path
+                )
                 context.config[
                     path_join(config_path, requirement.name, "symbol_mask")
                 ] = layer.address_mask

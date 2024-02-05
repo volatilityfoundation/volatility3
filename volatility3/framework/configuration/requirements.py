@@ -550,9 +550,9 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
         config_path = interfaces.configuration.path_join(config_path, self.name)
         if not self.matches_required(self._version, self._component.version):
             return {config_path: self}
-        context.config[
-            interfaces.configuration.path_join(config_path, self.name)
-        ] = True
+        context.config[interfaces.configuration.path_join(config_path, self.name)] = (
+            True
+        )
         return {}
 
     @classmethod
