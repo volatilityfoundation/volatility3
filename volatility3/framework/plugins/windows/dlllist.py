@@ -13,7 +13,7 @@ from volatility3.framework.renderers import conversion, format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
 from volatility3.plugins import timeliner
-from volatility3.plugins.windows import info, pslist
+from volatility3.plugins.windows import info, pslist, psscan
 
 vollog = logging.getLogger(__name__)
 
@@ -37,12 +37,20 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 name="pslist", component=pslist.PsList, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
+                name="psscan", component=psscan.PsScan, version=(1, 1, 0)
+            ),
+            requirements.VersionRequirement(
                 name="info", component=info.Info, version=(1, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
                 element_type=int,
                 description="Process IDs to include (all other processes are excluded)",
+                optional=True,
+            ),
+            requirements.IntRequirement(
+                name="offset",
+                description="Process offset in the physical address space",
                 optional=True,
             ),
             requirements.BooleanRequirement(
@@ -221,6 +229,24 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
         kernel = self.context.modules[self.config["kernel"]]
 
+        if self.config["offset"]:
+            procs = psscan.PsScan.scan_processes(
+                self.context,
+                kernel.layer_name,
+                kernel.symbol_table_name,
+                filter_func=psscan.PsScan.create_offset_filter(
+                    self.context.layers[kernel.layer_name],
+                    self.config["offset"],
+                ),
+            )
+        else:
+            procs = pslist.PsList.list_processes(
+                context=self.context,
+                layer_name=kernel.layer_name,
+                symbol_table=kernel.symbol_table_name,
+                filter_func=filter_func,
+            )
+
         return renderers.TreeGrid(
             [
                 ("PID", int),
@@ -232,12 +258,5 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 ("LoadTime", datetime.datetime),
                 ("File output", str),
             ],
-            self._generator(
-                pslist.PsList.list_processes(
-                    context=self.context,
-                    layer_name=kernel.layer_name,
-                    symbol_table=kernel.symbol_table_name,
-                    filter_func=filter_func,
-                )
-            ),
+            self._generator(procs=procs),
         )

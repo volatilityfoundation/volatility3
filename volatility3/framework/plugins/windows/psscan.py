@@ -4,7 +4,7 @@
 
 import datetime
 import logging
-from typing import Iterable, Callable, Optional, Tuple
+from typing import Iterable, Callable, List, Optional, Tuple
 
 from volatility3.framework import renderers, interfaces, layers, exceptions
 from volatility3.framework.configuration import requirements
@@ -58,6 +58,44 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 optional=True,
             ),
         ]
+
+    @classmethod
+    def create_offset_filter(
+        cls,
+        memory: interfaces.layers.DataLayerInterface,
+        offset: int = None,
+        exclude: bool = False,
+    ) -> Callable[[interfaces.objects.ObjectInterface], bool]:
+        """A factory for producing filter functions that filter based on the physical offset of the process.
+
+        Args:
+            offset: A number that is the physical offset to be filtered out
+            memory: Memory object needed to do the offset mapping to physical.
+            exclude: Accept only tasks that are not the offset argument
+        Returns:
+            Filter function to be passed to the list of processes.
+        """
+        if not isinstance(memory, interfaces.layers.DataLayerInterface):
+            raise TypeError("memory object requires an instance of DataLayerInterface")
+
+        filter_func = lambda _: False
+
+        # return physical offset in tuple -> (_, _, physical_offset, _, _)
+        # from the first item in the memory mapping list
+        virtual_to_physical_offset = lambda virtual_offset, memory: list(
+            memory.mapping(offset=virtual_offset, length=0)
+        )[0][2]
+
+        if offset:
+            if exclude:
+                filter_func = (
+                    lambda x: virtual_to_physical_offset(x.vol.offset, memory) == offset
+                )
+            else:
+                filter_func = (
+                    lambda x: virtual_to_physical_offset(x.vol.offset, memory) != offset
+                )
+        return filter_func
 
     @classmethod
     def scan_processes(
