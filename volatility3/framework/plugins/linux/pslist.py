@@ -17,7 +17,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (2, 2, 0)
+    _version = (2, 2, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -128,7 +128,7 @@ class PsList(interfaces.plugins.PluginInterface):
         else:
             # Find the vma that belongs to the main ELF of the process
             file_output = "Error outputting file"
-            for v in task.mm.get_mmap_iter():
+            for v in task.mm.get_vma_iter():
                 if v.vm_start == task.mm.start_code:
                     file_handle = elfs.Elfs.elf_dump(
                         self.context,
