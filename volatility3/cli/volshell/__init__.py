@@ -56,7 +56,7 @@ class VolShell(cli.CommandLine):
         framework.require_interface_version(2, 0, 0)
 
         # Load up system defaults
-        delayed_logs, default_config = self.load_system_defaults('volshell.json')
+        delayed_logs, default_config = self.load_system_defaults("volshell.json")
 
         parser = argparse.ArgumentParser(
             prog=self.CLI_NAME,
@@ -151,10 +151,12 @@ class VolShell(cli.CommandLine):
             default=constants.CACHE_PATH,
             type=str,
         )
-        parser.add_argument("--offline",
-                            help = "Do not search online for additional JSON files",
-                            default = False,
-                            action = 'store_true')
+        parser.add_argument(
+            "--offline",
+            help="Do not search online for additional JSON files",
+            default=False,
+            action="store_true",
+        )
 
         # Volshell specific flags
         os_specific = parser.add_mutually_exclusive_group(required=False)
