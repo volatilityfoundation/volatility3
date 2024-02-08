@@ -6,5 +6,5 @@
 
 import volatility3.cli
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     volatility3.cli.main()

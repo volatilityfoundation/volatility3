@@ -23,33 +23,46 @@ class Timers(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 3, 0)),
-            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0))
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="macutils", component=mac.MacUtilities, version=(1, 3, 0)
+            ),
+            requirements.PluginRequirement(
+                name="lsmod", plugin=lsmod.Lsmod, version=(2, 0, 0)
+            ),
         ]
 
     def _generator(self):
-        kernel = self.context.modules[self.config['kernel']]
+        kernel = self.context.modules[self.config["kernel"]]
 
-        mods = lsmod.Lsmod.list_modules(self.context, self.config['kernel'])
+        mods = lsmod.Lsmod.list_modules(self.context, self.config["kernel"])
 
-        handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, kernel.layer_name, kernel, mods)
+        handlers = mac.MacUtilities.generate_kernel_handler_info(
+            self.context, kernel.layer_name, kernel, mods
+        )
 
-        real_ncpus = kernel.object_from_symbol(symbol_name = "real_ncpus")
+        real_ncpus = kernel.object_from_symbol(symbol_name="real_ncpus")
 
         cpu_data_ptrs_ptr = kernel.get_symbol("cpu_data_ptr").address
 
         # Returns the a pointer to the absolute address
-        cpu_data_ptrs_addr = kernel.object(object_type = "pointer",
-                                           offset = cpu_data_ptrs_ptr,
-                                           subtype = kernel.get_type('long unsigned int'))
+        cpu_data_ptrs_addr = kernel.object(
+            object_type="pointer",
+            offset=cpu_data_ptrs_ptr,
+            subtype=kernel.get_type("long unsigned int"),
+        )
 
-        cpu_data_ptrs = kernel.object(object_type = "array",
-                                      offset = cpu_data_ptrs_addr,
-                                      absolute = True,
-                                      subtype = kernel.get_type('cpu_data'),
-                                      count = real_ncpus)
+        cpu_data_ptrs = kernel.object(
+            object_type="array",
+            offset=cpu_data_ptrs_addr,
+            absolute=True,
+            subtype=kernel.get_type("cpu_data"),
+            count=real_ncpus,
+        )
 
         for cpu_data_ptr in cpu_data_ptrs:
             try:
@@ -68,13 +81,33 @@ class Timers(plugins.PluginInterface):
                 else:
                     entry_time = -1
 
-                module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, handler,
-                                                                                  self.config['kernel'])
+                module_name, symbol_name = mac.MacUtilities.lookup_module_address(
+                    self.context, handlers, handler, self.config["kernel"]
+                )
 
-                yield (0, (format_hints.Hex(handler), format_hints.Hex(timer.param0), format_hints.Hex(timer.param1),
-                           timer.deadline, entry_time, module_name, symbol_name))
+                yield (
+                    0,
+                    (
+                        format_hints.Hex(handler),
+                        format_hints.Hex(timer.param0),
+                        format_hints.Hex(timer.param1),
+                        timer.deadline,
+                        entry_time,
+                        module_name,
+                        symbol_name,
+                    ),
+                )
 
     def run(self):
-        return renderers.TreeGrid([("Function", format_hints.Hex), ("Param 0", format_hints.Hex),
-                                   ("Param 1", format_hints.Hex), ("Deadline", int), ("Entry Time", int),
-                                   ("Module", str), ("Symbol", str)], self._generator())
+        return renderers.TreeGrid(
+            [
+                ("Function", format_hints.Hex),
+                ("Param 0", format_hints.Hex),
+                ("Param 1", format_hints.Hex),
+                ("Deadline", int),
+                ("Entry Time", int),
+                ("Module", str),
+                ("Symbol", str),
+            ],
+            self._generator(),
+        )

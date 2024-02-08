@@ -24,13 +24,14 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
         # We don't want the action self-check to kick in, so we remove the choices list, the check happens in __call__
         self.choices = None
 
-    def __call__(self,
-                 parser: argparse.ArgumentParser,
-                 namespace: argparse.Namespace,
-                 values: Union[str, Sequence[Any], None],
-                 option_string: Optional[str] = None) -> None:
-
-        parser_name = ''
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: Union[str, Sequence[Any], None],
+        option_string: Optional[str] = None,
+    ) -> None:
+        parser_name = ""
         arg_strings = []  # type: List[str]
         if values is not None:
             for value in values:
@@ -43,7 +44,9 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
         if self.dest != argparse.SUPPRESS:
             setattr(namespace, self.dest, parser_name)
 
-        matched_parsers = [name for name in self._name_parser_map if parser_name in name]
+        matched_parsers = [
+            name for name in self._name_parser_map if parser_name in name
+        ]
 
         if len(matched_parsers) < 1:
             msg = f"invalid choice {parser_name} (choose from {', '.join(self._name_parser_map)})"
@@ -52,7 +55,7 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
             msg = f"plugin {parser_name} matches multiple plugins ({', '.join(matched_parsers)})"
             raise argparse.ArgumentError(self, msg)
         parser = self._name_parser_map[matched_parsers[0]]
-        setattr(namespace, 'plugin', matched_parsers[0])
+        setattr(namespace, "plugin", matched_parsers[0])
 
         # parse all the remaining options into the namespace
         # store any unrecognized options on the object, so that the top
@@ -71,7 +74,6 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
 
 
 class HelpfulArgParser(argparse.ArgumentParser):
-
     def _match_argument(self, action, arg_strings_pattern) -> int:
         # match the pattern for this action to the arg strings
         nargs_pattern = self._get_nargs_pattern(action)
@@ -80,13 +82,18 @@ class HelpfulArgParser(argparse.ArgumentParser):
         # raise an exception if we weren't able to find a match
         if match is None:
             nargs_errors = {
-                None: gettext.gettext('expected one argument'),
-                argparse.OPTIONAL: gettext.gettext('expected at most one argument'),
-                argparse.ONE_OR_MORE: gettext.gettext('expected at least one argument'),
+                None: gettext.gettext("expected one argument"),
+                argparse.OPTIONAL: gettext.gettext("expected at most one argument"),
+                argparse.ONE_OR_MORE: gettext.gettext("expected at least one argument"),
             }
             msg = nargs_errors.get(action.nargs)
             if msg is None:
-                msg = gettext.ngettext('expected %s argument', 'expected %s arguments', action.nargs) % action.nargs
+                msg = (
+                    gettext.ngettext(
+                        "expected %s argument", "expected %s arguments", action.nargs
+                    )
+                    % action.nargs
+                )
             if action.choices:
                 msg = f"{msg} (from: {', '.join(action.choices)})"
             raise argparse.ArgumentError(action, msg)

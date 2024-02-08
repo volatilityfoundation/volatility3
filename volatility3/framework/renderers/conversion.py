@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import contextlib
 import datetime
 import ipaddress
 import socket
@@ -11,7 +11,9 @@ from typing import Union
 from volatility3.framework import interfaces, renderers
 
 
-def wintime_to_datetime(wintime: int) -> Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]:
+def wintime_to_datetime(
+    wintime: int,
+) -> Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]:
     unix_time = wintime // 10000000
     if unix_time == 0:
         return renderers.NotApplicableValue()
@@ -23,14 +25,16 @@ def wintime_to_datetime(wintime: int) -> Union[interfaces.renderers.BaseAbsentVa
         return renderers.UnparsableValue()
 
 
-def unixtime_to_datetime(unixtime: int) -> Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]:
-    ret: Union[interfaces.renderers.BaseAbsentValue, datetime.datetime] = renderers.UnparsableValue()
+def unixtime_to_datetime(
+    unixtime: int,
+) -> Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]:
+    ret: Union[interfaces.renderers.BaseAbsentValue, datetime.datetime] = (
+        renderers.UnparsableValue()
+    )
 
     if unixtime > 0:
-        try:
+        with contextlib.suppress(ValueError):
             ret = datetime.datetime.utcfromtimestamp(unixtime)
-        except ValueError:
-            pass
 
     return ret
 
@@ -51,8 +55,8 @@ def round(addr: int, align: int, up: bool = False) -> int:
         return addr
     else:
         if up:
-            return (addr + (align - (addr % align)))
-        return (addr - (addr % align))
+            return addr + (align - (addr % align))
+        return addr - (addr % align)
 
 
 # For vol3 devs:
@@ -88,7 +92,7 @@ def convert_ipv6(packed_ip):
 
 
 def convert_port(port_as_integer):
-    return (port_as_integer >> 8) | ((port_as_integer & 0xff) << 8)
+    return (port_as_integer >> 8) | ((port_as_integer & 0xFF) << 8)
 
 
 def convert_network_four_tuple(family, four_tuple):
@@ -100,11 +104,19 @@ def convert_network_four_tuple(family, four_tuple):
     """
 
     if family == socket.AF_INET:
-        ret = (convert_ipv4(four_tuple[0]), convert_port(four_tuple[1]), convert_ipv4(four_tuple[2]),
-               convert_port(four_tuple[3]))
+        ret = (
+            convert_ipv4(four_tuple[0]),
+            convert_port(four_tuple[1]),
+            convert_ipv4(four_tuple[2]),
+            convert_port(four_tuple[3]),
+        )
     elif family == socket.AF_INET6:
-        ret = (convert_ipv6(four_tuple[0]), convert_port(four_tuple[1]), convert_ipv6(four_tuple[2]),
-               convert_port(four_tuple[3]))
+        ret = (
+            convert_ipv6(four_tuple[0]),
+            convert_port(four_tuple[1]),
+            convert_ipv6(four_tuple[2]),
+            convert_port(four_tuple[3]),
+        )
     else:
         ret = None
 

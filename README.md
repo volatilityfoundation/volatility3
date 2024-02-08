@@ -20,7 +20,7 @@ more details.
 
 ## Requirements
 
-Volatility 3 requires Python 3.6.0 or later. To install the most minimal set of dependencies (some plugins will not work) use a command such as:
+Volatility 3 requires Python 3.7.0 or later. To install the most minimal set of dependencies (some plugins will not work) use a command such as:
 
 ```shell
 pip3 install -r requirements-minimal.txt
@@ -94,6 +94,9 @@ Symbol tables zip files must be placed, as named, into the `volatility3/symbols`
 
 Windows symbols that cannot be found will be queried, downloaded, generated and cached.  Mac and Linux symbol tables must be manually produced by a tool such as [dwarf2json](https://github.com/volatilityfoundation/dwarf2json).
 
+Important: The first run of volatility with new symbol files will require the cache to be updated.  The symbol packs contain a large number of symbol files and so may take some time to update!
+However, this process only needs to be run once on each new symbol file, so assuming the pack stays in the same location will not need to be done again.  Please also note it can be interrupted and next run will restart itself.
+
 Please note: These are representative and are complete up to the point of creation for Windows and Mac.  Due to the ease of compiling Linux kernels and the inability to uniquely distinguish them, an exhaustive set of Linux symbol tables cannot easily be supplied.
 
 ## Documentation
@@ -104,7 +107,7 @@ The latest generated copy of the documentation can be found at: <https://volatil
 
 ## Licensing and Copyright
 
-Copyright (C) 2007-2022 Volatility Foundation
+Copyright (C) 2007-2024 Volatility Foundation
 
 All Rights Reserved
 

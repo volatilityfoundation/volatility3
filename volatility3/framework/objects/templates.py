@@ -22,13 +22,22 @@ class ObjectTemplate(interfaces.objects.Template):
       * etc
     """
 
-    def __init__(self, object_class: Type[interfaces.objects.ObjectInterface], type_name: str, **arguments) -> None:
-        arguments['object_class'] = object_class
-        super().__init__(type_name = type_name, **arguments)
+    def __init__(
+        self,
+        object_class: Type[interfaces.objects.ObjectInterface],
+        type_name: str,
+        **arguments,
+    ) -> None:
+        arguments["object_class"] = object_class
+        super().__init__(type_name=type_name, **arguments)
 
         proxy_cls = self.vol.object_class.VolTemplateProxy
         for method_name in proxy_cls._methods:
-            setattr(self, method_name, functools.partial(getattr(proxy_cls, method_name), self))
+            setattr(
+                self,
+                method_name,
+                functools.partial(getattr(proxy_cls, method_name), self),
+            )
 
     @property
     def size(self) -> int:
@@ -48,28 +57,45 @@ class ObjectTemplate(interfaces.objects.Template):
         plateProxy`)"""
         return self.vol.object_class.VolTemplateProxy.relative_child_offset(self, child)
 
-    def replace_child(self, old_child: interfaces.objects.Template, new_child: interfaces.objects.Template) -> None:
+    def child_template(self, child: str) -> interfaces.objects.Template:
+        """Returns the template of a child of the templated object (see
+        :class:`~volatility3.framework.interfaces.objects.ObjectInterface.VolTem
+        plateProxy`)"""
+        return self.vol.object_class.VolTemplateProxy.child_template(self, child)
+
+    def replace_child(
+        self,
+        old_child: interfaces.objects.Template,
+        new_child: interfaces.objects.Template,
+    ) -> None:
         """Replaces `old_child` for `new_child` in the templated object's child
         list (see :class:`~volatility3.framework.interfaces.objects.ObjectInterf
         ace.VolTemplateProxy`)"""
-        return self.vol.object_class.VolTemplateProxy.replace_child(self, old_child, new_child)
+        return self.vol.object_class.VolTemplateProxy.replace_child(
+            self, old_child, new_child
+        )
 
     def has_member(self, member_name: str) -> bool:
         """Returns whether the object would contain a member called
         member_name."""
         return self.vol.object_class.VolTemplateProxy.has_member(self, member_name)
 
-    def __call__(self, context: interfaces.context.ContextInterface,
-                 object_info: interfaces.objects.ObjectInformation) -> interfaces.objects.ObjectInterface:
+    def __call__(
+        self,
+        context: interfaces.context.ContextInterface,
+        object_info: interfaces.objects.ObjectInformation,
+    ) -> interfaces.objects.ObjectInterface:
         """Constructs the object.
 
-        Returns: an object adhereing to the :class:`~volatility3.framework.interfaces.objects.ObjectInterface`
+        Returns: an object adhering to the :class:`~volatility3.framework.interfaces.objects.ObjectInterface`
         """
         arguments: Dict[str, Any] = {}
         for arg in self.vol:
-            if arg != 'object_class':
+            if arg != "object_class":
                 arguments[arg] = self.vol[arg]
-        return self.vol.object_class(context = context, object_info = object_info, **arguments)
+        return self.vol.object_class(
+            context=context, object_info=object_info, **arguments
+        )
 
 
 class ReferenceTemplate(interfaces.objects.Template):
@@ -93,14 +119,21 @@ class ReferenceTemplate(interfaces.objects.Template):
             table_name = type_name[0]
         symbol_name = type_name[-1]
         raise exceptions.SymbolError(
-            symbol_name, table_name,
-            f"Template contains no information about its structure: {self.vol.type_name}")
+            symbol_name,
+            table_name,
+            f"Template contains no information about its structure: {self.vol.type_name}",
+        )
 
     size: ClassVar[Any] = property(_unresolved)
     replace_child: ClassVar[Any] = _unresolved
     relative_child_offset: ClassVar[Any] = _unresolved
+    child_template: ClassVar[Any] = _unresolved
     has_member: ClassVar[Any] = _unresolved
 
-    def __call__(self, context: interfaces.context.ContextInterface, object_info: interfaces.objects.ObjectInformation):
+    def __call__(
+        self,
+        context: interfaces.context.ContextInterface,
+        object_info: interfaces.objects.ObjectInformation,
+    ):
         template = context.symbol_space.get_type(self.vol.type_name)
-        return template(context = context, object_info = object_info)
+        return template(context=context, object_info=object_info)

@@ -21,33 +21,45 @@ class Lsof(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
-            requirements.ListRequirement(name = 'pid',
-                                         description = 'Filter on specific process IDs',
-                                         element_type = int,
-                                         optional = True)
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="macutils", component=mac.MacUtilities, version=(1, 0, 0)
+            ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                description="Filter on specific process IDs",
+                element_type=int,
+                optional=True,
+            ),
         ]
 
     def _generator(self, tasks):
-        darwin = self.context.modules[self.config['kernel']]
+        darwin = self.context.modules[self.config["kernel"]]
         for task in tasks:
             pid = task.p_pid
 
-            for _, filepath, fd in mac.MacUtilities.files_descriptors_for_process(self.context,
-                                                                                  darwin.symbol_table_name,
-                                                                                  task):
+            for _, filepath, fd in mac.MacUtilities.files_descriptors_for_process(
+                self.context, darwin.symbol_table_name, task
+            ):
                 if filepath and len(filepath) > 0:
                     yield (0, (pid, fd, filepath))
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
-        list_tasks = pslist.PsList.get_list_tasks(self.config.get('pslist_method', pslist.PsList.pslist_methods[0]))
+        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
+        list_tasks = pslist.PsList.get_list_tasks(
+            self.config.get("pslist_method", pslist.PsList.pslist_methods[0])
+        )
 
-        return renderers.TreeGrid([("PID", int), ("File Descriptor", int), ("File Path", str)],
-                                  self._generator(
-                                      list_tasks(self.context,
-                                                 self.config['kernel'],
-                                                 filter_func = filter_func)))
+        return renderers.TreeGrid(
+            [("PID", int), ("File Descriptor", int), ("File Path", str)],
+            self._generator(
+                list_tasks(self.context, self.config["kernel"], filter_func=filter_func)
+            ),
+        )

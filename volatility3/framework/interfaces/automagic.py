@@ -9,15 +9,17 @@ that a user has not filled.
 """
 import logging
 from abc import ABCMeta
-from typing import Any, List, Optional, Tuple, Union, Type
+from typing import Any, List, Optional, Tuple, Type, Union
 
-from volatility3.framework import interfaces, constants
+from volatility3.framework import constants, interfaces
 from volatility3.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
 
-class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metaclass = ABCMeta):
+class AutomagicInterface(
+    interfaces.configuration.ConfigurableInterface, metaclass=ABCMeta
+):
     """Class that defines an automagic component that can help fulfill
     `Requirements`
 
@@ -43,32 +45,52 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
     exclusion_list = []
     """A list of plugin categories (typically operating systems) which the plugin will not operate on"""
 
-    def __init__(self, context: interfaces.context.ContextInterface, config_path: str, *args, **kwargs) -> None:
+    def __init__(
+        self,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        *args,
+        **kwargs
+    ) -> None:
         super().__init__(context, config_path)
         for requirement in self.get_requirements():
-            if not isinstance(requirement, (interfaces.configuration.SimpleTypeRequirement,
-                                            requirements.ChoiceRequirement, requirements.ListRequirement)):
+            if not isinstance(
+                requirement,
+                (
+                    interfaces.configuration.SimpleTypeRequirement,
+                    requirements.ChoiceRequirement,
+                    requirements.ListRequirement,
+                    requirements.VersionRequirement,
+                ),
+            ):
                 raise TypeError(
-                    "Automagic requirements must be a SimpleTypeRequirement, ChoiceRequirement or ListRequirement")
+                    "Automagic requirements must be a SimpleTypeRequirement, ChoiceRequirement, ListRequirement or VersionRequirement"
+                )
 
-    def __call__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: constants.ProgressCallback = None) -> Optional[List[Any]]:
+    def __call__(
+        self,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        requirement: interfaces.configuration.RequirementInterface,
+        progress_callback: constants.ProgressCallback = None,
+    ) -> Optional[List[Any]]:
         """Runs the automagic over the configurable."""
         return []
 
     # TODO: requirement_type can be made UnionType[Type[T], Tuple[Type[T], ...]]
     #       once mypy properly supports Tuples in instance
 
-    def find_requirements(self,
-                          context: interfaces.context.ContextInterface,
-                          config_path: str,
-                          requirement_root: interfaces.configuration.RequirementInterface,
-                          requirement_type: Union[Tuple[Type[interfaces.configuration.RequirementInterface], ...],
-                                                  Type[interfaces.configuration.RequirementInterface]],
-                          shortcut: bool = True) -> List[Tuple[str, interfaces.configuration.RequirementInterface]]:
+    def find_requirements(
+        self,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        requirement_root: interfaces.configuration.RequirementInterface,
+        requirement_type: Union[
+            Tuple[Type[interfaces.configuration.RequirementInterface], ...],
+            Type[interfaces.configuration.RequirementInterface],
+        ],
+        shortcut: bool = True,
+    ) -> List[Tuple[str, interfaces.configuration.RequirementInterface]]:
         """Determines if there is actually an unfulfilled `Requirement`
         waiting.
 
@@ -84,7 +106,9 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
         Returns:
             A list of tuples containing the config_path, sub_config_path and requirement identifying the unsatisfied `Requirements`
         """
-        sub_config_path = interfaces.configuration.path_join(config_path, requirement_root.name)
+        sub_config_path = interfaces.configuration.path_join(
+            config_path, requirement_root.name
+        )
         results: List[Tuple[str, interfaces.configuration.RequirementInterface]] = []
         recurse = not shortcut
         if isinstance(requirement_root, requirement_type):
@@ -94,11 +118,13 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
             recurse = True
         if recurse:
             for subreq in requirement_root.requirements.values():
-                results += self.find_requirements(context, sub_config_path, subreq, requirement_type, shortcut)
+                results += self.find_requirements(
+                    context, sub_config_path, subreq, requirement_type, shortcut
+                )
         return results
 
 
-class StackerLayerInterface(metaclass = ABCMeta):
+class StackerLayerInterface(metaclass=ABCMeta):
     """Class that takes a lower layer and attempts to build on it.
 
     stack_order determines the order (from low to high) that stacking
@@ -112,10 +138,12 @@ class StackerLayerInterface(metaclass = ABCMeta):
     """The list operating systems/first-level plugin hierarchy that should exclude this stacker"""
 
     @classmethod
-    def stack(self,
-              context: interfaces.context.ContextInterface,
-              layer_name: str,
-              progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
+    def stack(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        progress_callback: constants.ProgressCallback = None,
+    ) -> Optional[interfaces.layers.DataLayerInterface]:
         """Method to determine whether this builder can operate on the named
         layer.  If so, modify the context appropriately.
 
@@ -134,4 +162,5 @@ class StackerLayerInterface(metaclass = ABCMeta):
     @classmethod
     def stacker_slow_warning(cls):
         vollog.warning(
-            "Reads to this layer are slow, it's recommended to use the layerwriter plugin once to produce a raw file")
+            "Reads to this layer are slow, it's recommended to use the layerwriter plugin once to produce a raw file"
+        )

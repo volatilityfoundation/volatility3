@@ -1,0 +1,55 @@
+name: Test Volatility3
+on: [push, pull_request]
+jobs:
+
+  build:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        python-version: ["3.7"]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install Cmake
+        pip install setuptools wheel
+        pip install -r ./test/requirements-testing.txt
+
+    - name: Build PyPi packages
+      run: |
+        python setup.py sdist --formats=gztar,zip
+        python setup.py bdist_wheel
+
+    - name: Download images
+      run: |
+        curl -sLO "https://downloads.volatilityfoundation.org/volatility3/images/linux-sample-1.bin.gz"
+        gunzip linux-sample-1.bin.gz
+        curl -sLO "https://downloads.volatilityfoundation.org/volatility3/images/win-xp-laptop-2005-06-25.img.gz"
+        gunzip win-xp-laptop-2005-06-25.img.gz
+
+    - name: Download and Extract symbols
+      run: |
+        cd ./volatility3/symbols
+        curl -sLO https://downloads.volatilityfoundation.org/volatility3/symbols/linux.zip
+        unzip linux.zip
+        cd -
+
+    - name: Testing...
+      run: |
+        py.test ./test/test_volatility.py --volatility=vol.py --image win-xp-laptop-2005-06-25.img -k test_windows -v
+        py.test ./test/test_volatility.py --volatility=vol.py --image linux-sample-1.bin -k test_linux -v
+
+    - name: Clean up post-test
+      run: |
+        rm -rf *.lime
+        rm -rf *.img
+        cd volatility3/symbols
+        rm -rf linux
+        rm -rf linux.zip
+        cd -

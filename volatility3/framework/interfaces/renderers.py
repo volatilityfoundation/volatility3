@@ -12,14 +12,26 @@ suitable output.
 import datetime
 from abc import abstractmethod, ABCMeta
 from collections import abc
-from typing import Any, Callable, ClassVar, Generator, List, NamedTuple, Optional, TypeVar, Type, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Generator,
+    List,
+    NamedTuple,
+    Optional,
+    TypeVar,
+    Type,
+    Tuple,
+    Union,
+)
 
-Column = NamedTuple('Column', [('name', str), ('type', Any)])
+Column = NamedTuple("Column", [("name", str), ("type", Any)])
 
 RenderOption = Any
 
 
-class Renderer(metaclass = ABCMeta):
+class Renderer(metaclass=ABCMeta):
     """Class that defines the interface that all output renderers must
     support."""
 
@@ -32,12 +44,12 @@ class Renderer(metaclass = ABCMeta):
         """Returns a list of rendering options."""
 
     @abstractmethod
-    def render(self, grid: 'TreeGrid') -> None:
+    def render(self, grid: "TreeGrid") -> None:
         """Takes a grid object and renders it based on the object's
         preferences."""
 
 
-class ColumnSortKey(metaclass = ABCMeta):
+class ColumnSortKey(metaclass=ABCMeta):
     ascending: bool = True
 
     @abstractmethod
@@ -46,14 +58,13 @@ class ColumnSortKey(metaclass = ABCMeta):
         function."""
 
 
-class TreeNode(abc.Sequence, metaclass = ABCMeta):
-
+class TreeNode(abc.Sequence, metaclass=ABCMeta):
     def __init__(self, path, treegrid, parent, values):
         """Initializes the TreeNode."""
 
     @property
     @abstractmethod
-    def values(self) -> List['BaseTypes']:
+    def values(self) -> List["BaseTypes"]:
         """Returns the list of values from the particular node, based on column
         index."""
 
@@ -69,7 +80,7 @@ class TreeNode(abc.Sequence, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def parent(self) -> Optional['TreeNode']:
+    def parent(self) -> Optional["TreeNode"]:
         """Returns the parent node of this node or None."""
 
     @property
@@ -94,9 +105,12 @@ class BaseAbsentValue(object):
 class Disassembly(object):
     """A class to indicate that the bytes provided should be disassembled
     (based on the architecture)"""
-    possible_architectures = ['intel', 'intel64', 'arm', 'arm64']
 
-    def __init__(self, data: bytes, offset: int = 0, architecture: str = 'intel64') -> None:
+    possible_architectures = ["intel", "intel64", "arm", "arm64"]
+
+    def __init__(
+        self, data: bytes, offset: int = 0, architecture: str = "intel64"
+    ) -> None:
         self.data = data
         self.architecture = None
         if architecture in self.possible_architectures:
@@ -110,13 +124,20 @@ class Disassembly(object):
 # contain the types that the validator will accept (which would not include the base)
 
 _Type = TypeVar("_Type")
-BaseTypes = Union[Type[int], Type[str], Type[float], Type[bytes], Type[datetime.datetime], Type[BaseAbsentValue],
-                  Type[Disassembly]]
+BaseTypes = Union[
+    Type[int],
+    Type[str],
+    Type[float],
+    Type[bytes],
+    Type[datetime.datetime],
+    Type[BaseAbsentValue],
+    Type[Disassembly],
+]
 ColumnsType = List[Tuple[str, BaseTypes]]
 VisitorSignature = Callable[[TreeNode, _Type], _Type]
 
 
-class TreeGrid(object, metaclass = ABCMeta):
+class TreeGrid(object, metaclass=ABCMeta):
     """Class providing the interface for a TreeGrid (which contains TreeNodes)
 
     The structure of a TreeGrid is designed to maintain the structure of the tree in a single object.
@@ -129,7 +150,14 @@ class TreeGrid(object, metaclass = ABCMeta):
     and to create cycles.
     """
 
-    base_types: ClassVar[Tuple] = (int, str, float, bytes, datetime.datetime, Disassembly)
+    base_types: ClassVar[Tuple] = (
+        int,
+        str,
+        float,
+        bytes,
+        datetime.datetime,
+        Disassembly,
+    )
 
     def __init__(self, columns: ColumnsType, generator: Generator) -> None:
         """Constructs a TreeGrid object using a specific set of columns.
@@ -149,10 +177,12 @@ class TreeGrid(object, metaclass = ABCMeta):
         """Method used to sanitize column names for TreeNodes."""
 
     @abstractmethod
-    def populate(self,
-                 function: VisitorSignature = None,
-                 initial_accumulator: Any = None,
-                 fail_on_errors: bool = True) -> Optional[Exception]:
+    def populate(
+        self,
+        function: VisitorSignature = None,
+        initial_accumulator: Any = None,
+        fail_on_errors: bool = True,
+    ) -> Optional[Exception]:
         """Populates the tree by consuming the TreeGrid's construction
         generator Func is called on every node, so can be used to create output
         on demand.
@@ -196,11 +226,13 @@ class TreeGrid(object, metaclass = ABCMeta):
         return node.path_depth
 
     @abstractmethod
-    def visit(self,
-              node: Optional[TreeNode],
-              function: VisitorSignature,
-              initial_accumulator: _Type,
-              sort_key: ColumnSortKey = None) -> None:
+    def visit(
+        self,
+        node: Optional[TreeNode],
+        function: VisitorSignature,
+        initial_accumulator: _Type,
+        sort_key: ColumnSortKey = None,
+    ) -> None:
         """Visits all the nodes in a tree, calling function on each one.
 
         function should have the signature function(node, accumulator) and return new_accumulator

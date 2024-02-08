@@ -15,41 +15,53 @@ class Volshell(generic.Volshell):
 
     @classmethod
     def get_requirements(cls):
-        return ([
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel'),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
-            requirements.IntRequirement(name = 'pid', description = "Process ID", optional = True)
-        ])
+        return [
+            requirements.ModuleRequirement(name="kernel", description="Windows kernel"),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            ),
+            requirements.IntRequirement(
+                name="pid", description="Process ID", optional=True
+            ),
+        ]
 
-    def change_process(self, pid = None):
+    def change_process(self, pid=None):
         """Change the current process and layer, based on a process ID"""
         processes = self.list_processes()
         for process in processes:
             if process.UniqueProcessId == pid:
                 process_layer = process.add_process_layer()
                 self.change_layer(process_layer)
-                return
+                return None
         print(f"No process with process ID {pid} found")
 
     def list_processes(self):
         """Returns a list of EPROCESS objects from the primary layer"""
         # We always use the main kernel memory and associated symbols
-        return list(pslist.PsList.list_processes(self.context, self.current_layer, self.current_symbol_table))
+        return list(
+            pslist.PsList.list_processes(
+                self.context, self.current_layer, self.current_symbol_table
+            )
+        )
 
     def construct_locals(self) -> List[Tuple[List[str], Any]]:
         result = super().construct_locals()
         result += [
-            (['cp', 'change_process'], self.change_process),
-            (['lp', 'list_processes', 'ps'], self.list_processes),
-            (['symbols'], self.context.symbol_space[self.current_symbol_table]),
+            (["cp", "change_process"], self.change_process),
+            (["lp", "list_processes", "ps"], self.list_processes),
+            (["symbols"], self.context.symbol_space[self.current_symbol_table]),
         ]
-        if self.config.get('pid', None) is not None:
-            self.change_process(self.config['pid'])
+        if self.config.get("pid", None) is not None:
+            self.change_process(self.config["pid"])
         return result
 
-    def display_type(self,
-                     object: Union[str, interfaces.objects.ObjectInterface, interfaces.objects.Template],
-                     offset: int = None):
+    def display_type(
+        self,
+        object: Union[
+            str, interfaces.objects.ObjectInterface, interfaces.objects.Template
+        ],
+        offset: int = None,
+    ):
         """Display Type describes the members of a particular object in alphabetical order"""
         if isinstance(object, str):
             if constants.BANG not in object:

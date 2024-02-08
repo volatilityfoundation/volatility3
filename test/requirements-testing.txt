@@ -1,0 +1,10 @@
+# These packages are required for core functionality.
+pefile>=2017.8.1 #foo
+
+# The following packages are optional.
+# If certain packages are not necessary, place a comment (#) at the start of the line.
+
+# This is required for the yara plugins
+yara-python>=3.8.0
+
+pytest>=7.0.0

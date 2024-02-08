@@ -9,7 +9,11 @@ Synopsis
 **volatility** [-h] [-c CONFIG] [--parallelism [{processes,threads,off}]]
            [-e EXTEND] [-p PLUGIN_DIRS] [-s SYMBOL_DIRS] [-v] [-l LOG]
            [-o OUTPUT_DIR] [-q] [-r RENDERER] [-f FILE]
-           [--write-config] [--single-location SINGLE_LOCATION]
+           [--write-config] [--save-config SAVE_CONFIG]
+           [--clear-cache] [--cache-path CACHE_PATH]
+           [--offline]
+           [--single-location SINGLE_LOCATION]
+           [--stackers [STACKERS ...]]
            [--single-swap-locations SINGLE_SWAP_LOCATIONS]
            <plugin> ...
 
@@ -98,6 +102,10 @@ Options
     attempt to build upon, and can be considered the input for the program.
 
 --write-config
+    *Deprecated*
+    Use of `--write-config` has been deprecated, replaced by `--save-config`
+
+--save-config
     This flag specifies that volatility should write or overwrite a file
     called config.json in the current directory.  The file will contain
     the necessary JSON configuration to recreate the environment that the
@@ -105,10 +113,24 @@ Options
     other plugins, but there's no guarantee that plugins use the same
     configuration options.
 
+--clear-cache
+    Clears out all short-term cached items.
+
+--cache-path
+    Change the default path used to store the cache.
+
+--offline
+    Do not search online for additional JSON files.
+    Run offline mode (defaults to false) and for
+    remote windows symbol tables, linux/mac banner repositories. 
+
 --single-location SINGLE_LOCATION
     This specifies a URL which will be downloaded if necessary, and built
     upon by the automagic and, since most plugins require a single memory
     image, can be considered the input for the program.
+
+--stackers STACKERS
+    Creates the list of stackers to use based on the config option.
 
 --single-swap-locations SINGLE_SWAP_LOCATIONS
     A comma-separated list of swap files to be considered as part of the

@@ -1,4 +1,4 @@
-# This file is opyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
@@ -11,34 +11,44 @@ from volatility3.plugins.mac import lsmod, kauth_scopes
 
 
 class Kauth_listeners(interfaces.plugins.PluginInterface):
-    """ Lists kauth listeners and their status """
+    """Lists kauth listeners and their status"""
 
     _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 1, 0)),
-            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0)),
-            requirements.PluginRequirement(name = 'kauth_scopes',
-                                           plugin = kauth_scopes.Kauth_scopes,
-                                           version = (2, 0, 0))
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="macutils", component=mac.MacUtilities, version=(1, 1, 0)
+            ),
+            requirements.PluginRequirement(
+                name="lsmod", plugin=lsmod.Lsmod, version=(2, 0, 0)
+            ),
+            requirements.PluginRequirement(
+                name="kauth_scopes", plugin=kauth_scopes.Kauth_scopes, version=(2, 0, 0)
+            ),
         ]
 
     def _generator(self):
         """
         Enumerates the listeners for each kauth scope
         """
-        kernel = self.context.modules[self.config['kernel']]
+        kernel = self.context.modules[self.config["kernel"]]
 
-        mods = lsmod.Lsmod.list_modules(self.context, self.config['kernel'])
+        mods = lsmod.Lsmod.list_modules(self.context, self.config["kernel"])
 
-        handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, kernel.layer_name, kernel, mods)
+        handlers = mac.MacUtilities.generate_kernel_handler_info(
+            self.context, kernel.layer_name, kernel, mods
+        )
 
-        for scope in kauth_scopes.Kauth_scopes.list_kauth_scopes(self.context, self.config['kernel']):
-
+        for scope in kauth_scopes.Kauth_scopes.list_kauth_scopes(
+            self.context, self.config["kernel"]
+        ):
             scope_name = utility.pointer_to_string(scope.ks_identifier, 128)
 
             for listener in scope.get_listeners():
@@ -46,12 +56,29 @@ class Kauth_listeners(interfaces.plugins.PluginInterface):
                 if callback == 0:
                     continue
 
-                module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, callback,
-                                                                                  self.config['kernel'])
+                module_name, symbol_name = mac.MacUtilities.lookup_module_address(
+                    self.context, handlers, callback, self.config["kernel"]
+                )
 
-                yield (0, (scope_name, format_hints.Hex(listener.kll_idata), format_hints.Hex(callback), module_name,
-                           symbol_name))
+                yield (
+                    0,
+                    (
+                        scope_name,
+                        format_hints.Hex(listener.kll_idata),
+                        format_hints.Hex(callback),
+                        module_name,
+                        symbol_name,
+                    ),
+                )
 
     def run(self):
-        return renderers.TreeGrid([("Name", str), ("IData", format_hints.Hex), ("Callback Address", format_hints.Hex),
-                                   ("Module", str), ("Symbol", str)], self._generator())
+        return renderers.TreeGrid(
+            [
+                ("Name", str),
+                ("IData", format_hints.Hex),
+                ("Callback Address", format_hints.Hex),
+                ("Module", str),
+                ("Symbol", str),
+            ],
+            self._generator(),
+        )

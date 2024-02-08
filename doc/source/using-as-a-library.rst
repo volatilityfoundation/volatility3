@@ -54,6 +54,12 @@ also be included, which can be found in `volatility3.constants.PLUGINS_PATH`.
         volatility3.plugins.__path__ = <new_plugin_path> + constants.PLUGINS_PATH
         failures = framework.import_files(volatility3.plugins, True)
 
+.. note::
+
+    Volatility uses the `volatility3.plugins` namespace for all plugins (including those in `volatility3.framework.plugins`).
+    Please ensure you only use `volatility3.plugins` and only ever import plugins from this namespace.
+    This ensures the ability of users to override core plugins without needing write access to the framework directory.
+
 Once the plugins have been imported, we can interrogate which plugins are available.  The
 :py:func:`~volatility3.framework.list_plugins` call will
 return a dictionary of plugin names and the plugin classes.
@@ -67,9 +73,10 @@ return a dictionary of plugin names and the plugin classes.
 Determine what configuration options a plugin requires
 ------------------------------------------------------
 
-For each plugin class, we can call the classmethod `requirements` on it, which will return a list of objects that
-adhere to the :py:class:`~volatility3.framework.interfaces.configuration.RequirementInterface` method.  The various
-types of Requirement are split roughly in two,
+For each plugin class, we can call the classmethod 
+:py:func:`~volatility3.framework.interfaces.configuration.ConfigurableInterface.get_requirements` on it, which will 
+return a list of objects that adhere to the :py:class:`~volatility3.framework.interfaces.configuration.RequirementInterface` 
+method.  The various types of Requirement are split roughly in two,
 :py:class:`~volatility3.framework.interfaces.configuration.SimpleTypeRequirement` (such as integers, booleans, floats
 and strings) and more complex requirements (such as lists, choices, multiple requirements, translation layer
 requirements or symbol table requirements).  A requirement just specifies a type of data and a name, and must be

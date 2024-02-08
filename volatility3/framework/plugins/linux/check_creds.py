@@ -19,13 +19,18 @@ class Check_creds(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0))
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            ),
         ]
 
     def _generator(self):
-        vmlinux = self.context.modules[self.config['kernel']]
+        vmlinux = self.context.modules[self.config["kernel"]]
 
         type_task = vmlinux.get_type("task_struct")
 
@@ -41,7 +46,6 @@ class Check_creds(interfaces.plugins.PluginInterface):
         tasks = pslist.PsList.list_tasks(self.context, vmlinux.name)
 
         for task in tasks:
-
             cred_addr = task.cred.dereference().vol.offset
 
             if cred_addr not in creds:
@@ -49,7 +53,7 @@ class Check_creds(interfaces.plugins.PluginInterface):
 
             creds[cred_addr].append(task.pid)
 
-        for (_, pids) in creds.items():
+        for _, pids in creds.items():
             if len(pids) > 1:
                 pid_str = ""
                 for pid in pids:

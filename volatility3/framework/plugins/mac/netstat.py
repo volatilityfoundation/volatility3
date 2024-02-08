@@ -24,24 +24,38 @@ class Netstat(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
-            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
-            requirements.ListRequirement(name = 'pid',
-                                         description = 'Filter on specific process IDs',
-                                         element_type = int,
-                                         optional = True)
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="macutils", component=mac.MacUtilities, version=(1, 0, 0)
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                description="Filter on specific process IDs",
+                element_type=int,
+                optional=True,
+            ),
         ]
 
     @classmethod
-    def list_sockets(cls,
-                     context: interfaces.context.ContextInterface,
-                     kernel_module_name: str,
-                     filter_func: Callable[[int], bool] = lambda _: False) -> \
-            Iterable[Tuple[interfaces.objects.ObjectInterface,
-                           interfaces.objects.ObjectInterface,
-                           interfaces.objects.ObjectInterface]]:
+    def list_sockets(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        filter_func: Callable[[int], bool] = lambda _: False,
+    ) -> Iterable[
+        Tuple[
+            interfaces.objects.ObjectInterface,
+            interfaces.objects.ObjectInterface,
+            interfaces.objects.ObjectInterface,
+        ]
+    ]:
         """
         Returns the open socket descriptors of a process
 
@@ -54,18 +68,18 @@ class Netstat(plugins.PluginInterface):
         # This is hardcoded, since a change in the default method would change the expected results
         list_tasks = pslist.PsList.get_list_tasks(pslist.PsList.pslist_methods[0])
         for task in list_tasks(context, kernel_module_name, filter_func):
-
             task_name = utility.array_to_string(task.p_comm)
             pid = task.p_pid
 
-            for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(context, context.modules[
-                kernel_module_name].symbol_table_name, task):
+            for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(
+                context, context.modules[kernel_module_name].symbol_table_name, task
+            ):
                 try:
                     ftype = filp.f_fglob.get_fg_type()
                 except exceptions.InvalidAddressException:
                     continue
 
-                if ftype != 'SOCKET':
+                if ftype != "SOCKET":
                     continue
 
                 try:
@@ -73,19 +87,19 @@ class Netstat(plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     continue
 
-                if not context.layers[task.vol.native_layer_name].is_valid(socket.vol.offset,
-                                                                           socket.vol.size):
+                if not context.layers[task.vol.native_layer_name].is_valid(
+                    socket.vol.offset, socket.vol.size
+                ):
                     continue
 
                 yield task_name, pid, socket
 
     def _generator(self):
-        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
-        for task_name, pid, socket in self.list_sockets(self.context,
-                                                        self.config['kernel'],
-                                                        filter_func = filter_func):
-
+        for task_name, pid, socket in self.list_sockets(
+            self.context, self.config["kernel"], filter_func=filter_func
+        ):
             family = socket.get_family()
 
             if family == 1:
@@ -95,8 +109,19 @@ class Netstat(plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     continue
 
-                yield (0, (format_hints.Hex(socket.vol.offset), "UNIX", path, 0, "", 0, "",
-                           f"{task_name}/{pid:d}"))
+                yield (
+                    0,
+                    (
+                        format_hints.Hex(socket.vol.offset),
+                        "UNIX",
+                        path,
+                        0,
+                        "",
+                        0,
+                        "",
+                        f"{task_name}/{pid:d}",
+                    ),
+                )
 
             elif family in [2, 30]:
                 state = socket.get_state()
@@ -107,10 +132,31 @@ class Netstat(plugins.PluginInterface):
                 if vals:
                     (lip, lport, rip, rport) = vals
 
-                    yield (0, (format_hints.Hex(socket.vol.offset), proto, lip, lport, rip, rport, state,
-                               f"{task_name}/{pid:d}"))
+                    yield (
+                        0,
+                        (
+                            format_hints.Hex(socket.vol.offset),
+                            proto,
+                            lip,
+                            lport,
+                            rip,
+                            rport,
+                            state,
+                            f"{task_name}/{pid:d}",
+                        ),
+                    )
 
     def run(self):
-        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Proto", str), ("Local IP", str), ("Local Port", int),
-                                   ("Remote IP", str), ("Remote Port", int), ("State", str), ("Process", str)],
-                                  self._generator())
+        return renderers.TreeGrid(
+            [
+                ("Offset", format_hints.Hex),
+                ("Proto", str),
+                ("Local IP", str),
+                ("Local Port", int),
+                ("Remote IP", str),
+                ("Remote Port", int),
+                ("State", str),
+                ("Process", str),
+            ],
+            self._generator(),
+        )

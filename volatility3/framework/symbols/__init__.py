@@ -12,8 +12,12 @@ from volatility3.framework import constants, exceptions, interfaces, objects
 
 vollog = logging.getLogger(__name__)
 
-SymbolSpaceReturnType = TypeVar("SymbolSpaceReturnType", interfaces.objects.Template,
-                                interfaces.symbols.SymbolInterface, Dict[str, Any])
+SymbolSpaceReturnType = TypeVar(
+    "SymbolSpaceReturnType",
+    interfaces.objects.Template,
+    interfaces.symbols.SymbolInterface,
+    Dict[str, Any],
+)
 
 
 class SymbolType(enum.Enum):
@@ -31,7 +35,9 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
 
     def __init__(self) -> None:
         super().__init__()
-        self._dict: Dict[str, interfaces.symbols.BaseSymbolTableInterface] = collections.OrderedDict()
+        self._dict: Dict[str, interfaces.symbols.BaseSymbolTableInterface] = (
+            collections.OrderedDict()
+        )
         # Permanently cache all resolved symbols
         self._resolved: Dict[str, interfaces.objects.Template] = {}
         self._resolved_symbols: Dict[str, interfaces.objects.Template] = {}
@@ -63,16 +69,20 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             for symbol_name in self._dict[table].get_symbols_by_type(type_name):
                 yield table + constants.BANG + symbol_name
 
-    def get_symbols_by_location(self, offset: int, size: int = 0, table_name: str = None) -> Iterable[str]:
+    def get_symbols_by_location(
+        self, offset: int, size: int = 0, table_name: str = None
+    ) -> Iterable[str]:
         """Returns all symbols that exist at a specific relative address."""
-        table_list: Iterable[interfaces.symbols.BaseSymbolTableInterface] = self._dict.values()
+        table_list: Iterable[interfaces.symbols.BaseSymbolTableInterface] = (
+            self._dict.values()
+        )
         if table_name is not None:
             if table_name in self._dict:
                 table_list = [self._dict[table_name]]
             else:
                 table_list = []
         for table in table_list:
-            for symbol_name in table.get_symbols_by_location(offset = offset, size = size):
+            for symbol_name in table.get_symbols_by_location(offset=offset, size=size):
                 yield table.name + constants.BANG + symbol_name
 
     ### Space functions
@@ -118,16 +128,18 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
 
         def __init__(self, type_name: str, **kwargs) -> None:
             vollog.debug(f"Unresolved reference: {type_name}")
-            super().__init__(type_name = type_name, **kwargs)
+            super().__init__(type_name=type_name, **kwargs)
 
-    def _weak_resolve(self, resolve_type: SymbolType, name: str) -> SymbolSpaceReturnType:
+    def _weak_resolve(
+        self, resolve_type: SymbolType, name: str
+    ) -> SymbolSpaceReturnType:
         """Takes a symbol name and resolves it with ReferentialTemplates."""
         if resolve_type == SymbolType.TYPE:
-            get_function = 'get_type'
+            get_function = "get_type"
         elif resolve_type == SymbolType.SYMBOL:
-            get_function = 'get_symbol'
+            get_function = "get_symbol"
         elif resolve_type == SymbolType.ENUM:
-            get_function = 'get_enumeration'
+            get_function = "get_enumeration"
         else:
             raise TypeError("Weak_resolve called without a proper SymbolType")
 
@@ -138,8 +150,11 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             try:
                 return getattr(self._dict[table_name], get_function)(component_name)
             except KeyError as e:
-                raise exceptions.SymbolError(component_name, table_name,
-                                             f'Type {name} references missing Type/Symbol/Enum: {e}')
+                raise exceptions.SymbolError(
+                    component_name,
+                    table_name,
+                    f"Type {name} references missing Type/Symbol/Enum: {e}",
+                )
         raise exceptions.SymbolError(name, None, f"Malformed name: {name}")
 
     def _iterative_resolve(self, traverse_list):
@@ -148,10 +163,15 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         replacements = set()
         # Whole Symbols that still need traversing
         while traverse_list:
-            template_traverse_list, traverse_list = [self._resolved[traverse_list[0]]], traverse_list[1:]
+            template_traverse_list, traverse_list = [
+                self._resolved[traverse_list[0]]
+            ], traverse_list[1:]
             # Traverse a single symbol looking for any ReferenceTemplate objects
             while template_traverse_list:
-                traverser, template_traverse_list = template_traverse_list[0], template_traverse_list[1:]
+                traverser, template_traverse_list = (
+                    template_traverse_list[0],
+                    template_traverse_list[1:],
+                )
                 for child in traverser.children:
                     if isinstance(child, objects.templates.ReferenceTemplate):
                         # If we haven't seen it before, subresolve it and also add it
@@ -159,15 +179,20 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
                         if child.vol.type_name not in self._resolved:
                             traverse_list.append(child.vol.type_name)
                             try:
-                                self._resolved[child.vol.type_name] = self._weak_resolve(
-                                    SymbolType.TYPE, child.vol.type_name)
+                                self._resolved[child.vol.type_name] = (
+                                    self._weak_resolve(
+                                        SymbolType.TYPE, child.vol.type_name
+                                    )
+                                )
                             except exceptions.SymbolError:
-                                self._resolved[child.vol.type_name] = self.UnresolvedTemplate(child.vol.type_name)
+                                self._resolved[child.vol.type_name] = (
+                                    self.UnresolvedTemplate(child.vol.type_name)
+                                )
                         # Stash the replacement
                         replacements.add((traverser, child))
                     elif child.children:
                         template_traverse_list.append(child)
-        for (parent, child) in replacements:
+        for parent, child in replacements:
             parent.replace_child(child, self._resolved[child.vol.type_name])
 
     def get_type(self, type_name: str) -> interfaces.objects.Template:
@@ -184,8 +209,10 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             table_name = None
             index = type_name.find(constants.BANG)
             if index > 0:
-                table_name, type_name = type_name[:index], type_name[index + 1:]
-            raise exceptions.SymbolError(type_name, table_name, f"Unresolvable symbol requested: {type_name}")
+                table_name, type_name = type_name[:index], type_name[index + 1 :]
+            raise exceptions.SymbolError(
+                type_name, table_name, f"Unresolvable symbol requested: {type_name}"
+            )
         return self._resolved[type_name]
 
     def get_symbol(self, symbol_name: str) -> interfaces.symbols.SymbolInterface:
@@ -197,18 +224,22 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             table_name = None
             index = symbol_name.find(constants.BANG)
             if index > 0:
-                table_name, symbol_name = symbol_name[:index], symbol_name[index + 1:]
-            raise exceptions.SymbolError(symbol_name, table_name, f"Unresolvable Symbol: {symbol_name}")
+                table_name, symbol_name = symbol_name[:index], symbol_name[index + 1 :]
+            raise exceptions.SymbolError(
+                symbol_name, table_name, f"Unresolvable Symbol: {symbol_name}"
+            )
         return retval
 
-    def _subresolve(self, object_template: interfaces.objects.Template) -> interfaces.objects.Template:
+    def _subresolve(
+        self, object_template: interfaces.objects.Template
+    ) -> interfaces.objects.Template:
         """Ensure an ObjectTemplate doesn't contain any ReferenceTemplates"""
         for child in object_template.children:
             if isinstance(child, objects.templates.ReferenceTemplate):
                 new_child = self.get_type(child.vol.type_name)
             else:
                 new_child = self._subresolve(child)
-            object_template.replace_child(old_child = child, new_child = new_child)
+            object_template.replace_child(old_child=child, new_child=new_child)
         return object_template
 
     def get_enumeration(self, enum_name: str) -> interfaces.objects.Template:
@@ -219,8 +250,10 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             table_name = None
             index = enum_name.find(constants.BANG)
             if index > 0:
-                table_name, enum_name = enum_name[:index], enum_name[index + 1:]
-            raise exceptions.SymbolError(enum_name, table_name, f"Unresolvable Enumeration: {enum_name}")
+                table_name, enum_name = enum_name[:index], enum_name[index + 1 :]
+            raise exceptions.SymbolError(
+                enum_name, table_name, f"Unresolvable Enumeration: {enum_name}"
+            )
         return retval
 
     def _membership(self, member_type: SymbolType, name: str) -> bool:
@@ -255,7 +288,14 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         return self._membership(SymbolType.ENUM, name)
 
 
-def symbol_table_is_64bit(context: interfaces.context.ContextInterface, symbol_table_name: str) -> bool:
+def symbol_table_is_64bit(
+    context: interfaces.context.ContextInterface, symbol_table_name: str
+) -> bool:
     """Returns a boolean as to whether a particular symbol table within a
     context is 64-bit or not."""
-    return context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer").size == 8
+    return (
+        context.symbol_space.get_type(
+            symbol_table_name + constants.BANG + "pointer"
+        ).size
+        == 8
+    )
