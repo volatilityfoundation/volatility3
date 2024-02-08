@@ -106,7 +106,7 @@ class CommandLine:
         )
 
         # Load up system defaults
-        delayed_logs, default_config = self.load_system_defaults('vol.json')
+        delayed_logs, default_config = self.load_system_defaults("vol.json")
 
         parser = volargparse.HelpfulArgParser(
             add_help=False,
@@ -280,7 +280,7 @@ class CommandLine:
 
         if partial_args.cache_path:
             constants.CACHE_PATH = partial_args.cache_path
-        
+
         vollog.info(f"Volatility plugins path: {volatility3.plugins.__path__}")
         vollog.info(f"Volatility symbols path: {volatility3.symbols.__path__}")
 
@@ -473,28 +473,47 @@ class CommandLine:
         )
         return requirements.URIRequirement.location_from_file(filename)
 
-    def load_system_defaults(self, filename: str) -> Tuple[List[Tuple[int, str]], Dict[str, Any]]:
+    def load_system_defaults(
+        self, filename: str
+    ) -> Tuple[List[Tuple[int, str]], Dict[str, Any]]:
         """Modify the main configuration based on the default configuration override"""
         # Build the config path
-        default_config_path = os.path.join(os.path.expanduser("~"), ".config", "volatility3", filename)
-        if sys.platform == 'win32':
-            default_config_path = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "volatility3",
-                                               filename)
+        default_config_path = os.path.join(
+            os.path.expanduser("~"), ".config", "volatility3", filename
+        )
+        if sys.platform == "win32":
+            default_config_path = os.path.join(
+                os.environ.get("APPDATA", os.path.expanduser("~")),
+                "volatility3",
+                filename,
+            )
 
         delayed_logs = []
 
         # Process it if the files exist
         if os.path.exists(default_config_path):
-            with open(default_config_path, 'rb') as config_json:
+            with open(default_config_path, "rb") as config_json:
                 result = json.load(config_json)
             if not isinstance(result, dict):
-                delayed_logs.append((logging.INFO,
-                                     f'Default configuration file {default_config_path} does not contain a dictionary'))
+                delayed_logs.append(
+                    (
+                        logging.INFO,
+                        f"Default configuration file {default_config_path} does not contain a dictionary",
+                    )
+                )
             else:
                 delayed_logs.append(
-                    (logging.INFO, f"Loading default configuration options from {default_config_path}"))
-                delayed_logs.append((logging.DEBUG,
-                                     f"Loaded configuration: {json.dumps(result, indent = 2, sort_keys = True)}"))
+                    (
+                        logging.INFO,
+                        f"Loading default configuration options from {default_config_path}",
+                    )
+                )
+                delayed_logs.append(
+                    (
+                        logging.DEBUG,
+                        f"Loaded configuration: {json.dumps(result, indent = 2, sort_keys = True)}",
+                    )
+                )
                 return delayed_logs, result
         return delayed_logs, {}
 
