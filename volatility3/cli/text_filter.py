@@ -51,6 +51,8 @@ class CLIFilter:
         row: List[Any],
     ) -> bool:
         """Filters the row based on each of the column_filters"""
+        if not self._filters:
+            return False
         found = any([column_filter.found(row) for column_filter in self._filters])
         return not found
 
