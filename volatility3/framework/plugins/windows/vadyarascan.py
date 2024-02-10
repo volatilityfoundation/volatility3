@@ -5,7 +5,7 @@
 import logging
 from typing import Iterable, List, Tuple
 
-from volatility3.framework import interfaces, renderers
+from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins import yarascan
@@ -44,6 +44,18 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 description="Process IDs to include (all other processes are excluded)",
                 optional=True,
             ),
+            requirements.IntRequirement(
+                name="reverse",
+                default=0,
+                description="Reverse preview hexdump this number of bytes",
+                optional=True,
+            ),
+            requirements.IntRequirement(
+                name="size",
+                default=256,
+                description="Size of preview hexdump (in bytes)",
+                optional=True,
+            ),
         ]
 
         # get base yarascan requirements for command line options
@@ -72,12 +84,26 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 scanner=yarascan.YaraScanner(rules=rules),
                 sections=self.get_vad_maps(task),
             ):
+                try:
+                    data = layer.read(
+                        offset - self.config["reverse"], self.config["size"], False
+                    )
+                except exceptions.InvalidAddressException:
+                    vollog.warning(
+                        "Unable to read from {:#x}. Padding results.".format(
+                            offset - self.config["reverse"]
+                        )
+                    )
+                    data = layer.read(
+                        offset - self.config["reverse"], self.config["size"], True
+                    )
+
                 yield 0, (
-                    format_hints.Hex(offset),
+                    format_hints.Hex(offset - self.config["reverse"]),
                     task.UniqueProcessId,
                     rule_name,
                     name,
-                    value,
+                    format_hints.HexBytes(data),
                 )
 
     @staticmethod
@@ -104,7 +130,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 ("PID", int),
                 ("Rule", str),
                 ("Component", str),
-                ("Value", bytes),
+                ("Hexdump", format_hints.HexBytes),
             ],
             self._generator(),
         )
