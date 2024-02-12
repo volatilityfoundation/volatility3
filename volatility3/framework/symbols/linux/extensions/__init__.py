@@ -15,7 +15,6 @@ from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATE
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
 from volatility3.framework.constants.linux import CAPABILITIES
 from volatility3.framework import exceptions, objects, interfaces, symbols
-from volatility3.framework.renderers import UnparsableValue
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import generic, linux, intermed
