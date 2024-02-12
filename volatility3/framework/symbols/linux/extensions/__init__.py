@@ -447,6 +447,16 @@ class maple_tree(objects.StructType):
 
 
 class mm_struct(objects.StructType):
+
+    def get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """
+        Deprecated: Use either get_vma_iter() or _get_mmap_iter().
+        """
+        vollog.warning(
+            "This method has been deprecated in favour of using the get_vma_iter() method."
+        )
+        yield from self.get_vma_iter()
+
     def _get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mmap list member of an mm_struct. Use this only if
         required, get_vma_iter() will choose the correct _get_maple_tree_iter() or
@@ -467,6 +477,15 @@ class mm_struct(objects.StructType):
             yield link
             seen.add(link.vol.offset)
             link = link.vm_next
+
+    def get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """
+        Deprecated: Use either get_vma_iter() or _get_maple_tree_iter().
+        """
+        vollog.warning(
+            "This method has been deprecated in favour of using the get_vma_iter() method."
+        )
+        yield from self.get_vma_iter()
 
     def _get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mm_mt member of an mm_struct. Use this only if
