@@ -15,6 +15,7 @@ from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATE
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
 from volatility3.framework.constants.linux import CAPABILITIES
 from volatility3.framework import exceptions, objects, interfaces, symbols
+from volatility3.framework.renderers import UnparsableValue
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import generic, linux, intermed
@@ -26,9 +27,10 @@ vollog = logging.getLogger(__name__)
 
 
 class module(generic.GenericIntelProcess):
-    def _get_mod_mem_type(self):
-        """Attempt to get the mod_mem_type enum once to allow repeated access from other functions"""
-        if not self.has_member("mod_mem_type"):
+    @property
+    def mod_mem_type(self):
+        """Return the mod_mem_type enum choices if available or None if not"""
+        if not self.has_member("_mod_mem_type"):
             try:
                 vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(
                     self._context, self
@@ -36,31 +38,41 @@ class module(generic.GenericIntelProcess):
                 # mod_mem_type and module_memory were added in kernel 6.4 which replaces
                 # module_layout for storing the information around core_layout etc.
                 # see commit ac3b43283923440900b4f36ca5f9f0b1ca43b70e for more information
-                self.mod_mem_type = vmlinux.get_enumeration("mod_mem_type").choices
+                self._mod_mem_type = vmlinux.get_enumeration("mod_mem_type").choices
             except exceptions.SymbolError:
                 vollog.debug(
                     f"Unable to find mod_mem_type enum. This is expected on kernels <6.4 but may cause issues with later kernels"
                 )
-                self.mod_mem_type = None
+                self._mod_mem_type = None
+        return self._mod_mem_type
 
     def get_module_base(self):
-        self._get_mod_mem_type()
         if self.mod_mem_type:
-            return self.mem[self.mod_mem_type["MOD_TEXT"]].base
+            try:
+                return self.mem[self.mod_mem_type["MOD_TEXT"]].base
+            except:
+                raise AttributeError(
+                    "module -> get_module_base: Unable to get module base. Cannot read base from MOD_TEXT."
+                )
         else:
             if self.has_member("core_layout"):
                 return self.core_layout.base
-            else:
+            elif self.has_member("module_core"):
                 return self.module_core
+        raise AttributeError("module -> get_module_base: Unable to get module base")
 
     def get_init_size(self):
-        self._get_mod_mem_type()
         if self.mod_mem_type:
-            return (
-                self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].size
-                + self.mem[self.mod_mem_type["MOD_INIT_DATA"]].size
-                + self.mem[self.mod_mem_type["MOD_INIT_RODATA"]].size
-            )
+            try:
+                return (
+                    self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].size
+                    + self.mem[self.mod_mem_type["MOD_INIT_DATA"]].size
+                    + self.mem[self.mod_mem_type["MOD_INIT_RODATA"]].size
+                )
+            except:
+                raise AttributeError(
+                    "module -> get_init_size: Unable to determine .init section size of module. Cannot read size of MOD_INIT_TEXT, MOD_INIT_DATA, and MOD_INIT_RODATA"
+                )
         else:
             if self.has_member("init_layout"):
                 return self.init_layout.size
@@ -71,14 +83,19 @@ class module(generic.GenericIntelProcess):
         )
 
     def get_core_size(self):
-        self._get_mod_mem_type()
         if self.mod_mem_type:
-            return (
-                self.mem[self.mod_mem_type["MOD_TEXT"]].size
-                + self.mem[self.mod_mem_type["MOD_DATA"]].size
-                + self.mem[self.mod_mem_type["MOD_RODATA"]].size
-                + self.mem[self.mod_mem_type["MOD_RO_AFTER_INIT"]].size
-            )
+            try:
+                return (
+                    self.mem[self.mod_mem_type["MOD_TEXT"]].size
+                    + self.mem[self.mod_mem_type["MOD_DATA"]].size
+                    + self.mem[self.mod_mem_type["MOD_RODATA"]].size
+                    + self.mem[self.mod_mem_type["MOD_RO_AFTER_INIT"]].size
+                )
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_core_size: Unable to determine core size of module. Cannot read size of MOD_TEXT, MOD_DATA, MOD_RODATA, and MOD_RO_AFTER_INIT."
+                )
+
         else:
             if self.has_member("core_layout"):
                 return self.core_layout.size
@@ -89,9 +106,13 @@ class module(generic.GenericIntelProcess):
         )
 
     def get_module_core(self):
-        self._get_mod_mem_type()
         if self.mod_mem_type:
-            return self.mem[self.mod_mem_type["MOD_TEXT"]].base
+            try:
+                return self.mem[self.mod_mem_type["MOD_TEXT"]].base
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_module_core: Unable to get module core. Cannot read base from MOD_TEXT."
+                )
         else:
             if self.has_member("core_layout"):
                 return self.core_layout.base
@@ -100,9 +121,13 @@ class module(generic.GenericIntelProcess):
         raise AttributeError("module -> get_module_core: Unable to get module core")
 
     def get_module_init(self):
-        self._get_mod_mem_type()
         if self.mod_mem_type:
-            return self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].base
+            try:
+                return self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].base
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_module_core: Unable to get module init. Cannot read base from MOD_INIT_TEXT."
+                )
         else:
             if self.has_member("init_layout"):
                 return self.init_layout.base
