@@ -351,6 +351,8 @@ class elf_phdr(objects.StructType):
             if self._parent_e_type.description == "ET_DYN":
                 offset = self._parent_offset + offset
         except ValueError:
+            # Unknown ELF object file type. Anyway, if the ELF object file type is not a
+            # shared object (ET_DYN), the virtual address is 'p_vaddr'.
             pass
 
         return offset
