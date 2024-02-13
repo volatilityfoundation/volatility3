@@ -6,8 +6,10 @@ import struct
 from typing import Optional
 
 from volatility3.framework import exceptions, interfaces, constants
+from volatility3.framework.constants.linux import ELF_CLASS
 from volatility3.framework.layers import segmented
 from volatility3.framework.symbols import intermed
+
 
 vollog = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ class Elf64Layer(segmented.SegmentedLayer):
 
     _header_struct = struct.Struct("<IBBB")
     MAGIC = 0x464C457F  # "\x7fELF"
-    ELF_CLASS = 2
+    ELF_CLASS = ELF_CLASS.ELFCLASS64
 
     def __init__(
         self, context: interfaces.context.ContextInterface, config_path: str, name: str
@@ -50,8 +52,13 @@ class Elf64Layer(segmented.SegmentedLayer):
                 offset=ehdr.e_phoff + (pindex * ehdr.e_phentsize),
             )
             # We only want PT_TYPES with valid sizes
+            try:
+                ptype = phdr.p_type.description
+            except ValueError:
+                continue
+
             if (
-                phdr.p_type.lookup() == "PT_LOAD"
+                ptype == "PT_LOAD"
                 and phdr.p_filesz == phdr.p_memsz
                 and phdr.p_filesz > 0
             ):

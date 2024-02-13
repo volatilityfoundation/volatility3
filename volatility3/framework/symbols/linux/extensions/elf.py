@@ -6,6 +6,10 @@ from typing import Dict, Tuple
 import logging
 
 from volatility3.framework import constants
+from volatility3.framework.constants.linux import (
+    ELF_IDENT,
+    ELF_CLASS,
+)
 from volatility3.framework import objects, interfaces, exceptions
 
 vollog = logging.getLogger(__name__)
@@ -59,13 +63,15 @@ class elf(objects.StructType):
         ei_class = self._context.object(
             symbol_table_name + constants.BANG + "unsigned char",
             layer_name=layer_name,
-            offset=object_info.offset + 0x4,
+            offset=object_info.offset + ELF_IDENT.EI_CLASS,
         )
 
-        if ei_class == 1:
+        if ei_class == ELF_CLASS.ELFCLASS32:
             self._type_prefix = "Elf32_"
-        elif ei_class == 2:
+            self._ei_class_size = 32
+        elif ei_class == ELF_CLASS.ELFCLASS64:
             self._type_prefix = "Elf64_"
+            self._ei_class_size = 64
         else:
             raise ValueError(f"Unsupported ei_class value {ei_class}")
 
@@ -140,36 +146,103 @@ class elf(objects.StructType):
         )
         return section_headers
 
+    def get_link_maps(self, kernel_symbol_table_name):
+        """Get the ELF link map objects for the given VMA address
+
+        Args:
+            kernel_symbol_table_name (str): Kernel symbol table name
+
+        Yields:
+            The ELF link map objects
+        """
+        got_entry_size = self._ei_class_size // 8
+
+        elf_symbol_table = self.get_symbol_table_name()
+
+        link_maps_seen = set()
+        for phdr in self.get_program_headers():
+            try:
+                if phdr.p_type.description != "PT_DYNAMIC":
+                    continue
+            except ValueError:
+                continue
+
+            for dsec in phdr.dynamic_sections():
+                try:
+                    if dsec.d_tag.description != "DT_PLTGOT":
+                        continue
+                except ValueError:
+                    continue
+
+                got_start = dsec.d_ptr
+
+                # link_map is stored at the second GOT entry
+                link_map_addr = got_start + got_entry_size
+
+                # It needs the kernel symbol table to create a pointer
+                link_map_ptr = self._context.object(
+                    kernel_symbol_table_name + constants.BANG + "pointer",
+                    offset=link_map_addr,
+                    layer_name=self.vol.layer_name,
+                )
+                if not link_map_ptr:
+                    continue
+
+                linkmap_symname = (
+                    elf_symbol_table + constants.BANG + self._type_prefix + "LinkMap"
+                )
+                link_map = self._context.object(
+                    object_type=linkmap_symname,
+                    offset=link_map_ptr,
+                    layer_name=self.vol.layer_name,
+                )
+
+                while link_map and link_map.vol.offset != 0:
+                    if link_map.vol.offset in link_maps_seen:
+                        break
+                    link_maps_seen.add(link_map.vol.offset)
+
+                    yield link_map
+
+                    link_map = self._context.object(
+                        object_type=linkmap_symname,
+                        offset=link_map.l_next,
+                        layer_name=self.vol.layer_name,
+                    )
+
     def _find_symbols(self):
         dt_strtab = None
         dt_symtab = None
         dt_strent = None
 
         for phdr in self.get_program_headers():
+            # Find PT_DYNAMIC segment
             try:
-                # Find PT_DYNAMIC segment
-                if str(phdr.p_type.description) != "PT_DYNAMIC":
+                if phdr.p_type.description != "PT_DYNAMIC":
                     continue
             except ValueError:
-                # If the p_type value is outside the ones declared in the enumeration, an
-                # exception is raised
-                return None
+                continue
 
             # This section contains pointers to the strtab, symtab, and strent sections
             for dsec in phdr.dynamic_sections():
-                if dsec.d_tag == 5:
+                try:
+                    dtag = dsec.d_tag.description
+                except ValueError:
+                    continue
+
+                if dtag == "DT_STRTAB":
                     dt_strtab = dsec.d_ptr
 
-                elif dsec.d_tag == 6:
+                elif dtag == "DT_SYMTAB":
                     dt_symtab = dsec.d_ptr
 
-                elif dsec.d_tag == 11:
+                elif dtag == "DT_SYMENT":
                     # Size of the symtab symbol entry
                     dt_strent = dsec.d_ptr
 
             break
 
-        if dt_strtab is None or dt_symtab is None or dt_strent is None:
+        if not (dt_strtab and dt_symtab and dt_strent):
             return None
 
         self._cached_symtab = dt_symtab
@@ -274,15 +347,18 @@ class elf_phdr(objects.StructType):
     def get_vaddr(self):
         offset = self.__getattr__("p_vaddr")
 
-        if self._parent_e_type == 3:  # ET_DYN
-            offset = self._parent_offset + offset
+        try:
+            if self._parent_e_type.description == "ET_DYN":
+                offset = self._parent_offset + offset
+        except ValueError:
+            pass
 
         return offset
 
     def dynamic_sections(self):
         # sanity check
         try:
-            if str(self.p_type.description) != "PT_DYNAMIC":
+            if self.p_type.description != "PT_DYNAMIC":
                 return None
         except ValueError:
             # If the value is outside the ones declared in the enumeration, an
@@ -314,10 +390,26 @@ class elf_phdr(objects.StructType):
                 break
 
 
+class elf_linkmap(objects.StructType):
+    def get_name(self):
+        try:
+            buf = self._context.layers.read(self.vol.layer_name, self.l_name, 256)
+        except exceptions.PagedInvalidAddressException:
+            # Protection against memory smear
+            return None
+
+        idx = buf.find(b"\x00")
+        if idx != -1:
+            buf = buf[:idx]
+        return buf.decode()
+
+
 class_types = {
     "Elf": elf,
     "Elf64_Phdr": elf_phdr,
     "Elf32_Phdr": elf_phdr,
     "Elf32_Sym": elf_sym,
     "Elf64_Sym": elf_sym,
+    "Elf32_LinkMap": elf_linkmap,
+    "Elf64_LinkMap": elf_linkmap,
 }

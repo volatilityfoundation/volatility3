@@ -7,14 +7,13 @@ import logging
 import socket as socket_module
 from typing import Generator, Iterable, Iterator, Optional, Tuple, List
 
-from volatility3.framework import constants
+from volatility3.framework import constants, exceptions, objects, interfaces, symbols
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
 from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
 from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
 from volatility3.framework.constants.linux import CAPABILITIES
-from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import generic, linux, intermed
