@@ -6,6 +6,7 @@
 #
 
 import os
+import re
 import subprocess
 import sys
 import shutil
@@ -328,6 +329,32 @@ def test_linux_tty_check(image, volatility, python):
 
     assert out.find(b"__kernel__") != -1
     assert out.count(b"\n") >= 5
+    assert rc == 0
+
+
+def test_linux_library_list(image, volatility, python):
+    rc, out, err = runvol_plugin(
+        "linux.library_list.LibraryList", image, volatility, python
+    )
+
+    assert re.search(
+        rb"NetworkManager\s2363\s0x7f52cdda0000\s/lib/x86_64-linux-gnu/libnss_files.so.2",
+        out,
+    )
+    assert re.search(
+        rb"gnome-settings-\s3807\s0x7f7e660b5000\s/lib/x86_64-linux-gnu/libbz2.so.1.0",
+        out,
+    )
+    assert re.search(
+        rb"gdu-notificatio\s3878\s0x7f25ce33e000\s/usr/lib/x86_64-linux-gnu/libXau.so.6",
+        out,
+    )
+    assert re.search(
+        rb"bash\s8600\s0x7fe78a85f000\s/lib/x86_64-linux-gnu/libnss_files.so.2",
+        out,
+    )
+
+    assert out.count(b"\n") >= 2677
     assert rc == 0
 
 
