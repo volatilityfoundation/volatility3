@@ -26,7 +26,7 @@ from typing import (
     Union,
 )
 
-Column = NamedTuple("Column", [("name", str), ("type", Any)])
+Column = NamedTuple("Column", [("name", str), ("type", Any), ("extra", bool)])
 
 RenderOption = Any
 
@@ -133,7 +133,7 @@ BaseTypes = Union[
     Type[BaseAbsentValue],
     Type[Disassembly],
 ]
-ColumnsType = List[Tuple[str, BaseTypes]]
+ColumnsType = List[Tuple[str, BaseTypes, bool]]
 VisitorSignature = Callable[[TreeNode, _Type], _Type]
 
 

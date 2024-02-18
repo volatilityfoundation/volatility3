@@ -149,6 +149,8 @@ class CLIRenderer(interfaces.renderers.Renderer):
                     accept = True
             if not accept:
                 ignored_columns.append(column)
+        elif self.column_output_list is not None:
+            return []
         return ignored_columns
 
 
@@ -182,12 +184,12 @@ class QuickTextRenderer(CLIRenderer):
         outfd = sys.stdout
 
         line = []
-        ignored_columns = []
+        ignored_columns = [column for column in grid.columns if column.extra == True]
         for column in grid.columns:
             # Ignore the type because namedtuples don't realize they have accessible attributes
             ignored_columns = self.ignore_columns(column, ignored_columns)
             if column not in ignored_columns:
-                line.append(f"column.name")
+                line.append(f"{column.name}")
 
         if not line:
             raise exceptions.RenderException("No visible columns")
@@ -260,7 +262,7 @@ class CSVRenderer(CLIRenderer):
         outfd = sys.stdout
 
         header_list = ["TreeDepth"]
-        ignored_columns = []
+        ignored_columns = [column for column in grid.columns if column.extra == True]
         for column in grid.columns:
             # Ignore the type because namedtuples don't realize they have accessible attributes
             ignored_columns = self.ignore_columns(column, ignored_columns)
@@ -325,7 +327,7 @@ class PrettyTextRenderer(CLIRenderer):
             [(column.name, len(column.name)) for column in grid.columns]
         )
 
-        ignored_columns = []
+        ignored_columns = [column for column in grid.columns if column.extra == True]
         for column in grid.columns:
             ignored_columns = self.ignore_columns(column, ignored_columns)
 
@@ -446,7 +448,7 @@ class JsonRenderer(CLIRenderer):
             List[interfaces.renderers.TreeNode],
         ] = ({}, [])
 
-        ignored_columns = []
+        ignored_columns = [column for column in grid.columns if column.extra == True]
         for column in grid.columns:
             ignored_columns = self.ignore_columns(column, ignored_columns)
 
