@@ -50,6 +50,12 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 default=False,
                 optional=True,
             ),
+            requirements.ListRequirement(
+                name="name",
+                element_type=str,
+                description="Name of the process(es) to include (all other processes are excluded). Filter is case-sensitive and match full process name only",
+                optional=True,
+            ),
         ]
 
     @classmethod
@@ -171,9 +177,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         context: interfaces.context.ContextInterface,
         layer_name: str,
         symbol_table: str,
-        filter_func: Callable[
-            [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: False,
+        filter_funcs: List[Callable[[interfaces.objects.ObjectInterface], bool]] = None,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the processes in the primary layer that are in the pid
         config option.
@@ -216,7 +220,10 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         )
 
         for proc in eproc.ActiveProcessLinks:
-            if not filter_func(proc):
+            if filter_funcs:
+                if any(not filter_func(proc) for filter_func in filter_funcs):
+                    yield proc
+            else:
                 yield proc
 
     def _generator(self):
@@ -230,12 +237,21 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         if not isinstance(memory, layers.intel.Intel):
             raise TypeError("Primary layer is not an intel layer")
 
-        for proc in self.list_processes(
+        filter_funcs = []
+
+        if self.config["pid"]:
+            filter_funcs.append(self.create_pid_filter(self.config.get("pid")))
+        if self.config["name"]:
+            filter_funcs.append(self.create_name_filter(self.config.get("name")))
+
+        processes = self.list_processes(
             self.context,
             kernel.layer_name,
             kernel.symbol_table_name,
-            filter_func=self.create_pid_filter(self.config.get("pid", None)),
-        ):
+            filter_funcs=filter_funcs,
+        )
+
+        for proc in processes:
             if not self.config.get("physical", self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset
             else:

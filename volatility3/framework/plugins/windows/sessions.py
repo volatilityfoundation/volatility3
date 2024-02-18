@@ -49,7 +49,7 @@ class Sessions(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
             self.context,
             kernel.layer_name,
             kernel.symbol_table_name,
-            filter_func=filter_func,
+            filter_funcs=[filter_func],
         ):
             session_id = proc.get_session_id()
 

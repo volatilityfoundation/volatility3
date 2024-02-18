@@ -101,7 +101,7 @@ class CmdLine(interfaces.plugins.PluginInterface):
                     context=self.context,
                     layer_name=kernel.layer_name,
                     symbol_table=kernel.symbol_table_name,
-                    filter_func=filter_func,
+                    filter_funcs=[filter_func],
                 )
             ),
         )

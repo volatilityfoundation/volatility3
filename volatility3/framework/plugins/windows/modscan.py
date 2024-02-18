@@ -101,7 +101,7 @@ class ModScan(interfaces.plugins.PluginInterface):
             context=context,
             layer_name=layer_name,
             symbol_table=symbol_table,
-            filter_func=filter_func,
+            filter_funcs=[filter_func],
         ):
             proc_id = "Unknown"
             try:
