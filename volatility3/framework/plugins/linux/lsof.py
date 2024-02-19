@@ -11,7 +11,7 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import linux
-from volatility3.plugins.linux import pslist
+from volatility3.plugins.linux import pslist, psscan
 
 vollog = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class Lsof(plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 1, 0)
+    _version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -34,6 +34,9 @@ class Lsof(plugins.PluginInterface):
             requirements.PluginRequirement(
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
+            requirements.PluginRequirement(
+                name="psscan", plugin=psscan.PsScan, version=(1, 1, 0)
+            ),
             requirements.VersionRequirement(
                 name="linuxutils", component=linux.LinuxUtilities, version=(2, 0, 0)
             ),
@@ -43,6 +46,12 @@ class Lsof(plugins.PluginInterface):
                 element_type=int,
                 optional=True,
             ),
+            requirements.BooleanRequirement(
+                name="scan",
+                description="Scan for processes rather than using pslist",
+                optional=True,
+                default=False,
+            ),
         ]
 
     @classmethod
@@ -51,9 +60,25 @@ class Lsof(plugins.PluginInterface):
         context: interfaces.context.ContextInterface,
         symbol_table: str,
         filter_func: Callable[[int], bool] = lambda _: False,
+        scan: bool = False,
     ):
         linuxutils_symbol_table = None  # type: ignore
-        for task in pslist.PsList.list_tasks(context, symbol_table, filter_func):
+
+        # select the function used to find task objects
+        if scan:
+            vmlinux = context.modules[symbol_table]
+            task_finder_function = psscan.PsScan.scan_tasks(
+                context,
+                symbol_table,
+                vmlinux.layer_name,
+                filter_func=filter_func,
+            )
+        else:
+            task_finder_function = pslist.PsList.list_tasks(
+                context, symbol_table, filter_func
+            )
+
+        for task in task_finder_function:
             if linuxutils_symbol_table is None:
                 if constants.BANG not in task.vol.type_name:
                     raise ValueError("Task is not part of a symbol table")
@@ -69,10 +94,10 @@ class Lsof(plugins.PluginInterface):
             for fd_fields in fd_generator:
                 yield pid, task_comm, task, fd_fields
 
-    def _generator(self, pids, symbol_table):
+    def _generator(self, pids, symbol_table, scan):
         filter_func = pslist.PsList.create_pid_filter(pids)
         fds_generator = self.list_fds(
-            self.context, symbol_table, filter_func=filter_func
+            self.context, symbol_table, filter_func=filter_func, scan=scan
         )
 
         for pid, task_comm, _task, fd_fields in fds_generator:
@@ -84,6 +109,9 @@ class Lsof(plugins.PluginInterface):
     def run(self):
         pids = self.config.get("pid", None)
         symbol_table = self.config["kernel"]
+        scan = self.config.get("scan", None)
 
         tree_grid_args = [("PID", int), ("Process", str), ("FD", int), ("Path", str)]
-        return renderers.TreeGrid(tree_grid_args, self._generator(pids, symbol_table))
+        return renderers.TreeGrid(
+            tree_grid_args, self._generator(pids, symbol_table, scan)
+        )
