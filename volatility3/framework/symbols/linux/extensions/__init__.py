@@ -448,6 +448,7 @@ class maple_tree(objects.StructType):
 
 class mm_struct(objects.StructType):
 
+    # TODO: As of version 3.0.0 this method should be removed
     def get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """
         Deprecated: Use either get_vma_iter() or _get_mmap_iter().
@@ -478,6 +479,7 @@ class mm_struct(objects.StructType):
             seen.add(link.vol.offset)
             link = link.vm_next
 
+    # TODO: As of version 3.0.0 this method should be removed
     def get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """
         Deprecated: Use either get_vma_iter() or _get_maple_tree_iter().
