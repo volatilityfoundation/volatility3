@@ -235,7 +235,8 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 kernel.layer_name,
                 kernel.symbol_table_name,
                 filter_func=psscan.PsScan.create_offset_filter(
-                    self.context.layers[kernel.layer_name],
+                    self.context,
+                    kernel.layer_name,
                     self.config["offset"],
                 ),
             )

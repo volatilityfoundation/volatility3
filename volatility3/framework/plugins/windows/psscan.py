@@ -60,41 +60,72 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     @classmethod
+    def physical_offset_from_virtual(cls, context, layer_name, proc):
+        """Calculate the physical offset from the virtual offset of a process.
+
+        Args:
+            context: The context containing layers and modules information.
+            layer_name: The name of the layer containing the process memory.
+            proc: The process object for which to calculate the physical offset.
+
+        Returns:
+            int: The physical offset of the process.
+        Raises:
+            TypeError: If the primary layer is not an Intel layer.
+        """
+        memory = context.layers[layer_name]
+
+        if not isinstance(memory, layers.intel.Intel):
+            raise TypeError("Primary layer is not an intel layer")
+
+        (_, _, ph_offset, _, _) = list(
+            memory.mapping(offset=proc.vol.offset, length=0)
+        )[0]
+
+        return ph_offset
+
+    @classmethod
     def create_offset_filter(
         cls,
-        memory: interfaces.layers.DataLayerInterface,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
         offset: int = None,
+        physical: bool = True,
         exclude: bool = False,
     ) -> Callable[[interfaces.objects.ObjectInterface], bool]:
         """A factory for producing filter functions that filter based on the physical offset of the process.
 
         Args:
             offset: A number that is the physical offset to be filtered out
-            memory: Memory object needed to do the offset mapping to physical.
             exclude: Accept only tasks that are not the offset argument
+
         Returns:
             Filter function to be passed to the list of processes.
         """
-        if not isinstance(memory, interfaces.layers.DataLayerInterface):
-            raise TypeError("memory object requires an instance of DataLayerInterface")
-
         filter_func = lambda _: False
 
-        # return physical offset in tuple -> (_, _, physical_offset, _, _)
-        # from the first item in the memory mapping list
-        virtual_to_physical_offset = lambda virtual_offset, memory: list(
-            memory.mapping(offset=virtual_offset, length=0)
-        )[0][2]
-
         if offset:
-            if exclude:
-                filter_func = (
-                    lambda x: virtual_to_physical_offset(x.vol.offset, memory) == offset
-                )
+            if physical:
+                if exclude:
+                    filter_func = (
+                        lambda proc: cls.physical_offset_from_virtual(
+                            context, layer_name, proc
+                        )
+                        == offset
+                    )
+                else:
+                    filter_func = (
+                        lambda proc: cls.physical_offset_from_virtual(
+                            context, layer_name, proc
+                        )
+                        != offset
+                    )
             else:
-                filter_func = (
-                    lambda x: virtual_to_physical_offset(x.vol.offset, memory) != offset
-                )
+                if exclude:
+                    lambda proc: proc.vol.offset == offset
+                else:
+                    lambda proc: proc.vol.offset != offset
+
         return filter_func
 
     @classmethod
