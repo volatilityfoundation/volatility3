@@ -525,7 +525,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             elif isinstance(value, objects.PrimitiveObject):
                 return repr(value)
             elif isinstance(value, objects.Array):
-                return repr([cls._display_value(val) for val in value])
+                return repr([self._display_value(val) for val in value])
             else:
                 return hex(value.vol.offset)
         except exceptions.InvalidAddressException:
