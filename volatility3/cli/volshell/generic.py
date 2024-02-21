@@ -23,6 +23,8 @@ try:
 except ImportError:
     has_capstone = False
 
+MAX_DEREFERENCE_COUNT = 4  # the max number of times display_type should follow pointers
+
 
 class Volshell(interfaces.plugins.PluginInterface):
     """Shell environment to directly interact with a memory image."""
@@ -319,8 +321,8 @@ class Volshell(interfaces.plugins.PluginInterface):
         try:
             if member_type.vol.object_class == objects.Pointer:
                 sub_member_type = member_type.vol.subtype
-                # follow at most 8 pointers. A guard against, hopefully unlikely, infinite loops
-                if depth < 8:
+                # follow at most MAX_DEREFERENCE_COUNT pointers. A guard against, hopefully unlikely, infinite loops
+                if depth < MAX_DEREFERENCE_COUNT:
                     return self._get_type_name_with_pointer(sub_member_type, depth + 1)
                 else:
                     return member_type_name
@@ -364,11 +366,15 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         # add special case for pointer so that information about the struct the
         # pointer is pointing to is shown rather than simply the fact this is a
-        # pointer object. The "dereference_count < 8" is to guard against loops
+        # pointer object. The "dereference_count < MAX_DEREFERENCE_COUNT" is to
+        # guard against loops
         dereference_count = 0
-        while isinstance(volobject, objects.Pointer) and dereference_count < 8:
+        while (
+            isinstance(volobject, objects.Pointer)
+            and dereference_count < MAX_DEREFERENCE_COUNT
+        ):
             # before defreerencing the pointer, show it's information
-            print("   " * dereference_count, self._display_simple_type(volobject))
+            print(f'{"    " * dereference_count}{self._display_simple_type(volobject)}')
 
             # check that we can follow the pointer before dereferencing and do not
             # attempt to follow null pointers.
@@ -390,7 +396,9 @@ class Volshell(interfaces.plugins.PluginInterface):
             # if the original object was an actual volobject or was a type string
             # with an offset. Then append the actual data to the display.
             else:
-                print("    " * dereference_count, self._display_simple_type(volobject))
+                print(
+                    f'{"    " * dereference_count}{self._display_simple_type(volobject)}'
+                )
 
             # it is a more complex type, so all members also need information displayed
             longest_member = longest_offset = longest_typename = 0
@@ -467,7 +475,10 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         if include_value == True:
             # if include_value is true also add the value to the display
-            return f"{display_type_string}: {self._display_value(volobject)}"
+            if isinstance(volobject, objects.Pointer):
+                return f"{display_type_string} @ {hex(volobject.vol.offset)} -> {self._display_value(volobject)}"
+            else:
+                return f"{display_type_string} @ {self._display_value(volobject)}"
         else:
             return display_type_string
 
@@ -476,7 +487,14 @@ class Volshell(interfaces.plugins.PluginInterface):
         try:
             if isinstance(value, objects.Pointer):
                 # show pointers in hex to match output for struct addrs
-                return hex(value)
+                # highlight null or unreadable pointers
+                if value == 0:
+                    suffix = " (null pointer)"
+                elif not value.is_readable():
+                    suffix = " (unreadable pointer)"
+                else:
+                    suffix = ""
+                return f"{hex(value)}{suffix}"
             elif isinstance(value, objects.PrimitiveObject):
                 return repr(value)
             elif isinstance(value, objects.Array):
