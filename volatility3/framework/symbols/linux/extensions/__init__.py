@@ -517,12 +517,25 @@ class maple_tree(objects.StructType):
 
 
 class mm_struct(objects.StructType):
+
+    # TODO: As of version 3.0.0 this method should be removed
     def get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Returns an iterator for the mmap list member of an mm_struct."""
+        """
+        Deprecated: Use either get_vma_iter() or _get_mmap_iter().
+        """
+        vollog.warning(
+            "This method has been deprecated in favour of using the get_vma_iter() method."
+        )
+        yield from self.get_vma_iter()
+
+    def _get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns an iterator for the mmap list member of an mm_struct. Use this only if
+        required, get_vma_iter() will choose the correct _get_maple_tree_iter() or
+        _get_mmap_iter() automatically as required."""
 
         if not self.has_member("mmap"):
             raise AttributeError(
-                "get_mmap_iter called on mm_struct where no mmap member exists."
+                "_get_mmap_iter called on mm_struct where no mmap member exists."
             )
         if not self.mmap:
             return None
@@ -536,12 +549,24 @@ class mm_struct(objects.StructType):
             seen.add(link.vol.offset)
             link = link.vm_next
 
+    # TODO: As of version 3.0.0 this method should be removed
     def get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Returns an iterator for the mm_mt member of an mm_struct."""
+        """
+        Deprecated: Use either get_vma_iter() or _get_maple_tree_iter().
+        """
+        vollog.warning(
+            "This method has been deprecated in favour of using the get_vma_iter() method."
+        )
+        yield from self.get_vma_iter()
+
+    def _get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns an iterator for the mm_mt member of an mm_struct. Use this only if
+        required, get_vma_iter() will choose the correct _get_maple_tree_iter() or
+        get_mmap_iter() automatically as required."""
 
         if not self.has_member("mm_mt"):
             raise AttributeError(
-                "get_maple_tree_iter called on mm_struct where no mm_mt member exists."
+                "_get_maple_tree_iter called on mm_struct where no mm_mt member exists."
             )
         symbol_table_name = self.get_symbol_table_name()
         for vma_pointer in self.mm_mt.get_slot_iter():
@@ -557,9 +582,9 @@ class mm_struct(objects.StructType):
         """Returns an iterator for the VMAs in an mm_struct. Automatically choosing the mmap or mm_mt as required."""
 
         if self.has_member("mmap"):
-            yield from self.get_mmap_iter()
+            yield from self._get_mmap_iter()
         elif self.has_member("mm_mt"):
-            yield from self.get_maple_tree_iter()
+            yield from self._get_maple_tree_iter()
         else:
             raise AttributeError("Unable to find mmap or mm_mt in mm_struct")
 
