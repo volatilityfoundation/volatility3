@@ -147,7 +147,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         socket_filter["bpf_filter_type"] = "cBPF"
 
         if not sock_filter.has_member("prog") or not sock_filter.prog:
-            return
+            return None
 
         bpfprog = sock_filter.prog
 
@@ -158,13 +158,13 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
                 return  # cBPF filter
         except AttributeError:
             # kernel < 3.18.140, it's a cBPF filter
-            return
+            return None
 
         BPF_PROG_TYPE_SOCKET_FILTER = 1  # eBPF filter
         if bpfprog_type != BPF_PROG_TYPE_SOCKET_FILTER:
             socket_filter["bpf_filter_type"] = f"UNK({bpfprog_type})"
             vollog.warning(f"Unexpected BPF type {bpfprog_type} for a socket")
-            return
+            return None
 
         socket_filter["bpf_filter_type"] = "eBPF"
         if not bpfprog.has_member("aux") or not bpfprog.aux:
@@ -329,17 +329,17 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         xdp_sock = sock.cast("xdp_sock")
         device = xdp_sock.dev
         if not device:
-            return
+            return None
 
         src_addr = utility.array_to_string(device.name)
         src_port = dst_addr = dst_port = None
 
         bpfprog = device.xdp_prog
         if not bpfprog:
-            return
+            return None
 
         if not bpfprog.has_member("aux") or not bpfprog.aux:
-            return
+            return None
 
         bpfprog_aux = bpfprog.aux
         if bpfprog_aux.has_member("id"):

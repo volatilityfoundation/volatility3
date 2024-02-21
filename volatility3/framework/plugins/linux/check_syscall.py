@@ -145,7 +145,7 @@ class Check_syscall(plugins.PluginInterface):
             table_info = self._get_table_info(vmlinux, "sys_call_table", ptr_sz)
         except exceptions.SymbolError:
             vollog.error("Unable to find the system call table. Exiting.")
-            return
+            return None
 
         tables = [(table_name, table_info)]
 

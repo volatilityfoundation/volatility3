@@ -69,7 +69,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
 
         # Bomb out early if our details haven't been configured
         if self.symbol_class is None:
-            return
+            return None
 
         self._requirements = self.find_requirements(
             context,
@@ -120,7 +120,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
 
         # Bomb out early if there's no banners
         if not self.banners:
-            return
+            return None
 
         mss = scanners.MultiStringScanner([x for x in self.banners if x is not None])
 
@@ -150,12 +150,12 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                 clazz = self.symbol_class
                 # Set the discovered options
                 path_join = interfaces.configuration.path_join
-                context.config[
-                    path_join(config_path, requirement.name, "class")
-                ] = clazz
-                context.config[
-                    path_join(config_path, requirement.name, "isf_url")
-                ] = isf_path
+                context.config[path_join(config_path, requirement.name, "class")] = (
+                    clazz
+                )
+                context.config[path_join(config_path, requirement.name, "isf_url")] = (
+                    isf_path
+                )
                 context.config[
                     path_join(config_path, requirement.name, "symbol_mask")
                 ] = layer.address_mask

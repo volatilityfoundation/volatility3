@@ -285,7 +285,7 @@ class Handles(interfaces.plugins.PluginInterface):
             count = 0x1000 / subtype.size
 
         if not self.context.layers[virtual].is_valid(offset):
-            return
+            return None
 
         table = ntkrnlmp.object(
             object_type="array",
@@ -335,7 +335,7 @@ class Handles(interfaces.plugins.PluginInterface):
                 constants.LOGLEVEL_VVV,
                 "Handle table parsing was aborted due to an invalid address exception",
             )
-            return
+            return None
 
         for handle_table_entry in self._make_handle_array(TableCode, table_levels):
             yield handle_table_entry

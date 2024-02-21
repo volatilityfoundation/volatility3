@@ -224,7 +224,7 @@ class AVMLStacker(interfaces.automagic.StackerLayerInterface):
         except exceptions.LayerException:
             return None
         new_name = context.layers.free_layer_name("AVMLLayer")
-        context.config[
-            interfaces.configuration.path_join(new_name, "base_layer")
-        ] = layer_name
+        context.config[interfaces.configuration.path_join(new_name, "base_layer")] = (
+            layer_name
+        )
         return AVMLLayer(context, new_name, new_name)

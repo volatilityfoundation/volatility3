@@ -5,7 +5,7 @@ import datetime
 import logging
 from typing import Callable, Dict, Set, Tuple
 
-from volatility3.framework import objects, interfaces, renderers
+from volatility3.framework import objects, interfaces, renderers, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins.windows import pslist
@@ -108,13 +108,13 @@ class PsTree(interfaces.plugins.PluginInterface):
         def yield_processes(pid, descendant: bool = False):
             if pid in process_pids:
                 vollog.debug(f"Pid cycle: already processed pid {pid}")
-                return
+                return None
 
             process_pids.add(pid)
 
             if pid not in self._ancestors and not descendant:
                 vollog.debug(f"Pid cycle: pid {pid} not in filtered tree")
-                return
+                return None
 
             proc, offset = self._processes[pid]
             row = (
@@ -131,6 +131,25 @@ class PsTree(interfaces.plugins.PluginInterface):
                 proc.get_create_time(),
                 proc.get_exit_time(),
             )
+
+            try:
+                audit = proc.SeAuditProcessCreationInfo.ImageFileName.Name
+                # If 'audit' is set to the empty string, display NotAvailableValue
+                row += (audit.get_string() or renderers.NotAvailableValue(),)
+            except exceptions.InvalidAddressException:
+                row += (renderers.NotAvailableValue(),)
+
+            try:
+                process_params = proc.get_peb().ProcessParameters
+                row += (
+                    process_params.CommandLine.get_string(),
+                    process_params.ImagePathName.get_string(),
+                )
+            except exceptions.InvalidAddressException:
+                row += (
+                    renderers.NotAvailableValue(),
+                    renderers.NotAvailableValue(),
+                )
 
             yield (self._levels[pid] - 1, row)
             for child_pid in self._children.get(pid, []):
@@ -161,6 +180,9 @@ class PsTree(interfaces.plugins.PluginInterface):
                 ("Wow64", bool),
                 ("CreateTime", datetime.datetime),
                 ("ExitTime", datetime.datetime),
+                ("Audit", str),
+                ("Cmd", str),
+                ("Path", str),
             ],
             self._generator(
                 filter_func=pslist.PsList.create_pid_filter(

@@ -173,11 +173,11 @@ class UserAssist(interfaces.plugins.PluginInterface):
 
         if not userassist_node_path:
             vollog.warning("list_userassist did not find a valid node_path (or None)")
-            return
+            return None
 
         if not isinstance(userassist_node_path, list):
             vollog.warning("userassist_node_path did not return a list as expected")
-            return
+            return None
         userassist_node = userassist_node_path[-1]
         # iterate through the GUIDs under the userassist key
         for guidkey in userassist_node.get_subkeys():
