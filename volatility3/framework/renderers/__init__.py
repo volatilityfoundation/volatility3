@@ -166,7 +166,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 
     def __init__(
         self,
-        columns: List[Tuple[str, interfaces.renderers.BaseTypes]],
+        columns: interfaces.renderers.ColumnsType,
         generator: Optional[Iterable[Tuple[int, Tuple]]],
     ) -> None:
         """Constructs a TreeGrid object using a specific set of columns.
@@ -185,7 +185,12 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         converted_columns: List[interfaces.renderers.Column] = []
         if len(columns) < 1:
             raise ValueError("Columns must be a list containing at least one column")
-        for name, column_type in columns:
+        for column_info in columns:
+            if len(column_info) < 3:
+                name, column_type = column_info
+                extra = False
+            else:
+                name, column_type, extra = column_info
             is_simple_type = issubclass(column_type, self.base_types)
             if not is_simple_type:
                 raise TypeError(
@@ -193,7 +198,9 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                         name, column_type.__class__.__name__
                     )
                 )
-            converted_columns.append(interfaces.renderers.Column(name, column_type))
+            converted_columns.append(
+                interfaces.renderers.Column(name, column_type, extra)
+            )
         self.RowStructure = RowStructureConstructor(
             [column.name for column in converted_columns]
         )

@@ -4,6 +4,11 @@ API Changes
 When an addition to the existing API is made, the minor version is bumped.
 When an API feature or function is removed or changed, the major version is bumped.
 
+2.6.0
+=====
+Plugins defining treegrid columns can use three-tuples, including a new third "extra" parameter to determine if a column
+should be hidden by default.
+
 2.5.0
 =====
 Add in support for specifying a type override for object_from_symbol

@@ -233,6 +233,14 @@ class CommandLine:
             default=False,
             action="store_true",
         )
+        parser.add_argument(
+            "--columns",
+            help="Case-insensitive space separated list of prefixes to determine which columns to output if provided (otherwise all columns)",
+            default=None,
+            # action="extend", Can be enabled when python 3.8 is made default
+            nargs="*",
+            type=str,
+        )
 
         parser.set_defaults(**default_config)
 
@@ -454,7 +462,9 @@ class CommandLine:
         try:
             # Construct and run the plugin
             if constructed:
-                renderers[args.renderer]().render(constructed.run())
+                renderer = renderers[args.renderer]()
+                renderer.column_output_list = args.columns
+                renderer.render(constructed.run())
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
 
@@ -569,6 +579,10 @@ class CommandLine:
                 "A plugin requesting a bad symbol",
                 "A plugin requesting a symbol from the wrong table",
             ]
+        elif isinstance(excp, exceptions.RenderException):
+            general = "Volatility experienced an issue when rendering the output:"
+            detail = f"{excp}"
+            caused_by = ["An invalid renderer option, such as no visible columns"]
         elif isinstance(excp, exceptions.LayerException):
             general = f"Volatility experienced a layer-related issue: {excp.layer_name}"
             detail = f"{excp}"

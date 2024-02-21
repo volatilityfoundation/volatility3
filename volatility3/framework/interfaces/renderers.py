@@ -9,6 +9,7 @@ renderer interface which can interact with a TreeGrid to produce
 suitable output.
 """
 
+import dataclasses
 import datetime
 from abc import abstractmethod, ABCMeta
 from collections import abc
@@ -26,7 +27,13 @@ from typing import (
     Union,
 )
 
-Column = NamedTuple("Column", [("name", str), ("type", Any)])
+
+@dataclasses.dataclass
+class Column:
+    name: str
+    type: Any
+    extra: bool = True
+
 
 RenderOption = Any
 
@@ -133,7 +140,7 @@ BaseTypes = Union[
     Type[BaseAbsentValue],
     Type[Disassembly],
 ]
-ColumnsType = List[Tuple[str, BaseTypes]]
+ColumnsType = List[Tuple[str, BaseTypes, bool]]
 VisitorSignature = Callable[[TreeNode, _Type], _Type]
 
 

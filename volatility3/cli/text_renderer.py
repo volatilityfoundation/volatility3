@@ -11,7 +11,7 @@ import sys
 from functools import wraps
 from typing import Any, Callable, Dict, List, Tuple
 
-from volatility3.framework import interfaces, renderers
+from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
@@ -135,6 +135,24 @@ class CLIRenderer(interfaces.renderers.Renderer):
     name = "unnamed"
     structured_output = False
 
+    column_output_list: list = None
+
+    def ignore_columns(
+        self,
+        column: interfaces.renderers.Column,
+        ignored_columns: List[interfaces.renderers.Column],
+    ) -> Tuple[List[interfaces.renderers.Column], Any]:
+        if self.column_output_list:
+            accept = False
+            for column_prefix in self.column_output_list:
+                if column.name.lower().startswith(column_prefix.lower()):
+                    accept = True
+            if not accept:
+                ignored_columns.append(column)
+        elif self.column_output_list is not None:
+            return []
+        return ignored_columns
+
 
 class QuickTextRenderer(CLIRenderer):
     _type_renderers = {
@@ -166,9 +184,15 @@ class QuickTextRenderer(CLIRenderer):
         outfd = sys.stdout
 
         line = []
+        ignored_columns = [column for column in grid.columns if column.extra == True]
         for column in grid.columns:
             # Ignore the type because namedtuples don't realize they have accessible attributes
-            line.append(f"{column.name}")
+            ignored_columns = self.ignore_columns(column, ignored_columns)
+            if column not in ignored_columns:
+                line.append(f"{column.name}")
+
+        if not line:
+            raise exceptions.RenderException("No visible columns")
         outfd.write("\n{}\n".format("\t".join(line)))
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
@@ -184,7 +208,8 @@ class QuickTextRenderer(CLIRenderer):
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
-                line.append(renderer(node.values[column_index]))
+                if column not in ignored_columns:
+                    line.append(renderer(node.values[column_index]))
             accumulator.write("{}".format("\t".join(line)))
             accumulator.flush()
             return accumulator
@@ -237,9 +262,12 @@ class CSVRenderer(CLIRenderer):
         outfd = sys.stdout
 
         header_list = ["TreeDepth"]
+        ignored_columns = [column for column in grid.columns if column.extra == True]
         for column in grid.columns:
             # Ignore the type because namedtuples don't realize they have accessible attributes
-            header_list.append(f"{column.name}")
+            ignored_columns = self.ignore_columns(column, ignored_columns)
+            if column not in ignored_columns:
+                header_list.append(f"{column.name}")
 
         writer = csv.DictWriter(
             outfd, header_list, lineterminator="\n", escapechar="\\"
@@ -254,7 +282,8 @@ class CSVRenderer(CLIRenderer):
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
-                row[f"{column.name}"] = renderer(node.values[column_index])
+                if column not in ignored_columns:
+                    row[f"{column.name}"] = renderer(node.values[column_index])
             accumulator.writerow(row)
             return accumulator
 
@@ -298,6 +327,10 @@ class PrettyTextRenderer(CLIRenderer):
             [(column.name, len(column.name)) for column in grid.columns]
         )
 
+        ignored_columns = [column for column in grid.columns if column.extra == True]
+        for column in grid.columns:
+            ignored_columns = self.ignore_columns(column, ignored_columns)
+
         def visitor(
             node: interfaces.renderers.TreeNode,
             accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]],
@@ -306,6 +339,7 @@ class PrettyTextRenderer(CLIRenderer):
             max_column_widths[tree_indent_column] = max(
                 max_column_widths.get(tree_indent_column, 0), node.path_depth
             )
+
             line = {}
             for column_index in range(len(grid.columns)):
                 column = grid.columns[column_index]
@@ -319,7 +353,8 @@ class PrettyTextRenderer(CLIRenderer):
                 max_column_widths[column.name] = max(
                     max_column_widths.get(column.name, len(column.name)), field_width
                 )
-                line[column] = data.split("\n")
+                if column not in ignored_columns:
+                    line[column] = data.split("\n")
             accumulator.append((node.path_depth, line))
             return accumulator
 
@@ -335,18 +370,21 @@ class PrettyTextRenderer(CLIRenderer):
         ]
         for column_index in range(len(grid.columns)):
             column = grid.columns[column_index]
-            format_string_list.append(
-                "{"
-                + str(column_index + 1)
-                + ":"
-                + display_alignment
-                + str(max_column_widths[column.name])
-                + "s}"
-            )
+            if column not in ignored_columns:
+                format_string_list.append(
+                    "{"
+                    + str(column_index + 1)
+                    + ":"
+                    + display_alignment
+                    + str(max_column_widths[column.name])
+                    + "s}"
+                )
 
         format_string = column_separator.join(format_string_list) + "\n"
 
-        column_titles = [""] + [column.name for column in grid.columns]
+        column_titles = [""] + [
+            column.name for column in grid.columns if column not in ignored_columns
+        ]
         outfd.write(format_string.format(*column_titles))
         for depth, line in final_output:
             nums_line = max([len(line[column]) for column in line])
@@ -357,20 +395,14 @@ class PrettyTextRenderer(CLIRenderer):
                     outfd.write(
                         format_string.format(
                             "*" * depth,
-                            *[
-                                self.tab_stop(line[column][index])
-                                for column in grid.columns
-                            ],
+                            *[self.tab_stop(line[column][index]) for column in line],
                         )
                     )
                 else:
                     outfd.write(
                         format_string.format(
                             " " * depth,
-                            *[
-                                self.tab_stop(line[column][index])
-                                for column in grid.columns
-                            ],
+                            *[self.tab_stop(line[column][index]) for column in line],
                         )
                     )
 
@@ -416,6 +448,10 @@ class JsonRenderer(CLIRenderer):
             List[interfaces.renderers.TreeNode],
         ] = ({}, [])
 
+        ignored_columns = [column for column in grid.columns if column.extra == True]
+        for column in grid.columns:
+            ignored_columns = self.ignore_columns(column, ignored_columns)
+
         def visitor(
             node: interfaces.renderers.TreeNode,
             accumulator: Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]],
@@ -425,6 +461,8 @@ class JsonRenderer(CLIRenderer):
             node_dict: Dict[str, Any] = {"__children": []}
             for column_index in range(len(grid.columns)):
                 column = grid.columns[column_index]
+                if column in ignored_columns:
+                    continue
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
