@@ -314,7 +314,13 @@ class Volshell(interfaces.plugins.PluginInterface):
                 for i in disasm_types[architecture].disasm(remaining_data, offset):
                     print(f"0x{i.address:x}:\t{i.mnemonic}\t{i.op_str}")
 
-    def _get_type_name_with_pointer(self, member_type, depth=0) -> str:
+    def _get_type_name_with_pointer(
+        self,
+        member_type: Union[
+            str, interfaces.objects.ObjectInterface, interfaces.objects.Template
+        ],
+        depth: int = 0,
+    ) -> str:
         """Takes a member_type from and returns the subtype name with a * if the member_type is
         a pointer otherwise it returns just the normal type name."""
         pointer_marker = "*" * depth
@@ -385,20 +391,19 @@ class Volshell(interfaces.plugins.PluginInterface):
             else:
                 # if we aren't able to follow the pointers anymore then there will
                 # be no more information to display as we've already printed the
-                # details of this pointer
+                # details of this pointer including the fact that we're not able to
+                # follow it anywhere
                 return
 
         if hasattr(volobject.vol, "members"):
             # display the header for this object, if the orginal object was just a type string, display the type information
-            if isinstance(object, str):
-                print(self._display_simple_type(volobject, include_value=False))
-
-            # if the original object was an actual volobject or was a type string
-            # with an offset. Then append the actual data to the display.
+            struct_header = f'{"    " * dereference_count}{volobject.vol.type_name} ({volobject.vol.size} bytes)'
+            if isinstance(object, str) and offset is None:
+                suffix = ":"
             else:
-                print(
-                    f'{"    " * dereference_count}{self._display_simple_type(volobject)}'
-                )
+                # this is an actual object or an offset was given so the offset should be displayed
+                suffix = f" @ {hex(volobject.vol.offset)}:"
+            print(struct_header + suffix)
 
             # it is a more complex type, so all members also need information displayed
             longest_member = longest_offset = longest_typename = 0
@@ -421,6 +426,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                     member_type
                 )  # special case for pointers to show what they point to
                 len_typename = len(member_type_name)
+
                 if isinstance(volobject, interfaces.objects.ObjectInterface):
                     # We're an instance, so also display the data
                     print(
@@ -437,6 +443,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                         self._display_value(getattr(volobject, member)),
                     )
                 else:
+                    # not provided with an actual object, nor an offset so just display the types
                     print(
                         "    " * dereference_count,
                         " " * (longest_offset - len_offset),
@@ -450,7 +457,7 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         else:  # simple type with no members, only one line to print
             # if the orginal object was just a type string, display the type information
-            if isinstance(object, str):
+            if isinstance(object, str) and offset is None:
                 print(self._display_simple_type(volobject, include_value=False))
 
             # if the original object was an actual volobject or was a type string
@@ -458,13 +465,26 @@ class Volshell(interfaces.plugins.PluginInterface):
             else:
                 print("    " * dereference_count, self._display_simple_type(volobject))
 
-    def _display_simple_type(self, volobject: Any, include_value: bool = True) -> str:
+    def _display_simple_type(
+        self,
+        volobject: Union[
+            interfaces.objects.ObjectInterface, interfaces.objects.Template
+        ],
+        include_value: bool = True,
+    ) -> str:
         # build the display_type_string based on the aviable information
+
         if hasattr(volobject.vol, "size"):
+            # the most common type to display, this shows their full size, e.g.:
+            # (layer_name) >>> dt('task_struct')
+            # symbol_table_name1!task_struct (1784 bytes)
             display_type_string = (
                 f"{volobject.vol.type_name} ({volobject.vol.size} bytes)"
             )
         elif hasattr(volobject.vol, "data_format"):
+            # this is useful for very simple types like ints, e.g.:
+            # (layer_name) >>> dt('int')
+            # symbol_table_name1!int (4 bytes, little endian, signed)
             data_format = volobject.vol.data_format
             display_type_string = "{} ({} bytes, {} endian, {})".format(
                 volobject.vol.type_name,
@@ -472,17 +492,24 @@ class Volshell(interfaces.plugins.PluginInterface):
                 data_format.byteorder,
                 "signed" if data_format.signed else "unsigned",
             )
+        elif hasattr(volobject.vol, "type_name"):
+            # types like void have almost no values to display other than their name, e.g.:
+            # (layer_name) >>> dt('void')
+            # symbol_table_name1!void
+            display_type_string = volobject.vol.type_name
+        else:
+            # it should not be possible to have a volobject without at least a type_name
+            raise AttributeError("Unable to find any details for object")
 
-        if include_value == True:
-            # if include_value is true also add the value to the display
+        if include_value:  # if include_value is true also add the value to the display
             if isinstance(volobject, objects.Pointer):
+                # for pointers include the location of the pointer and where it points to
                 return f"{display_type_string} @ {hex(volobject.vol.offset)} -> {self._display_value(volobject)}"
             else:
-                return f"{display_type_string} @ {self._display_value(volobject)}"
+                return f"{display_type_string}: {self._display_value(volobject)}"
         else:
             return display_type_string
 
-    @classmethod
     def _display_value(cls, value: Any) -> str:
         try:
             if isinstance(value, objects.Pointer):
