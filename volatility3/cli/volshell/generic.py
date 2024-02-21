@@ -510,7 +510,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         else:
             return display_type_string
 
-    def _display_value(cls, value: Any) -> str:
+    def _display_value(self, value: Any) -> str:
         try:
             if isinstance(value, objects.Pointer):
                 # show pointers in hex to match output for struct addrs
