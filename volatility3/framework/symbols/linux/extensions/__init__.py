@@ -52,43 +52,41 @@ class module(generic.GenericIntelProcess):
         return self._mod_mem_type
 
     def get_module_base(self):
-        if self.mod_mem_type:  # kernels 6.4+
+        if self.has_member("mem"):  # kernels 6.4+
             try:
                 return self.mem[self.mod_mem_type["MOD_TEXT"]].base
-            except:
+            except KeyError:
                 raise AttributeError(
                     "module -> get_module_base: Unable to get module base. Cannot read base from MOD_TEXT."
                 )
-        else:
-            if self.has_member("core_layout"):
-                return self.core_layout.base
-            elif self.has_member("module_core"):
-                return self.module_core
+        elif self.has_member("core_layout"):
+            return self.core_layout.base
+        elif self.has_member("module_core"):
+            return self.module_core
         raise AttributeError("module -> get_module_base: Unable to get module base")
 
     def get_init_size(self):
-        if self.mod_mem_type:  # kernels 6.4+
+        if self.has_member("mem"):  # kernels 6.4+
             try:
                 return (
                     self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].size
                     + self.mem[self.mod_mem_type["MOD_INIT_DATA"]].size
                     + self.mem[self.mod_mem_type["MOD_INIT_RODATA"]].size
                 )
-            except:
+            except KeyError:
                 raise AttributeError(
                     "module -> get_init_size: Unable to determine .init section size of module. Cannot read size of MOD_INIT_TEXT, MOD_INIT_DATA, and MOD_INIT_RODATA"
                 )
-        else:
-            if self.has_member("init_layout"):
-                return self.init_layout.size
-            elif self.has_member("init_size"):
-                return self.init_size
+        elif self.has_member("init_layout"):
+            return self.init_layout.size
+        elif self.has_member("init_size"):
+            return self.init_size
         raise AttributeError(
             "module -> get_init_size: Unable to determine .init section size of module"
         )
 
     def get_core_size(self):
-        if self.mod_mem_type:  # kernels 6.4+
+        if self.has_member("mem"):  # kernels 6.4+
             try:
                 return (
                     self.mem[self.mod_mem_type["MOD_TEXT"]].size
@@ -100,44 +98,40 @@ class module(generic.GenericIntelProcess):
                 raise AttributeError(
                     "module -> get_core_size: Unable to determine core size of module. Cannot read size of MOD_TEXT, MOD_DATA, MOD_RODATA, and MOD_RO_AFTER_INIT."
                 )
-
-        else:
-            if self.has_member("core_layout"):
-                return self.core_layout.size
-            elif self.has_member("core_size"):
-                return self.core_size
+        elif self.has_member("core_layout"):
+            return self.core_layout.size
+        elif self.has_member("core_size"):
+            return self.core_size
         raise AttributeError(
             "module -> get_core_size: Unable to determine core size of module"
         )
 
     def get_module_core(self):
-        if self.mod_mem_type:  # kernels 6.4+
+        if self.has_member("mem"):  # kernels 6.4+
             try:
                 return self.mem[self.mod_mem_type["MOD_TEXT"]].base
             except KeyError:
                 raise AttributeError(
                     "module -> get_module_core: Unable to get module core. Cannot read base from MOD_TEXT."
                 )
-        else:
-            if self.has_member("core_layout"):
-                return self.core_layout.base
-            elif self.has_member("module_core"):
-                return self.module_core
+        elif self.has_member("core_layout"):
+            return self.core_layout.base
+        elif self.has_member("module_core"):
+            return self.module_core
         raise AttributeError("module -> get_module_core: Unable to get module core")
 
     def get_module_init(self):
-        if self.mod_mem_type:  # kernels 6.4+
+        if self.has_member("mem"):  # kernels 6.4+
             try:
                 return self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].base
             except KeyError:
                 raise AttributeError(
                     "module -> get_module_core: Unable to get module init. Cannot read base from MOD_INIT_TEXT."
                 )
-        else:
-            if self.has_member("init_layout"):
-                return self.init_layout.base
-            elif self.has_member("module_init"):
-                return self.module_init
+        elif self.has_member("init_layout"):
+            return self.init_layout.base
+        elif self.has_member("module_init"):
+            return self.module_init
         raise AttributeError("module -> get_module_init: Unable to get module init")
 
     def get_name(self):
