@@ -26,27 +26,33 @@ vollog = logging.getLogger(__name__)
 
 
 class module(generic.GenericIntelProcess):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._mod_mem_type = None  # Initialize _mod_mem_type to None for memoization
+
     @property
     def mod_mem_type(self):
-        """Return the mod_mem_type enum choices if available or None if not"""
-        if not self.has_member("_mod_mem_type"):
+        """Return the mod_mem_type enum choices if available or an empty dict if not"""
+        # mod_mem_type and module_memory were added in kernel 6.4 which replaces
+        # module_layout for storing the information around core_layout etc.
+        # see commit ac3b43283923440900b4f36ca5f9f0b1ca43b70e for more information
+
+        if self._mod_mem_type is None:
             try:
-                vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(
-                    self._context, self
-                )
-                # mod_mem_type and module_memory were added in kernel 6.4 which replaces
-                # module_layout for storing the information around core_layout etc.
-                # see commit ac3b43283923440900b4f36ca5f9f0b1ca43b70e for more information
-                self._mod_mem_type = vmlinux.get_enumeration("mod_mem_type").choices
+                self._mod_mem_type = self._context.symbol_space.get_enumeration(
+                    self.get_symbol_table_name() + constants.BANG + "mod_mem_type"
+                ).choices
             except exceptions.SymbolError:
                 vollog.debug(
-                    f"Unable to find mod_mem_type enum. This is expected on kernels <6.4 but may cause issues with later kernels"
+                    f"Unable to find mod_mem_type enum. This message can be ignored for kernels < 6.4"
                 )
-                self._mod_mem_type = None
+                # set to empty dict to show that the enum was not found, and so shouldn't be searched for again
+                self._mod_mem_type = {}
         return self._mod_mem_type
 
     def get_module_base(self):
-        if self.mod_mem_type:
+        if self.mod_mem_type:  # kernels 6.4+
             try:
                 return self.mem[self.mod_mem_type["MOD_TEXT"]].base
             except:
@@ -61,7 +67,7 @@ class module(generic.GenericIntelProcess):
         raise AttributeError("module -> get_module_base: Unable to get module base")
 
     def get_init_size(self):
-        if self.mod_mem_type:
+        if self.mod_mem_type:  # kernels 6.4+
             try:
                 return (
                     self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].size
@@ -82,7 +88,7 @@ class module(generic.GenericIntelProcess):
         )
 
     def get_core_size(self):
-        if self.mod_mem_type:
+        if self.mod_mem_type:  # kernels 6.4+
             try:
                 return (
                     self.mem[self.mod_mem_type["MOD_TEXT"]].size
@@ -105,7 +111,7 @@ class module(generic.GenericIntelProcess):
         )
 
     def get_module_core(self):
-        if self.mod_mem_type:
+        if self.mod_mem_type:  # kernels 6.4+
             try:
                 return self.mem[self.mod_mem_type["MOD_TEXT"]].base
             except KeyError:
@@ -120,7 +126,7 @@ class module(generic.GenericIntelProcess):
         raise AttributeError("module -> get_module_core: Unable to get module core")
 
     def get_module_init(self):
-        if self.mod_mem_type:
+        if self.mod_mem_type:  # kernels 6.4+
             try:
                 return self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].base
             except KeyError:
