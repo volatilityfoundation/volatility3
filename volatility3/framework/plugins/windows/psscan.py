@@ -4,7 +4,7 @@
 
 import datetime
 import logging
-from typing import Iterable, Callable, List, Optional, Tuple
+from typing import Iterable, Callable, Optional, Tuple
 
 from volatility3.framework import renderers, interfaces, layers, exceptions
 from volatility3.framework.configuration import requirements
@@ -122,9 +122,9 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     )
             else:
                 if exclude:
-                    lambda proc: proc.vol.offset == offset
+                    filter_func = lambda proc: proc.vol.offset == offset
                 else:
-                    lambda proc: proc.vol.offset != offset
+                    filter_func = lambda proc: proc.vol.offset != offset
 
         return filter_func
 
