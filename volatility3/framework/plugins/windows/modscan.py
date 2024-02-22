@@ -45,7 +45,7 @@ class ModScan(interfaces.plugins.PluginInterface):
             ),
             requirements.IntRequirement(
                 name="base",
-                description="Extract a single module with BASE address(hex)",
+                description="Extract a single module with BASE address",
                 optional=True,
             ),
         ]
