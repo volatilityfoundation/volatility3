@@ -22,6 +22,7 @@ import traceback
 from typing import Any, Dict, List, Tuple, Type, Union
 from urllib import parse, request
 
+from volatility3.cli import text_filter
 import volatility3.plugins
 import volatility3.symbols
 from volatility3 import framework
@@ -232,6 +233,12 @@ class CommandLine:
             help="Do not search online for additional JSON files",
             default=False,
             action="store_true",
+        )
+        parser.add_argument(
+            "--filters",
+            help="List of filters to apply to the output (in the form of [+-]columname,pattern[!])",
+            default=[],
+            action="append",
         )
 
         parser.set_defaults(**default_config)
@@ -454,7 +461,10 @@ class CommandLine:
         try:
             # Construct and run the plugin
             if constructed:
-                renderers[args.renderer]().render(constructed.run())
+                grid = constructed.run()
+                renderer = renderers[args.renderer]()
+                renderer.filter = text_filter.CLIFilter(grid, args.filters)
+                renderer.render(grid)
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
 
