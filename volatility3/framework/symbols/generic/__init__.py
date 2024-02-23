@@ -4,12 +4,47 @@
 
 import random
 import string
+import datetime
 from typing import Union
 
 from volatility3.framework import objects, interfaces
 
 
-class GenericIntelProcess(objects.StructType):
+class GenericProcess(objects.StructType):
+    """A Generic Process class which is not designed to be used directly but provide a base to be used elsewhere."""
+
+    def get_pid(self) -> int:
+        """get_pid should return the pid of the process"""
+        raise NotImplementedError(
+            "The GenericProcess base class has no get_pid method defined"
+        )
+
+    def get_parent_pid(self) -> int:
+        """get_parent_pid should return the pid of the parent process"""
+        raise NotImplementedError(
+            "The GenericProcess base class has no get_parent_pid method defined"
+        )
+
+    def get_name(self) -> str:
+        """get_name should return the friendly name of the process"""
+        raise NotImplementedError(
+            "The GenericProcess base class has no get_name method defined"
+        )
+
+    def get_create_time(self) -> datetime.datetime:
+        """get_create_time should return the time the process was created/started"""
+        raise NotImplementedError(
+            "The GenericProcess base class has no get_start_time method defined"
+        )
+
+    def get_exit_time(self) -> datetime.datetime:
+        """get_exit_time should return the time the process exited/finished"""
+        raise NotImplementedError(
+            "The GenericProcess base class has no get_exit_time method defined"
+        )
+
+
+class GenericIntelProcess(GenericProcess):
     def _add_process_layer(
         self,
         context: interfaces.context.ContextInterface,

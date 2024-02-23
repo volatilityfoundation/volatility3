@@ -3,6 +3,7 @@
 #
 import contextlib
 import logging
+import datetime
 from typing import Generator, Iterable, Optional, Set, Tuple
 
 from volatility3.framework import constants, exceptions, interfaces, objects
@@ -107,6 +108,22 @@ class proc(generic.GenericIntelProcess):
                         continue
 
             yield (start, end - start)
+
+    def get_pid(self) -> int:
+        return self.p_pid
+
+    def get_parent_pid(self) -> int:
+        return self.p_ppid
+
+    def get_name(self) -> str:
+        return utility.array_to_string(self.p_comm)
+
+    def get_create_time(self) -> datetime.datetime:
+        start_time_seconds = self.p_start.tv_sec
+        start_time_microseconds = self.p_start.tv_usec
+        return datetime.datetime.fromtimestamp(
+            start_time_seconds + start_time_microseconds / 1e6
+        )
 
 
 class fileglob(objects.StructType):

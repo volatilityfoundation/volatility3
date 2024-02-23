@@ -72,7 +72,7 @@ class PsList(interfaces.plugins.PluginInterface):
         if filter_list:
 
             def filter_func(x):
-                return x.pid not in filter_list
+                return x.get_pid() not in filter_list
 
             return filter_func
         else:

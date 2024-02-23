@@ -812,6 +812,20 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
                 yield env, var
         return  # Generation finished
 
+    def get_pid(self) -> int:
+        """Returns the pid of this process"""
+        return self.UniqueProcessId
+
+    def get_parent_pid(self) -> int:
+        """Returns the pid of parent of this process"""
+        return self.InheritedFromUniqueProcessId
+
+    def get_name(self) -> str:
+        """Returns the name of this process"""
+        return self.ImageFileName.cast(
+            "string", max_length=self.ImageFileName.vol.count, errors="replace"
+        )
+
 
 class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
     """A class for double-linked lists on Windows."""
