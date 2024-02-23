@@ -92,18 +92,15 @@ class AArch64(linear.LinearlyMappedLayer):
         self._is_52bits = (
             True if self._ttbs_tnsz[self._virtual_addr_space] < 16 else False
         )
-
         self._ttb_lookup_indexes = self._determine_ttb_lookup_indexes(
             self._ttb_granule, self._ttb_bitsize
         )
         self._ttb_descriptor_bits = self._determine_ttb_descriptor_bits(
             self._ttb_granule, self._ttb_lookup_indexes, self._is_52bits
         )
-
         self._virtual_addr_range = self._get_virtual_addr_range()[
             self._virtual_addr_space
         ]
-
         self._canonical_prefix = self._mask(
             (1 << self._bits_per_register) - 1,
             self._bits_per_register,
@@ -196,10 +193,16 @@ class AArch64(linear.LinearlyMappedLayer):
                 invalid_address=virtual_offset,
             )
 
+        # [1], see D8.3, page 5852
+        if self._is_52bits:
+            if self._ttb_granule in [4, 16]:
+                ta_51_x_bits = (9, 8)
+            elif self._ttb_granule == 64:
+                ta_51_x_bits = (15, 12)
+
         table_address = self._page_map_offset
         level = 0
         max_level = len(self._ttb_lookup_indexes) - 1
-
         for high_bit, low_bit in self._ttb_lookup_indexes:
             index = self._mask(virtual_offset, high_bit, low_bit)
 
@@ -210,27 +213,21 @@ class AArch64(linear.LinearlyMappedLayer):
                 ),
                 byteorder="little",
             )
-            ta_51_x = None
-
-            # [1], see D8.3, page 5852
+            table_address = 0
+            # Bits 51->x need to be extracted from the descriptor
             if self._is_52bits:
-                if self._ttb_granule in [4, 16]:
-                    ta_51_x_bits = (9, 8)
-                elif self._ttb_granule == 64:
-                    ta_51_x_bits = (15, 12)
-
                 ta_51_x = self._mask(
                     descriptor,
                     ta_51_x_bits[0],
                     ta_51_x_bits[1],
                 )
-                ta_51_x = ta_51_x << (52 - ta_51_x.bit_length())
+                table_address = ta_51_x << (52 - ta_51_x.bit_length())
 
             # [1], see D8.3, page 5852
             descriptor_type = self._mask(descriptor, 1, 0)
             # Table descriptor
             if level < max_level and descriptor_type == 0b11:
-                table_address = (
+                table_address |= (
                     self._mask(
                         descriptor,
                         self._ttb_descriptor_bits[0],
@@ -238,10 +235,9 @@ class AArch64(linear.LinearlyMappedLayer):
                     )
                     << self._ttb_descriptor_bits[1]
                 )
-                table_address = ta_51_x | table_address if ta_51_x else table_address
             # Block descriptor
             elif level < max_level and descriptor_type == 0b01:
-                table_address = (
+                table_address |= (
                     self._mask(
                         descriptor,
                         self._ttb_descriptor_bits[0],
@@ -249,11 +245,10 @@ class AArch64(linear.LinearlyMappedLayer):
                     )
                     << low_bit
                 )
-                table_address = ta_51_x | table_address if ta_51_x else table_address
                 break
             # Page descriptor
             elif level == max_level and descriptor_type == 0b11:
-                table_address = (
+                table_address |= (
                     self._mask(
                         descriptor,
                         self._ttb_descriptor_bits[0],
@@ -261,7 +256,6 @@ class AArch64(linear.LinearlyMappedLayer):
                     )
                     << self._ttb_descriptor_bits[1]
                 )
-                table_address = ta_51_x | table_address if ta_51_x else table_address
                 break
             # Invalid descriptor || Reserved descriptor (level 3)
             else:
@@ -275,7 +269,7 @@ class AArch64(linear.LinearlyMappedLayer):
 
         if self._translation_debug:
             vollog.debug(
-                f"Virtual {hex(virtual_offset)} lives in page frame {hex(table_address)} at offset {hex(self._mask(virtual_offset, low_bit-1, 0))}",
+                f"Virtual {hex(virtual_offset)} lives in page frame {hex(table_address)} at offset {hex(self._mask(virtual_offset, low_bit-1, 0))} with descriptor {hex(descriptor)}",
             )
 
         return table_address, low_bit, descriptor
@@ -434,7 +428,14 @@ class AArch64(linear.LinearlyMappedLayer):
 
     @staticmethod
     def _page_is_dirty(entry: int) -> bool:
-        """Returns whether a particular page is dirty based on its entry."""
+        """Returns whether a particular page is dirty based on its entry.
+        The bit indicates that its associated block of memory
+        has been modified and has not been saved to storage yet
+
+        Hardware management (only > Armv8.1-A) : https://developer.arm.com/documentation/102376/0200/Access-Flag/Dirty-state
+        + [1], see D8.4.6, page 5877 and [1], see D8-16, page 5857
+        """
+        # The following is based on Linux software implementation :
         # [2], see arch/arm64/include/asm/pgtable-prot.h#L18
         return bool(entry & (1 << 55))
 
