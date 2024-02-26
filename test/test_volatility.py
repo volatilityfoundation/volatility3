@@ -141,7 +141,7 @@ def test_windows_dumpfiles(image, volatility, python):
                 volatility,
                 python,
                 globalargs=["-o", path],
-                pluginargs=["--virtaddr", addr],
+                pluginargs=["--addr", addr],
             )
 
             for file in os.listdir(path):
