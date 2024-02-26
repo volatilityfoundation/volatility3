@@ -45,13 +45,8 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 optional=True,
             ),
             requirements.IntRequirement(
-                name="virtaddr",
-                description="Dump a single _FILE_OBJECT at this virtual address",
-                optional=True,
-            ),
-            requirements.IntRequirement(
-                name="physaddr",
-                description="Dump a single _FILE_OBJECT at this physical address",
+                name="addr",
+                description="Dump a single _FILE_OBJECT at this offset",
                 optional=True,
             ),
             requirements.StringRequirement(
@@ -318,7 +313,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
             for offset, is_virtual in offsets:
                 try:
                     layer_name = kernel.layer_name
-                    # switch to a memory layer if the user provided --physaddr instead of --virtaddr
+                    # switch to a memory layer if the user provided --addr
                     if not is_virtual:
                         layer_name = self.context.layers[layer_name].config[
                             "memory_layer"
@@ -346,15 +341,11 @@ class DumpFiles(interfaces.plugins.PluginInterface):
         procs = list()
         kernel = self.context.modules[self.config["kernel"]]
 
-        if self.config["filter"] and (
-            self.config["virtaddr"] or self.config["physaddr"]
-        ):
+        if self.config["filter"] and self.config["addr"]:
             raise ValueError("Cannot use filter flag with an address flag")
 
-        if self.config.get("virtaddr", None) is not None:
-            offsets.append((self.config["virtaddr"], True))
-        elif self.config.get("physaddr", None) is not None:
-            offsets.append((self.config["physaddr"], False))
+        if self.config.get("addr", None) is not None:
+            offsets.append((self.config["addr"], False))
         else:
             filter_func = pslist.PsList.create_pid_filter(
                 [self.config.get("pid", None)]
