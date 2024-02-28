@@ -6,12 +6,12 @@
 #
 
 import os
+import re
 import subprocess
 import sys
 import shutil
 import tempfile
 import hashlib
-import ntpath
 import json
 
 #
@@ -124,11 +124,7 @@ def test_windows_dumpfiles(image, volatility, python):
         known_files = json.load(json_file)
 
     failed_chksms = 0
-
-    if sys.platform == "win32":
-        file_name = ntpath.basename(image)
-    else:
-        file_name = os.path.basename(image)
+    file_name = os.path.basename(image)
 
     try:
         for addr in known_files["windows_dumpfiles"][file_name]:
@@ -328,6 +324,36 @@ def test_linux_tty_check(image, volatility, python):
 
     assert out.find(b"__kernel__") != -1
     assert out.count(b"\n") >= 5
+    assert rc == 0
+
+
+def test_linux_ip_addr(image, volatility, python):
+    rc, out, err = runvol_plugin("linux.ip.Addr", image, volatility, python)
+
+    assert re.search(
+        rb"2\s+eth0\s+00:0c:29:8f:ed:ca\s+False\s+192.168.201.161\s+24\s+global\s+UP",
+        out,
+    )
+    assert re.search(
+        rb"2\s+eth0\s+00:0c:29:8f:ed:ca\s+False\s+fe80::20c:29ff:fe8f:edca\s+64\s+link\s+UP",
+        out,
+    )
+    assert out.count(b"\n") >= 8
+    assert rc == 0
+
+
+def test_linux_ip_link(image, volatility, python):
+    rc, out, err = runvol_plugin("linux.ip.Link", image, volatility, python)
+
+    assert re.search(
+        rb"-\s+lo\s+00:00:00:00:00:00\s+UNKNOWN\s+16436\s+noqueue\s+0\s+LOOPBACK,LOWER_UP,UP",
+        out,
+    )
+    assert re.search(
+        rb"-\s+eth0\s+00:0c:29:8f:ed:ca\s+UP\s+1500\s+pfifo_fast\s+1000\s+BROADCAST,LOWER_UP,MULTICAST,UP",
+        out,
+    )
+    assert out.count(b"\n") >= 6
     assert rc == 0
 
 

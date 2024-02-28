@@ -5,7 +5,7 @@
 import collections.abc
 import logging
 import socket as socket_module
-from typing import Generator, Iterable, Iterator, Optional, Tuple, List
+from typing import Generator, Iterable, Iterator, Optional, Tuple, List, Dict
 
 from volatility3.framework import constants
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
@@ -13,11 +13,15 @@ from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
 from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
-from volatility3.framework.constants.linux import CAPABILITIES
+from volatility3.framework.constants.linux import CAPABILITIES, NET_DEVICE_FLAGS
+from volatility3.framework.constants.linux import IFA_HOST, IFA_LINK, IFA_SITE
+from volatility3.framework.constants.linux import IF_OPER_STATES
+from volatility3.framework.renderers import conversion, UnparsableValue
 from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import generic, linux, intermed
+from volatility3.framework.symbols.wrappers import Flags
 from volatility3.framework.symbols.linux.extensions import elf
 
 vollog = logging.getLogger(__name__)
@@ -1308,6 +1312,15 @@ class mnt_namespace(objects.StructType):
 
 class net(objects.StructType):
     def get_inode(self):
+        """Get the namespace id for this network namespace.
+
+        Raises:
+            AttributeError: If it cannot find the network namespace id for the
+             current kernel.
+
+        Returns:
+            int: the namespace id
+        """
         if self.has_member("proc_inum"):
             # 3.8.13 <= kernel < 3.19.8
             return self.proc_inum
@@ -1317,6 +1330,337 @@ class net(objects.StructType):
         else:
             # kernel < 3.8.13
             raise AttributeError("Unable to find net_namespace inode")
+
+
+class net_device(objects.StructType):
+    def get_device_name(self) -> str:
+        """Return the network device name
+
+        Returns:
+            str: The network device name
+        """
+        return utility.array_to_string(self.name)
+
+    def _format_as_mac_address(self, hwaddr):
+        return ":".join([f"{x:02x}" for x in hwaddr[: self.addr_len]])
+
+    def get_mac_address(self) -> str:
+        """Get the MAC address of this network interface.
+
+        Returns:
+            str: the MAC address of this network interface.
+        """
+        if self.has_member("perm_addr"):
+            null_mac_addr_bytes = b"\x00" * self.addr_len
+            null_mac_addr = self._format_as_mac_address(null_mac_addr_bytes)
+            mac_addr = self._format_as_mac_address(self.perm_addr)
+            if mac_addr != null_mac_addr:
+                return mac_addr
+
+        parent_layer = self._context.layers[self.vol.layer_name]
+        try:
+            hwaddr = parent_layer.read(self.dev_addr, self.addr_len, pad=True)
+        except exceptions.InvalidAddressException:
+            vollog.debug(
+                f"Unable to read network inteface mac address from {self.dev_addr:#x}"
+            )
+            return None
+
+        return self._format_as_mac_address(hwaddr)
+
+    def _get_flag_choices(self) -> Dict:
+        """Return the net_device flags as a list of strings"""
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        try:
+            # kernels >= 3.15
+            net_device_flags_enum = vmlinux.get_enumeration("net_device_flags")
+            choices = net_device_flags_enum.choices
+        except exceptions.SymbolError:
+            # kernels < 3.15
+            choices = NET_DEVICE_FLAGS
+
+        return choices
+
+    def _get_net_device_flag_value(self, name):
+        """Return the net_device flag value based on the flag name"""
+        return self._get_flag_choices().get(name, UnparsableValue())
+
+    def _get_netdev_state_t(self):
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        try:
+            # At least from kernels 2.6.30
+            return vmlinux.get_enumeration("netdev_state_t")
+        except exceptions.SymbolError:
+            raise exceptions.VolatilityException(
+                "Unsupported kernel or wrong ISF. Cannot find 'netdev_state_t' enumeration"
+            )
+
+    def is_running(self) -> bool:
+        """Test if the network device has been brought up
+        Based on netif_running()
+
+        Returns:
+            bool: True if the device is UP
+        """
+        netdev_state_t_enum = self._get_netdev_state_t()
+
+        # It should be safe. netdev_state_t::__LINK_STATE_START has been available since
+        # at least kernels 2.6.30
+        return (
+            self.state & (1 << netdev_state_t_enum.choices["__LINK_STATE_START"]) != 0
+        )
+
+    def is_carrier_ok(self) -> bool:
+        """Check if carrier is present on network device
+        Based on netif_carrier_ok()
+
+        Returns:
+            bool: True if carrier present
+        """
+        netdev_state_t_enum = self._get_netdev_state_t()
+
+        # It should be safe. netdev_state_t::__LINK_STATE_NOCARRIER has been available
+        # since at least kernels 2.6.30
+        return (
+            self.state & (1 << netdev_state_t_enum.choices["__LINK_STATE_NOCARRIER"])
+            == 0
+        )
+
+    def is_dormant(self) -> bool:
+        """Check if the network device is dormant
+        Based on netif_dormant(()
+
+        Returns:
+            bool: True if the network device is dormant
+        """
+        netdev_state_t_enum = self._get_netdev_state_t()
+
+        # It should be safe. netdev_state_t::__LINK_STATE_DORMANT has been available
+        # since at least kernels 2.6.30
+        return (
+            self.state & (1 << netdev_state_t_enum.choices["__LINK_STATE_DORMANT"]) != 0
+        )
+
+    def is_operational(self) -> bool:
+        """Test if the carrier is operational
+        Based on netif_oper_up()
+
+        Returns:
+            bool: True if the device is UP
+        """
+
+        return self.get_operational_state() in ("UP", "UNKNOWN")
+
+    def get_flag_names(self) -> List[str]:
+        """Return the net_device flags as a list of strings.
+        This is the combination of flags exported through kernel APIs to userspace.
+        Based on dev_get_flags()
+
+        Returns:
+            List[str]: A list of flag names
+        """
+        choices = self._get_flag_choices()
+        clear_flags = choices.get("IFF_PROMISC", 0)
+        clear_flags |= choices.get("IFF_ALLMULTI", 0)
+        clear_flags |= choices.get("IFF_RUNNING", 0)
+        clear_flags |= choices.get("IFF_LOWER_UP", 0)
+        clear_flags |= choices.get("IFF_DORMANT", 0)
+
+        clear_gflags = choices.get("IFF_PROMISC", 0)
+        clear_gflags |= choices.get("IFF_ALLMULTI)", 0)
+
+        flags = (self.flags & ~clear_flags) | (self.gflags & ~clear_gflags)
+
+        if self.is_running():
+            if self.is_operational():
+                flags |= choices.get("IFF_RUNNING", 0)
+            if self.is_carrier_ok():
+                flags |= choices.get("IFF_LOWER_UP", 0)
+            if self.is_dormant():
+                flags |= choices.get("IFF_DORMANT", 0)
+
+        net_device_flags_enum_flags = Flags(choices)
+        net_device_flags = net_device_flags_enum_flags(flags)
+
+        # It's preferable to provide a deterministic list of items. i.e. for testing
+        return sorted(net_device_flags)
+
+    @property
+    def promisc(self):
+        """Return if this network interface is in promiscuous mode.
+
+        Returns:
+            bool: True if this network interface is in promiscuous mode. Otherwise, False
+        """
+        return self.flags & self._get_net_device_flag_value("IFF_PROMISC") != 0
+
+    def get_net_namespace_id(self) -> int:
+        """Return the network namespace id for this network interface.
+
+        Returns:
+            int: the network namespace id for this network interface
+        """
+        nd_net = self.nd_net
+        if nd_net.has_member("net"):
+            # In kernel 4.1.52 the 'nd_net' member type was changed from
+            # 'struct net*' to 'possible_net_t' which has a 'struct net *net' member.
+            net_ns_id = nd_net.net.get_inode()
+        else:
+            # In kernels < 4.1.52 the 'nd_net'member type was  'struct net*'
+            net_ns_id = nd_net.get_inode()
+
+        return net_ns_id
+
+    def get_operational_state(self) -> str:
+        """Return the netwok device oprational state (RFC 2863) string
+
+        Returns:
+            str: A string with the operational state
+        """
+        try:
+            return IF_OPER_STATES(self.operstate).name
+        except ValueError:
+            vollog.warning(f"Invalid net_device operational state '{self.operstate}'")
+            return UnparsableValue()
+
+    def get_qdisc_name(self) -> str:
+        """Return the network device queuing discipline (qdisc) name
+
+        Returns:
+            str: A string with the queuing discipline (qdisc) name
+        """
+        return utility.array_to_string(self.qdisc.ops.id)
+
+    def get_queue_length(self) -> int:
+        """Return the netwrok device transmision qeueue length (qlen)
+
+        Returns:
+            int: the netwrok device transmision qeueue length (qlen)
+        """
+        return self.tx_queue_len
+
+
+class in_device(objects.StructType):
+    def get_addresses(self):
+        """Yield the IPv4 ifaddr addresses
+
+        Yields:
+            in_ifaddr: An IPv4 ifaddr address
+        """
+        cur = self.ifa_list
+        while cur and cur.vol.offset:
+            yield cur
+            cur = cur.ifa_next
+
+
+class inet6_dev(objects.StructType):
+    def get_addresses(self):
+        """Yield the IPv6 ifaddr addresses
+
+        Yields:
+            inet6_ifaddr: An IPv6 ifaddr address
+        """
+        if not self.has_member(
+            "addr_list"
+        ) or not self.addr_list.vol.type_name.endswith(constants.BANG + "list_head"):
+            # kernels < 3.0
+            # FIXME: struct inet6_ifaddr	*addr_list;
+            vollog.warning(
+                "IPv6 is unsupported for this kernel. Check if the ISF contains the appropriate 'inet6_dev' type"
+            )
+            return
+
+        symbol_space = self._context.symbol_space
+        table_name = self.get_symbol_table_name()
+        inet6_ifaddr_symname = table_name + constants.BANG + "inet6_ifaddr"
+        if not symbol_space.has_type(inet6_ifaddr_symname) or not symbol_space.get_type(
+            inet6_ifaddr_symname
+        ).has_member("if_list"):
+            vollog.warning(
+                "IPv6 is unsupported for this kernel. Check if the ISF contains the appropriate 'inet6_ifaddr' type"
+            )
+            return
+
+        # 'if_list' member was added to 'inet6_ifaddr' type in kernels 3.0
+        for inet6_ifaddr in self.addr_list.to_list(inet6_ifaddr_symname, "if_list"):
+            yield inet6_ifaddr
+
+
+class in_ifaddr(objects.StructType):
+    # Translation to text based on iproute2 package. See 'rtnl_rtscope_tab' in lib/rt_names.c
+    _rtnl_rtscope_tab = {
+        "RT_SCOPE_UNIVERSE": "global",
+        "RT_SCOPE_NOWHERE": "nowhere",
+        "RT_SCOPE_HOST": "host",
+        "RT_SCOPE_LINK": "link",
+        "RT_SCOPE_SITE": "site",
+    }
+
+    def get_scope_type(self):
+        """Get the scope type for this IPv4 address
+
+        Returns:
+            str: the IPv4 scope type.
+        """
+        table_name = self.get_symbol_table_name()
+        rt_scope_enum = self._context.symbol_space.get_enumeration(
+            table_name + constants.BANG + "rt_scope_t"
+        )
+        try:
+            rt_scope = rt_scope_enum.lookup(self.ifa_scope)
+        except ValueError:
+            return "unknown"
+
+        return self._rtnl_rtscope_tab.get(rt_scope, "unknown")
+
+    def get_address(self):
+        """Get an string with the IPv4 address
+
+        Returns:
+            str: the IPv4 address
+        """
+        return conversion.convert_ipv4(self.ifa_address)
+
+    def get_prefix_len(self):
+        """Get the IPv4 address prefix len
+
+        Returns:
+            int: the IPv4 address prefix len
+        """
+        return self.ifa_prefixlen
+
+
+class inet6_ifaddr(objects.StructType):
+    def get_scope_type(self):
+        """Get the scope type for this IPv6 address
+
+        Returns:
+            str: the IPv6 scope type.
+        """
+        if (self.scope & IFA_HOST) != 0:
+            return "host"
+        elif (self.scope & IFA_LINK) != 0:
+            return "link"
+        elif (self.scope & IFA_SITE) != 0:
+            return "site"
+        else:
+            return "global"
+
+    def get_address(self):
+        """Get an string with the IPv6 address
+
+        Returns:
+            str: the IPv6 address
+        """
+        return conversion.convert_ipv6(self.addr.in6_u.u6_addr32)
+
+    def get_prefix_len(self):
+        """Get the IPv6 address prefix len
+
+        Returns:
+            int: the IPv6 address prefix len
+        """
+        return self.prefix_len
 
 
 class socket(objects.StructType):

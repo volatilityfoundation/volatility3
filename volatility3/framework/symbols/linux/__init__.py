@@ -43,6 +43,11 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 
         # Network
         self.set_type_class("net", extensions.net)
+        self.set_type_class("net_device", extensions.net_device)
+        self.set_type_class("in_device", extensions.in_device)
+        self.set_type_class("in_ifaddr", extensions.in_ifaddr)
+        self.set_type_class("inet6_dev", extensions.inet6_dev)
+        self.set_type_class("inet6_ifaddr", extensions.inet6_ifaddr)
         self.set_type_class("socket", extensions.socket)
         self.set_type_class("sock", extensions.sock)
         self.set_type_class("inet_sock", extensions.inet_sock)
