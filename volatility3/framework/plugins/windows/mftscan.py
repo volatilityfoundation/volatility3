@@ -38,7 +38,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         # Yara Rule to scan for MFT Header Signatures
         rules = yarascan.YaraScan.process_yara_options(
-            {"yara_rules": "/FILE0|FILE\*|BAAD/"}
+            {"yara_rules": "/FILE0|FILE\\*|BAAD/"}
         )
 
         # Read in the Symbol File
@@ -197,7 +197,7 @@ class ADS(interfaces.plugins.PluginInterface):
 
         # Yara Rule to scan for MFT Header Signatures
         rules = yarascan.YaraScan.process_yara_options(
-            {"yara_rules": "/FILE0|FILE\*|BAAD/"}
+            {"yara_rules": "/FILE0|FILE\\*|BAAD/"}
         )
 
         # Read in the Symbol File
