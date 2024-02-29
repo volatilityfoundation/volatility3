@@ -93,6 +93,10 @@ class Elfs(plugins.PluginInterface):
                 if phdr.p_type.description != "PT_LOAD":
                     continue
             except ValueError:
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    f"Skipping unknown ELF program header type: {phdr.p_type}",
+                )
                 continue
 
             start = phdr.p_vaddr

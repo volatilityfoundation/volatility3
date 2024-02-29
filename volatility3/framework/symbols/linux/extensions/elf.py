@@ -165,6 +165,10 @@ class elf(objects.StructType):
                 if phdr.p_type.description != "PT_DYNAMIC":
                     continue
             except ValueError:
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    f"Skipping unknown ELF program header type: {phdr.p_type}",
+                )
                 continue
 
             for dsec in phdr.dynamic_sections():
@@ -172,6 +176,10 @@ class elf(objects.StructType):
                     if dsec.d_tag.description != "DT_PLTGOT":
                         continue
                 except ValueError:
+                    vollog.log(
+                        constants.LOGLEVEL_VVVV,
+                        f"Skipping unknown ELF dynamic section type: {dsec.d_tag}",
+                    )
                     continue
 
                 got_start = dsec.d_ptr
@@ -186,16 +194,27 @@ class elf(objects.StructType):
                     layer_name=self.vol.layer_name,
                 )
                 if not link_map_ptr:
+                    vollog.log(
+                        constants.LOGLEVEL_VVVV,
+                        f"Invalid ELF link map pointer at 0x{link_map_addr:x}",
+                    )
                     continue
 
                 linkmap_symname = (
                     elf_symbol_table + constants.BANG + self._type_prefix + "LinkMap"
                 )
-                link_map = self._context.object(
-                    object_type=linkmap_symname,
-                    offset=link_map_ptr,
-                    layer_name=self.vol.layer_name,
-                )
+                try:
+                    link_map = self._context.object(
+                        object_type=linkmap_symname,
+                        offset=link_map_ptr,
+                        layer_name=self.vol.layer_name,
+                    )
+                except exceptions.InvalidAddressException:
+                    vollog.log(
+                        constants.LOGLEVEL_VVVV,
+                        f"Invalid ELF link map address at 0x{link_map_ptr:x}",
+                    )
+                    continue
 
                 while link_map and link_map.vol.offset != 0:
                     if link_map.vol.offset in link_maps_seen:
@@ -204,11 +223,18 @@ class elf(objects.StructType):
 
                     yield link_map
 
-                    link_map = self._context.object(
-                        object_type=linkmap_symname,
-                        offset=link_map.l_next,
-                        layer_name=self.vol.layer_name,
-                    )
+                    try:
+                        link_map = self._context.object(
+                            object_type=linkmap_symname,
+                            offset=link_map.l_next,
+                            layer_name=self.vol.layer_name,
+                        )
+                    except exceptions.InvalidAddressException:
+                        vollog.log(
+                            constants.LOGLEVEL_VVVV,
+                            f"ELF link map linked list is corrupt at 0x{self.vol.offset:x}",
+                        )
+                        break
 
     def _find_symbols(self):
         dt_strtab = None
@@ -221,6 +247,10 @@ class elf(objects.StructType):
                 if phdr.p_type.description != "PT_DYNAMIC":
                     continue
             except ValueError:
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    f"Skipping unknown ELF program header type: {phdr.p_type}",
+                )
                 continue
 
             # This section contains pointers to the strtab, symtab, and strent sections
@@ -228,6 +258,10 @@ class elf(objects.StructType):
                 try:
                     dtag = dsec.d_tag.description
                 except ValueError:
+                    vollog.log(
+                        constants.LOGLEVEL_VVVV,
+                        f"Skipping unknown ELF dynamic section type: {dsec.d_tag}",
+                    )
                     continue
 
                 if dtag == "DT_STRTAB":
@@ -353,6 +387,10 @@ class elf_phdr(objects.StructType):
         except ValueError:
             # Unknown ELF object file type. Anyway, if the ELF object file type is not a
             # shared object (ET_DYN), the virtual address is 'p_vaddr'.
+            vollog.log(
+                constants.LOGLEVEL_VVVV,
+                f"Skipping unknown ELF object type: {self._parent_e_type}",
+            )
             pass
 
         return offset
@@ -365,6 +403,10 @@ class elf_phdr(objects.StructType):
         except ValueError:
             # If the value is outside the ones declared in the enumeration, an
             # exception is raised
+            vollog.log(
+                constants.LOGLEVEL_VVVV,
+                f"Skipping unknown ELF program header type: {self.p_type}",
+            )
             return None
 
         # the buffer of array starts at elf_base + our virtual address ( offset )
@@ -398,6 +440,10 @@ class elf_linkmap(objects.StructType):
             buf = self._context.layers.read(self.vol.layer_name, self.l_name, 256)
         except exceptions.PagedInvalidAddressException:
             # Protection against memory smear
+            vollog.log(
+                constants.LOGLEVEL_VVVV,
+                f"Invalid l_name address for ELF link map at 0x{self.vol.offset:x}",
+            )
             return None
 
         idx = buf.find(b"\x00")

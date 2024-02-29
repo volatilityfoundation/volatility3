@@ -55,6 +55,10 @@ class Elf64Layer(segmented.SegmentedLayer):
             try:
                 ptype = phdr.p_type.description
             except ValueError:
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    f"Skipping unknown ELF program header type: {phdr.p_type}",
+                )
                 continue
 
             if (
