@@ -611,7 +611,8 @@ class vm_area_struct(objects.StructType):
     def get_page_offset(self) -> int:
         if self.vm_file == 0:
             return 0
-        return self.vm_pgoff << constants.linux.PAGE_SHIFT
+        parent_layer = self._context.layers[self.vol.layer_name]
+        return self.vm_pgoff << parent_layer.page_shift
 
     def get_name(self, context, task):
         if self.vm_file != 0:
