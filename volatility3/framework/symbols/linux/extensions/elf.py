@@ -391,7 +391,6 @@ class elf_phdr(objects.StructType):
                 constants.LOGLEVEL_VVVV,
                 f"Skipping unknown ELF object type: {self._parent_e_type}",
             )
-            pass
 
         return offset
 
