@@ -9,11 +9,6 @@ from enum import IntEnum
 
 KERNEL_NAME = "__kernel__"
 
-# arch/x86/include/asm/page_types.h
-PAGE_SHIFT = 12
-PAGE_SIZE = 1 << PAGE_SHIFT
-PAGE_MASK = ~(PAGE_SIZE - 1)
-
 """The value hard coded from the Linux Kernel (hence not extracted from the layer itself)"""
 
 # include/linux/sched.h

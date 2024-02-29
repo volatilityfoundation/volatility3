@@ -14,11 +14,7 @@ from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux.extensions import elf
-from volatility3.framework.constants.linux import (
-    PAGE_SIZE,
-    PAGE_MASK,
-    ELF_MAX_EXTRACTION_SIZE,
-)
+from volatility3.framework.constants.linux import ELF_MAX_EXTRACTION_SIZE
 from volatility3.plugins.linux import pslist
 
 
@@ -106,11 +102,11 @@ class Elfs(plugins.PluginInterface):
             # Use complete memory pages for dumping
             # If start isn't a multiple of a page, stick to the highest multiple < start
             # If end isn't a multiple of a page, stick to the lowest multiple > end
-            if start % PAGE_SIZE:
-                start = start & PAGE_MASK
+            if start % proc_layer.page_size:
+                start = start & proc_layer.page_mask
 
-            if end % PAGE_SIZE:
-                end = (end & PAGE_MASK) + PAGE_SIZE
+            if end % proc_layer.page_size:
+                end = (end & proc_layer.page_mask) + proc_layer.page_size
 
             real_size = end - start
 

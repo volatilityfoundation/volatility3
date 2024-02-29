@@ -640,7 +640,7 @@ class vm_area_struct(objects.StructType):
         elif flags_str == "r-x" and self.vm_file.dereference().vol.offset == 0:
             ret = True
         elif proclayer and "x" in flags_str:
-            for i in range(self.vm_start, self.vm_end, 1 << constants.linux.PAGE_SHIFT):
+            for i in range(self.vm_start, self.vm_end, proclayer.page_size):
                 try:
                     if proclayer.is_dirty(i):
                         vollog.warning(
