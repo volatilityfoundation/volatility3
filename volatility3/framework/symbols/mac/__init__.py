@@ -21,12 +21,14 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("vm_map_object", extensions.vm_map_object)
         self.set_type_class("socket", extensions.socket)
         self.set_type_class("inpcb", extensions.inpcb)
-        self.set_type_class("queue_entry", extensions.queue_entry)
         self.set_type_class("ifnet", extensions.ifnet)
         self.set_type_class("sockaddr_dl", extensions.sockaddr_dl)
         self.set_type_class("sockaddr", extensions.sockaddr)
         self.set_type_class("sysctl_oid", extensions.sysctl_oid)
         self.set_type_class("kauth_scope", extensions.kauth_scope)
+        # https://developer.apple.com/documentation/kernel/queue_head_t
+        self.set_type_class("queue_entry", extensions.queue_entry)
+        self.set_type_class("queue_head_t", extensions.queue_entry)
 
 
 class MacUtilities(interfaces.configuration.VersionableInterface):

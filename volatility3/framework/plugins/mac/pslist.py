@@ -49,9 +49,7 @@ class PsList(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def get_list_tasks(
-        cls, method: str
-    ) -> Callable[
+    def get_list_tasks(cls, method: str) -> Callable[
         [interfaces.context.ContextInterface, str, Callable[[int], bool]],
         Iterable[interfaces.objects.ObjectInterface],
     ]:
@@ -188,9 +186,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
         kernel_layer = context.layers[kernel.layer_name]
 
-        queue_entry = kernel.object(
-            object_type="queue_entry", offset=kernel.get_symbol("tasks").address
-        )
+        queue_entry = kernel.object_from_symbol(symbol_name="tasks")
 
         seen: Dict[int, int] = {}
         for task in queue_entry.walk_list(queue_entry, "tasks", "task"):
