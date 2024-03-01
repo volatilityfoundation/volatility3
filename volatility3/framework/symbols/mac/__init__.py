@@ -28,7 +28,7 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("kauth_scope", extensions.kauth_scope)
         # https://developer.apple.com/documentation/kernel/queue_head_t
         self.set_type_class("queue_entry", extensions.queue_entry)
-        self.set_type_class("queue_head_t", extensions.queue_entry)
+        self.optional_set_type_class("queue_head_t", extensions.queue_entry)
 
 
 class MacUtilities(interfaces.configuration.VersionableInterface):
