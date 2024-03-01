@@ -490,22 +490,24 @@ class queue_entry(objects.StructType):
 
         for attr in ["next", "prev"]:
             with contextlib.suppress(exceptions.InvalidAddressException):
-                n = getattr(self, attr).dereference().cast(type_name)
-
-                while n is not None and n.vol.offset != list_head:
-                    if n.vol.offset in seen:
+                queue_element = getattr(self, attr).dereference().cast(type_name)
+                while (
+                    queue_element is not None
+                    and queue_element.vol.offset != list_head.vol.offset
+                ):
+                    if queue_element.vol.offset in seen:
                         break
 
-                    yield n
+                    yield queue_element
 
-                    seen.add(n.vol.offset)
+                    seen.add(queue_element.vol.offset)
 
                     yielded = yielded + 1
                     if yielded == max_size:
-                        return
+                        return None
 
-                    n = (
-                        getattr(n.member(attr=member_name), attr)
+                    queue_element = (
+                        getattr(queue_element.member(attr=member_name), attr)
                         .dereference()
                         .cast(type_name)
                     )
