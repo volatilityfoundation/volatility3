@@ -61,7 +61,7 @@ class Dmesg(interfaces.plugins.PluginInterface):
 
         # Yield each line
         for dmesg_line in dmesg.splitlines():
-            yield (dmesg_line.strip(),)
+            yield (dmesg_line,)
 
     def _generator(self):
         for value in self.get_kernel_log_buffer(
