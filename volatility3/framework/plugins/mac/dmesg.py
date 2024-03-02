@@ -40,10 +40,9 @@ class Dmesg(interfaces.plugins.PluginInterface):
 
         kernel = context.modules[kernel_module_name]
         if not kernel.has_symbol("msgbufp"):
-            vollog.error(
+            raise TypeError(
                 'The provided symbol table does not include the "msgbufp" symbol. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt.'
             )
-            return []
 
         msgbufp_ptr = kernel.object_from_symbol(symbol_name="msgbufp")
         msgbufp = msgbufp_ptr.dereference()
