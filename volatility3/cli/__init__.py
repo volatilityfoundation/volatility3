@@ -19,9 +19,10 @@ import os
 import sys
 import tempfile
 import traceback
-from typing import Any, Dict, Type, Union
+from typing import Any, Dict, List, Tuple, Type, Union
 from urllib import parse, request
 
+from volatility3.cli import text_filter
 import volatility3.plugins
 import volatility3.symbols
 from volatility3 import framework
@@ -104,6 +105,9 @@ class CommandLine:
                 for x in framework.class_subclasses(text_renderer.CLIRenderer)
             ]
         )
+
+        # Load up system defaults
+        delayed_logs, default_config = self.load_system_defaults("vol.json")
 
         parser = volargparse.HelpfulArgParser(
             add_help=False,
@@ -230,6 +234,14 @@ class CommandLine:
             default=False,
             action="store_true",
         )
+        parser.add_argument(
+            "--filters",
+            help="List of filters to apply to the output (in the form of [+-]columname,pattern[!])",
+            default=[],
+            action="append",
+        )
+
+        parser.set_defaults(**default_config)
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
@@ -241,19 +253,7 @@ class CommandLine:
             banner_output = sys.stderr
         banner_output.write(f"Volatility 3 Framework {constants.PACKAGE_VERSION}\n")
 
-        if partial_args.plugin_dirs:
-            volatility3.plugins.__path__ = [
-                os.path.abspath(p) for p in partial_args.plugin_dirs.split(";")
-            ] + constants.PLUGINS_PATH
-
-        if partial_args.symbol_dirs:
-            volatility3.symbols.__path__ = [
-                os.path.abspath(p) for p in partial_args.symbol_dirs.split(";")
-            ] + constants.SYMBOL_BASEPATHS
-
-        if partial_args.cache_path:
-            constants.CACHE_PATH = partial_args.cache_path
-
+        ### Start up logging
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)
             file_logger.setLevel(1)
@@ -270,6 +270,23 @@ class CommandLine:
             console.setLevel(30 - (partial_args.verbosity * 10))
         else:
             console.setLevel(10 - (partial_args.verbosity - 2))
+
+        for level, msg in delayed_logs:
+            vollog.log(level, msg)
+
+        ### Alter constants if necessary
+        if partial_args.plugin_dirs:
+            volatility3.plugins.__path__ = [
+                os.path.abspath(p) for p in partial_args.plugin_dirs.split(";")
+            ] + constants.PLUGINS_PATH
+
+        if partial_args.symbol_dirs:
+            volatility3.symbols.__path__ = [
+                os.path.abspath(p) for p in partial_args.symbol_dirs.split(";")
+            ] + constants.SYMBOL_BASEPATHS
+
+        if partial_args.cache_path:
+            constants.CACHE_PATH = partial_args.cache_path
 
         vollog.info(f"Volatility plugins path: {volatility3.plugins.__path__}")
         vollog.info(f"Volatility symbols path: {volatility3.symbols.__path__}")
@@ -444,7 +461,10 @@ class CommandLine:
         try:
             # Construct and run the plugin
             if constructed:
-                renderers[args.renderer]().render(constructed.run())
+                grid = constructed.run()
+                renderer = renderers[args.renderer]()
+                renderer.filter = text_filter.CLIFilter(grid, args.filters)
+                renderer.render(grid)
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
 
@@ -462,6 +482,50 @@ class CommandLine:
             f"{__name__}.location_from_file has been deprecated and moved to requirements.URIRequirement.location_from_file"
         )
         return requirements.URIRequirement.location_from_file(filename)
+
+    def load_system_defaults(
+        self, filename: str
+    ) -> Tuple[List[Tuple[int, str]], Dict[str, Any]]:
+        """Modify the main configuration based on the default configuration override"""
+        # Build the config path
+        default_config_path = os.path.join(
+            os.path.expanduser("~"), ".config", "volatility3", filename
+        )
+        if sys.platform == "win32":
+            default_config_path = os.path.join(
+                os.environ.get("APPDATA", os.path.expanduser("~")),
+                "volatility3",
+                filename,
+            )
+
+        delayed_logs = []
+
+        # Process it if the files exist
+        if os.path.exists(default_config_path):
+            with open(default_config_path, "rb") as config_json:
+                result = json.load(config_json)
+            if not isinstance(result, dict):
+                delayed_logs.append(
+                    (
+                        logging.INFO,
+                        f"Default configuration file {default_config_path} does not contain a dictionary",
+                    )
+                )
+            else:
+                delayed_logs.append(
+                    (
+                        logging.INFO,
+                        f"Loading default configuration options from {default_config_path}",
+                    )
+                )
+                delayed_logs.append(
+                    (
+                        logging.DEBUG,
+                        f"Loaded configuration: {json.dumps(result, indent = 2, sort_keys = True)}",
+                    )
+                )
+                return delayed_logs, result
+        return delayed_logs, {}
 
     def process_exceptions(self, excp):
         """Provide useful feedback if an exception occurs during a run of a plugin."""

@@ -26,14 +26,58 @@ vollog = logging.getLogger(__name__)
 
 
 class module(generic.GenericIntelProcess):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._mod_mem_type = None  # Initialize _mod_mem_type to None for memoization
+
+    @property
+    def mod_mem_type(self):
+        """Return the mod_mem_type enum choices if available or an empty dict if not"""
+        # mod_mem_type and module_memory were added in kernel 6.4 which replaces
+        # module_layout for storing the information around core_layout etc.
+        # see commit ac3b43283923440900b4f36ca5f9f0b1ca43b70e for more information
+
+        if self._mod_mem_type is None:
+            try:
+                self._mod_mem_type = self._context.symbol_space.get_enumeration(
+                    self.get_symbol_table_name() + constants.BANG + "mod_mem_type"
+                ).choices
+            except exceptions.SymbolError:
+                vollog.debug(
+                    f"Unable to find mod_mem_type enum. This message can be ignored for kernels < 6.4"
+                )
+                # set to empty dict to show that the enum was not found, and so shouldn't be searched for again
+                self._mod_mem_type = {}
+        return self._mod_mem_type
+
     def get_module_base(self):
-        if self.has_member("core_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return self.mem[self.mod_mem_type["MOD_TEXT"]].base
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_module_base: Unable to get module base. Cannot read base from MOD_TEXT."
+                )
+        elif self.has_member("core_layout"):
             return self.core_layout.base
-        else:
+        elif self.has_member("module_core"):
             return self.module_core
+        raise AttributeError("module -> get_module_base: Unable to get module base")
 
     def get_init_size(self):
-        if self.has_member("init_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return (
+                    self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].size
+                    + self.mem[self.mod_mem_type["MOD_INIT_DATA"]].size
+                    + self.mem[self.mod_mem_type["MOD_INIT_RODATA"]].size
+                )
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_init_size: Unable to determine .init section size of module. Cannot read size of MOD_INIT_TEXT, MOD_INIT_DATA, and MOD_INIT_RODATA"
+                )
+        elif self.has_member("init_layout"):
             return self.init_layout.size
         elif self.has_member("init_size"):
             return self.init_size
@@ -42,7 +86,19 @@ class module(generic.GenericIntelProcess):
         )
 
     def get_core_size(self):
-        if self.has_member("core_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return (
+                    self.mem[self.mod_mem_type["MOD_TEXT"]].size
+                    + self.mem[self.mod_mem_type["MOD_DATA"]].size
+                    + self.mem[self.mod_mem_type["MOD_RODATA"]].size
+                    + self.mem[self.mod_mem_type["MOD_RO_AFTER_INIT"]].size
+                )
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_core_size: Unable to determine core size of module. Cannot read size of MOD_TEXT, MOD_DATA, MOD_RODATA, and MOD_RO_AFTER_INIT."
+                )
+        elif self.has_member("core_layout"):
             return self.core_layout.size
         elif self.has_member("core_size"):
             return self.core_size
@@ -51,18 +107,32 @@ class module(generic.GenericIntelProcess):
         )
 
     def get_module_core(self):
-        if self.has_member("core_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return self.mem[self.mod_mem_type["MOD_TEXT"]].base
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_module_core: Unable to get module core. Cannot read base from MOD_TEXT."
+                )
+        elif self.has_member("core_layout"):
             return self.core_layout.base
         elif self.has_member("module_core"):
             return self.module_core
         raise AttributeError("module -> get_module_core: Unable to get module core")
 
     def get_module_init(self):
-        if self.has_member("init_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].base
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_module_core: Unable to get module init. Cannot read base from MOD_INIT_TEXT."
+                )
+        elif self.has_member("init_layout"):
             return self.init_layout.base
         elif self.has_member("module_init"):
             return self.module_init
-        raise AttributeError("module -> get_module_core: Unable to get module init")
+        raise AttributeError("module -> get_module_init: Unable to get module init")
 
     def get_name(self):
         """Get the name of the module as a string"""
@@ -362,7 +432,7 @@ class maple_tree(objects.StructType):
         # None. If however you wanted to parse from a node, but ignore some parts of the tree below it then
         # this could be populated with the addresses of the nodes you wish to ignore.
 
-        if seen == None:
+        if seen is None:
             seen = set()
 
         # protect against unlikely loop
@@ -447,12 +517,25 @@ class maple_tree(objects.StructType):
 
 
 class mm_struct(objects.StructType):
+
+    # TODO: As of version 3.0.0 this method should be removed
     def get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Returns an iterator for the mmap list member of an mm_struct."""
+        """
+        Deprecated: Use either get_vma_iter() or _get_mmap_iter().
+        """
+        vollog.warning(
+            "This method has been deprecated in favour of using the get_vma_iter() method."
+        )
+        yield from self.get_vma_iter()
+
+    def _get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns an iterator for the mmap list member of an mm_struct. Use this only if
+        required, get_vma_iter() will choose the correct _get_maple_tree_iter() or
+        _get_mmap_iter() automatically as required."""
 
         if not self.has_member("mmap"):
             raise AttributeError(
-                "get_mmap_iter called on mm_struct where no mmap member exists."
+                "_get_mmap_iter called on mm_struct where no mmap member exists."
             )
         if not self.mmap:
             return None
@@ -466,12 +549,24 @@ class mm_struct(objects.StructType):
             seen.add(link.vol.offset)
             link = link.vm_next
 
+    # TODO: As of version 3.0.0 this method should be removed
     def get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Returns an iterator for the mm_mt member of an mm_struct."""
+        """
+        Deprecated: Use either get_vma_iter() or _get_maple_tree_iter().
+        """
+        vollog.warning(
+            "This method has been deprecated in favour of using the get_vma_iter() method."
+        )
+        yield from self.get_vma_iter()
+
+    def _get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns an iterator for the mm_mt member of an mm_struct. Use this only if
+        required, get_vma_iter() will choose the correct _get_maple_tree_iter() or
+        get_mmap_iter() automatically as required."""
 
         if not self.has_member("mm_mt"):
             raise AttributeError(
-                "get_maple_tree_iter called on mm_struct where no mm_mt member exists."
+                "_get_maple_tree_iter called on mm_struct where no mm_mt member exists."
             )
         symbol_table_name = self.get_symbol_table_name()
         for vma_pointer in self.mm_mt.get_slot_iter():
@@ -487,9 +582,9 @@ class mm_struct(objects.StructType):
         """Returns an iterator for the VMAs in an mm_struct. Automatically choosing the mmap or mm_mt as required."""
 
         if self.has_member("mmap"):
-            yield from self.get_mmap_iter()
+            yield from self._get_mmap_iter()
         elif self.has_member("mm_mt"):
-            yield from self.get_maple_tree_iter()
+            yield from self._get_maple_tree_iter()
         else:
             raise AttributeError("Unable to find mmap or mm_mt in mm_struct")
 
@@ -1042,17 +1137,17 @@ class vfsmount(objects.StructType):
         """Helper to make sure it is comparing two pointers to 'vfsmount'.
 
         Depending on the kernel version, the calling object (self) could be
-        a 'vfsmount \*' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
+        a 'vfsmount \\*' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
         in the framework "auto" dereferencing ability to assure that when we
         reach this point 'self' will be a 'vfsmount' already and self.vol.offset
-        a 'vfsmount \*' and not a 'vfsmount \*\*'. The argument must be a 'vfsmount \*'.
+        a 'vfsmount \\*' and not a 'vfsmount \\*\\*'. The argument must be a 'vfsmount \\*'.
         Typically, it's called from do_get_path().
 
         Args:
-            vfsmount_ptr (vfsmount \*): A pointer to a 'vfsmount'
+            vfsmount_ptr (vfsmount *): A pointer to a 'vfsmount'
 
         Raises:
-            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount \*'
+            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount \\*'
 
         Returns:
             bool: 'True' if the given argument points to the the same 'vfsmount'

@@ -169,7 +169,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "Volatility 3"
-copyright = "2012-2022, Volatility Foundation"
+copyright = "2012-2024, Volatility Foundation"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
