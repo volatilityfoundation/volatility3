@@ -7,14 +7,13 @@ import logging
 import socket as socket_module
 from typing import Generator, Iterable, Iterator, Optional, Tuple, List
 
-from volatility3.framework import constants
+from volatility3.framework import constants, exceptions, objects, interfaces, symbols
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
 from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
 from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
 from volatility3.framework.constants.linux import CAPABILITIES
-from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import generic, linux, intermed
@@ -707,7 +706,8 @@ class vm_area_struct(objects.StructType):
     def get_page_offset(self) -> int:
         if self.vm_file == 0:
             return 0
-        return self.vm_pgoff << constants.linux.PAGE_SHIFT
+        parent_layer = self._context.layers[self.vol.layer_name]
+        return self.vm_pgoff << parent_layer.page_shift
 
     def get_name(self, context, task):
         if self.vm_file != 0:
@@ -736,7 +736,7 @@ class vm_area_struct(objects.StructType):
         elif flags_str == "r-x" and self.vm_file.dereference().vol.offset == 0:
             ret = True
         elif proclayer and "x" in flags_str:
-            for i in range(self.vm_start, self.vm_end, 1 << constants.linux.PAGE_SHIFT):
+            for i in range(self.vm_start, self.vm_end, proclayer.page_size):
                 try:
                     if proclayer.is_dirty(i):
                         vollog.warning(
