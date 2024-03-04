@@ -43,7 +43,7 @@ class LibraryList(interfaces.plugins.PluginInterface):
             ),
         ]
 
-    def get_libdl_libraries(
+    def _get_libdl_libraries(
         self, proc_layer_name: str, vma_start: int
     ) -> interfaces.objects.ObjectInterface:
         """Get the ELF link map objects for the given VMA address
@@ -81,7 +81,7 @@ class LibraryList(interfaces.plugins.PluginInterface):
             # Protection against memory smear in this VMA
             pass
 
-    def get_libdl_maps(
+    def _get_libdl_maps(
         self, task: interfaces.objects.ObjectInterface, proc_layer_name: str
     ) -> interfaces.objects.ObjectInterface:
         """Get the ELF link maps objects for a task
@@ -96,14 +96,14 @@ class LibraryList(interfaces.plugins.PluginInterface):
 
         link_map_seen = set()
         for vma in task.mm.get_vma_iter():
-            for link_map in self.get_libdl_libraries(proc_layer_name, vma.vm_start):
+            for link_map in self._get_libdl_libraries(proc_layer_name, vma.vm_start):
                 if link_map.l_addr in link_map_seen:
                     continue
 
                 yield link_map
                 link_map_seen.add(link_map.l_addr)
 
-    def get_task_libraries(
+    def _get_task_libraries(
         self, task: interfaces.objects.ObjectInterface
     ) -> Tuple[int, str]:
         """Get the task libraries from the ELF headers found within the memory maps
@@ -118,13 +118,13 @@ class LibraryList(interfaces.plugins.PluginInterface):
         if not proc_layer_name:
             return
 
-        for elf_link_map in self.get_libdl_maps(task, proc_layer_name):
+        for elf_link_map in self._get_libdl_maps(task, proc_layer_name):
             name = elf_link_map.get_name()
             if not name:
                 continue
             yield elf_link_map.l_addr, name
 
-    def get_tasks_libraries(
+    def _get_tasks_libraries(
         self,
         tasks: Iterable[interfaces.objects.ObjectInterface],
     ) -> Iterable[Tuple[str, int, int, str]]:
@@ -139,7 +139,7 @@ class LibraryList(interfaces.plugins.PluginInterface):
         """
         for task in tasks:
             task_name = utility.array_to_string(task.comm)
-            for linkmap_addr, linkmap_name in self.get_task_libraries(task):
+            for linkmap_addr, linkmap_name in self._get_task_libraries(task):
                 yield task_name, task.tgid, linkmap_addr, linkmap_name
 
     def _format_fields(self, fields):
@@ -149,7 +149,7 @@ class LibraryList(interfaces.plugins.PluginInterface):
     def _generator(
         self, tasks: Iterable[interfaces.objects.ObjectInterface]
     ) -> Iterable[Tuple[int, Tuple]]:
-        for fields in self.get_tasks_libraries(tasks):
+        for fields in self._get_tasks_libraries(tasks):
             yield 0, self._format_fields(fields)
 
     def run(self):
