@@ -827,7 +827,11 @@ class CommandLine:
                 requirement,
                 volatility3.framework.configuration.requirements.ListRequirement,
             ):
-                additional["type"] = requirement.element_type
+                # Allow a list of integers, specified with the convenient 0x hexadecimal format
+                if requirement.element_type == int:
+                    additional["type"] = lambda x: int(x, 0)
+                else:
+                    additional["type"] = requirement.element_type
                 nargs = "*" if requirement.optional else "+"
                 additional["nargs"] = nargs
             elif isinstance(
