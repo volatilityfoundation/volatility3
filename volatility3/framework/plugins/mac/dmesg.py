@@ -41,7 +41,9 @@ class Dmesg(interfaces.plugins.PluginInterface):
         kernel = context.modules[kernel_module_name]
         if not kernel.has_symbol("msgbufp"):
             raise exceptions.SymbolError(
-                'The provided symbol table does not include the "msgbufp" symbol. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt.'
+                "msgbufp",
+                kernel.symbol_table_name,
+                'The provided symbol table does not include the "msgbufp" symbol. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt.',
             )
 
         msgbufp = kernel.object_from_symbol(symbol_name="msgbufp")
