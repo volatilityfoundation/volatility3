@@ -165,10 +165,7 @@ class Maps(interfaces.plugins.PluginInterface):
                 ]
 
                 # if any of the user supplied addresses would fall within this vma return true
-                if addrs_in_vma:
-                    return True
-                else:
-                    return False
+                return bool(addrs_in_vma)
 
             vma_filter_func = vma_filter_function
 
