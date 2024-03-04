@@ -115,9 +115,17 @@ class DriverIrp(interfaces.plugins.PluginInterface):
                         )
 
                 if not module_found:
-                     yield (0, (format_hints.Hex(driver.vol.offset), driver_name, MAJOR_FUNCTIONS[i],
-                                format_hints.Hex(address), renderers.NotAvailableValue(), renderers.NotAvailableValue()))
-
+                    yield (
+                        0,
+                        (
+                            format_hints.Hex(driver.vol.offset),
+                            driver_name,
+                            MAJOR_FUNCTIONS[i],
+                            format_hints.Hex(address),
+                            renderers.NotAvailableValue(),
+                            renderers.NotAvailableValue(),
+                        ),
+                    )
 
     def run(self):
         return renderers.TreeGrid(
