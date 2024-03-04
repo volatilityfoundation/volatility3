@@ -3,7 +3,7 @@
 #
 
 import logging
-from volatility3.framework import interfaces, renderers
+from volatility3.framework import interfaces, renderers, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 
@@ -40,7 +40,7 @@ class Dmesg(interfaces.plugins.PluginInterface):
 
         kernel = context.modules[kernel_module_name]
         if not kernel.has_symbol("msgbufp"):
-            raise TypeError(
+            raise exceptions.SymbolError(
                 'The provided symbol table does not include the "msgbufp" symbol. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt.'
             )
 
