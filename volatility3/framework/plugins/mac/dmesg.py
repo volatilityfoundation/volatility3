@@ -44,8 +44,7 @@ class Dmesg(interfaces.plugins.PluginInterface):
                 'The provided symbol table does not include the "msgbufp" symbol. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt.'
             )
 
-        msgbufp_ptr = kernel.object_from_symbol(symbol_name="msgbufp")
-        msgbufp = msgbufp_ptr.dereference()
+        msgbufp = kernel.object_from_symbol(symbol_name="msgbufp")
         msg_size = msgbufp.msg_size  # max buffer size
         msg_bufx = msgbufp.msg_bufx  # write pointer
         msg_bufc = msgbufp.msg_bufc
