@@ -46,7 +46,7 @@ class Dmesg(interfaces.plugins.PluginInterface):
 
         msgbufp = kernel.object_from_symbol(symbol_name="msgbufp")
         msg_size = msgbufp.msg_size  # max buffer size
-        msg_bufx = msgbufp.msg_bufx  # write pointer
+        msg_bufx = msgbufp.msg_bufx  # write index of the msg_bufc circular buffer
         msg_bufc = msgbufp.msg_bufc
         # msg_bufc is circular, meaning that if its size exceeds msg_size,
         # msg_bufx will point to the beginning of the buffer and start overwriting.
