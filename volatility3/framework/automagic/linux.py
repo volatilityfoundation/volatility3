@@ -90,7 +90,6 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                 ] = str(banner, "latin-1")
 
                 linux_arch_stackers = [cls.intel_stacker, cls.aarch64_stacker]
-
                 for linux_arch_stacker in linux_arch_stackers:
                     try:
                         layer = linux_arch_stacker(
@@ -106,10 +105,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                         if layer:
                             return layer
                     except Exception as e:
-                        vollog.log(
-                            constants.LOGLEVEL_VVVV,
-                            f"{linux_arch_stacker.__name__} exception: {e}",
-                        )
+                        vollog.exception(e)
 
         vollog.debug("No suitable linux banner could be matched")
         return None
@@ -290,24 +286,27 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         """Determine if a stacked layer is correct or a false positive, by calling the underlying
         _translate method against the linux_banner symbol virtual address. Then, compare it with
         the detected banner to verify the correct translation.
-        This will directly raise an exception, as any failed attempt indicates a wrong layer selection.
         """
 
-        test_banner_equality = True
         try:
             banner_phys_address = layer._translate(linux_banner_address)[0]
             banner_value = context.layers[layer_name].read(
                 banner_phys_address, len(target_banner)
             )
-        except exceptions.InvalidAddressException:
-            raise Exception('Cannot translate "linux_banner" virtual address')
+        except exceptions.InvalidAddressException as e:
+            vollog.log(
+                constants.LOGLEVEL_VVVV,
+                'Cannot translate "linux_banner" symbol virtual address.',
+            )
+            return False
 
         if not banner_value == target_banner:
-            raise Exception(
-                f'Translated "linux_banner" virtual address mismatches detected banner : \n{banner_value}\n!=\n{target_banner}'
+            vollog.error(
+                f"Mismatch between scanned and virtually translated linux banner : {target_banner} != {banner_value}."
             )
+            return False
 
-        return test_banner_equality
+        return True
 
     @classmethod
     def find_aslr(
