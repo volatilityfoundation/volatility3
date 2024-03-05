@@ -224,9 +224,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                 kernel_endianness,
             )
         else:
-            # TODO: If KASAN space is large enough, it *might* push kernel addresses higher and generate inaccurate results ?
-            # We count the number of high bits equal to 1, which gives us the kernel space address mask and ultimately TCR_EL1.T1SZ.
-            va_bits = (linux_banner_address ^ (2**64 - 1)).bit_length() + 1
+            va_bits = 0
 
         tcr_el1_t1sz = 64 - va_bits
         context.config[cls.join(config_path, "tcr_el1_t1sz")] = tcr_el1_t1sz
