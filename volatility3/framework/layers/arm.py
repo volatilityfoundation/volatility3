@@ -68,6 +68,7 @@ class AArch64(linear.LinearlyMappedLayer):
         super().__init__(
             context=context, config_path=config_path, name=name, metadata=metadata
         )
+        self._kernel_endianness = self.config["kernel_endianness"]
         self._layer_debug = self.config.get("layer_debug", False)
         self._translation_debug = self.config.get("translation_debug", False)
         self._base_layer = self.config["memory_layer"]
@@ -205,13 +206,11 @@ class AArch64(linear.LinearlyMappedLayer):
         max_level = len(self._ttb_lookup_indexes) - 1
         for high_bit, low_bit in self._ttb_lookup_indexes:
             index = self._mask(virtual_offset, high_bit, low_bit)
-
-            # TODO: Adapt endianness ?
             descriptor = int.from_bytes(
                 base_layer.read(
                     table_address + (index * self._register_size), self._register_size
                 ),
-                byteorder="little",
+                byteorder=self._kernel_endianness,
             )
             table_address = 0
             # Bits 51->x need to be extracted from the descriptor
@@ -519,6 +518,12 @@ class AArch64(linear.LinearlyMappedLayer):
                 name="page_size_kernel_space",
                 optional=False,
                 description="Page size used by the kernel address space. Conveniently calculated by LinuxStacker.",
+            ),
+            requirements.ChoiceRequirement(
+                choices=["little", "big"],
+                name="kernel_endianness",
+                optional=False,
+                description="Kernel endianness (little or big)",
             ),
             requirements.BooleanRequirement(
                 name="layer_debug",
