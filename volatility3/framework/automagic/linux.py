@@ -193,6 +193,8 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         dtb = table.get_symbol("swapper_pg_dir").address + kaslr_shift
         context.config[cls.join(config_path, "page_map_offset")] = dtb
         context.config[cls.join(config_path, "page_map_offset_kernel")] = dtb
+        kernel_endianness = table.get_type("pointer").vol.data_format.byteorder
+        context.config[cls.join(config_path, "kernel_endianness")] = kernel_endianness
 
         # CREDIT : https://github.com/crash-utility/crash/blob/28891d1127542dbb2d5ba16c575e14e741ed73ef/arm64.c#L941
         kernel_flags = 0
@@ -214,7 +216,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
             )
             va_bits = int.from_bytes(
                 context.layers[layer_name].read(vabits_actual_phys_addr, 8),
-                "little",
+                kernel_endianness,
             )
         else:
             # TODO: If KASAN space is large enough, it *might* push kernel addresses higher and generate inaccurate results ?
