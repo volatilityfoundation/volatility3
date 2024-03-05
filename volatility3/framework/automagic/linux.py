@@ -59,10 +59,17 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
             )
             return None
 
+        seen_banners = []
         mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
         for _, banner in layer.scan(
             context=context, scanner=mss, progress_callback=progress_callback
         ):
+            # No need to try stackers on the same banner more than once
+            if banner in seen_banners:
+                continue
+            else:
+                seen_banners.append(banner)
+
             vollog.debug(f"Identified banner: {repr(banner)}")
 
             isf_path = linux_banners.get(banner, None)
