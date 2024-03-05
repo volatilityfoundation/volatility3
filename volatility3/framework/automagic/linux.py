@@ -226,38 +226,44 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         else:
             va_bits = 0
 
-        tcr_el1_t1sz = 64 - va_bits
-        context.config[cls.join(config_path, "tcr_el1_t1sz")] = tcr_el1_t1sz
-        context.config[cls.join(config_path, "tcr_el1_t0sz")] = tcr_el1_t1sz
-
-        # If "_kernel_flags_le*" aren't in the symbols, we can still do a quick bruteforce on [4,16,64] page sizes
-        # False positives cannot happen, as translation indexes will be off on a wrong page size
-        page_size_kernel_space_candidates = (
-            [4**page_size_kernel_space_bit]
-            if 1 <= page_size_kernel_space_bit <= 3
-            else [4, 16, 64]
+        """
+        Determining the number of bits available for virtual addresses (va_bits) in 64 bits addresses
+        is not straightforward, and not available in the kernel symbols.
+        Calculation by symbols addresses masking isn't accurate, as kernel addresses can be 
+        pushed too high from the TTB1 region start, skewing results.
+        See https://www.kernel.org/doc/html/v5.5/arm64/memory.html.
+        Testing every possible value is quick, and starting from the highest possible one
+        blocks false positives. The va_bits value is eventually used to calculate
+        which bits to extract from a virtual address, for translation purposes.
+        """
+        va_bits_candidates = (
+            [va_bits] if va_bits != 0 else [x for x in range(52, 16, -1)]
         )
-
-        for i, page_size_kernel_space in enumerate(page_size_kernel_space_candidates):
-            # Kernel space page size is considered equal to the user space page size
+        for va_bits in va_bits_candidates:
+            tcr_el1_t1sz = 64 - va_bits
             # T1SZ is considered equal to T0SZ
-            context.config[cls.join(config_path, "page_size_kernel_space")] = (
-                page_size_kernel_space
-            )
-            context.config[cls.join(config_path, "page_size_user_space")] = (
-                page_size_kernel_space
-            )
+            context.config[cls.join(config_path, "tcr_el1_t1sz")] = tcr_el1_t1sz
+            context.config[cls.join(config_path, "tcr_el1_t0sz")] = tcr_el1_t1sz
 
-            # Build layer
-            layer = layer_class(
-                context,
-                config_path=config_path,
-                name=new_layer_name,
-                metadata={"os": "Linux"},
-            )
-            layer.config["kernel_virtual_offset"] = aslr_shift
+            # If "_kernel_flags_le*" aren't in the symbols, we can still do a quick bruteforce on [4,16,64] page sizes
+            # False positives cannot happen, as translation indexes will be off on a wrong page size
+            for page_size_kernel_space in page_size_kernel_space_candidates:
+                # Kernel space page size is considered equal to the user space page size
+                context.config[cls.join(config_path, "page_size_kernel_space")] = (
+                    page_size_kernel_space
+                )
+                context.config[cls.join(config_path, "page_size_user_space")] = (
+                    page_size_kernel_space
+                )
+                # Build layer
+                layer = layer_class(
+                    context,
+                    config_path=config_path,
+                    name=new_layer_name,
+                    metadata={"os": "Linux"},
+                )
+                layer.config["kernel_virtual_offset"] = aslr_shift
 
-            try:
                 test_banner_equality = cls.verify_translation_by_banner(
                     context=context,
                     layer=layer,
@@ -265,17 +271,11 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                     linux_banner_address=linux_banner_address,
                     target_banner=banner,
                 )
-            except Exception as e:
-                # Only raise the banner translation error if there are no more candidates
-                if i < len(page_size_kernel_space_candidates) - 1:
-                    continue
-                else:
-                    raise e
 
-            if layer and dtb and test_banner_equality:
-                vollog.debug(f"Kernel DTB was found at: 0x{dtb:0x}")
-                vollog.debug("AArch64 image found")
-                return layer
+                if layer and dtb and test_banner_equality:
+                    vollog.debug(f"Kernel DTB was found at: 0x{dtb:0x}")
+                    vollog.debug("AArch64 image found")
+                    return layer
 
         return None
 
