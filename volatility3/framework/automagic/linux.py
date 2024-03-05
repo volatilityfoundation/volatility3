@@ -207,9 +207,14 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
 
         # https://www.kernel.org/doc/Documentation/arm64/booting.txt
         page_size_kernel_space_bit = (kernel_flags >> 1) & 3
-        linux_banner_address = table.get_symbol("linux_banner").address + aslr_shift
+        page_size_kernel_space_candidates = (
+            [4**page_size_kernel_space_bit]
+            if 1 <= page_size_kernel_space_bit <= 3
+            else [4, 16, 64]
+        )
 
-        # v6.7/source/arch/arm64/include/asm/memory.h#L186 - v5.7/source/arch/arm64/include/asm/memory.h#L160
+        linux_banner_address = table.get_symbol("linux_banner").address + aslr_shift
+        # Linux source : v6.7/source/arch/arm64/include/asm/memory.h#L186 - v5.7/source/arch/arm64/include/asm/memory.h#L160
         if "vabits_actual" in table.symbols:
             vabits_actual_phys_addr = (
                 table.get_symbol("vabits_actual").address + kaslr_shift
