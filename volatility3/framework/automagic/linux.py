@@ -162,12 +162,14 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
             linux_banner_address=linux_banner_address,
             target_banner=banner,
         )
-
+        
         if layer and dtb and test_banner_equality:
             vollog.debug(f"DTB was found at: 0x{dtb:0x}")
             vollog.debug("Intel image found")
             return layer
-
+        else:
+            layer.destroy()
+            
         return None
 
     @classmethod
@@ -276,6 +278,8 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                     vollog.debug(f"Kernel DTB was found at: 0x{dtb:0x}")
                     vollog.debug("AArch64 image found")
                     return layer
+                else:
+                    layer.destroy()
 
         return None
 
