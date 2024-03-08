@@ -221,26 +221,34 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
             vabits_actual_phys_addr = (
                 table.get_symbol("vabits_actual").address + kaslr_shift
             )
+            # Linux source : v6.7/source/arch/arm64/Kconfig#L1263, VA_BITS
             va_bits = int.from_bytes(
                 context.layers[layer_name].read(vabits_actual_phys_addr, 8),
                 kernel_endianness,
             )
         else:
-            va_bits = 0
+            """
+            Count leftmost bits equal to 1, deduce number of used bits for virtual addressing.
+            Example :
+                linux_banner_address = 0xffffffd733aae820 = 0b1111111111111111111111111101011100110011101010101110100000100000
+                va_bits = (linux_banner_address ^ (2**64 - 1)).bit_length() + 1 = 39
+            """
+            va_bits = (linux_banner_address ^ (2**64 - 1)).bit_length() + 1
 
         """
-        Determining the number of bits available for virtual addresses (va_bits) in 64 bits addresses
+        Determining the number of useful bits in virtual addresses (VA_BITS)
         is not straightforward, and not available in the kernel symbols.
-        Calculation by symbols addresses masking isn't accurate, as kernel addresses can be 
-        pushed too high from the TTB1 region start, skewing results.
+        Calculation by masking works great, but not in every case, due to the AArch64 memory layout,
+        sometimes pushing kernel addresses "too far" from the TTB1 start.
         See https://www.kernel.org/doc/html/v5.5/arm64/memory.html.
-        Testing every possible value is quick, and starting from the highest possible one
-        blocks false positives. The va_bits value is eventually used to calculate
-        which bits to extract from a virtual address, for translation purposes.
+        Errors are by 1 or 2 bits, so we can try va_bits - {1,2,3}.
+        Example, assuming the good va_bits value is 39 :
+            # Case where calculation was correct : 1 iteration
+            va_bits_candidates = [**39**, 38, 37, 36]
+            # Case where calculation is off by 1 : 2 iterations
+            va_bits_candidates = [40, **39**, 38, 37]
         """
-        va_bits_candidates = (
-            [va_bits] if va_bits != 0 else [x for x in range(52, 16, -1)]
-        )
+        va_bits_candidates = [va_bits] + [va_bits + i for i in range(-1, -4, -1)]
         for va_bits in va_bits_candidates:
             tcr_el1_t1sz = 64 - va_bits
             # T1SZ is considered equal to T0SZ
