@@ -3,7 +3,7 @@
 #
 from typing import Any, Callable, Iterable, List, Tuple
 
-from volatility3.framework import interfaces, renderers
+from volatility3.framework import interfaces, renderers, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
@@ -175,7 +175,10 @@ class PsList(interfaces.plugins.PluginInterface):
             else:
                 file_output = "Disabled"
 
-            offset, pid, tid, ppid, name = self.get_task_fields(task, decorate_comm)
+            try:
+                offset, pid, tid, ppid, name = self.get_task_fields(task, decorate_comm)
+            except exceptions.PagedInvalidAddressException:
+                continue
 
             yield 0, (
                 format_hints.Hex(offset),
