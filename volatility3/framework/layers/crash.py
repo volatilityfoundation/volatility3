@@ -268,8 +268,8 @@ class WindowsCrashDumpStacker(interfaces.automagic.StackerLayerInterface):
                     interfaces.configuration.path_join(new_name, "base_layer")
                 ] = layer_name
                 return layer(context, new_name, new_name)
-            except (WindowsCrashDump32Layer, WindowsCrashDump64Layer) as excp:
+            except WindowsCrashDumpFormatException as excp:
                 vollog.log(
                     constants.LOGLEVEL_VVVV, f"Exception reading crashdump: {excp}"
-                )
+                )\
         return None
