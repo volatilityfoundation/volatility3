@@ -271,5 +271,5 @@ class WindowsCrashDumpStacker(interfaces.automagic.StackerLayerInterface):
             except WindowsCrashDumpFormatException as excp:
                 vollog.log(
                     constants.LOGLEVEL_VVVV, f"Exception reading crashdump: {excp}"
-                )\
+                )
         return None
