@@ -59,14 +59,18 @@ PACKAGE_VERSION = (
 AUTOMAGIC_CONFIG_PATH = "automagic"
 """The root section within the context configuration for automagic values"""
 
+LOGLEVEL_INFO = 20
+"""Logging level for information data, showed when use the requests any logging: -v"""
+LOGLEVEL_DEBUG = 10
+"""Logging level for debugging data, showed when the user requests more logging detail: -vv"""
 LOGLEVEL_V = 9
-"""Logging level for a single -v"""
+"""Logging level for the lowest "extra" level of logging: -vvv"""
 LOGLEVEL_VV = 8
-"""Logging level for -vv"""
+"""Logging level for two levels of detail: -vvvv"""
 LOGLEVEL_VVV = 7
-"""Logging level for -vvv"""
+"""Logging level for three levels of detail: -vvvvv"""
 LOGLEVEL_VVVV = 6
-"""Logging level for -vvvv"""
+"""Logging level for four levels of detail: -vvvvvv"""
 
 CACHE_PATH = os.path.join(os.path.expanduser("~"), ".cache", "volatility3")
 """Default path to store cached data"""
