@@ -264,6 +264,17 @@ class CommandLine:
             file_logger.setFormatter(file_formatter)
             rootlog.addHandler(file_logger)
             vollog.info("Logging started")
+
+        for level, level_value in enumerate(
+            [
+                constants.LOGLEVEL_V,
+                constants.LOGLEVEL_VV,
+                constants.LOGLEVEL_VVV,
+                constants.LOGLEVEL_VVVV,
+            ]
+        ):
+            logging.addLevelName(level_value, f"DETAIL {level+1}")
+
         if partial_args.verbosity < 3:
             if partial_args.verbosity < 1:
                 sys.tracebacklimit = None
