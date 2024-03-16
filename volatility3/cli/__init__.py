@@ -278,9 +278,9 @@ class CommandLine:
         if partial_args.verbosity < 3:
             if partial_args.verbosity < 1:
                 sys.tracebacklimit = None
-            console.setLevel(30 - (partial_args.verbosity * 10))
+            console.setLevel(logging.WARNING - (partial_args.verbosity * 10))
         else:
-            console.setLevel(10 - (partial_args.verbosity - 2))
+            console.setLevel(logging.DEBUG - (partial_args.verbosity - 2))
 
         for level, msg in delayed_logs:
             vollog.log(level, msg)
