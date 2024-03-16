@@ -197,6 +197,7 @@ class VolShell(cli.CommandLine):
             vollog.addHandler(file_logger)
             vollog.info("Logging started")
 
+        self.order_extra_verbose_levels()
         if partial_args.verbosity < 3:
             console.setLevel(logging.WARNING - (partial_args.verbosity * 10))
         else:
