@@ -98,56 +98,72 @@ class List_Files(plugins.PluginInterface):
         return added
 
     @classmethod
-    def _walk_vnode(cls, context, vnode, loop_vnodes):
+    def _walk_vnode(
+        cls, context, vnode, loop_vnodes, to_explore: list, visited_vnodes: set
+    ):
         """
         Iterates over the list of vnodes associated with the given one.
         Also traverses the parent chain for the vnode and adds each one.
         """
-        added = False
 
         while vnode:
-            if vnode in loop_vnodes:
-                return added
+            if vnode in loop_vnodes or vnode in visited_vnodes:
+                return to_explore
+
+            visited_vnodes.add(vnode)
 
             if not cls._add_vnode(context, vnode, loop_vnodes):
                 break
 
-            added = True
-
             parent = cls._get_parent(context, vnode)
-            while parent and parent not in loop_vnodes:
-                if not cls._walk_vnode(context, parent, loop_vnodes):
-                    break
-
-                parent = cls._get_parent(context, parent)
+            if parent not in to_explore:
+                to_explore.append(parent)
 
             try:
                 vnode = vnode.v_mntvnodes.tqe_next.dereference()
             except exceptions.InvalidAddressException:
                 break
 
-        return added
+        return to_explore
 
     @classmethod
-    def _walk_vnodelist(cls, context, list_head, loop_vnodes):
+    def _walk_vnode_iterative(cls, context, vnode, loop_vnodes, visited_vnodes):
+        to_explore = [vnode]
+        while to_explore:
+            vnode = to_explore.pop(-1)
+            to_explore = cls._walk_vnode(
+                context, vnode, loop_vnodes, to_explore, visited_vnodes
+            )
+
+    @classmethod
+    def _walk_vnodelist(cls, context, list_head, loop_vnodes, visited_vnodes):
         for vnode in mac.MacUtilities.walk_tailq(list_head, "v_mntvnodes"):
-            cls._walk_vnode(context, vnode, loop_vnodes)
+            cls._walk_vnode_iterative(context, vnode, loop_vnodes, visited_vnodes)
 
     @classmethod
     def _walk_mounts(
         cls, context: interfaces.context.ContextInterface, kernel_module_name: str
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         loop_vnodes = {}
+        visited_vnodes = set()
 
         # iterate each vnode source from each mount
         list_mounts = mount.Mount.list_mounts(context, kernel_module_name)
         for mnt in list_mounts:
-            cls._walk_vnodelist(context, mnt.mnt_vnodelist, loop_vnodes)
-            cls._walk_vnodelist(context, mnt.mnt_workerqueue, loop_vnodes)
-            cls._walk_vnodelist(context, mnt.mnt_newvnodes, loop_vnodes)
-            cls._walk_vnode(context, mnt.mnt_vnodecovered, loop_vnodes)
-            cls._walk_vnode(context, mnt.mnt_realrootvp, loop_vnodes)
-            cls._walk_vnode(context, mnt.mnt_devvp, loop_vnodes)
+            cls._walk_vnodelist(context, mnt.mnt_vnodelist, loop_vnodes, visited_vnodes)
+            cls._walk_vnodelist(
+                context, mnt.mnt_workerqueue, loop_vnodes, visited_vnodes
+            )
+            cls._walk_vnodelist(context, mnt.mnt_newvnodes, loop_vnodes, visited_vnodes)
+            cls._walk_vnode_iterative(
+                context, mnt.mnt_vnodecovered, loop_vnodes, visited_vnodes
+            )
+            cls._walk_vnode_iterative(
+                context, mnt.mnt_realrootvp, loop_vnodes, visited_vnodes
+            )
+            cls._walk_vnode_iterative(
+                context, mnt.mnt_devvp, loop_vnodes, visited_vnodes
+            )
 
         return loop_vnodes
 
