@@ -121,7 +121,7 @@ class BaseSymbolTableInterface:
         )
 
     @property
-    def symbols_as_dict(self) -> Dict[str, interfaces.symbols.SymbolInterface]:
+    def symbols_as_dict(self) -> Dict[str, SymbolInterface]:
         """Returns a dict of the symbols names and their corresponding SymbolInterface."""
         raise NotImplementedError(
             "Abstract property symbols_as_dict not implemented by subclass."
