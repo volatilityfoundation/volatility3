@@ -292,6 +292,13 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
     def has_enumeration(self, name: str) -> bool:
         """Determines whether an enumeration is present in the module's symbol table."""
 
+    def update_symbol_address(
+        self, name: str, updated_address: int
+    ) -> "interfaces.symbols.SymbolInterface":
+        """Updates the symbol's address, given its name.
+        Invalidates any existing cache entry for this specific symbol.
+        """
+
     def symbols(self) -> List:
         """Lists the symbols contained in the symbol table for this module"""
 
