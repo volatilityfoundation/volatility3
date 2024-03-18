@@ -302,6 +302,9 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
     def symbols(self) -> List:
         """Lists the symbols contained in the symbol table for this module"""
 
+    def symbols_as_dict(self) -> Dict:
+        """Returns a dict of the symbols names and their corresponding SymbolInterface."""
+
     def get_symbols_by_absolute_location(self, offset: int, size: int = 0) -> List[str]:
         """Returns the symbols within table_name (or this module if not specified) that live at the specified
         absolute offset provided."""
