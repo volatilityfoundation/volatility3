@@ -69,7 +69,7 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         cls,
         context: interfaces.context.ContextInterface,
         layer_name: str,
-        kernel,  # ikelos - how to type this??
+        kernel: interfaces.context.ModuleInterface,
         mods_list: Iterator[Any],
     ):
         try:
