@@ -182,8 +182,14 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
 
         for fd_num, f in enumerate(fds):
             if f != 0:
+                if hasattr(f, "f_fglob"):
+                    glob = f.f_fglob
+                elif hasattr(f, "fp_glob"):
+                    glob = f.fp_glob
+                else:
+                    raise AttributeError("fileglob", "f_fglob || fp_glob")
                 try:
-                    ftype = f.f_fglob.get_fg_type()
+                    ftype = glob.get_fg_type()
                 except exceptions.InvalidAddressException:
                     continue
 
