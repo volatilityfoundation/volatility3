@@ -121,6 +121,13 @@ class BaseSymbolTableInterface:
         )
 
     @property
+    def symbols_as_dict(self) -> Dict[str, int]:
+        """Returns a dict of the symbols names and their corresponding SymbolInterface."""
+        raise NotImplementedError(
+            "Abstract property symbols_as_dict not implemented by subclass."
+        )
+
+    @property
     def symbols(self) -> Iterable[str]:
         """Returns an iterator of the Symbol names."""
         raise NotImplementedError(
