@@ -194,7 +194,15 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
                     continue
 
                 if ftype == "VNODE":
-                    vnode = f.f_fglob.fg_data.dereference().cast("vnode")
+                    if type(glob.fg_data) == objects.Pointer:
+                        vnode = glob.fg_data.dereference().cast("vnode")
+                    else:
+                        # On macOS 14+ versions, glob.fg_data is an uintptr_t
+                        # ASLR is not applied with casting,
+                        # Hardcoding "kernel" string as there isn't a way to get the proper config key ?
+                        vnode = context.modules["kernel"].object(
+                            "vnode", glob.fg_data, absolute=True
+                        )
                     path = vnode.full_path()
                 elif ftype:
                     path = f"<{ftype.lower()}>"
