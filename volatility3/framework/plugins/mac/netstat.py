@@ -74,14 +74,20 @@ class Netstat(plugins.PluginInterface):
             for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(
                 context, context.modules[kernel_module_name].symbol_table_name, task
             ):
+                if hasattr(filp, "f_fglob"):
+                    glob = filp.f_fglob
+                elif hasattr(filp, "fp_glob"):
+                    glob = filp.fp_glob
+                else:
+                    raise AttributeError("fileglob", "f_fglob || fp_glob")
+
                 try:
-                    ftype = filp.f_fglob.get_fg_type()
+                    ftype = glob.get_fg_type()
                 except exceptions.InvalidAddressException:
                     continue
 
                 if ftype != "SOCKET":
                     continue
-
                 try:
                     socket = filp.f_fglob.fg_data.dereference().cast("socket")
                 except exceptions.InvalidAddressException:
