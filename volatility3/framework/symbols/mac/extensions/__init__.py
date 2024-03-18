@@ -15,7 +15,11 @@ vollog = logging.getLogger(__name__)
 
 class proc(generic.GenericIntelProcess):
     def get_task(self):
-        return self.task.dereference().cast("task")
+        if hasattr(self, "p_proc_ro"):
+            task = self.p_proc_ro.pr_task.dereference()
+        else:
+            task = self.task.dereference().cast("task")
+        return task
 
     def add_process_layer(
         self, config_prefix: str = None, preferred_name: str = None
