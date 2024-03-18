@@ -259,6 +259,16 @@ class BaseSymbolTableInterface:
         """Clears the symbol cache of this symbol table."""
         pass
 
+    # ## Functions to manipulate symbols
+    def update_symbol_address(self, name: str, updated_address: int) -> SymbolInterface:
+        """Updates the symbol's address, given its name.
+        Invalidates any existing cache entry for this specific symbol.
+        If the symbol isn't found, it raises a SymbolError exception.
+        """
+        raise NotImplementedError(
+            "Abstract property update_symbol_address not implemented by subclass."
+        )
+
 
 class SymbolSpaceInterface(collections.abc.Mapping):
     """An interface for the container that holds all the symbol-containing
