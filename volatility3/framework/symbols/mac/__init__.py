@@ -151,7 +151,10 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         """
 
         try:
-            num_fds = task.p_fd.fd_lastfile
+            if hasattr(task.p_fd, "fd_lastfile"):
+                num_fds = task.p_fd.fd_lastfile
+            elif hasattr(task.p_fd, "fd_afterlast"):
+                num_fds = task.p_fd.fd_afterlast
         except exceptions.InvalidAddressException:
             num_fds = 1024
 
