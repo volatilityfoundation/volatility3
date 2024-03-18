@@ -180,6 +180,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         return versions[max(supported_versions)]
 
     symbols = _construct_delegate_function("symbols", True)
+    symbols_as_dict = _construct_delegate_function("symbols_as_dict", True)
     types = _construct_delegate_function("types", True)
     enumerations = _construct_delegate_function("enumerations", True)
     metadata = _construct_delegate_function("metadata", True)
@@ -187,6 +188,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     clear_symbol_cache = _construct_delegate_function("clear_symbol_cache")
     get_type = _construct_delegate_function("get_type")
     get_symbol = _construct_delegate_function("get_symbol")
+    update_symbol_address = _construct_delegate_function("update_symbol_address")
     get_enumeration = _construct_delegate_function("get_enumeration")
     get_type_class = _construct_delegate_function("get_type_class")
     set_type_class = _construct_delegate_function("set_type_class")
@@ -408,6 +410,26 @@ class Version1Format(ISFormatTable):
             name=name, address=address
         )
         return self._symbol_cache[name]
+
+    def update_symbol_address(
+        self, name: str, updated_address: int
+    ) -> interfaces.symbols.SymbolInterface:
+        """Updates the symbol's address, given its name.
+        Invalidates any existing cache entry for this specific symbol."""
+        symbol = self._json_object["symbols"].get(name, None)
+        if not symbol:
+            raise exceptions.SymbolError(name, self.name, f"Unknown symbol: {name}")
+        if self._symbol_cache.get(name, None):
+            del self._symbol_cache[name]
+        if self.config.get("symbol_mask", 0):
+            updated_address = updated_address & self.config["symbol_mask"]
+        self._json_object["symbols"][name]["address"] = updated_address
+        return self._json_object["symbols"][name]
+
+    @property
+    def symbols_as_dict(self) -> Dict[str, interfaces.symbols.SymbolInterface]:
+        """Returns a dict of the symbols names and their corresponding SymbolInterface."""
+        return self._json_object.get("symbols", {})
 
     @property
     def symbols(self) -> Iterable[str]:
