@@ -156,36 +156,31 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
     ) -> int:
         """Determines the offset of the actual DTB in physical space and its
         symbol offset."""
-        version_symbol = symbol_table + constants.BANG + "version"
-        version_json_address = context.symbol_space.get_symbol(version_symbol).address
 
-        version_major_symbol = symbol_table + constants.BANG + "version_major"
-        version_major_json_address = context.symbol_space.get_symbol(
-            version_major_symbol
-        ).address
-        version_major_phys_offset = cls.virtual_to_physical_address(
-            version_major_json_address
-        )
+        banner_major_version, banner_minor_version = [
+            int(x) for x in compare_banner[22:].split(b".")[0:2]
+        ]
 
-        version_minor_symbol = symbol_table + constants.BANG + "version_minor"
-        version_minor_json_address = context.symbol_space.get_symbol(
-            version_minor_symbol
-        ).address
-        version_minor_phys_offset = cls.virtual_to_physical_address(
-            version_minor_json_address
-        )
+        """
+        References :
+         - https://github.com/apple-open-source/macos/blob/14.3/xnu/osfmk/x86_64/lowmem_vectors.c#L78
+         - https://github.com/apple-open-source/macos/blob/14.3/xnu/osfmk/x86_64/lowglobals.h#L50
+        """
 
-        if not compare_banner_offset or not compare_banner:
-            offset_generator = cls._scan_generator(
-                context, layer_name, progress_callback
-            )
-        else:
-            offset_generator = [(compare_banner_offset, compare_banner)]
+        symbol_table_object: mac.MacKernelIntermedSymbols = context.symbol_space[
+            symbol_table
+        ]
+        lowglo_json_address = symbol_table_object.get_symbol("lowGlo").address
+        lowglo_phys_offset = cls.virtual_to_physical_address(lowglo_json_address)
 
         aslr_shift = 0
+        for offset in cls._lowglo_scan_generator(
+            context, layer_name, progress_callback
+        ):
 
-        for offset, banner in offset_generator:
-            banner_major, banner_minor = [int(x) for x in banner[22:].split(b".")[0:2]]
+            aslr_shift_candidate = offset - lowglo_phys_offset
+            if aslr_shift_candidate & 0xFFF != 0:
+                continue
 
             tmp_aslr_shift = offset - cls.virtual_to_physical_address(
                 version_json_address
@@ -229,7 +224,28 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         return addr
 
     @classmethod
+    def _lowglo_scan_generator(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        progress_callback: constants.ProgressCallback,
+    ):
+        """
+        References :
+         - https://github.com/apple-open-source/macos/blob/10.8/xnu/osfmk/x86_64/lowmem_vectors.c#L78
+         - https://github.com/apple-open-source/macos/blob/14.3/xnu/osfmk/x86_64/lowmem_vectors.c#L79
+        """
+        lowglo_signature = rb"Catfish \x00\x00"
+        for offset in context.layers[layer_name].scan(
+            scanner=scanners.RegExScanner(lowglo_signature),
+            context=context,
+            progress_callback=progress_callback,
+        ):
+            yield offset
+
+    @classmethod
     def _scan_generator(cls, context, layer_name, progress_callback):
+        """Kept for backward compatibility."""
         darwin_signature = (
             rb"Darwin Kernel Version \d{1,3}\.\d{1,3}\.\d{1,3}: [^\x00]+\x00"
         )
