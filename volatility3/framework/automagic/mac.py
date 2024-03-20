@@ -399,3 +399,6 @@ class MacSymbolFinder(symbol_finder.SymbolFinder):
     find_aslr = MacIntelStacker.find_aslr
     symbol_class = "volatility3.framework.symbols.mac.MacKernelIntermedSymbols"
     exclusion_list = ["windows", "linux"]
+    mh_fileset_config_path_prefix = interfaces.configuration.path_join(
+        "temporary", "MacIntelMhFilesetHelper"
+    )
