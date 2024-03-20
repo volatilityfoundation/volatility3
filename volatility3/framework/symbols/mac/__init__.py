@@ -179,7 +179,12 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         fds = objects.utility.array_of_pointers(
             table_addr, count=num_fds, subtype=file_type, context=context
         )
-
+        kernel_config_path = context.layers[
+            glob.vol.layer_name
+        ].config_path.rsplit(context.config.separator, 1)[0]
+        kernel_module = context.modules[
+            context.config[kernel_config_path]
+        ]
         for fd_num, f in enumerate(fds):
             if f != 0:
                 if hasattr(f, "f_fglob"):
@@ -198,9 +203,7 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
                         vnode = glob.fg_data.dereference().cast("vnode")
                     else:
                         # On macOS 14+ versions, glob.fg_data is an uintptr_t
-                        # ASLR is not applied with casting,
-                        # Hardcoding "kernel" string as there isn't a way to get the proper config key ?
-                        vnode = context.modules["kernel"].object(
+                        vnode = kernel_module.object(
                             "vnode", glob.fg_data, absolute=True
                         )
                     path = vnode.full_path()
