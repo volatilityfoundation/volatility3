@@ -3,6 +3,7 @@
 #
 import contextlib
 import logging
+import struct
 from typing import Generator, Iterable, Optional, Set, Tuple
 
 from volatility3.framework import constants, exceptions, interfaces, objects
