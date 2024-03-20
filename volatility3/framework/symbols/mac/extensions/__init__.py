@@ -333,7 +333,12 @@ class vm_map_entry(objects.StructType):
             return "sub_map"
 
         # based on find_vnode_object
-        vnode_object = self.get_object().get_map_object()
+        tmp_object = self.get_object()
+        if type(tmp_object) == vm_map_object:
+            vnode_object = tmp_object.get_map_object()
+        else:
+            vnode_object = tmp_object
+
         if vnode_object == 0:
             return None
 
