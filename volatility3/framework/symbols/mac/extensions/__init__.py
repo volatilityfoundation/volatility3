@@ -268,6 +268,30 @@ class vm_map_entry(objects.StructType):
 
         return ret
 
+    def vm_pointer_unpack(
+        self,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        packed: int,
+    ) -> int:
+        """
+        https://github.com/apple-open-source/macos/blob/ea4cd5a06831aca49e33df829d2976d6de5316ec/xnu/tools/lldbmacros/kmemory/kmem.py#L34
+        """
+        kernel_module = context.modules[kernel_module_name]
+        vm_page_packing = kernel_module.object_from_symbol("vm_page_packing_params")
+        base_relative = vm_page_packing.vmpp_base_relative
+        bits = vm_page_packing.vmpp_bits
+        shift = vm_page_packing.vmpp_shift
+        base = vm_page_packing.vmpp_base
+
+        if base_relative:
+            addr = (packed << shift) + base
+        else:
+            addr = struct.unpack("<q", packed << (64 - bits))[0]
+            addr >>= 64 - bits - shift
+
+        return addr & 0xFFFFFFFFFFFFFFFF
+
     def get_object(self):
         if self.has_member("vme_object"):
             return self.vme_object
