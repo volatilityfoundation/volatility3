@@ -1,6 +1,18 @@
 {
     "symbols": {},
-    "enums": {},
+    "enums": {
+        "EventCategory": {
+            "base": "long",
+            "constants": {
+                "EventCategoryReserved": 0,
+                "EventCategoryHardwareProfileChange": 1,
+                "EventCategoryDeviceInterfaceChange": 2,
+                "EventCategoryTargetDeviceChange": 3,
+                "EventCategoryKernelSoftRestart": 4
+            },
+            "size": 4
+        }
+    },
     "base_types": {
         "unsigned long": {
             "kind": "int",
@@ -46,6 +58,151 @@
         }
     },
     "user_types": {
+        "_NOTIFICATION_PACKET": {
+            "fields": {
+                "ListEntry": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 0
+                },
+                "DriverObject": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "nt_symbols!_DRIVER_OBJECT"
+                        }
+                    },
+                    "offset": 8
+                },
+                "NotificationRoutine": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    },
+                    "offset": 12
+                }
+            },
+            "kind": "struct",
+            "size": 16
+        },
+        "_SHUTDOWN_PACKET": {
+            "fields": {
+                "Entry": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 0
+                },
+                "DeviceObject": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "nt_symbols!_DEVICE_OBJECT"
+                        }
+                    },
+                    "offset": 8
+                }
+            },
+            "kind": "struct",
+            "size": 12
+        },
+        "_REGISTRY_CALLBACK": {
+            "fields": {
+                "ListEntry": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 0
+                },
+                "Function": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 28
+                }
+            },
+            "kind": "struct",
+            "size": 32
+        },
+        "_REGISTRY_CALLBACK_LEGACY": {
+            "fields": {
+                "CreateTime": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 28
+                }
+            },
+            "kind": "struct",
+            "size": 32
+        },
+        "_DBGPRINT_CALLBACK": {
+            "fields": {
+                "Function": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 8
+                }
+            },
+            "kind": "struct",
+            "size": 20
+        },
+        "_NOTIFY_ENTRY_HEADER": {
+            "fields": {
+                "ListEntry": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 0
+                },
+                "EventCategory": {
+                    "type": {
+                        "kind": "enum",
+                        "name": "EventCategory"
+                    },
+                    "offset": 8
+                },
+                "CallbackRoutine": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    },
+                    "offset": 20
+                },
+                "DriverObject": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "nt_symbols!_DRIVER_OBJECT"
+                        }
+                    },
+                    "offset": 28
+                }
+            },
+            "kind": "struct",
+            "size": 32
+        },
         "_GENERIC_CALLBACK": {
             "fields": {
                 "Callback": {
@@ -57,10 +214,20 @@
                         }
                     },
                     "offset": 4
+                },
+                "Associated": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 8
                 }
             },
             "kind": "struct",
-            "size": 8
+            "size": 12
         },
         "_KBUGCHECK_CALLBACK_RECORD": {
             "fields": {
@@ -184,9 +351,9 @@
     },
     "metadata": {
         "producer": {
-            "version": "0.0.1",
-            "name": "mhl by hand",
-            "datetime": "2019-08-27T18:17:16.417006"
+            "version": "0.0.2",
+            "name": "dgmcdona by hand",
+            "datetime": "2024-02-02T19:32:00.000000"
         },
         "format": "4.0.0"
     }

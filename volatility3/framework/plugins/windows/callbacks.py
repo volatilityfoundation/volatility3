@@ -2,16 +2,25 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import logging
 import contextlib
-from typing import List, Iterable, Tuple, Optional, Union
+import logging
+from typing import Dict, Iterable, List, Optional, Tuple, Union, cast
 
-from volatility3.framework import constants, exceptions, renderers, interfaces, symbols
+from volatility3.framework import (
+    constants,
+    exceptions,
+    interfaces,
+    objects,
+    renderers,
+    symbols,
+)
 from volatility3.framework.configuration import requirements
+from volatility3.framework.interfaces.objects import ObjectInterface
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import versions
-from volatility3.plugins.windows import ssdt
+from volatility3.framework.symbols.windows.extensions import callbacks
+from volatility3.plugins.windows import driverirp, handles, poolscanner, ssdt
 
 vollog = logging.getLogger(__name__)
 
@@ -20,7 +29,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
     """Lists kernel callbacks and notification routines."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -33,27 +42,161 @@ class Callbacks(interfaces.plugins.PluginInterface):
             requirements.PluginRequirement(
                 name="ssdt", plugin=ssdt.SSDT, version=(1, 0, 0)
             ),
+            requirements.PluginRequirement(
+                name="poolscanner", plugin=poolscanner.PoolScanner, version=(1, 0, 0)
+            ),
+            requirements.PluginRequirement(
+                name="driverirp", plugin=driverirp.DriverIrp, version=(1, 0, 0)
+            ),
+            requirements.PluginRequirement(
+                name="handles", plugin=handles.Handles, version=(1, 0, 0)
+            ),
         ]
 
-    @staticmethod
-    def create_callback_table(
+    @classmethod
+    def create_callback_scan_constraints(
+        cls,
         context: interfaces.context.ContextInterface,
         symbol_table: str,
-        config_path: str,
-    ) -> str:
-        """Creates a symbol table for a set of callbacks.
+        is_vista_or_above: bool,
+    ) -> List[poolscanner.PoolConstraint]:
+        """Creates a list of Pool Tag Constraints for callback objects.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            symbol_table: The name of an existing symbol table containing the kernel symbols
-            config_path: The configuration path within the context of the symbol table to create
+            symbol_table: The name of an existing symbol table containing the symbols / types
+            is_vista_or_above: A boolean indicating whether the OS version is Vista or newer.
 
         Returns:
-            The name of the constructed callback table
+            The list containing the built constraints.
         """
-        native_types = context.symbol_space[symbol_table].natives
-        is_64bit = symbols.symbol_table_is_64bit(context, symbol_table)
-        table_mapping = {"nt_symbols": symbol_table}
+        constraints = cls._create_default_scan_constraints(context, symbol_table)
+        if is_vista_or_above:
+            constraints += cls._create_scan_constraints_vista_and_above(symbol_table)
+        return constraints
+
+    @staticmethod
+    def _create_default_scan_constraints(
+        context: interfaces.context.ContextInterface, symbol_table: str
+    ) -> List[poolscanner.PoolConstraint]:
+
+        shutdown_packet_size = context.symbol_space.get_type(
+            symbol_table + constants.BANG + "_SHUTDOWN_PACKET"
+        ).size
+        generic_callback_size = context.symbol_space.get_type(
+            symbol_table + constants.BANG + "_GENERIC_CALLBACK"
+        ).size
+        notification_packet_size = context.symbol_space.get_type(
+            symbol_table + constants.BANG + "_NOTIFICATION_PACKET"
+        ).size
+
+        return [
+            poolscanner.PoolConstraint(
+                b"IoFs",
+                type_name=symbol_table + constants.BANG + "_NOTIFICATION_PACKET",
+                size=(notification_packet_size, None),
+                page_type=poolscanner.PoolType.NONPAGED
+                | poolscanner.PoolType.PAGED
+                | poolscanner.PoolType.FREE,
+            ),
+            poolscanner.PoolConstraint(
+                b"IoSh",
+                type_name=symbol_table + constants.BANG + "_SHUTDOWN_PACKET",
+                size=(shutdown_packet_size, None),
+                page_type=poolscanner.PoolType.NONPAGED
+                | poolscanner.PoolType.PAGED
+                | poolscanner.PoolType.FREE,
+                index=(0, 0),
+            ),
+            poolscanner.PoolConstraint(
+                b"Cbrb",
+                type_name=symbol_table + constants.BANG + "_GENERIC_CALLBACK",
+                size=(generic_callback_size, None),
+                page_type=poolscanner.PoolType.NONPAGED
+                | poolscanner.PoolType.PAGED
+                | poolscanner.PoolType.FREE,
+            ),
+        ]
+
+    @staticmethod
+    def _create_scan_constraints_vista_and_above(
+        symbol_table: str,
+    ) -> List[poolscanner.PoolConstraint]:
+        """Creates a list of Pool Tag Constraints for callback objects.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            symbol_table: The name of an existing symbol table containing the symbols / types
+
+        Returns:
+            The list containing the built constraints.
+        """
+
+        PNP9_SIZE = 0x30
+        PNPC_SIZE = 0x38
+        PNPD_SIZE = 0x40
+        DBG_MIN_SIZE = 0x20
+        DBG_MAX_SIZE = 0x40
+
+        return [
+            poolscanner.PoolConstraint(
+                b"DbCb",
+                type_name=symbol_table + constants.BANG + "_DBGPRINT_CALLBACK",
+                size=(DBG_MIN_SIZE, DBG_MAX_SIZE),
+                page_type=poolscanner.PoolType.NONPAGED
+                | poolscanner.PoolType.PAGED
+                | poolscanner.PoolType.FREE,
+            ),
+            poolscanner.PoolConstraint(
+                b"Pnp9",
+                type_name=symbol_table + constants.BANG + "_NOTIFY_ENTRY_HEADER",
+                size=(PNP9_SIZE, None),
+                page_type=poolscanner.PoolType.NONPAGED
+                | poolscanner.PoolType.PAGED
+                | poolscanner.PoolType.FREE,
+                index=(1, 1),
+            ),
+            poolscanner.PoolConstraint(
+                b"PnpD",
+                type_name=symbol_table + constants.BANG + "_NOTIFY_ENTRY_HEADER",
+                size=(PNPD_SIZE, None),
+                page_type=poolscanner.PoolType.NONPAGED
+                | poolscanner.PoolType.PAGED
+                | poolscanner.PoolType.FREE,
+                index=(1, 1),
+            ),
+            poolscanner.PoolConstraint(
+                b"PnpC",
+                type_name=symbol_table + constants.BANG + "_NOTIFY_ENTRY_HEADER",
+                size=(PNPC_SIZE, None),
+                page_type=poolscanner.PoolType.NONPAGED
+                | poolscanner.PoolType.PAGED
+                | poolscanner.PoolType.FREE,
+                index=(1, 1),
+            ),
+        ]
+
+    @classmethod
+    def create_callback_symbol_table(
+        cls,
+        context: interfaces.context.ContextInterface,
+        nt_symbol_table: str,
+        config_path: str,
+    ) -> str:
+        """Creates a symbol table for kernel callback objects.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            nt_symbol_table: The name of the table containing the kernel symbols
+            config_path: The config path where to find symbol files
+
+        Returns:
+            The name of the constructed symbol table
+        """
+        native_types = context.symbol_space[nt_symbol_table].natives
+        is_64bit = symbols.symbol_table_is_64bit(context, nt_symbol_table)
+        table_mapping = {"nt_symbols": nt_symbol_table}
 
         if is_64bit:
             symbol_filename = "callbacks-x64"
@@ -65,8 +208,131 @@ class Callbacks(interfaces.plugins.PluginInterface):
             config_path,
             "windows",
             symbol_filename,
+            class_types=callbacks.class_types,
             native_types=native_types,
             table_mapping=table_mapping,
+        )
+
+    @classmethod
+    def scan(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        nt_symbol_table: str,
+        callback_symbol_table: str,
+    ) -> Iterable[
+        Tuple[
+            Union[str, interfaces.renderers.BaseAbsentValue],
+            int,
+            Union[str, interfaces.renderers.BaseAbsentValue],
+        ]
+    ]:
+        """Scans for callback objects using the poolscanner module and constraints.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            nt_symbol_table: The name of the table containing the kernel symbols
+            callback_symbol_table: The name of the table containing the callback object symbols (_SHUTDOWN_PACKET etc.)
+
+        Returns:
+            A list of callback objects found by scanning the `layer_name` layer for callback pool signatures
+        """
+        is_vista_or_later = versions.is_vista_or_later(
+            context=context, symbol_table=nt_symbol_table
+        )
+
+        type_map = handles.Handles.get_type_map(context, layer_name, nt_symbol_table)
+
+        constraints = cls.create_callback_scan_constraints(
+            context, callback_symbol_table, is_vista_or_later
+        )
+
+        for (
+            _constraint,
+            mem_object,
+            _header,
+        ) in poolscanner.PoolScanner.generate_pool_scan(
+            context, layer_name, nt_symbol_table, constraints
+        ):
+            try:
+                if hasattr(mem_object, "is_valid") and not mem_object.is_valid():
+                    continue
+
+                yield cls._process_scanned_callback(mem_object, type_map)
+            except exceptions.InvalidAddressException:
+                continue
+
+    @classmethod
+    def _process_scanned_callback(
+        cls, memory_object: objects.StructType, type_map: Dict[int, str]
+    ) -> Tuple[
+        Union[str, interfaces.renderers.BaseAbsentValue],
+        int,
+        Union[str, interfaces.renderers.BaseAbsentValue],
+    ]:
+        symbol_table = memory_object.get_symbol_table_name()
+        type_name = memory_object.vol.type_name
+        if isinstance(memory_object, callbacks._SHUTDOWN_PACKET):
+            callback_type = "IoRegisterShutdownNotification"
+            try:
+                driver = memory_object.DeviceObject.dereference().DriverObject
+                index = driverirp.MAJOR_FUNCTIONS.index("IRP_MJ_SHUTDOWN")
+                callback_address = driver.MajorFunction[index]
+                details = driver.DriverName.String or renderers.UnparsableValue()
+            except exceptions.InvalidAddressException:
+                callback_address = memory_object.vol.offset
+                details = renderers.NotApplicableValue()
+        elif type_name == symbol_table + constants.BANG + "_NOTIFICATION_PACKET":
+            callback_type = "IoRegisterFsRegistrationChange"
+            callback_address = memory_object.NotificationRoutine
+            details = renderers.NotApplicableValue()
+        elif type_name == symbol_table + constants.BANG + "_NOTIFY_ENTRY_HEADER":
+            driver = (
+                memory_object.DriverObject.dereference()
+                if memory_object.DriverObject.is_readable()
+                else None
+            )
+            if driver:
+                # Instantiate an object header for the driver name
+                header = driver.get_object_header()
+                try:
+                    if header.get_object_type(type_map) == "Driver":
+                        # Grab the object name
+                        details = header.NameInfo.Name.String
+                    else:
+                        details = renderers.NotApplicableValue()
+                except exceptions.InvalidAddressException:
+                    details = renderers.UnreadableValue()
+            else:
+                details = renderers.UnreadableValue()
+
+            callback_type = (
+                memory_object.EventCategory.description
+                if memory_object.EventCategory.is_valid_choice
+                else renderers.UnparsableValue()
+            )
+
+            callback_address = memory_object.CallbackRoutine
+        elif type_name == symbol_table + constants.BANG + "_GENERIC_CALLBACK":
+            callback_type = "GenericKernelCallback"
+            callback_address = memory_object.Callback
+            details = renderers.NotApplicableValue()
+        elif type_name == symbol_table + constants.BANG + "_DBGPRINT_CALLBACK":
+            callback_type = "DbgSetDebugPrintCallback"
+            callback_address = memory_object.Function
+            details = renderers.NotApplicableValue()
+        else:
+            raise ValueError("Unexpected object type %s" % type_name)
+
+        return (
+            callback_type,
+            cast(int, callback_address),
+            (
+                cast(str, details)
+                if not isinstance(details, interfaces.renderers.BaseAbsentValue)
+                else details
+            ),
         )
 
     @classmethod
@@ -115,11 +381,14 @@ class Callbacks(interfaces.plugins.PluginInterface):
             else:
                 count = 8
 
-            fast_refs = ntkrnlmp.object(
-                object_type="array",
-                offset=symbol_offset,
-                subtype=ntkrnlmp.get_type("_EX_FAST_REF"),
-                count=count,
+            fast_refs = cast(
+                List[objects.Pointer],
+                ntkrnlmp.object(
+                    object_type="array",
+                    offset=symbol_offset,
+                    subtype=ntkrnlmp.get_type("_EX_FAST_REF"),
+                    count=count,
+                ),
             )
 
             for fast_ref in fast_refs:
@@ -159,11 +428,14 @@ class Callbacks(interfaces.plugins.PluginInterface):
         if callback_count == 0:
             return None
 
-        fast_refs = ntkrnlmp.object(
-            object_type="array",
-            offset=symbol_offset,
-            subtype=ntkrnlmp.get_type("_EX_FAST_REF"),
-            count=callback_count,
+        fast_refs = cast(
+            List[objects.Pointer],
+            ntkrnlmp.object(
+                object_type="array",
+                offset=symbol_offset,
+                subtype=ntkrnlmp.get_type("_EX_FAST_REF"),
+                count=callback_count,
+            ),
         )
 
         for fast_ref in fast_refs:
@@ -265,7 +537,13 @@ class Callbacks(interfaces.plugins.PluginInterface):
         layer_name: str,
         symbol_table: str,
         callback_table_name: str,
-    ) -> Iterable[Tuple[str, int, str]]:
+    ) -> Iterable[
+        Tuple[
+            str,
+            int,
+            Union[interfaces.objects.ObjectInterface, renderers.UnreadableValue],
+        ]
+    ]:
         """Lists all kernel bugcheck reason callbacks.
 
         Args:
@@ -323,7 +601,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
         layer_name: str,
         symbol_table: str,
         callback_table_name: str,
-    ) -> Iterable[Tuple[str, int, str]]:
+    ) -> Iterable[Tuple[str, int, Union[ObjectInterface, renderers.UnreadableValue]]]:
         """Lists all kernel bugcheck callbacks.
 
         Args:
@@ -372,7 +650,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
     def _generator(self):
         kernel = self.context.modules[self.config["kernel"]]
 
-        callback_table_name = self.create_callback_table(
+        callback_symbol_table = self.create_callback_symbol_table(
             self.context, kernel.symbol_table_name, self.config_path
         )
 
@@ -385,6 +663,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
             self.list_bugcheck_callbacks,
             self.list_bugcheck_reason_callbacks,
             self.list_registry_callbacks,
+            self.scan,
         )
 
         for callback_method in callback_methods:
@@ -392,7 +671,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
                 self.context,
                 kernel.layer_name,
                 kernel.symbol_table_name,
-                callback_table_name,
+                callback_symbol_table,
             ):
                 if callback_detail is None:
                     detail = renderers.NotApplicableValue()
