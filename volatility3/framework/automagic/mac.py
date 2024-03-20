@@ -123,14 +123,26 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                 dtb = dtb_candidate
                 # Build the new layer
                 new_layer_name = context.layers.free_layer_name("IntelLayer")
-                config_path = join("automagic", "MacIntelHelper", new_layer_name)
-                context.config[join(config_path, "memory_layer")] = layer_name
-                context.config[join(config_path, "page_map_offset")] = dtb
-                context.config[join(config_path, MacSymbolFinder.banner_config_key)] = (
-                    str(banner, "latin-1")
+                config_path = cls.join("automagic", "MacIntelHelper", new_layer_name)
+                context.config[cls.join(config_path, "memory_layer")] = layer_name
+                context.config[cls.join(config_path, "page_map_offset")] = dtb
+                context.config[
+                    cls.join(config_path, MacSymbolFinder.banner_config_key)
+                ] = str(banner, "latin-1")
+                symbol_cache.SqliteCache(identifiers_path).get_identifier_dictionary(
+                    operating_system="mac"
                 )
+                layer_class = intel.Intel32e
+                # If an mh_fileset_config exists, this means the KernelCache is in an MH_FILESET format
+                mh_fileset_config = context.config.branch(
+                    cls.join(MacSymbolFinder.mh_fileset_config_path_prefix, table_name)
+                )
+                if mh_fileset_config != {}:
+                    for key, value in mh_fileset_config.items():
+                        context.config[cls.join(config_path, key)] = value
+                    layer_class = intel.MacIntelMhFilesetKernelCache
 
-                new_layer = intel.Intel32e(
+                new_layer = layer_class(
                     context,
                     config_path=config_path,
                     name=new_layer_name,
