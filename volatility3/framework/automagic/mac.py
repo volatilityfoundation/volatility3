@@ -219,15 +219,20 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
             if vm_kernel_slide_candidate & 0xFFF != 0:
                 continue
 
-            minor_string = context.layers[layer_name].read(
-                version_minor_phys_offset + tmp_aslr_shift, 4
+            # Banner related symbols have been slid by vm_kernel_slide
+            module_vm_kernel_slide = context.module(
+                symbol_table,
+                layer_name,
+                vm_kernel_slide_candidate - cls._KERNEL_MIN_ADDRESS,
             )
-            minor = struct.unpack("<I", minor_string)[0]
 
-            if minor != banner_minor:
+            # Verify ASLR with major and minor versions of banner
+            major = module_vm_kernel_slide.object_from_symbol("version_major")
+            if major != banner_major_version:
                 continue
 
-            if tmp_aslr_shift & 0xFFF != 0:
+            minor = module_vm_kernel_slide.object_from_symbol("version_minor")
+            if minor != banner_minor_version:
                 continue
 
             aslr_shift = tmp_aslr_shift & 0xFFFFFFFF
