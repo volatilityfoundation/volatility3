@@ -93,53 +93,34 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                     compare_banner_offset=banner_offset,
                     progress_callback=progress_callback,
                 )
-
                 if kaslr_shift == 0:
                     vollog.log(
                         constants.LOGLEVEL_VVV,
-                        f"Invalid kalsr_shift found at offset: {banner_offset}",
+                        f"Unable to calculate a valid KASLR shift for banner : {banner}",
                     )
                     continue
 
-                bootpml4_addr = cls.virtual_to_physical_address(
-                    table.get_symbol("BootPML4").address + kaslr_shift
-                )
-
-                new_layer_name = context.layers.free_layer_name("MacDTBTempLayer")
-                config_path = join("automagic", "MacIntelHelper", new_layer_name)
-                context.config[join(config_path, "memory_layer")] = layer_name
-                context.config[join(config_path, "page_map_offset")] = bootpml4_addr
-
-                layer = layers.intel.Intel32e(
-                    context,
-                    config_path=config_path,
-                    name=new_layer_name,
-                    metadata={"os": "Mac"},
-                )
-
-                idlepml4_ptr = table.get_symbol("IdlePML4").address + kaslr_shift
+                idlepml4_json_address = symbol_table.get_symbol("IdlePML4").address
+                idlepml4_ptr = idlepml4_json_address + kaslr_shift
                 try:
-                    idlepml4_str = layer.read(idlepml4_ptr, 4)
+                    idlepml4_raw = context.layers[layer_name].read(
+                        cls.virtual_to_physical_address(idlepml4_ptr), 4
+                    )
                 except exceptions.InvalidAddressException:
                     vollog.log(
                         constants.LOGLEVEL_VVVV,
-                        f"Skipping invalid idlepml4_ptr: 0x{idlepml4_ptr:0x}",
+                        f"Skipping invalid IdlePML4 pointer: {hex(idlepml4_ptr)}",
                     )
                     continue
 
-                idlepml4_addr = struct.unpack("<I", idlepml4_str)[0]
-
-                tmp_dtb = idlepml4_addr
-
-                if tmp_dtb % 4096:
+                dtb_candidate = struct.unpack("<I", idlepml4_raw)[0]
+                if dtb_candidate % 4096:
                     vollog.log(
                         constants.LOGLEVEL_VVV,
-                        f"Skipping non-page aligned DTB: 0x{tmp_dtb:0x}",
+                        f"Skipping non-page aligned DTB: {hex(dtb_candidate)}",
                     )
                     continue
-
-                dtb = tmp_dtb
-
+                dtb = dtb_candidate
                 # Build the new layer
                 new_layer_name = context.layers.free_layer_name("IntelLayer")
                 config_path = join("automagic", "MacIntelHelper", new_layer_name)
