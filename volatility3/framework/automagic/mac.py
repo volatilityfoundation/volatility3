@@ -139,7 +139,7 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                 new_layer.config["kernel_virtual_offset"] = kaslr_shift
 
             if new_layer and dtb:
-                vollog.debug(f"DTB was found at: 0x{dtb:0x}")
+                vollog.debug(f"DTB was found at: {hex(dtb)}")
                 return new_layer
         vollog.debug("No suitable mac banner could be matched")
         return None
