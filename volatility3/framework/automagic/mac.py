@@ -182,16 +182,41 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
             if aslr_shift_candidate & 0xFFF != 0:
                 continue
 
-            tmp_aslr_shift = offset - cls.virtual_to_physical_address(
-                version_json_address
+            # We can use the convenient module methods, with virtual addresses in physical space,
+            # because the shift is constant and known.
+            module = context.module(
+                symbol_table,
+                layer_name,
+                aslr_shift_candidate - cls._KERNEL_MIN_ADDRESS,
             )
 
-            major_string = context.layers[layer_name].read(
-                version_major_phys_offset + tmp_aslr_shift, 4
-            )
-            major = struct.unpack("<I", major_string)[0]
+            # https://github.com/apple-open-source/macos/blob/14.3/xnu/osfmk/i386/i386_vm_init.c#L282
+            vm_kernel_slide_candidate = module.object_from_symbol("vm_kernel_slide")
+            mh_fileset_kernel_cache_check = False
+            try:
+                mh_fileset_kernel_cache_check = cls.detect_mh_fileset_kernel_cache(
+                    context,
+                    symbol_table,
+                    layer_name,
+                    aslr_shift_candidate,
+                )
+            except exceptions.SymbolError as e:
+                vollog.log(constants.LOGLEVEL_VVVV, e)
+            except exceptions.InvalidAddressException:
+                continue
 
-            if major != banner_major:
+            if mh_fileset_kernel_cache_check:
+                vm_kernel_slide_candidate = (
+                    cls.vm_kernel_slide_kernel_cache_calculations(
+                        context,
+                        symbol_table,
+                        layer_name,
+                        aslr_shift_candidate,
+                        vm_kernel_slide_candidate,
+                    )
+                )
+
+            if vm_kernel_slide_candidate & 0xFFF != 0:
                 continue
 
             minor_string = context.layers[layer_name].read(
