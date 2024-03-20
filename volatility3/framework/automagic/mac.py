@@ -78,13 +78,13 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
             isf_path = mac_banners.get(banner, None)
             if isf_path:
                 table_name = context.symbol_space.free_table_name("MacintelStacker")
-                table = mac.MacKernelIntermedSymbols(
+                symbol_table = mac.MacKernelIntermedSymbols(
                     context=context,
-                    config_path=join("temporary", table_name),
+                    config_path=cls.join("temporary", table_name),
                     name=table_name,
                     isf_url=isf_path,
                 )
-                context.symbol_space.append(table)
+                context.symbol_space.append(symbol_table)
                 kaslr_shift = cls.find_aslr(
                     context=context,
                     symbol_table=table_name,
