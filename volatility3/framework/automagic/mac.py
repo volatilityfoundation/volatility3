@@ -243,6 +243,83 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         return aslr_shift
 
     @classmethod
+    def vm_kernel_slide_kernel_cache_calculations(
+        cls,
+        context: interfaces.context.ContextInterface,
+        symbol_table: str,
+        layer_name: str,
+        aslr_shift: int,
+        vm_kernel_slide: int,
+    ) -> int:
+        """
+        Effective kernel slide calculation necessites post actions, as hinted here :
+         - https://github.com/apple-open-source/macos/blob/ea4cd5a06831aca49e33df829d2976d6de5316ec/xnu/osfmk/kern/debug.c#L1874.
+        KernelCache slide and Kernel slide differ, and the "vm_kernel_slide" symbol value will be slightly incorrect, on a MH_FILESET.
+        """
+        # Convenient module to ease symbol values access
+        module = context.module(
+            symbol_table, layer_name, aslr_shift - cls._KERNEL_MIN_ADDRESS
+        )
+
+        # https://github.com/apple-open-source/macos/blob/14.3/xnu/pexpert/gen/kcformat.c#L41
+        primary_kc_index = module.get_enumeration("kc_index").choices[
+            "primary_kc_index"
+        ]
+        collection_mach_headers = module.object_from_symbol("collection_mach_headers")
+        kernel_cache_header_ptr = collection_mach_headers[primary_kc_index]
+
+        # Kernel __TEXT section start
+        stext = module.object_from_symbol("stext")
+
+        """
+        References :
+         - https://github.com/apple-open-source/macos/blob/14.3/xnu/pexpert/gen/kcformat.c#L190
+         - https://github.com/apple-open-source/macos/blob/14.3/xnu/osfmk/kern/debug.c#L1870
+        """
+        return cls.virtual_to_physical_address(
+            stext - kernel_cache_header_ptr + vm_kernel_slide
+        )
+
+    @classmethod
+    def detect_mh_fileset_kernel_cache(
+        cls,
+        context: interfaces.context.ContextInterface,
+        symbol_table: str,
+        layer_name: str,
+        aslr_shift: int,
+    ) -> bool:
+        """
+        *MH_FILESET is a new Mach-O feature in recent macOS and iOS binaries where kernel extensions and libraries are collected into a single large file.*
+         - source : binary.ninja
+        """
+        # Convenient module to ease symbol values access
+        module = context.module(
+            symbol_table, layer_name, aslr_shift - cls._KERNEL_MIN_ADDRESS
+        )
+
+        # https://github.com/apple-open-source/macos/blob/14.3/xnu/pexpert/gen/kcformat.c#L41
+        primary_kc_index = module.get_enumeration("kc_index").choices[
+            "primary_kc_index"
+        ]
+        collection_mach_headers = module.object_from_symbol("collection_mach_headers")
+        kernel_cache_header_ptr = collection_mach_headers[primary_kc_index]
+
+        # https://github.com/apple-open-source/macos/blob/14.3/xnu/EXTERNAL_HEADERS/mach-o/loader.h#L72
+        mach_header_64 = module.object(
+            "mach_header_64", kernel_cache_header_ptr, absolute=True
+        )
+
+        # https://github.com/apple-open-source/macos/blob/14.3/kext_tools/kclist_main.c#L63
+        if mach_header_64.filetype == 0xC:
+            vollog.log(
+                constants.LOGLEVEL_VVVV,
+                f"Detected an MH_FILESET KernelCache.",
+            )
+            return True
+        else:
+            return False
+
+    @classmethod
     def virtual_to_physical_address(cls, addr: int) -> int:
         """Converts a virtual mac address to a physical one (does not account
         of ASLR)"""
