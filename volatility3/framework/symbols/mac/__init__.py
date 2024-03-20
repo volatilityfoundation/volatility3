@@ -18,7 +18,6 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("fileglob", extensions.fileglob)
         self.set_type_class("vnode", extensions.vnode)
         self.set_type_class("vm_map_entry", extensions.vm_map_entry)
-        # FIXME: Issue #848
         self.optional_set_type_class("vm_map_object", extensions.vm_map_object)
         self.set_type_class("socket", extensions.socket)
         self.set_type_class("inpcb", extensions.inpcb)
