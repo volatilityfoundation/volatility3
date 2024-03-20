@@ -235,11 +235,31 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
             if minor != banner_minor_version:
                 continue
 
-            aslr_shift = tmp_aslr_shift & 0xFFFFFFFF
+            if mh_fileset_kernel_cache_check:
+                # Kernel __TEXT section start and end
+                stext = module.object_from_symbol("stext")
+                etext = module.object_from_symbol("etext")
+
+                config_path = cls.join(
+                    MacSymbolFinder.mh_fileset_config_path_prefix, symbol_table
+                )
+                context.config[cls.join(config_path, "mh_fileset_kernel_cache_check")] = (
+                    mh_fileset_kernel_cache_check
+                )
+                context.config[cls.join(config_path, "vm_kernel_slide")] = (
+                    vm_kernel_slide_candidate
+                )
+                context.config[cls.join(config_path, "kernel_start")] = stext
+                context.config[cls.join(config_path, "kernel_end")] = etext
+
+            aslr_shift = aslr_shift_candidate
+            vollog.log(constants.LOGLEVEL_VVVV, f"Mac find_aslr found \"vm_kernel_slide\" to be: {hex(vm_kernel_slide_candidate)}")
+
             break
-
-        vollog.log(constants.LOGLEVEL_VVVV, f"Mac find_aslr returned: {aslr_shift:0x}")
-
+        vollog.log(
+            constants.LOGLEVEL_VVVV,
+            f"Mac find_aslr returned: {hex(aslr_shift)}",
+        )
         return aslr_shift
 
     @classmethod
