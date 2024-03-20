@@ -180,7 +180,7 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
             table_addr, count=num_fds, subtype=file_type, context=context
         )
         kernel_config_path = context.layers[
-            glob.vol.layer_name
+            task.vol.layer_name
         ].config_path.rsplit(context.config.separator, 1)[0]
         kernel_module = context.modules[
             context.config[kernel_config_path]
