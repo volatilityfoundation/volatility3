@@ -19,6 +19,8 @@ vollog = logging.getLogger(__name__)
 class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 35
     exclusion_list = ["windows", "linux"]
+    join = interfaces.configuration.path_join
+    _KERNEL_MIN_ADDRESS = 0xFFFFFF8000000000
 
     @classmethod
     def stack(
@@ -41,7 +43,6 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         # Bail out by default unless we can stack properly
         layer = context.layers[layer_name]
         new_layer = None
-        join = interfaces.configuration.path_join
 
         # Never stack on top of an intel layer
         # FIXME: Find a way to improve this check
