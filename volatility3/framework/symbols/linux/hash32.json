@@ -1,0 +1,172 @@
+{
+    "symbols": {}, 
+    "enums": {}, 
+    "base_types": {
+        "unsigned char": {
+            "kind": "char", 
+            "size": 1, 
+            "signed": false, 
+            "endian": "little"
+        }, 
+        "pointer": {
+            "kind": "int", 
+            "size": 4, 
+            "signed": false, 
+            "endian": "little"
+        },
+        "int": {
+            "kind": "int", 
+            "size": 4, 
+            "signed": false, 
+            "endian": "little"
+        }
+    }, 
+    "user_types": {
+        "pathdata": {
+            "fields": {
+                "path": {
+                    "type": {
+                        "subtype": {
+                            "count": 1024,
+                            "subtype": {
+                                "kind": "base",
+                                "name": "unsigned char"
+                            },
+                            "kind": "array"
+                        },
+                        "kind": "pointer"
+                    },
+                    "offset": 0
+                },
+                "flags": {
+                    "type": {
+                        "kind": "base",
+                        "name": "int"
+                    },
+                    "offset": 4
+                }
+            },
+            "kind": "struct",
+            "size": 8
+        },
+        "envdata": {
+            "fields": {
+                "name": {
+                    "type": {
+                        "subtype": {
+                            "count": 1024,
+                            "subtype": {
+                                "kind": "base",
+                                "name": "unsigned char"
+                            },
+                            "kind": "array"
+                        },
+                        "kind": "pointer"
+                    },
+                    "offset": 0
+                },
+                "value": {
+                    "type": {
+                        "subtype": {
+                            "count": 1024,
+                            "subtype": {
+                                "kind": "base",
+                                "name": "unsigned char"
+                            },
+                            "kind": "array"
+                        },
+                        "kind": "pointer"
+                    },
+                    "offset": 4
+                }
+            },
+            "kind": "struct",
+            "size": 8
+        },
+        "bucket_contents": {
+            "fields": {
+                "next": {
+                    "type": {
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "bucket_contents"
+                        },
+                        "kind": "pointer"
+                    },
+                    "offset": 0
+                },
+                "key": {
+                    "type": {
+                        "subtype": {
+                            "count": 1024,
+                            "subtype": {
+                                "kind": "base",
+                                "name": "unsigned char"
+                            },
+                            "kind": "array"
+                        },
+                        "kind": "pointer"
+                    },
+                    "offset": 4
+                },
+                "data": {
+                    "type": {
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "pathdata"
+                        },
+                        "kind": "pointer"
+                    },
+                    "offset": 8
+                },
+                "times_found": {
+                    "type": {
+                        "kind": "base",
+                        "name": "int"
+                    },
+                    "offset": 16
+                }
+            },
+            "kind": "struct",
+            "size": 20
+        },
+        "bash_hash_table": {
+            "fields": {
+                "bucket_array": {
+                    "type": {
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "bucket_contents"
+                        },
+                        "kind": "pointer"
+                    },
+                    "offset": 0
+                },
+                "nbuckets": {
+                    "type": {
+                        "kind": "base",
+                        "name": "int"
+                    },
+                    "offset": 4
+                },
+                "nentries": {
+                    "type": {
+                        "kind": "base",
+                        "name": "int"
+                    },
+                    "offset": 8
+                }
+            },
+            "kind": "struct",
+            "size": 12
+        }
+    }, 
+    "metadata": {
+        "producer": {
+            "version": "0.0.1", 
+            "name": "/mnt/hgfs/volshared/vtypes_to_json.py", 
+            "datetime": "2018-12-03T09:57:47.343730"
+        }, 
+        "format": "4.1.0"
+    }
+}
