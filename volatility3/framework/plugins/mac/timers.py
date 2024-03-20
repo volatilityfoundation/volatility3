@@ -3,6 +3,7 @@
 #
 import logging
 from typing import List
+from dataclasses import dataclass
 
 from volatility3.framework import exceptions, interfaces
 from volatility3.framework import renderers
@@ -10,9 +11,21 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import mac
+from volatility3.framework.objects import utility
 from volatility3.plugins.mac import lsmod
 
 vollog = logging.getLogger(__name__)
+
+
+@dataclass
+class TimerStructure:
+    type_name: str
+    func: str
+    qlink: str
+    entry_time: str
+    param0: str
+    param1: str
+    deadline: str
 
 
 class Timers(plugins.PluginInterface):
@@ -45,23 +58,35 @@ class Timers(plugins.PluginInterface):
             self.context, kernel.layer_name, kernel, mods
         )
 
+
+        if kernel.has_type("call_entry"):
+            timer_struct = TimerStructure(
+                type_name="call_entry",
+                func="func",
+                qlink="q_link",
+                entry_time="entry_time",
+                param0="param0",
+                param1="param1",
+                deadline="deadline",
+            )
+        elif kernel.has_type("timer_call"):
+            timer_struct = TimerStructure(
+                type_name="timer_call",
+                func="tc_func",
+                qlink="tc_qlink",
+                entry_time="tc_entry_time",
+                param0="tc_param0",
+                param1="tc_param1",
+                deadline="tc_soft_deadline",
+            )
+
         real_ncpus = kernel.object_from_symbol(symbol_name="real_ncpus")
-
-        cpu_data_ptrs_ptr = kernel.get_symbol("cpu_data_ptr").address
-
-        # Returns the a pointer to the absolute address
-        cpu_data_ptrs_addr = kernel.object(
-            object_type="pointer",
-            offset=cpu_data_ptrs_ptr,
-            subtype=kernel.get_type("long unsigned int"),
-        )
-
-        cpu_data_ptrs = kernel.object(
-            object_type="array",
-            offset=cpu_data_ptrs_addr,
-            absolute=True,
-            subtype=kernel.get_type("cpu_data"),
-            count=real_ncpus,
+        cpu_data_ptrs_ptr = kernel.object_from_symbol("cpu_data_ptr")
+        cpu_data_ptrs = utility.array_of_pointers(
+            cpu_data_ptrs_ptr,
+            real_ncpus,
+            cpu_data_ptrs_ptr.vol.subtype,
+            self.context,
         )
 
         for cpu_data_ptr in cpu_data_ptrs:
@@ -70,14 +95,15 @@ class Timers(plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 break
 
-            for timer in queue.walk_list(queue, "q_link", "call_entry"):
+            for timer in queue.walk_list(
+                queue, timer_struct.qlink, timer_struct.type_name
+            ):
                 try:
-                    handler = timer.func.dereference().vol.offset
+                    handler = getattr(timer, timer_struct.func).dereference().vol.offset
                 except exceptions.InvalidAddressException:
                     continue
-
-                if timer.has_member("entry_time"):
-                    entry_time = timer.entry_time
+                if timer.has_member(timer_struct.entry_time):
+                    entry_time = getattr(timer, timer_struct.entry_time)
                 else:
                     entry_time = -1
 
@@ -89,9 +115,9 @@ class Timers(plugins.PluginInterface):
                     0,
                     (
                         format_hints.Hex(handler),
-                        format_hints.Hex(timer.param0),
-                        format_hints.Hex(timer.param1),
-                        timer.deadline,
+                        format_hints.Hex(getattr(timer, timer_struct.param0)),
+                        format_hints.Hex(getattr(timer, timer_struct.param1)),
+                        getattr(timer, timer_struct.deadline),
                         entry_time,
                         module_name,
                         symbol_name,
