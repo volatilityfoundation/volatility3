@@ -501,3 +501,30 @@ class WindowsIntel32e(WindowsMixin, Intel32e):
 
     def _translate(self, offset: int) -> Tuple[int, int, str]:
         return self._translate_swap(self, offset, self._bits_per_register // 2)
+
+
+class MacIntelMhFilesetKernelCache(Intel32e):
+    @classmethod
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+        return super().get_requirements() + [
+            requirements.BooleanRequirement(
+                name="mh_fileset_kernel_cache_check",
+                optional=False,
+                description="Implicit key to determine if a MacIntel layer embeds a MH_FILESET KernelCache.",
+            ),
+            requirements.IntRequirement(
+                name="vm_kernel_slide",
+                optional=False,
+                description='"vm_kernel_slide" kernel symbol value.',
+            ),
+            requirements.IntRequirement(
+                name="kernel_start",
+                optional=False,
+                description='kernel _TEXT section start, typically obtained via kernel symbol "stext".',
+            ),
+            requirements.IntRequirement(
+                name="kernel_end",
+                optional=False,
+                description='kernel _TEXT section end, typically obtained via kernel symbol "etext".',
+            ),
+        ]
