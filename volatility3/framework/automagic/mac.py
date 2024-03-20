@@ -62,10 +62,16 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
             )
             return None
 
+        seen_banners = []
         mss = scanners.MultiStringScanner([x for x in mac_banners if x])
         for banner_offset, banner in layer.scan(
             context=context, scanner=mss, progress_callback=progress_callback
         ):
+            # No need to try stackers on the same banner more than once
+            if banner in seen_banners:
+                continue
+            else:
+                seen_banners.append(banner)
             dtb = None
             vollog.debug(f"Identified banner: {repr(banner)}")
 
