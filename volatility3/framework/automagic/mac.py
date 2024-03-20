@@ -234,8 +234,8 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
     def virtual_to_physical_address(cls, addr: int) -> int:
         """Converts a virtual mac address to a physical one (does not account
         of ASLR)"""
-        if addr > 0xFFFFFF8000000000:
-            addr = addr - 0xFFFFFF8000000000
+        if addr > cls._KERNEL_MIN_ADDRESS:
+            addr = addr - cls._KERNEL_MIN_ADDRESS
         else:
             addr = addr - 0xFF8000000000
 
