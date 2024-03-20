@@ -297,8 +297,28 @@ class vm_map_entry(objects.StructType):
             return self.vme_object
         elif self.has_member("object"):
             return self.object
-
-        raise AttributeError("vm_map_entry -> get_object: Unable to determine object")
+        # https://github.com/apple-open-source/macos/blob/ea4cd5a06831aca49e33df829d2976d6de5316ec/xnu/tools/lldbmacros/memory.py#L35
+        else:
+            kernel_config_path = self._context.layers[
+                self.vol.layer_name
+            ].config_path.rsplit(self._context.config.separator, 1)[0]
+            kernel_module = self._context.modules[
+                self._context.config[kernel_config_path]
+            ]
+            if self.vme_kernel_object:
+                return kernel_module.get_absolute_symbol_address("kernel_object_store")
+            else:
+                packed = self.vme_object_or_delta
+                # https://github.com/apple-open-source/macos/blob/14.3/xnu/osfmk/vm/vm_map.h#L253
+                if isinstance(packed, int):
+                    addr = self.vm_pointer_unpack(
+                        self._context, self._context.config[kernel_config_path], packed
+                    )
+                    if addr:
+                        return kernel_module.object("vm_object", addr, absolute=True)
+                else:
+                    return packed
+        return 0
 
     def get_offset(self):
         if self.has_member("vme_offset"):
