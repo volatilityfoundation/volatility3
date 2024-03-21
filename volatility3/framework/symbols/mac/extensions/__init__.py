@@ -333,7 +333,11 @@ class vm_map_entry(objects.StructType):
             return "sub_map"
 
         # based on find_vnode_object
-        tmp_object = self.get_object()
+        try:
+            tmp_object = self.get_object()
+        except exceptions.InvalidAddressException:
+            return None
+
         if type(tmp_object) == vm_map_object:
             vnode_object = tmp_object.get_map_object()
         else:
