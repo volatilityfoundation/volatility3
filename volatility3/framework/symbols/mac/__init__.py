@@ -209,7 +209,8 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
                     path = vnode.full_path()
                 elif ftype:
                     path = f"<{ftype.lower()}>"
-
+                else:
+                    path = "UNKNOWN"
                 yield f, path, fd_num
 
     @classmethod
