@@ -179,12 +179,10 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         fds = objects.utility.array_of_pointers(
             table_addr, count=num_fds, subtype=file_type, context=context
         )
-        kernel_config_path = context.layers[
-            task.vol.layer_name
-        ].config_path.rsplit(context.config.separator, 1)[0]
-        kernel_module = context.modules[
-            context.config[kernel_config_path]
-        ]
+        kernel_config_path = context.layers[task.vol.layer_name].config_path.rsplit(
+            context.config.separator, 1
+        )[0]
+        kernel_module = context.modules[context.config[kernel_config_path]]
         for fd_num, f in enumerate(fds):
             if f != 0:
                 if hasattr(f, "f_fglob"):

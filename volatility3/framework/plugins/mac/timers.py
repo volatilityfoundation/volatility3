@@ -58,7 +58,6 @@ class Timers(plugins.PluginInterface):
             self.context, kernel.layer_name, kernel, mods
         )
 
-
         if kernel.has_type("call_entry"):
             timer_struct = TimerStructure(
                 type_name="call_entry",
