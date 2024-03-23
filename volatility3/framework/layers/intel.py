@@ -507,11 +507,6 @@ class MacIntelMhFilesetKernelCache(Intel32e):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return super().get_requirements() + [
-            requirements.BooleanRequirement(
-                name="mh_fileset_kernel_cache_check",
-                optional=False,
-                description="Implicit key to determine if a MacIntel layer embeds a MH_FILESET KernelCache.",
-            ),
             requirements.IntRequirement(
                 name="vm_kernel_slide",
                 optional=False,

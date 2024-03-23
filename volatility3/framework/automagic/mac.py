@@ -255,9 +255,6 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                 config_path = cls.join(
                     MacSymbolFinder.mh_fileset_config_path_prefix, symbol_table
                 )
-                context.config[cls.join(config_path, "mh_fileset_kernel_cache_check")] = (
-                    mh_fileset_kernel_cache_check
-                )
                 context.config[cls.join(config_path, "vm_kernel_slide")] = (
                     vm_kernel_slide_candidate
                 )
@@ -265,7 +262,10 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[cls.join(config_path, "kernel_end")] = etext
 
             aslr_shift = aslr_shift_candidate
-            vollog.log(constants.LOGLEVEL_VVVV, f"Mac find_aslr found \"vm_kernel_slide\" to be: {hex(vm_kernel_slide_candidate)}")
+            vollog.log(
+                constants.LOGLEVEL_VVVV,
+                f'Mac find_aslr found "vm_kernel_slide" to be: {hex(vm_kernel_slide_candidate)}',
+            )
 
             break
         vollog.log(
