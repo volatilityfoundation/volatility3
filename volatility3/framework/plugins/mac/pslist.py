@@ -200,7 +200,10 @@ class PsList(interfaces.plugins.PluginInterface):
                 seen[task.vol.offset] = 1
 
             try:
-                proc = task.bsd_info.dereference().cast("proc")
+                if hasattr(task, "bsd_info"):
+                    proc = task.bsd_info.dereference().cast("proc")
+                elif hasattr(task, "bsd_info_ro"):
+                    proc = task.bsd_info_ro.pr_proc.dereference()
             except exceptions.InvalidAddressException:
                 continue
 

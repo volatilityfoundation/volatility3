@@ -184,18 +184,29 @@ class Kevents(interfaces.plugins.PluginInterface):
         for task_name, pid, kn in self.list_kernel_events(
             self.context, self.config["kernel"], filter_func=filter_func
         ):
-            filter_index = kn.kn_kevent.filter * -1
+            if hasattr(kn.kn_kevent, "filter"):
+                filter = kn.kn_kevent.filter
+            elif hasattr(kn.kn_kevent, "kei_filter"):
+                filter = kn.kn_kevent.kei_filter
+            filter_index = filter * -1
             if filter_index in self.event_types:
                 filter_name = self.event_types[filter_index]
             else:
                 continue
 
             try:
-                ident = kn.kn_kevent.ident
+                if hasattr(kn.kn_kevent, "ident"):
+                    ident = kn.kn_kevent.ident
+                elif hasattr(kn.kn_kevent, "kei_ident"):
+                    ident = kn.kn_kevent.kei_ident
             except exceptions.InvalidAddressException:
                 continue
 
-            context = self._parse_flags(filter_index, kn.kn_sfflags)
+            if hasattr(kn, "kn_sfflags"):
+                sfflags = kn.kn_sfflags
+            elif hasattr(kn.kn_kevent, "kei_sfflags"):
+                sfflags = kn.kn_kevent.kei_sfflags
+            context = self._parse_flags(filter_index, sfflags)
 
             yield (0, (pid, task_name, ident, filter_name, context))
 

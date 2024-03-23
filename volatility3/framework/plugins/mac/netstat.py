@@ -8,7 +8,7 @@ from typing import Iterable, Callable, Tuple
 from volatility3.framework import exceptions, renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
-from volatility3.framework.objects import utility
+from volatility3.framework.objects import utility, Pointer
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import mac
 from volatility3.plugins.mac import pslist
@@ -74,16 +74,27 @@ class Netstat(plugins.PluginInterface):
             for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(
                 context, context.modules[kernel_module_name].symbol_table_name, task
             ):
+                if hasattr(filp, "f_fglob"):
+                    glob = filp.f_fglob
+                elif hasattr(filp, "fp_glob"):
+                    glob = filp.fp_glob
+                else:
+                    raise AttributeError("fileglob", "f_fglob || fp_glob")
+
                 try:
-                    ftype = filp.f_fglob.get_fg_type()
+                    ftype = glob.get_fg_type()
                 except exceptions.InvalidAddressException:
                     continue
 
                 if ftype != "SOCKET":
                     continue
-
                 try:
-                    socket = filp.f_fglob.fg_data.dereference().cast("socket")
+                    if type(glob.fg_data) == Pointer:
+                        socket = glob.fg_data.dereference().cast("socket")
+                    else:
+                        socket = context.modules[kernel_module_name].object(
+                            "socket", glob.fg_data, absolute=True
+                        )
                 except exceptions.InvalidAddressException:
                     continue
 

@@ -3,6 +3,7 @@
 #
 import contextlib
 import logging
+import struct
 from typing import Generator, Iterable, Optional, Set, Tuple
 
 from volatility3.framework import constants, exceptions, interfaces, objects
@@ -15,7 +16,11 @@ vollog = logging.getLogger(__name__)
 
 class proc(generic.GenericIntelProcess):
     def get_task(self):
-        return self.task.dereference().cast("task")
+        if hasattr(self, "p_proc_ro"):
+            task = self.p_proc_ro.pr_task.dereference()
+        else:
+            task = self.task.dereference().cast("task")
+        return task
 
     def add_process_layer(
         self, config_prefix: str = None, preferred_name: str = None
@@ -263,13 +268,57 @@ class vm_map_entry(objects.StructType):
 
         return ret
 
+    def vm_pointer_unpack(
+        self,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        packed: int,
+    ) -> int:
+        """
+        https://github.com/apple-open-source/macos/blob/ea4cd5a06831aca49e33df829d2976d6de5316ec/xnu/tools/lldbmacros/kmemory/kmem.py#L34
+        """
+        kernel_module = context.modules[kernel_module_name]
+        vm_page_packing = kernel_module.object_from_symbol("vm_page_packing_params")
+        base_relative = vm_page_packing.vmpp_base_relative
+        bits = vm_page_packing.vmpp_bits
+        shift = vm_page_packing.vmpp_shift
+        base = vm_page_packing.vmpp_base
+
+        if base_relative:
+            addr = (packed << shift) + base
+        else:
+            addr = struct.unpack("<q", packed << (64 - bits))[0]
+            addr >>= 64 - bits - shift
+
+        return addr & 0xFFFFFFFFFFFFFFFF
+
     def get_object(self):
         if self.has_member("vme_object"):
             return self.vme_object
         elif self.has_member("object"):
             return self.object
-
-        raise AttributeError("vm_map_entry -> get_object: Unable to determine object")
+        # https://github.com/apple-open-source/macos/blob/ea4cd5a06831aca49e33df829d2976d6de5316ec/xnu/tools/lldbmacros/memory.py#L35
+        else:
+            kernel_config_path = self._context.layers[
+                self.vol.layer_name
+            ].config_path.rsplit(self._context.config.separator, 1)[0]
+            kernel_module = self._context.modules[
+                self._context.config[kernel_config_path]
+            ]
+            if self.vme_kernel_object:
+                return kernel_module.get_absolute_symbol_address("kernel_object_store")
+            else:
+                packed = self.vme_object_or_delta
+                # https://github.com/apple-open-source/macos/blob/14.3/xnu/osfmk/vm/vm_map.h#L253
+                if isinstance(packed, int):
+                    addr = self.vm_pointer_unpack(
+                        self._context, self._context.config[kernel_config_path], packed
+                    )
+                    if addr:
+                        return kernel_module.object("vm_object", addr, absolute=True)
+                else:
+                    return packed
+        return 0
 
     def get_offset(self):
         if self.has_member("vme_offset"):
@@ -284,7 +333,16 @@ class vm_map_entry(objects.StructType):
             return "sub_map"
 
         # based on find_vnode_object
-        vnode_object = self.get_object().get_map_object()
+        try:
+            tmp_object = self.get_object()
+        except exceptions.InvalidAddressException:
+            return None
+
+        if type(tmp_object) == vm_map_object:
+            vnode_object = tmp_object.get_map_object()
+        else:
+            vnode_object = tmp_object
+
         if vnode_object == 0:
             return None
 
