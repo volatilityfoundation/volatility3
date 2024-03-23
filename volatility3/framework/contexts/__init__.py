@@ -474,6 +474,9 @@ class MacOSKernelCacheSupportModule(Module):
     To circumvent this, we create an additional module object, in this context, with the
     "vm_kernel_slide" shift as offset. Doing so, we are able to detect which slide to use,
     depending on a provided symbol address.
+
+    Additional reference, on the stage where the KernelCache is given an additional slide :
+     - https://github.com/apple-open-source/macos/blob/14.3/xnu/osfmk/i386/i386_init.c#L621
     """
 
     def __init__(
