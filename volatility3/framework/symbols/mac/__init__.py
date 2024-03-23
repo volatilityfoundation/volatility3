@@ -15,9 +15,7 @@ vollog = logging.getLogger(__name__)
 class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
     provides = {"type": "interface"}
 
-    def __init__(
-        self, do_i386_kernel_cache_unslide: bool = True, *args, **kwargs
-    ) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         self.set_type_class("proc", extensions.proc)
@@ -35,80 +33,6 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         # https://developer.apple.com/documentation/kernel/queue_head_t
         self.set_type_class("queue_entry", extensions.queue_entry)
         self.optional_set_type_class("queue_head_t", extensions.queue_entry)
-        # If a kernel layer exists, we want to check if an MH_FILESET kernel cache
-        # was detected. If so, we need to unslide the concerned kernel symbols.
-        config_path_without_last_part = self.config_path.rsplit(
-            self.context.config.separator, 1
-        )[0]
-        kernel_layer_config_path = path_join(
-            config_path_without_last_part, "layer_name"
-        )
-        if (
-            self.context.config.get(
-                path_join(kernel_layer_config_path, "mh_fileset_kernel_cache_check")
-            )
-            and do_i386_kernel_cache_unslide
-        ):
-            vm_kernel_slide = self.context.config[
-                path_join(kernel_layer_config_path, "vm_kernel_slide")
-            ]
-            kaslr_shift = self.context.config[
-                path_join(kernel_layer_config_path, "kernel_virtual_offset")
-            ]
-            kernel_start = self.context.config[
-                path_join(kernel_layer_config_path, "kernel_start")
-            ]
-            kernel_end = self.context.config[
-                path_join(kernel_layer_config_path, "kernel_end")
-            ]
-            self.i386_kernel_cache_unslide_symbols(
-                vm_kernel_slide, kaslr_shift, kernel_start, kernel_end
-            )
-
-    def i386_kernel_cache_unslide_symbols(
-        self,
-        vm_kernel_slide: int,
-        kaslr_shift: int,
-        kernel_start: int,
-        kernel_end: int,
-    ) -> Tuple[int, int]:
-        """
-        If the MH_FILESET KernelCache support is ON, header addresses in all mach-o segments and sections
-        of the MH_FILESET are slid by a specific offset. This is problematic, as some kernel symbols, typically
-        contained in an external ISF file, won't be correctly readable with a sole KASLR shift.
-        To circumvent this, we unslide every symbol address determined to be part of the KernelCache
-        in a position reachable by KASLR shift. This only affects the current symbol table.
-        """
-
-        # This is equivalent to the "slide" value from :
-        # https://github.com/apple-open-source/macos/blob/14.3/xnu/osfmk/i386/i386_init.c#L621
-        slide = vm_kernel_slide - kaslr_shift
-        if slide == 0:
-            return 0, 0
-        """
-        Addresses slid by i386_slide_and_rebase_image's slide are now in the kernelcache.
-        We want each symbol address to be slidable by aslr_slide, for the global context.
-        In this sense, we will slide concerned addresses references back to their original positions.
-        """
-        # Check if a symbol, slid by vm_kernel_slide, is located in the kernel _TEXT boundaries.
-        # Using symbols_as_dict method (fewer function calls) and a one liner offers a huge performance boost
-        to_slide = []
-        [
-            to_slide.append((sym_name, sym["address"]))
-            for sym_name, sym in self.symbols_as_dict.items()
-            if kernel_start <= sym["address"] + vm_kernel_slide <= kernel_end
-        ]
-        [
-            self.update_symbol_address(sym_name, sym_address + slide)
-            for sym_name, sym_address in to_slide
-        ]
-        to_slide_len = len(to_slide)
-        if to_slide_len != 0:
-            vollog.log(
-                constants.LOGLEVEL_VVVV,
-                f"{to_slide_len} symbols located in the MH_FILESET KernelCache were rebased with offset {hex(slide)}, to be reachable by KASLR shift.",
-            )
-        return slide, to_slide_len
 
 
 class MacUtilities(interfaces.configuration.VersionableInterface):
