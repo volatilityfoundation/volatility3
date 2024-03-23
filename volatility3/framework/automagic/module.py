@@ -62,5 +62,17 @@ class KernelModule(interfaces.automagic.AutomagicInterface):
                 offset = context.config[layer_kvo_config_path]
                 context.config[offset_config_path] = offset
 
+                # macOS KernelCache module override
+                layer_class_config_path = interfaces.configuration.path_join(
+                    new_config_path, req, "class"
+                )
+                layer_class_str = context.config[layer_class_config_path]
+                if (
+                    layer_class_str
+                    == "volatility3.framework.layers.intel.MacIntelMhFilesetKernelCache"
+                ):
+                    context.config[
+                        interfaces.configuration.path_join(new_config_path, "class")
+                    ] = "volatility3.framework.contexts.MacOSKernelCacheSupportModule"
         # Now construct the module based on the sub-requirements
         requirement.construct(context, config_path)
