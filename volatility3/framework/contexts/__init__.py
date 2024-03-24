@@ -576,22 +576,18 @@ class MacOSKernelCacheSupportModule(Module):
         if size < 0:
             raise ValueError("Size must be strictly non-negative")
 
-        kernelcache_module_list = list(
-            self._context.symbol_space.get_symbols_by_location(
-                offset=offset - self._offset,
-                size=size,
-                table_name=self.symbol_table_name,
-            )
-        )
-        not_kernelcache_module_list = list(
-            self._context.symbol_space.get_symbols_by_location(
-                offset=offset - self._vm_kernel_slide,
-                size=size,
-                table_name=self.symbol_table_name,
-            )
-        )
+        if self._is_offset_in_kernel_boundaries(offset=offset, absolute=True):
+            slide_offset = self._vm_kernel_slide
+        else:
+            slide_offset = self._offset
 
-        return kernelcache_module_list + not_kernelcache_module_list
+        return list(
+            self._context.symbol_space.get_symbols_by_location(
+                offset=offset - slide_offset,
+                size=size,
+                table_name=self.symbol_table_name,
+            )
+        )
 
     @property
     def not_kernelcache_module(self) -> Module:
