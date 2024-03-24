@@ -14,6 +14,7 @@ import logging
 from typing import Callable, Iterable, List, Optional, Set, Tuple, Union
 
 from volatility3.framework import constants, interfaces, symbols, exceptions
+from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import templates
 
 vollog = logging.getLogger(__name__)
@@ -225,6 +226,20 @@ class Module(interfaces.context.ModuleInterface):
         context.config[config_path] = return_val.name
         # Add the module to the context modules collection
         return return_val
+
+    @classmethod
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+        """Returns a list of Requirement objects for this type of layer."""
+        return [
+            requirements.IntRequirement(name="offset", optional=False),
+            requirements.TranslationLayerRequirement(name="layer_name", optional=False),
+            requirements.TranslationLayerRequirement(
+                name="native_layer_name", optional=True
+            ),
+            requirements.SymbolTableRequirement(
+                name="symbol_table_name", optional=False
+            ),
+        ]
 
     def object(
         self,
