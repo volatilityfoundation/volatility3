@@ -6,7 +6,7 @@ import logging
 import os
 import struct
 import re
-from typing import Optional
+from typing import Optional, Generator
 
 from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.automagic import symbol_cache, symbol_finder
@@ -375,7 +375,7 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         context: interfaces.context.ContextInterface,
         layer_name: str,
         progress_callback: constants.ProgressCallback,
-    ):
+    ) -> Generator[int, None, None]:
         """
         References :
          - https://github.com/apple-open-source/macos/blob/10.8/xnu/osfmk/x86_64/lowmem_vectors.c#L78
