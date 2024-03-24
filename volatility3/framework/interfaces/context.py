@@ -157,6 +157,10 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
         super().__init__(context, config_path)
         self._module_name = name
 
+    @classmethod
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+        """Returns a list of Requirement objects for this type of layer."""
+
     @property
     def _layer_name(self) -> str:
         return self.config["layer_name"]
@@ -175,7 +179,6 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
 
     def build_configuration(self) -> "interfaces.configuration.HierarchicalDict":
         """Builds the configuration dictionary for this specific Module"""
-
         config = super().build_configuration()
 
         config["offset"] = self.config["offset"]
