@@ -5,6 +5,7 @@
 import logging
 import os
 import struct
+import re
 from typing import Optional
 
 from volatility3.framework import constants, exceptions, interfaces
@@ -167,19 +168,27 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         """Determines the offset of the actual DTB in physical space and its
         symbol offset."""
 
-        banner_major_version, banner_minor_version = [
-            int(x) for x in compare_banner[22:].split(b".")[0:2]
-        ]
+        darwin_signature_pattern = re.compile(
+            rb"Darwin Kernel Version (?P<major>\d{1,3})\.(?P<minor>\d{1,3})\.\d{1,3}:"
+        )
+        banner_versions = darwin_signature_pattern.search(compare_banner)
+        if not banner_versions:
+            vollog.log(
+                constants.LOGLEVEL_V,
+                f"Unable to determine major and minor versions of banner : {compare_banner}",
+            )
+            return 0
+        banner_major_version = int(banner_versions.group("major"))
+        banner_minor_version = int(banner_versions.group("minor"))
 
+        symbol_table_object: mac.MacKernelIntermedSymbols = context.symbol_space[
+            symbol_table
+        ]
         """
         References :
          - https://github.com/apple-open-source/macos/blob/14.3/xnu/osfmk/x86_64/lowmem_vectors.c#L78
          - https://github.com/apple-open-source/macos/blob/14.3/xnu/osfmk/x86_64/lowglobals.h#L50
         """
-
-        symbol_table_object: mac.MacKernelIntermedSymbols = context.symbol_space[
-            symbol_table
-        ]
         lowglo_json_address = symbol_table_object.get_symbol("lowGlo").address
         lowglo_phys_offset = cls.virtual_to_physical_address(lowglo_json_address)
 
