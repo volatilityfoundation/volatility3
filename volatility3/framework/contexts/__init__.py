@@ -496,7 +496,6 @@ class MacOSKernelCacheSupportModule(Module):
             context.config[pathjoin(config_path, self.layer_name, "kernel_end")]
             & self.context.layers[self.layer_name].address_mask
         )
-
         # Instantiate generic Kernel module, with "vm_kernel_slide" as offset
         not_kernelcache_module_name = interfaces.configuration.path_join(
             self.name, "not_kernelcache"
@@ -509,10 +508,11 @@ class MacOSKernelCacheSupportModule(Module):
             symbol_table_name=self.symbol_table_name,
         )
 
-    def _is_offset_in_kernel_boundaries(self, offset: int) -> bool:
+    def _is_offset_in_kernel_boundaries(self, offset: int, absolute: bool) -> bool:
         """Determine if an offset, typically a symbol address, locates in kernel __TEXT
         boundaries, by adding "vm_kernel_slide" shift to it."""
-        return self._kernel_start <= offset + self._vm_kernel_slide <= self._kernel_end
+        slide = self._vm_kernel_slide if not absolute else 0
+        return self._kernel_start <= offset + slide <= self._kernel_end
 
     def object(
         self,
@@ -524,7 +524,7 @@ class MacOSKernelCacheSupportModule(Module):
     ) -> "interfaces.objects.ObjectInterface":
 
         # Construct the object on the appropriate module
-        if self._is_offset_in_kernel_boundaries(offset=offset):
+        if self._is_offset_in_kernel_boundaries(offset=offset, absolute=absolute):
             module = self.not_kernelcache_module
         else:
             module = super()
@@ -557,7 +557,7 @@ class MacOSKernelCacheSupportModule(Module):
         offset = tmp_symbol_val.address
 
         # Construct the object on the appropriate module
-        if self._is_offset_in_kernel_boundaries(offset=offset):
+        if self._is_offset_in_kernel_boundaries(offset=offset, absolute=absolute):
             module = self.not_kernelcache_module
         else:
             module = super()
