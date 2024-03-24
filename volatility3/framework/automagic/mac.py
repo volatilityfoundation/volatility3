@@ -129,9 +129,7 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[
                     cls.join(config_path, MacSymbolFinder.banner_config_key)
                 ] = str(banner, "latin-1")
-                symbol_cache.SqliteCache(identifiers_path).get_identifier_dictionary(
-                    operating_system="mac"
-                )
+
                 layer_class = intel.Intel32e
                 # If an mh_fileset_config exists, this means the KernelCache is in an MH_FILESET format
                 mh_fileset_config = context.config.branch(
