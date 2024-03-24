@@ -135,7 +135,7 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                 mh_fileset_config = context.config.branch(
                     cls.join(MacSymbolFinder.mh_fileset_config_path_prefix, table_name)
                 )
-                if mh_fileset_config != {}:
+                if mh_fileset_config:
                     for key, value in mh_fileset_config.items():
                         context.config[cls.join(config_path, key)] = value
                     layer_class = intel.MacIntelMhFilesetKernelCache
