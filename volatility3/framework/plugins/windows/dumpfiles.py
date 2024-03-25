@@ -4,11 +4,12 @@
 
 import logging
 import ntpath
+import re
 from typing import List, Tuple, Type, Optional, Generator
 
 from volatility3.framework import interfaces, renderers, exceptions, constants
 from volatility3.framework.configuration import requirements
-from volatility3.framework.renderers import format_hints
+from volatility3.framework.renderers import format_hints, UnreadableValue
 from volatility3.plugins.windows import handles
 from volatility3.plugins.windows import pslist
 
@@ -51,6 +52,17 @@ class DumpFiles(interfaces.plugins.PluginInterface):
             requirements.IntRequirement(
                 name="physaddr",
                 description="Dump a single _FILE_OBJECT at this physical address",
+                optional=True,
+            ),
+            requirements.StringRequirement(
+                name="filter",
+                description="Dump files matching regular expression FILTER",
+                optional=True,
+            ),
+            requirements.BooleanRequirement(
+                name="ignore-case",
+                description="Ignore case in filter match",
+                default=False,
                 optional=True,
             ),
             requirements.VersionRequirement(
@@ -130,7 +142,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 constants.LOGLEVEL_VVV,
                 f"The file object at {file_obj.vol.offset:#x} is not a file on disk",
             )
-            return
+            return None
 
         # Depending on the type of object (DataSection, ImageSection, SharedCacheMap) we may need to
         # read from the memory layer or the primary layer.
@@ -208,6 +220,10 @@ class DumpFiles(interfaces.plugins.PluginInterface):
 
     def _generator(self, procs: List, offsets: List):
         kernel = self.context.modules[self.config["kernel"]]
+        file_re = None
+        if self.config["filter"]:
+            flags = re.I if self.config["ignore-case"] else 0
+            file_re = re.compile(self.config["filter"], flags)
 
         if procs:
             # The handles plugin doesn't expose any staticmethod/classmethod, and it also requires stashing
@@ -229,7 +245,6 @@ class DumpFiles(interfaces.plugins.PluginInterface):
             )
 
             for proc in procs:
-
                 try:
                     object_table = proc.ObjectTable
                 except exceptions.InvalidAddressException:
@@ -244,6 +259,14 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                         obj_type = entry.get_object_type(type_map, cookie)
                         if obj_type == "File":
                             file_obj = entry.Body.cast("_FILE_OBJECT")
+
+                            if file_re:
+                                name = file_obj.file_name_with_device()
+                                if isinstance(name, UnreadableValue):
+                                    continue
+                                if not file_re.search(name):
+                                    continue
+
                             for result in self.process_file_object(
                                 self.context, kernel.layer_name, self.open, file_obj
                             ):
@@ -272,6 +295,13 @@ class DumpFiles(interfaces.plugins.PluginInterface):
 
                         if not file_obj.is_valid():
                             continue
+
+                        if file_re:
+                            name = file_obj.file_name_with_device()
+                            if isinstance(name, UnreadableValue):
+                                continue
+                            if not file_re.search(name):
+                                continue
 
                         for result in self.process_file_object(
                             self.context, kernel.layer_name, self.open, file_obj
@@ -315,6 +345,11 @@ class DumpFiles(interfaces.plugins.PluginInterface):
         # a list of processes matching the pid filter. all files for these process(es) will be dumped.
         procs = list()
         kernel = self.context.modules[self.config["kernel"]]
+
+        if self.config["filter"] and (
+            self.config["virtaddr"] or self.config["physaddr"]
+        ):
+            raise ValueError("Cannot use filter flag with an address flag")
 
         if self.config.get("virtaddr", None) is not None:
             offsets.append((self.config["virtaddr"], True))

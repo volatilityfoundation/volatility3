@@ -10,6 +10,7 @@ import string
 import sys
 from functools import wraps
 from typing import Any, Callable, Dict, List, Tuple
+from volatility3.cli import text_filter
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.renderers import format_hints
@@ -134,6 +135,7 @@ class CLIRenderer(interfaces.renderers.Renderer):
 
     name = "unnamed"
     structured_output = False
+    filter: text_filter.CLIFilter = None
 
 
 class QuickTextRenderer(CLIRenderer):
@@ -172,6 +174,9 @@ class QuickTextRenderer(CLIRenderer):
         outfd.write("\n{}\n".format("\t".join(line)))
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
+            if self.filter and self.filter.filter(node.values):
+                return accumulator
+
             accumulator.write("\n")
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             accumulator.write(
@@ -241,7 +246,9 @@ class CSVRenderer(CLIRenderer):
             # Ignore the type because namedtuples don't realize they have accessible attributes
             header_list.append(f"{column.name}")
 
-        writer = csv.DictWriter(outfd, header_list, lineterminator="\n")
+        writer = csv.DictWriter(
+            outfd, header_list, lineterminator="\n", escapechar="\\"
+        )
         writer.writeheader()
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
@@ -304,6 +311,10 @@ class PrettyTextRenderer(CLIRenderer):
             max_column_widths[tree_indent_column] = max(
                 max_column_widths.get(tree_indent_column, 0), node.path_depth
             )
+
+            if self.filter and self.filter.filter(node.values):
+                return accumulator
+
             line = {}
             for column_index in range(len(grid.columns)):
                 column = grid.columns[column_index]
@@ -346,7 +357,7 @@ class PrettyTextRenderer(CLIRenderer):
 
         column_titles = [""] + [column.name for column in grid.columns]
         outfd.write(format_string.format(*column_titles))
-        for (depth, line) in final_output:
+        for depth, line in final_output:
             nums_line = max([len(line[column]) for column in line])
             for column in line:
                 line[column] = line[column] + ([""] * (nums_line - len(line[column])))
@@ -387,9 +398,11 @@ class JsonRenderer(CLIRenderer):
         interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
         format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
         bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
-        datetime.datetime: lambda x: x.isoformat()
-        if not isinstance(x, interfaces.renderers.BaseAbsentValue)
-        else None,
+        datetime.datetime: lambda x: (
+            x.isoformat()
+            if not isinstance(x, interfaces.renderers.BaseAbsentValue)
+            else None
+        ),
         "default": lambda x: x,
     }
 

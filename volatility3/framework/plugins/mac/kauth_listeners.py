@@ -49,7 +49,6 @@ class Kauth_listeners(interfaces.plugins.PluginInterface):
         for scope in kauth_scopes.Kauth_scopes.list_kauth_scopes(
             self.context, self.config["kernel"]
         ):
-
             scope_name = utility.pointer_to_string(scope.ks_identifier, 128)
 
             for listener in scope.get_listeners():

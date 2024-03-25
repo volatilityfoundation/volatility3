@@ -294,7 +294,7 @@ class DataLayerInterface(
         sections."""
         result: List[Tuple[int, int]] = []
         position = 0
-        for (start, length) in sorted(sections):
+        for start, length in sorted(sections):
             if result and start <= position:
                 initial_start, _ = result.pop()
                 result.append((initial_start, (start + length) - initial_start))
@@ -375,7 +375,6 @@ class DataLayerInterface(
     def _scan_metric(
         self, _scanner: "ScannerInterface", sections: List[Tuple[int, int]]
     ) -> Callable[[int], float]:
-
         if not sections:
             raise ValueError("Sections have no size, nothing to scan")
         last_section, last_length = sections[-1]
@@ -551,7 +550,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass=ABCMeta):
         scanner.chunk_size + scanner.overlap DataLayers by default are
         assumed to have no holes
         """
-        for (section_start, section_length) in sections:
+        for section_start, section_length in sections:
             output: List[Tuple[str, int, int]] = []
 
             # Hold the offsets of each chunk (including how much has been filled)
@@ -679,16 +678,12 @@ class LayerContainer(collections.abc.Mapping):
             name: The name of the layer to delete
         """
         for layer in self._layers:
-            depend_list = [
-                superlayer
-                for superlayer in self._layers
-                if name in self._layers[layer].dependencies
-            ]
-            if depend_list:
+            if name in self._layers[layer].dependencies:
                 raise exceptions.LayerException(
                     self._layers[layer].name,
-                    f"Layer {self._layers[layer].name} is depended upon: {', '.join(depend_list)}",
+                    f"Layer {self._layers[layer].name} is depended upon by {layer}",
                 )
+        # Otherwise, wipe out the layer
         self._layers[name].destroy()
         del self._layers[name]
 

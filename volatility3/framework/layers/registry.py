@@ -171,7 +171,15 @@ class RegistryHive(linear.LinearlyMappedLayer):
         node (default) or a list of nodes from root to the current node
         (if return_list is true).
         """
-        node_key = [self.get_node(self.root_cell_offset)]
+        root_node = self.get_node(self.root_cell_offset)
+        if not root_node.vol.type_name.endswith(constants.BANG + "_CM_KEY_NODE"):
+            raise RegistryFormatException(
+                self.name,
+                "Encountered {} instead of _CM_KEY_NODE".format(
+                    root_node.vol.type_name
+                ),
+            )
+        node_key = [root_node]
         if key.endswith("\\"):
             key = key[:-1]
         key_array = key.split("\\")
@@ -269,7 +277,6 @@ class RegistryHive(linear.LinearlyMappedLayer):
     def mapping(
         self, offset: int, length: int, ignore_errors: bool = False
     ) -> Iterable[Tuple[int, int, int, int, str]]:
-
         if length < 0:
             raise ValueError("Mapping length of RegistryHive must be positive or zero")
 

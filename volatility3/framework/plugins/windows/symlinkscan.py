@@ -52,7 +52,6 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
         for result in poolscanner.PoolScanner.generate_pool_scan(
             context, layer_name, symbol_table, constraints
         ):
-
             _constraint, mem_object, _header = result
             yield mem_object
 
@@ -62,7 +61,6 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
         for link in self.scan_symlinks(
             self.context, kernel.layer_name, kernel.symbol_table_name
         ):
-
             try:
                 from_name = link.get_link_name()
             except (ValueError, exceptions.InvalidAddressException):

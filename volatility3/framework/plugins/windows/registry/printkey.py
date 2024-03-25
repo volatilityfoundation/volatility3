@@ -74,7 +74,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
             node_path = [hive.get_node(hive.root_cell_offset)]
         if not isinstance(node_path, list) or len(node_path) < 1:
             vollog.warning("Hive walker was not passed a valid node_path (or None)")
-            return
+            return None
         node = node_path[-1]
         key_path_items = [hive] + node_path[1:]
         key_path = "\\".join([k.get_name() for k in key_path_items])
@@ -153,6 +153,11 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     vollog.debug(excp)
                     key_node_name = renderers.UnreadableValue()
 
+                # if the item is a subkey, use the LastWriteTime of that subkey
+                last_write_time = conversion.wintime_to_datetime(
+                    node.LastWriteTime.QuadPart
+                )
+
                 yield (
                     depth,
                     (
@@ -188,9 +193,9 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     vollog.debug(
                         "Couldn't read registry value type, so data is unreadable"
                     )
-                    value_data: Union[
-                        interfaces.renderers.BaseAbsentValue, bytes
-                    ] = renderers.UnreadableValue()
+                    value_data: Union[interfaces.renderers.BaseAbsentValue, bytes] = (
+                        renderers.UnreadableValue()
+                    )
                 else:
                     try:
                         value_data = node.decode_data()
@@ -241,7 +246,6 @@ class PrintKey(interfaces.plugins.PluginInterface):
         key: str = None,
         recurse: bool = False,
     ):
-
         for hive in hivelist.HiveList.list_hives(
             self.context,
             self.config_path,
@@ -249,14 +253,13 @@ class PrintKey(interfaces.plugins.PluginInterface):
             symbol_table=symbol_table,
             hive_offsets=hive_offsets,
         ):
-
             try:
                 # Walk it
                 if key is not None:
                     node_path = hive.get_key(key, return_list=True)
                 else:
                     node_path = [hive.get_node(hive.root_cell_offset)]
-                for (x, y) in self._printkey_iterator(hive, node_path, recurse=recurse):
+                for x, y in self._printkey_iterator(hive, node_path, recurse=recurse):
                     yield (x - len(node_path), y)
             except (
                 exceptions.InvalidAddressException,

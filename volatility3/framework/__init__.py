@@ -26,6 +26,7 @@ import importlib
 import inspect
 import logging
 import os
+import traceback
 from typing import Any, Dict, Generator, List, Tuple, Type, TypeVar
 
 from volatility3.framework import constants, interfaces
@@ -183,7 +184,11 @@ def import_file(module: str, path: str, ignore_errors: bool = False) -> List[str
         try:
             importlib.import_module(module)
         except ImportError as e:
-            vollog.debug(str(e))
+            vollog.debug(
+                "".join(
+                    traceback.TracebackException.from_exception(e).format(chain=True)
+                )
+            )
             vollog.debug(
                 "Failed to import module {} based on file: {}".format(module, path)
             )
@@ -201,9 +206,9 @@ def _zipwalk(path: str):
             if not file.is_dir():
                 dirlist = zip_results.get(os.path.dirname(file.filename), [])
                 dirlist.append(os.path.basename(file.filename))
-                zip_results[
-                    os.path.join(path, os.path.dirname(file.filename))
-                ] = dirlist
+                zip_results[os.path.join(path, os.path.dirname(file.filename))] = (
+                    dirlist
+                )
     for value in zip_results:
         yield value, zip_results[value]
 
@@ -219,8 +224,7 @@ def list_plugins() -> Dict[str, Type[interfaces.plugins.PluginInterface]]:
 
 
 def clear_cache(complete=False):
-    glob_pattern = "*.cache"
-    if not complete:
-        glob_pattern = "data_" + glob_pattern
-    for cache_filename in glob.glob(os.path.join(constants.CACHE_PATH, glob_pattern)):
-        os.unlink(cache_filename)
+    try:
+        os.unlink(os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME))
+    except FileNotFoundError:
+        vollog.log(constants.LOGLEVEL_VVVV, "Attempting to clear a non-existant cache")

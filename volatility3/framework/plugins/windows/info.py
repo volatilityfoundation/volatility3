@@ -341,7 +341,6 @@ class Info(plugins.PluginInterface):
         return nt_header
 
     def _generator(self):
-
         kernel = self.context.modules[self.config["kernel"]]
 
         layer_name = kernel.layer_name
@@ -376,7 +375,6 @@ class Info(plugins.PluginInterface):
             ),
         )
         if kdbg.Header.OwnerTag == 0x4742444B:
-
             yield (0, ("KdDebuggerDataBlock", hex(kdbg.vol.offset)))
             yield (0, ("NTBuildLab", kdbg.get_build_lab()))
             yield (0, ("CSDVersion", str(kdbg.get_csdversion())))
@@ -446,5 +444,4 @@ class Info(plugins.PluginInterface):
         )
 
     def run(self):
-
         return TreeGrid([("Variable", str), ("Value", str)], self._generator())

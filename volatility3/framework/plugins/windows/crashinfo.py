@@ -14,6 +14,8 @@ vollog = logging.getLogger(__name__)
 
 
 class Crashinfo(interfaces.plugins.PluginInterface):
+    """Lists the information from a Windows crash dump."""
+
     _required_framework_version = (2, 0, 0)
 
     @classmethod
@@ -44,9 +46,9 @@ class Crashinfo(interfaces.plugins.PluginInterface):
             bitmap_size = format_hints.Hex(summary_header.BitmapSize)
             bitmap_pages = format_hints.Hex(summary_header.Pages)
         else:
-            bitmap_header_size = (
-                bitmap_size
-            ) = bitmap_pages = renderers.NotApplicableValue()
+            bitmap_header_size = bitmap_size = bitmap_pages = (
+                renderers.NotApplicableValue()
+            )
 
         yield (
             0,

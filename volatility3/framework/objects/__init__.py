@@ -442,7 +442,7 @@ class Pointer(Integer):
     def is_readable(self, layer_name: Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from
         memory."""
-        layer_name = layer_name or self.vol.layer_name
+        layer_name = layer_name or self.vol.native_layer_name
         return self._context.layers[layer_name].is_valid(self, self.vol.subtype.size)
 
     def __getattr__(self, attr: str) -> Any:
@@ -593,17 +593,19 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
         inverse_choices: Dict[int, str] = {}
         for k, v in choices.items():
             if v in inverse_choices:
-                # Technically this shouldn't be a problem, but since we inverse cache
-                # and can't map one value to two possibilities we throw an exception during build
-                # We can remove/work around this if it proves a common issue
-                raise ValueError(
-                    f"Enumeration value {v} duplicated as {k} and {inverse_choices[v]}"
+                vollog.log(
+                    constants.LOGLEVEL_VVV,
+                    f"Enumeration value {v} duplicated as {k}. Keeping name {inverse_choices[v]}",
                 )
+                continue
             inverse_choices[v] = k
         return inverse_choices
 
     def lookup(self, value: int = None) -> str:
-        """Looks up an individual value and returns the associated name."""
+        """Looks up an individual value and returns the associated name.
+
+        If multiple identifiers map to the same value, the first matching identifier will be returned
+        """
         if value is None:
             return self.lookup(self)
         if value in self._inverse_choices:
@@ -640,7 +642,10 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
 
         @classmethod
         def lookup(cls, template: interfaces.objects.Template, value: int) -> str:
-            """Looks up an individual value and returns the associated name."""
+            """Looks up an individual value and returns the associated name.
+
+            If multiple identifiers map to the same value, the first matching identifier will be returned
+            """
             _inverse_choices = Enumeration._generate_inverse_choices(
                 template.vol["choices"]
             )
@@ -763,12 +768,10 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
             raise IndexError(f"Member not present in array template: {child}")
 
     @overload
-    def __getitem__(self, i: int) -> interfaces.objects.Template:
-        ...
+    def __getitem__(self, i: int) -> interfaces.objects.Template: ...
 
     @overload
-    def __getitem__(self, s: slice) -> List[interfaces.objects.Template]:
-        ...
+    def __getitem__(self, s: slice) -> List[interfaces.objects.Template]: ...
 
     def __getitem__(self, i):
         """Returns the i-th item from the array."""

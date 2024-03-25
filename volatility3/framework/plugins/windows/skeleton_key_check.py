@@ -187,7 +187,6 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         proc_layer_name: str,
         cryptdll_base: int,
     ) -> Tuple[interfaces.objects.ObjectInterface, int, int, int]:
-
         """
         Finds the CSystems array through use of PDB symbols
 
@@ -574,7 +573,6 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             scanners.BytesScanner(b"\x17\x00\x00\x00\x01\x00\x00\x00"),
             sections=[(cryptdll_base, cryptdll_size)],
         ):
-
             # this occurs across page boundaries
             if not proc_layer.is_valid(address, ecrypt_size):
                 continue
@@ -603,21 +601,21 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         if not symbols.symbol_table_is_64bit(self.context, kernel.symbol_table_name):
             vollog.info("This plugin only supports 64bit Windows memory samples")
-            return
+            return None
 
         lsass_proc, proc_layer_name = self._find_lsass_proc(procs)
         if not lsass_proc:
             vollog.info(
                 "Unable to find a valid lsass.exe process in the process list. This should never happen. Analysis cannot proceed."
             )
-            return
+            return None
 
         cryptdll_base, cryptdll_size = self._find_cryptdll(lsass_proc)
         if not cryptdll_base:
             vollog.info(
                 "Unable to find the location of cryptdll.dll inside of lsass.exe. Analysis cannot proceed."
             )
-            return
+            return None
 
         # the custom type information from binary analysis
         cryptdll_types = self._get_cryptdll_types(
@@ -651,7 +649,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             vollog.info(
                 "Unable to find CSystems inside of cryptdll.dll. Analysis cannot proceed."
             )
-            return
+            return None
 
         for csystem in csystems:
             if not self.context.layers[proc_layer_name].is_valid(

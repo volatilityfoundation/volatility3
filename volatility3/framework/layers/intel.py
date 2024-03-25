@@ -56,11 +56,22 @@ class Intel(linear.LinearlyMappedLayer):
         )
         self._entry_size = struct.calcsize(self._entry_format)
         self._entry_number = self.page_size // self._entry_size
+        self._canonical_prefix = self._mask(
+            (1 << self._bits_per_register) - 1,
+            self._bits_per_register,
+            self._maxvirtaddr,
+        )
 
         # These can vary depending on the type of space
         self._index_shift = int(
             math.ceil(math.log2(struct.calcsize(self._entry_format)))
         )
+
+    @classproperty
+    @functools.lru_cache()
+    def page_shift(cls) -> int:
+        """Page shift for the intel memory layers."""
+        return cls._page_size_in_bits
 
     @classproperty
     @functools.lru_cache()
@@ -70,6 +81,12 @@ class Intel(linear.LinearlyMappedLayer):
         All Intel layers work on 4096 byte pages
         """
         return 1 << cls._page_size_in_bits
+
+    @classproperty
+    @functools.lru_cache()
+    def page_mask(cls) -> int:
+        """Page mask for the intel memory layers."""
+        return ~(cls.page_size - 1)
 
     @classproperty
     @functools.lru_cache()
@@ -105,6 +122,28 @@ class Intel(linear.LinearlyMappedLayer):
     def _page_is_valid(entry: int) -> bool:
         """Returns whether a particular page is valid based on its entry."""
         return bool(entry & 1)
+
+    @staticmethod
+    def _page_is_dirty(entry: int) -> bool:
+        """Returns whether a particular page is dirty based on its entry."""
+        return bool(entry & (1 << 6))
+
+    def canonicalize(self, addr: int) -> int:
+        """Canonicalizes an address by performing an appropiate sign extension on the higher addresses"""
+        if self._bits_per_register <= self._maxvirtaddr:
+            return addr & self.address_mask
+        elif addr < (1 << self._maxvirtaddr - 1):
+            return addr
+        return self._mask(addr, self._maxvirtaddr, 0) + self._canonical_prefix
+
+    def decanonicalize(self, addr: int) -> int:
+        """Removes canonicalization to ensure an adress fits within the correct range if it has been canonicalized
+
+        This will produce an address outside the range if the canonicalization is incorrect
+        """
+        if addr < (1 << self._maxvirtaddr - 1):
+            return addr
+        return addr ^ self._canonical_prefix
 
     def _translate(self, offset: int) -> Tuple[int, int, str]:
         """Translates a specific offset based on paging tables.
@@ -151,7 +190,7 @@ class Intel(linear.LinearlyMappedLayer):
             )
 
         # Run through the offset in various chunks
-        for (name, size, large_page) in self._structure:
+        for name, size, large_page in self._structure:
             # Check we're valid
             if not self._page_is_valid(entry):
                 raise exceptions.PagedInvalidAddressException(
@@ -237,6 +276,10 @@ class Intel(linear.LinearlyMappedLayer):
         except exceptions.InvalidAddressException:
             return False
 
+    def is_dirty(self, offset: int) -> bool:
+        """Returns whether the page at offset is marked dirty"""
+        return self._page_is_dirty(self._translate_entry(offset)[0])
+
     def mapping(
         self, offset: int, length: int, ignore_errors: bool = False
     ) -> Iterable[Tuple[int, int, int, int, str]]:
@@ -246,9 +289,9 @@ class Intel(linear.LinearlyMappedLayer):
         This allows translation layers to provide maps of contiguous
         regions in one layer
         """
-        stashed_offset = (
-            stashed_mapped_offset
-        ) = stashed_size = stashed_mapped_size = stashed_map_layer = None
+        stashed_offset = stashed_mapped_offset = stashed_size = stashed_mapped_size = (
+            stashed_map_layer
+        ) = None
         for offset, size, mapped_offset, mapped_size, map_layer in self._mapping(
             offset, length, ignore_errors
         ):
@@ -300,9 +343,9 @@ class Intel(linear.LinearlyMappedLayer):
             except exceptions.InvalidAddressException:
                 if not ignore_errors:
                     raise
-                return
+                return None
             yield offset, length, mapped_offset, length, layer_name
-            return
+            return None
         while length > 0:
             try:
                 chunk_offset, page_size, layer_name = self._translate(offset)

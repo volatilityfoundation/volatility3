@@ -375,7 +375,6 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         for result in poolscanner.PoolScanner.generate_pool_scan(
             context, layer_name, nt_symbol_table, constraints
         ):
-
             _constraint, mem_object, _header = result
             yield mem_object
 
@@ -394,7 +393,6 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             kernel.symbol_table_name,
             netscan_symbol_table,
         ):
-
             vollog.debug(
                 f"Found netw obj @ 0x{netw_obj.vol.offset:2x} of assumed type {type(netw_obj)}"
             )
@@ -489,10 +487,12 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if not isinstance(row_data[9], datetime.datetime):
                 continue
             row_data = [
-                "N/A"
-                if isinstance(i, renderers.UnreadableValue)
-                or isinstance(i, renderers.UnparsableValue)
-                else i
+                (
+                    "N/A"
+                    if isinstance(i, renderers.UnreadableValue)
+                    or isinstance(i, renderers.UnparsableValue)
+                    else i
+                )
                 for i in row_data
             ]
             description = (

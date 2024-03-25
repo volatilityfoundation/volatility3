@@ -13,6 +13,8 @@ vollog = logging.getLogger(__name__)
 
 
 class Statistics(plugins.PluginInterface):
+    """Lists statistics about the memory space."""
+
     _required_framework_version = (2, 0, 0)
 
     @classmethod
@@ -29,13 +31,9 @@ class Statistics(plugins.PluginInterface):
         # Do mass mapping and determine the number of different layers and how many pages go to each one
         layer = self.context.layers[self.config["primary"]]
 
-        page_count = (
-            swap_count
-        ) = (
-            invalid_page_count
-        ) = (
-            large_page_count
-        ) = large_swap_count = large_invalid_count = other_invalid = 0
+        page_count = swap_count = invalid_page_count = large_page_count = (
+            large_swap_count
+        ) = large_invalid_count = other_invalid = 0
 
         if isinstance(layer, intel.Intel):
             page_addr = 0

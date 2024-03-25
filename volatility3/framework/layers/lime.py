@@ -104,7 +104,7 @@ class LimeStacker(interfaces.automagic.StackerLayerInterface):
         except LimeFormatException:
             return None
         new_name = context.layers.free_layer_name("LimeLayer")
-        context.config[
-            interfaces.configuration.path_join(new_name, "base_layer")
-        ] = layer_name
+        context.config[interfaces.configuration.path_join(new_name, "base_layer")] = (
+            layer_name
+        )
         return LimeLayer(context, new_name, new_name)

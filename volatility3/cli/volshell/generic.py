@@ -108,7 +108,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         """Describes the available commands"""
         if args:
             help(*args)
-            return
+            return None
 
         variables = []
         print("\nMethods:")
@@ -325,7 +325,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             (str, interfaces.objects.ObjectInterface, interfaces.objects.Template),
         ):
             print("Cannot display information about non-type object")
-            return
+            return None
 
         if not isinstance(object, str):
             # Mypy requires us to order things this way
@@ -453,7 +453,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         """Prints an alphabetical list of symbols for a symbol table"""
         if symbol_table is None:
             print("No symbol table provided")
-            return
+            return None
         longest_offset = longest_name = 0
 
         table = self.context.symbol_space[symbol_table]
@@ -480,7 +480,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         accessor = resources.ResourceAccessor()
         with accessor.open(url=location) as fp:
             self.__console.runsource(
-                io.TextIOWrapper(fp.read(), encoding="utf-8"), symbol="exec"
+                io.TextIOWrapper(fp, encoding="utf-8").read(), symbol="exec"
             )
         print("\nCode complete")
 

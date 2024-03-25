@@ -151,7 +151,6 @@ class IMAGE_DOS_HEADER(objects.StructType):
 
         counter = 0
         for sect in nt_header.get_sections():
-
             if sect.VirtualAddress > size_of_image:
                 raise ValueError(
                     f"Section VirtualAddress is too large: {sect.VirtualAddress}"

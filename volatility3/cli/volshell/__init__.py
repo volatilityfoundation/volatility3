@@ -22,12 +22,14 @@ from volatility3.framework import (
 )
 
 # Make sure we log everything
+
+rootlog = logging.getLogger()
 vollog = logging.getLogger()
 vollog.setLevel(0)
-# Trim the console down by default
 console = logging.StreamHandler()
 console.setLevel(logging.WARNING)
 formatter = logging.Formatter("%(levelname)-8s %(name)-12s: %(message)s")
+# Trim the console down by default
 console.setFormatter(formatter)
 vollog.addHandler(console)
 
@@ -52,6 +54,9 @@ class VolShell(cli.CommandLine):
         )
 
         framework.require_interface_version(2, 0, 0)
+
+        # Load up system defaults
+        delayed_logs, default_config = self.load_system_defaults("volshell.json")
 
         parser = argparse.ArgumentParser(
             prog=self.CLI_NAME,
@@ -146,6 +151,12 @@ class VolShell(cli.CommandLine):
             default=constants.CACHE_PATH,
             type=str,
         )
+        parser.add_argument(
+            "--offline",
+            help="Do not search online for additional JSON files",
+            default=False,
+            action="store_true",
+        )
 
         # Volshell specific flags
         os_specific = parser.add_mutually_exclusive_group(required=False)
@@ -167,10 +178,35 @@ class VolShell(cli.CommandLine):
             "-m", "--mac", default=False, action="store_true", help="Run a Mac volshell"
         )
 
+        parser.set_defaults(**default_config)
+
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
         known_args = [arg for arg in sys.argv if arg != "--help" and arg != "-h"]
         partial_args, _ = parser.parse_known_args(known_args)
+
+        ### Start up logging
+        if partial_args.log:
+            file_logger = logging.FileHandler(partial_args.log)
+            file_logger.setLevel(0)
+            file_formatter = logging.Formatter(
+                datefmt="%y-%m-%d %H:%M:%S",
+                fmt="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
+            )
+            file_logger.setFormatter(file_formatter)
+            vollog.addHandler(file_logger)
+            vollog.info("Logging started")
+
+        self.order_extra_verbose_levels()
+        if partial_args.verbosity < 3:
+            console.setLevel(logging.WARNING - (partial_args.verbosity * 10))
+        else:
+            console.setLevel(logging.DEBUG - (partial_args.verbosity - 2))
+
+        for level, msg in delayed_logs:
+            vollog.log(level, msg)
+
+        ### Alter constants if necessary
         if partial_args.plugin_dirs:
             volatility3.plugins.__path__ = [
                 os.path.abspath(p) for p in partial_args.plugin_dirs.split(";")
@@ -187,24 +223,11 @@ class VolShell(cli.CommandLine):
         vollog.info(f"Volatility plugins path: {volatility3.plugins.__path__}")
         vollog.info(f"Volatility symbols path: {volatility3.symbols.__path__}")
 
-        if partial_args.log:
-            file_logger = logging.FileHandler(partial_args.log)
-            file_logger.setLevel(0)
-            file_formatter = logging.Formatter(
-                datefmt="%y-%m-%d %H:%M:%S",
-                fmt="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
-            )
-            file_logger.setFormatter(file_formatter)
-            vollog.addHandler(file_logger)
-            vollog.info("Logging started")
-
-        if partial_args.verbosity < 3:
-            console.setLevel(30 - (partial_args.verbosity * 10))
-        else:
-            console.setLevel(10 - (partial_args.verbosity - 2))
-
         if partial_args.clear_cache:
             framework.clear_cache()
+
+        if partial_args.offline:
+            constants.OFFLINE = partial_args.offline
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context

@@ -37,7 +37,6 @@ class Check_modules(plugins.PluginInterface):
     def get_kset_modules(
         cls, context: interfaces.context.ContextInterface, vmlinux_name: str
     ):
-
         vmlinux = context.modules[vmlinux_name]
 
         try:
@@ -57,7 +56,6 @@ class Check_modules(plugins.PluginInterface):
         for kobj in module_kset.list.to_list(
             vmlinux.symbol_table_name + constants.BANG + "kobject", "entry"
         ):
-
             mod_kobj = vmlinux.object(
                 object_type="module_kobject",
                 offset=kobj.vol.offset - kobj_off,

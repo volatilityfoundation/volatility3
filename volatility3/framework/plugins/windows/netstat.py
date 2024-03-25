@@ -154,7 +154,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             )
         else:
             # invalid argument.
-            return
+            return None
 
         vollog.debug(f"Current Port: {port}")
         # the given port serves as a shifted index into the port pool lists
@@ -175,7 +175,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         assignment = inpa.InPaBigPoolBase.Assignments[truncated_port]
 
         if not assignment:
-            return
+            return None
 
         # the value within assignment.Entry is a) masked and b) points inside of the network object
         # first decode the pointer
@@ -329,7 +329,6 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     alignment,
                     net_symbol_table,
                 ):
-
                     endpoint = context.object(
                         obj_name,
                         layer_name=layer_name,
@@ -591,7 +590,6 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             tcpip_module.DllBase,
             tcpip_symbol_table,
         ):
-
             # objects passed pool header constraints. check for additional constraints if strict flag is set.
             if not show_corrupt_results and not netw_obj.is_valid():
                 continue
