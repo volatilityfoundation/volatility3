@@ -6,6 +6,12 @@ This guide will step through how to construct a simple plugin using Volatility 3
 The example plugin we'll use is :py:class:`~volatility3.plugins.windows.dlllist.DllList`, which features the main traits
 of a normal plugin, and reuses other plugins appropriately.
 
+.. note::
+
+    This document will not include the complete code necessary for a
+    working plugin (such as imports, etc) since it's designed to focus on the necessary components for writing a plugin.
+    For complete and functioning plugins, the ``framework/plugins`` directory should be consulted.
+
 Inherit from PluginInterface
 ----------------------------
 
@@ -30,20 +36,20 @@ to be able to run properly.  Any that are defined as optional need not necessari
 
 ::
 
+        _version = (1, 0, 0)
+        _required_framework_version = (2, 0, 0)
+
         @classmethod
         def get_requirements(cls):
-            return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                             description = 'Memory layer for the kernel',
-                                                             architectures = ["Intel32", "Intel64"]),
-                    requirements.SymbolTableRequirement(name = "nt_symbols",
-                                                        description = "Windows kernel symbols"),
-                    requirements.PluginRequirement(name = 'pslist',
-                                                   plugin = pslist.PsList,
-                                                   version = (1, 0, 0)),
+            return [requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                                   architectures = ["Intel32", "Intel64"]),
                     requirements.ListRequirement(name = 'pid',
                                                  element_type = int,
                                                  description = "Process IDs to include (all other processes are excluded)",
-                                                 optional = True)]
+                                                 optional = True),
+                    requirements.PluginRequirement(name = 'pslist',
+                                                   plugin = pslist.PsList,
+                                                   version = (2, 0, 0))]
 
 
 This is a classmethod, because it is called before the specific plugin object has been instantiated (in order to know how
@@ -51,68 +57,111 @@ to instantiate the plugin).  At the moment these requirements are fairly straigh
 
 ::
 
-    requirements.TranslationLayerRequirement(name = 'primary',
-                                             description = 'Memory layer for the kernel',
-                                             architectures = ["Intel32", "Intel64"]),
+    requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                   architectures = ["Intel32", "Intel64"]),
 
-This requirement indicates that the plugin will operate on a single
-:py:class:`TranslationLayer <volatility3.framework.interfaces.layers.TranslationLayerInterface>`.  The name of the
-loaded layer will appear in the plugin's configuration under the name ``primary``.    Requirement values can be
-accessed within the plugin through the plugin's `config` attribute (for example ``self.config['pid']``).
+This requirement specifies the need for a particular submodule.  Each module requires a
+:py:class:`TranslationLayer <volatility3.framework.interfaces.layers.TranslationLayerInterface>` and a
+:py:class:`SymbolTable <volatility3.framework.interfaces.symbols.SymbolTableInterface>`, which are fulfilled by two
+subrequirements: a
+:py:class:`~volatility3.framework.configuration.requirements.TranslationLayerRequirement` and a
+:py:class:`~volatility3.framework.configuration.requirements.SymbolTableRequirement`.  At the moment, the automagic
+only fills `ModuleRequirements` with kernels, and so has relatively few parameters.  It requires the architecture for
+the underlying TranslationLayer, and the offset of the module within that layer.
 
-.. note:: The name itself is dynamic depending on the other layers already present in the Context.  Always use the value
-    from the configuration rather than attempting to guess what the layer will be called.
+The name of the module will be stored in the ``kernel`` configuration option, and the module object itself
+can be accessed from the ``context.modules`` collection.  This requirement is a Complex Requirement and therefore will
+not be requested directly from the user.
 
-Finally, this defines that the translation layer must be on the Intel Architecture.  At the moment, this acts as a filter,
-failing to be satisfied by memory images that do not match the architecture required.
 
-Most plugins will only operate on a single layer, but it is entirely possible for a plugin to request two different
-layers, for example a plugin that carries out some form of difference or statistics against multiple memory images.
+.. note::
 
-This requirement (and the next two) are known as Complex Requirements, and user interfaces will likely not directly
-request a value for this from a user.  The value stored in the configuration tree for a
-:py:class:`~volatility3.framework.configuration.requirements.TranslationLayerRequirement` is
-the string name of a layer present in the context's memory that satisfies the requirement.
+    In previous versions of volatility 3, there was no `ModuleRequirement`, and instead two requirements were defined
+    a :py:class:`TranslationLayer <volatility3.framework.interfaces.layers.TranslationLayerInterface>` and a `SymbolTableRequirement`.  These still exist, and can be used, most plugins just
+    define a single `ModuleRequirement` for the kernel, which the automagic will populate.  The `ModuleRequirement` has
+    two automatic sub-requirements, a `TranslationLayerRequirement` and a `SymbolTableRequirement`, but the module also
+    includes the offset of the module, and will allow future expansion to specify specific modules when application
+    level plugins become more common.  Below are how the requirements would be specified:
 
-::
+    ::
 
-    requirements.SymbolTableRequirement(name = "nt_symbols",
-                                        description = "Windows kernel symbols"),
+        requirements.TranslationLayerRequirement(name = 'primary',
+                                                 description = 'Memory layer for the kernel',
+                                                 architectures = ["Intel32", "Intel64"]),
 
-This requirement specifies the need for a particular
-:py:class:`SymbolTable <volatility3.framework.interfaces.symbols.SymbolTableInterface>`
-to be loaded.  This gets populated by various
-:py:class:`Automagic <volatility3.framework.interfaces.automagic.AutoMagicInterface>` as the nearest sibling to a particular
-:py:class:`~volatility3.framework.configuration.requirements.TranslationLayerRequirement`.
-This means that if the :py:class:`~volatility3.framework.configuration.requirements.TranslationLayerRequirement`
-is satisfied and the :py:class:`Automagic <volatility3.framework.interfaces.automagic.AutoMagicInterface>` can determine
-the appropriate :py:class:`SymbolTable <volatility3.framework.interfaces.symbols.SymbolTableInterface>`, the
-name of the :py:class:`SymbolTable <volatility3.framework.interfaces.symbols.SymbolTableInterface>` will be stored in the configuration.
+    This requirement indicates that the plugin will operate on a single
+    :py:class:`TranslationLayer <volatility3.framework.interfaces.layers.TranslationLayerInterface>`.  The name of the
+    loaded layer will appear in the plugin's configuration under the name ``primary``.    Requirement values can be
+    accessed within the plugin through the plugin's `config` attribute (for example ``self.config['pid']``).
 
-This requirement is also a Complex Requirement and therefore will not be requested directly from the user.
+    .. note:: The name itself is dynamic depending on the other layers already present in the Context.  Always use the value
+        from the configuration rather than attempting to guess what the layer will be called.
 
-::
+    Finally, this defines that the translation layer must be on the Intel Architecture.  At the moment, this acts as a filter,
+    failing to be satisfied by memory images that do not match the architecture required.
 
-    requirements.PluginRequirement(name = 'pslist',
-                                   plugin = pslist.PsList,
-                                   version = (1, 0, 0)),
+    Most plugins will only operate on a single layer, but it is entirely possible for a plugin to request two different
+    layers, for example a plugin that carries out some form of difference or statistics against multiple memory images.
 
-This requirement indicates that the plugin will make use of another plugin's code, and specifies the version requirements
-on that plugin.  The version is specified in terms of Semantic Versioning, meaning that to be compatible, the major
-versions must be identical and the minor version must be equal to or higher than the one provided.  This requirement
-does not make use of any data from the configuration, even if it were provided, it is merely a functional check before
-running the plugin.
+    This requirement (and the next two) are known as Complex Requirements, and user interfaces will likely not directly
+    request a value for this from a user.  The value stored in the configuration tree for a
+    :py:class:`~volatility3.framework.configuration.requirements.TranslationLayerRequirement` is
+    the string name of a layer present in the context's memory that satisfies the requirement.
+
+    ::
+
+        requirements.SymbolTableRequirement(name = "nt_symbols",
+                                            description = "Windows kernel symbols"),
+
+    This requirement specifies the need for a particular
+    :py:class:`SymbolTable <volatility3.framework.interfaces.symbols.SymbolTableInterface>`
+    to be loaded.  This gets populated by various
+    :py:class:`Automagic <volatility3.framework.interfaces.automagic.AutoMagicInterface>` as the nearest sibling to a particular
+    :py:class:`~volatility3.framework.configuration.requirements.TranslationLayerRequirement`.
+    This means that if the :py:class:`~volatility3.framework.configuration.requirements.TranslationLayerRequirement`
+    is satisfied and the :py:class:`Automagic <volatility3.framework.interfaces.automagic.AutoMagicInterface>` can determine
+    the appropriate :py:class:`SymbolTable <volatility3.framework.interfaces.symbols.SymbolTableInterface>`, the
+    name of the :py:class:`SymbolTable <volatility3.framework.interfaces.symbols.SymbolTableInterface>` will be stored in the configuration.
+
+    This requirement is also a Complex Requirement and therefore will not be requested directly from the user.
 
 ::
 
     requirements.ListRequirement(name = 'pid',
                                  description = 'Filter on specific process IDs',
                                  element_type = int,
-                                 optional = True)
+                                 optional = True),
 
-The final requirement is a List Requirement, populated by integers.  The description will be presented to the user to
+The next requirement is a List Requirement, populated by integers.  The description will be presented to the user to
 describe what the value represents.  The optional flag indicates that the plugin can function without the ``pid`` value
 being defined within the configuration tree at all.
+
+::
+
+    requirements.PluginRequirement(name = 'pslist',
+                                   plugin = pslist.PsList,
+                                   version = (2, 0, 0))]
+
+This requirement indicates that the plugin will make use of another plugin's code, and specifies the version requirements
+on that plugin.  The version is specified in terms of Semantic Versioning meaning that, to be compatible, the major
+versions must be identical and the minor version must be equal to or higher than the one provided.  This requirement
+does not make use of any data from the configuration, even if it were provided, it is merely a functional check before
+running the plugin.  To define the version of a plugin, populate the `_version` class variable as a tuple of version
+numbers `(major, minor, patch)`.  So for example:
+
+::
+
+    _version = (1, 0, 0)
+
+The plugin may also require a specific version of the framework, and this also uses Semantic Versioning, and can be
+set by defining the `_required_framework_version`.  The major version should match the version of volatility the plugin
+is to be used with, which at the time of writing would be 2.2.0, and so would be specified as below.  If only features, for example,
+from 2.0.0 are used, then the lowest applicable version number should be used to support the greatest number of
+installations:
+
+::
+
+    _required_framework_version = (2, 0, 0)
 
 Define the `run` method
 -----------------------
@@ -129,6 +178,7 @@ that will be output as part of the :py:class:`~volatility3.framework.interfaces.
         def run(self):
 
             filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+            kernel = self.context.modules[self.config['kernel']]
 
             return renderers.TreeGrid([("PID", int),
                                        ("Process", str),
@@ -137,8 +187,8 @@ that will be output as part of the :py:class:`~volatility3.framework.interfaces.
                                        ("Name", str),
                                        ("Path", str)],
                                       self._generator(pslist.PsList.list_processes(self.context,
-                                                                                   self.config['primary'],
-                                                                                   self.config['nt_symbols'],
+                                                                                   kernel.layer_name,
+                                                                                   kernel.symbol_table_name,
                                                                                    filter_func = filter_func)))
 
 In this instance, the plugin constructs a filter (using the PsList plugin's *classmethod* for creating filters).
@@ -157,7 +207,8 @@ the :py:class:`~volatility3.plugins.windows.pslist.PsList` plugin.  That plugin 
 so that other plugins can call it.  As such, it takes all the necessary parameters rather than accessing them
 from a configuration.  Since it must be portable code, it takes a context, as well as the layer name,
 symbol table and optionally a filter.  In this instance we unconditionally
-pass it the values from the configuration for the ``primary`` and ``nt_symbols`` requirements.  This will generate a list
+pass it the values from the configuration for the layer and symbol table from the kernel module object, constructed from
+the ``kernel`` configuration requirement.  This will generate a list
 of :py:class:`~volatility3.framework.symbols.windows.extensions.EPROCESS` objects, as provided by the :py:class:`~volatility.plugins.windows.pslist.PsList` plugin,
 and is not covered here but is used as an example for how to share code across plugins
 (both as the provider and the consumer of the shared code).
@@ -208,7 +259,7 @@ The plugin then takes the process's ``BaseDllName`` value, and calls :py:meth:`~
 as defined by the symbols, are directly accessible and use the case-style of the symbol library it came from (in Windows,
 attributes are CamelCase), such as ``entry.BaseDllName`` in this instance.  Any attributes not defined by the symbol but added
 by Volatility extensions cannot be properties (in case they overlap with the attributes defined in the symbol libraries)
-and are therefore always methods and pretended with ``get_``, in this example ``BaseDllName.get_string()``.
+and are therefore always methods and prepended with ``get_``, in this example ``BaseDllName.get_string()``.
 
 Finally, ``FullDllName`` is populated.  These operations read from memory, and as such, the memory image may be unable to
 read the data at a particular offset.  This will cause an exception to be thrown.  In Volatility 3, exceptions are thrown

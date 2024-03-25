@@ -6,5 +6,5 @@
 
 from volatility3.cli import volshell
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     volshell.main()

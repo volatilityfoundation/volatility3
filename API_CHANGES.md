@@ -4,6 +4,26 @@ API Changes
 When an addition to the existing API is made, the minor version is bumped.
 When an API feature or function is removed or changed, the major version is bumped.
 
+2.5.0
+=====
+Add in support for specifying a type override for object_from_symbol
+
+2.4.0
+=====
+Add a `get_size()` method to Windows VAD structures and fix several off-by-one issues when calculating VAD sizes.
+
+2.3.1
+=====
+Update in the windows `_EPROCESS.owning_process` method to support Windows Vista and later versions.
+
+2.3.0
+=====
+Add in `child_template` to template class
+
+2.2.0
+=====
+Changes to linux core calls
+
 2.1.0
 =====
 Add in the linux `task.get_threads` method to the API.

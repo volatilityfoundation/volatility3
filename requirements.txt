@@ -1,5 +1,5 @@
 # The following packages are required for core functionality.
-pefile>=2017.8.1
+pefile>=2023.2.7
 
 # The following packages are optional.
 # If certain packages are not necessary, place a comment (#) at the start of the line.
@@ -14,12 +14,9 @@ capstone>=3.0.5
 # This is required by plugins that decrypt passwords, password hashes, etc.
 pycryptodome
 
-# This can improve error messages regarding improperly configured ISF files.
-jsonschema>=2.3.0
-
 # This is required for memory acquisition via leechcore/pcileech.
 leechcorepyc>=2.4.0
 
-# This is required for analyzing Linux samples compressed using AVMLs native
-# compression format.  It is not required for AVML's standard LiME compression.
-python-snappy==0.6.0
+# This is required for memory analysis on a Amazon/MinIO S3 and Google Cloud object storage
+gcsfs>=2023.1.0
+s3fs>=2023.1.0

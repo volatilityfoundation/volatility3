@@ -38,3 +38,7 @@ ENV/
 # Memory dump files
 *.dmp
 *.vmem
+*.img
+
+# PyTest cache files
+.pytest_cache/

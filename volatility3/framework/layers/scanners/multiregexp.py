@@ -11,7 +11,7 @@ class MultiRegexp(object):
 
     def __init__(self) -> None:
         self._pattern_strings: List[bytes] = []
-        self._regex = re.compile(b'')
+        self._regex = re.compile(b"")
 
     def add_pattern(self, pattern: bytes) -> None:
         self._pattern_strings.append(pattern)
@@ -19,12 +19,14 @@ class MultiRegexp(object):
     def preprocess(self) -> None:
         if not self._pattern_strings:
             raise ValueError("No strings to compile into a regular expression")
-        self._regex = re.compile(b'|'.join(map(re.escape, self._pattern_strings)))
+        self._regex = re.compile(b"|".join(map(re.escape, self._pattern_strings)))
 
     def search(self, haystack: bytes) -> Generator[Tuple[int, bytes], None, None]:
         if not isinstance(haystack, bytes):
             raise TypeError("Search haystack must be a byte string")
         if not self._regex.pattern:
-            raise ValueError("MultiRegexp cannot be used with an empty set of search strings")
+            raise ValueError(
+                "MultiRegexp cannot be used with an empty set of search strings"
+            )
         for match in re.finditer(self._regex, haystack):
             yield (match.start(0), match.group())

@@ -3,11 +3,11 @@
 #
 """A module containing a collection of plugins that produce data typically
 found in Linux's /proc file system."""
+import contextlib
 import logging
 from typing import List
 
-from volatility3.framework import exceptions, interfaces
-from volatility3.framework import renderers, constants
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.renderers import format_hints
@@ -30,8 +30,11 @@ class Check_syscall(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
         ]
 
     def _get_table_size_next_symbol(self, table_addr, ptr_sz, vmlinux):
@@ -40,11 +43,9 @@ class Check_syscall(plugins.PluginInterface):
 
         symbol_list = []
         for sn in vmlinux.symbols:
-            try:
+            with contextlib.suppress(exceptions.SymbolError):
                 # When requesting the symbol from the module, a full resolve is performed
                 symbol_list.append((vmlinux.get_symbol(sn).address, sn))
-            except exceptions.SymbolError:
-                pass
         sorted_symbols = sorted(symbol_list)
 
         sym_address = 0
@@ -65,8 +66,12 @@ class Check_syscall(plugins.PluginInterface):
         accurate."""
 
         return len(
-            [sym for sym in self.context.symbol_space[vmlinux.symbol_table_name].symbols if
-             sym.startswith("__syscall_meta__")])
+            [
+                sym
+                for sym in self.context.symbol_space[vmlinux.symbol_table_name].symbols
+                if sym.startswith("__syscall_meta__")
+            ]
+        )
 
     def _get_table_info_other(self, table_addr, ptr_sz, vmlinux):
         table_size_meta = self._get_table_size_meta(vmlinux)
@@ -102,12 +107,12 @@ class Check_syscall(plugins.PluginInterface):
             # if we can't find the disassemble function then bail and rely on a different method
             return 0
 
-        vmlinux = self.context.modules[self.config['kernel']]
+        vmlinux = self.context.modules[self.config["kernel"]]
         data = self.context.layers.read(vmlinux.layer_name, func_addr, 6)
 
-        for (address, size, mnemonic, op_str) in md.disasm_lite(data, func_addr):
-            if mnemonic == 'CMP':
-                table_size = int(op_str.split(",")[1].strip()) & 0xffff
+        for address, size, mnemonic, op_str in md.disasm_lite(data, func_addr):
+            if mnemonic == "CMP":
+                table_size = int(op_str.split(",")[1].strip()) & 0xFFFF
                 break
 
         return table_size
@@ -128,7 +133,7 @@ class Check_syscall(plugins.PluginInterface):
 
     # TODO - add finding and parsing unistd.h once cached file enumeration is added
     def _generator(self):
-        vmlinux = self.context.modules[self.config['kernel']]
+        vmlinux = self.context.modules[self.config["kernel"]]
 
         ptr_sz = vmlinux.get_type("pointer").size
         if ptr_sz == 4:
@@ -140,7 +145,7 @@ class Check_syscall(plugins.PluginInterface):
             table_info = self._get_table_info(vmlinux, "sys_call_table", ptr_sz)
         except exceptions.SymbolError:
             vollog.error("Unable to find the system call table. Exiting.")
-            return
+            return None
 
         tables = [(table_name, table_info)]
 
@@ -156,27 +161,48 @@ class Check_syscall(plugins.PluginInterface):
             ia32_info = self._get_table_info(vmlinux, "ia32_sys_call_table", ptr_sz)
             tables.append(("32bit", ia32_info))
 
-        for (table_name, (tableaddr, tblsz)) in tables:
-            table = vmlinux.object(object_type = "array",
-                                   subtype = vmlinux.get_type("pointer"),
-                                   offset = tableaddr,
-                                   count = tblsz)
+        for table_name, (tableaddr, tblsz) in tables:
+            table = vmlinux.object(
+                object_type="array",
+                subtype=vmlinux.get_type("pointer"),
+                offset=tableaddr,
+                count=tblsz,
+            )
 
-            for (i, call_addr) in enumerate(table):
+            for i, call_addr in enumerate(table):
                 if not call_addr:
                     continue
 
                 symbols = list(vmlinux.get_symbols_by_absolute_location(call_addr))
 
                 if len(symbols) > 0:
-                    sym_name = str(symbols[0].split(constants.BANG)[1]) if constants.BANG in symbols[0] else \
-                        str(symbols[0])
+                    sym_name = (
+                        str(symbols[0].split(constants.BANG)[1])
+                        if constants.BANG in symbols[0]
+                        else str(symbols[0])
+                    )
                 else:
                     sym_name = "UNKNOWN"
 
-                yield (0, (format_hints.Hex(tableaddr), table_name, i, format_hints.Hex(call_addr), sym_name))
+                yield (
+                    0,
+                    (
+                        format_hints.Hex(tableaddr),
+                        table_name,
+                        i,
+                        format_hints.Hex(call_addr),
+                        sym_name,
+                    ),
+                )
 
     def run(self):
-
-        return renderers.TreeGrid([("Table Address", format_hints.Hex), ("Table Name", str), ("Index", int),
-                                   ("Handler Address", format_hints.Hex), ("Handler Symbol", str)], self._generator())
+        return renderers.TreeGrid(
+            [
+                ("Table Address", format_hints.Hex),
+                ("Table Name", str),
+                ("Index", int),
+                ("Handler Address", format_hints.Hex),
+                ("Handler Symbol", str),
+            ],
+            self._generator(),
+        )

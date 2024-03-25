@@ -87,12 +87,14 @@ class Context(interfaces.context.ContextInterface):
 
     # ## Object Factory Functions
 
-    def object(self,
-               object_type: Union[str, interfaces.objects.Template],
-               layer_name: str,
-               offset: int,
-               native_layer_name: Optional[str] = None,
-               **arguments) -> interfaces.objects.ObjectInterface:
+    def object(
+        self,
+        object_type: Union[str, interfaces.objects.Template],
+        layer_name: str,
+        offset: int,
+        native_layer_name: Optional[str] = None,
+        **arguments,
+    ) -> interfaces.objects.ObjectInterface:
         """Object factory, takes a context, symbol, offset and optional
         layername.
 
@@ -122,18 +124,24 @@ class Context(interfaces.context.ContextInterface):
 
         object_template = object_template.clone()
         object_template.update_vol(**arguments)
-        return object_template(context = self,
-                               object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
-                                                                                  offset = offset,
-                                                                                  native_layer_name = native_layer_name,
-                                                                                  size = object_template.size))
+        return object_template(
+            context=self,
+            object_info=interfaces.objects.ObjectInformation(
+                layer_name=layer_name,
+                offset=offset,
+                native_layer_name=native_layer_name,
+                size=object_template.size,
+            ),
+        )
 
-    def module(self,
-               module_name: str,
-               layer_name: str,
-               offset: int,
-               native_layer_name: Optional[str] = None,
-               size: Optional[int] = None) -> interfaces.context.ModuleInterface:
+    def module(
+        self,
+        module_name: str,
+        layer_name: str,
+        offset: int,
+        native_layer_name: Optional[str] = None,
+        size: Optional[int] = None,
+    ) -> interfaces.context.ModuleInterface:
         """Constructs a new os-independent module.
 
         Args:
@@ -144,17 +152,21 @@ class Context(interfaces.context.ContextInterface):
             size: The size, in bytes, that the module occupies from offset location within the layer named layer_name
         """
         if size:
-            return SizedModule.create(self,
-                                      module_name = module_name,
-                                      layer_name = layer_name,
-                                      offset = offset,
-                                      size = size,
-                                      native_layer_name = native_layer_name)
-        return Module.create(self,
-                             module_name = module_name,
-                             layer_name = layer_name,
-                             offset = offset,
-                             native_layer_name = native_layer_name)
+            return SizedModule.create(
+                self,
+                module_name=module_name,
+                layer_name=layer_name,
+                offset=offset,
+                size=size,
+                native_layer_name=native_layer_name,
+            )
+        return Module.create(
+            self,
+            module_name=module_name,
+            layer_name=layer_name,
+            offset=offset,
+            native_layer_name=native_layer_name,
+        )
 
 
 def get_module_wrapper(method: str) -> Callable:
@@ -169,7 +181,13 @@ def get_module_wrapper(method: str) -> Callable:
             raise ValueError(f"Cannot reference another module when calling {method}")
         return getattr(self._context.symbol_space, method)(name)
 
-    for entry in ['__annotations__', '__doc__', '__module__', '__name__', '__qualname__']:
+    for entry in [
+        "__annotations__",
+        "__doc__",
+        "__module__",
+        "__name__",
+        "__qualname__",
+    ]:
         proxy_interface = getattr(interfaces.context.ModuleInterface, method)
         if hasattr(proxy_interface, entry):
             setattr(wrapper, entry, getattr(proxy_interface, entry))
@@ -178,26 +196,27 @@ def get_module_wrapper(method: str) -> Callable:
 
 
 class Module(interfaces.context.ModuleInterface):
-
     @classmethod
-    def create(cls,
-               context: interfaces.context.ContextInterface,
-               module_name: str,
-               layer_name: str,
-               offset: int,
-               **kwargs) -> 'Module':
+    def create(
+        cls,
+        context: interfaces.context.ContextInterface,
+        module_name: str,
+        layer_name: str,
+        offset: int,
+        **kwargs,
+    ) -> "Module":
         pathjoin = interfaces.configuration.path_join
         # Check if config_path is None
         free_module_name = context.modules.free_module_name(module_name)
-        config_path = kwargs.get('config_path', None)
+        config_path = kwargs.get("config_path", None)
         if config_path is None:
-            config_path = pathjoin('temporary', 'modules', free_module_name)
+            config_path = pathjoin("temporary", "modules", free_module_name)
         # Populate the configuration
-        context.config[pathjoin(config_path, 'layer_name')] = layer_name
-        context.config[pathjoin(config_path, 'offset')] = offset
+        context.config[pathjoin(config_path, "layer_name")] = layer_name
+        context.config[pathjoin(config_path, "offset")] = offset
         # This is important, since the module_name may be changed in case it is already in use
-        if 'symbol_table_name' not in kwargs:
-            kwargs['symbol_table_name'] = module_name
+        if "symbol_table_name" not in kwargs:
+            kwargs["symbol_table_name"] = module_name
         for arg in kwargs:
             context.config[pathjoin(config_path, arg)] = kwargs.get(arg, None)
         # Construct the object
@@ -207,12 +226,14 @@ class Module(interfaces.context.ModuleInterface):
         # Add the module to the context modules collection
         return return_val
 
-    def object(self,
-               object_type: str,
-               offset: int = None,
-               native_layer_name: Optional[str] = None,
-               absolute: bool = False,
-               **kwargs) -> 'interfaces.objects.ObjectInterface':
+    def object(
+        self,
+        object_type: str,
+        offset: int = None,
+        native_layer_name: Optional[str] = None,
+        absolute: bool = False,
+        **kwargs,
+    ) -> "interfaces.objects.ObjectInterface":
         """Returns an object created using the symbol_table_name and layer_name
         of the Module.
 
@@ -225,7 +246,9 @@ class Module(interfaces.context.ModuleInterface):
         if constants.BANG not in object_type:
             object_type = self.symbol_table_name + constants.BANG + object_type
         else:
-            raise ValueError("Cannot reference another module when constructing an object")
+            raise ValueError(
+                "Cannot reference another module when constructing an object"
+            )
 
         if offset is None:
             raise TypeError("Offset must not be None for non-symbol objects")
@@ -234,19 +257,24 @@ class Module(interfaces.context.ModuleInterface):
             offset += self._offset
 
         # Ensure we don't use a layer_name other than the module's, why would anyone do that?
-        if 'layer_name' in kwargs:
-            del kwargs['layer_name']
-        return self._context.object(object_type = object_type,
-                                    layer_name = self._layer_name,
-                                    offset = offset,
-                                    native_layer_name = native_layer_name or self._native_layer_name,
-                                    **kwargs)
+        if "layer_name" in kwargs:
+            del kwargs["layer_name"]
+        return self._context.object(
+            object_type=object_type,
+            layer_name=self._layer_name,
+            offset=offset,
+            native_layer_name=native_layer_name or self._native_layer_name,
+            **kwargs,
+        )
 
-    def object_from_symbol(self,
-                           symbol_name: str,
-                           native_layer_name: Optional[str] = None,
-                           absolute: bool = False,
-                           **kwargs) -> 'interfaces.objects.ObjectInterface':
+    def object_from_symbol(
+        self,
+        symbol_name: str,
+        native_layer_name: Optional[str] = None,
+        absolute: bool = False,
+        object_type: Optional[Union[str, "interfaces.objects.ObjectInterface"]] = None,
+        **kwargs,
+    ) -> "interfaces.objects.ObjectInterface":
         """Returns an object based on a specific symbol (containing type and
         offset information) and the layer_name of the Module.  This will throw
         a ValueError if the symbol does not contain an associated type, or if
@@ -257,11 +285,14 @@ class Module(interfaces.context.ModuleInterface):
             symbol_name: Name of the symbol (within the module) to construct
             native_layer_name: Name of the layer in which constructed objects are made (for pointers)
             absolute: whether the symbol's address is absolute or relative to the module
+            object_type: Override for the type from the symobl to use (or if the symbol type is missing)
         """
         if constants.BANG not in symbol_name:
             symbol_name = self.symbol_table_name + constants.BANG + symbol_name
         else:
-            raise ValueError("Cannot reference another module when constructing an object")
+            raise ValueError(
+                "Cannot reference another module when constructing an object"
+            )
 
         # Only set the offset if type is Symbol and we were given a name, not a template
         symbol_val = self._context.symbol_space.get_symbol(symbol_name)
@@ -270,19 +301,26 @@ class Module(interfaces.context.ModuleInterface):
         if not absolute:
             offset += self._offset
 
-        if symbol_val.type is None:
-            raise TypeError(f"Symbol {symbol_val.name} has no associated type")
+        if object_type is None:
+            if symbol_val.type is None:
+                raise TypeError(
+                    f"Symbol {symbol_val.name} has no associated type and no object_type specified"
+                )
+            else:
+                object_type = symbol_val.type
 
         # Ensure we don't use a layer_name other than the module's, why would anyone do that?
-        if 'layer_name' in kwargs:
-            del kwargs['layer_name']
+        if "layer_name" in kwargs:
+            del kwargs["layer_name"]
 
         # Since type may be a template, we don't just call our own module method
-        return self._context.object(object_type = symbol_val.type,
-                                    layer_name = self._layer_name,
-                                    offset = offset,
-                                    native_layer_name = native_layer_name or self._native_layer_name,
-                                    **kwargs)
+        return self._context.object(
+            object_type=object_type,
+            layer_name=self._layer_name,
+            offset=offset,
+            native_layer_name=native_layer_name or self._native_layer_name,
+            **kwargs,
+        )
 
     def get_symbols_by_absolute_location(self, offset: int, size: int = 0) -> List[str]:
         """Returns the symbols within this module that live at the specified
@@ -290,28 +328,30 @@ class Module(interfaces.context.ModuleInterface):
         if size < 0:
             raise ValueError("Size must be strictly non-negative")
         return list(
-            self._context.symbol_space.get_symbols_by_location(offset = offset - self._offset,
-                                                               size = size,
-                                                               table_name = self.symbol_table_name))
+            self._context.symbol_space.get_symbols_by_location(
+                offset=offset - self._offset,
+                size=size,
+                table_name=self.symbol_table_name,
+            )
+        )
 
     @property
     def symbols(self):
         return self.context.symbol_space[self.symbol_table_name].symbols
 
-    get_symbol = get_module_wrapper('get_symbol')
-    get_type = get_module_wrapper('get_type')
-    get_enumeration = get_module_wrapper('get_enumeration')
-    has_symbol = get_module_wrapper('has_symbol')
-    has_type = get_module_wrapper('has_type')
-    has_enumeration = get_module_wrapper('has_enumeration')
+    get_symbol = get_module_wrapper("get_symbol")
+    get_type = get_module_wrapper("get_type")
+    get_enumeration = get_module_wrapper("get_enumeration")
+    has_symbol = get_module_wrapper("has_symbol")
+    has_type = get_module_wrapper("has_type")
+    has_enumeration = get_module_wrapper("has_enumeration")
 
 
 class SizedModule(Module):
-
     @property
     def size(self) -> int:
         """Returns the size of the module (0 for unknown size)"""
-        size = self.config.get('size', 0)
+        size = self.config.get("size", 0)
         return size or 0
 
     @property  # type: ignore # FIXME: mypy #5107
@@ -326,8 +366,12 @@ class SizedModule(Module):
         layer = self._context.layers[self.layer_name]
         if not isinstance(layer, interfaces.layers.TranslationLayerInterface):
             raise TypeError("Hashing modules on non-TranslationLayers is not allowed")
-        return hashlib.md5(bytes(str(list(layer.mapping(self.offset, self.size, ignore_errors = True))),
-                                 'utf-8')).hexdigest()
+        return hashlib.md5(
+            bytes(
+                str(list(layer.mapping(self.offset, self.size, ignore_errors=True))),
+                "utf-8",
+            )
+        ).hexdigest()
 
     def get_symbols_by_absolute_location(self, offset: int, size: int = 0) -> List[str]:
         """Returns the symbols within this module that live at the specified
@@ -341,10 +385,13 @@ class ModuleCollection(interfaces.context.ModuleContainer):
     """Class to contain a collection of SizedModules and reason about their
     contents."""
 
-    def __init__(self, modules: Optional[List[interfaces.context.ModuleInterface]] = None) -> None:
+    def __init__(
+        self, modules: Optional[List[interfaces.context.ModuleInterface]] = None
+    ) -> None:
+        self._prefix_count = {}
         super().__init__(modules)
 
-    def deduplicate(self) -> 'ModuleCollection':
+    def deduplicate(self) -> "ModuleCollection":
         """Returns a new deduplicated ModuleCollection featuring no repeated
         modules (based on data hash)
 
@@ -361,20 +408,27 @@ class ModuleCollection(interfaces.context.ModuleContainer):
 
     def free_module_name(self, prefix: str = "module") -> str:
         """Returns an unused module name"""
-        count = 1
+        if prefix not in self._prefix_count:
+            self._prefix_count[prefix] = 1
+            return prefix
+        count = self._prefix_count[prefix]
         while prefix + str(count) in self:
             count += 1
+        self._prefix_count[prefix] = count
         return prefix + str(count)
 
     @property
-    def modules(self) -> 'ModuleCollection':
+    def modules(self) -> "ModuleCollection":
         """A name indexed dictionary of modules using that name in this
         collection."""
         vollog.warning(
-            "This method has been deprecated in favour of the ModuleCollection acting as a dictionary itself")
+            "This method has been deprecated in favour of the ModuleCollection acting as a dictionary itself"
+        )
         return self
 
-    def get_module_symbols_by_absolute_location(self, offset: int, size: int = 0) -> Iterable[Tuple[str, List[str]]]:
+    def get_module_symbols_by_absolute_location(
+        self, offset: int, size: int = 0
+    ) -> Iterable[Tuple[str, List[str]]]:
         """Returns a tuple of (module_name, list_of_symbol_names) for each
         module, where symbols live at the absolute offset in memory
         provided."""
@@ -383,16 +437,28 @@ class ModuleCollection(interfaces.context.ModuleContainer):
         for module_name in self._modules:
             module = self._modules[module_name]
             if isinstance(module, SizedModule):
-                if (offset <= module.offset + module.size) and (offset + size >= module.offset):
-                    yield (module.name, module.get_symbols_by_absolute_location(offset, size))
+                if (offset <= module.offset + module.size) and (
+                    offset + size >= module.offset
+                ):
+                    yield (
+                        module.name,
+                        module.get_symbols_by_absolute_location(offset, size),
+                    )
 
 
 class ConfigurableModule(Module, interfaces.configuration.ConfigurableInterface):
-
-    def __init__(self, context: interfaces.context.ContextInterface, config_path: str, name: str) -> None:
-        interfaces.configuration.ConfigurableInterface.__init__(self, context, config_path)
-        layer_name = self.config['layer_name']
-        offset = self.config['offset']
-        symbol_table_name = self.config['symbol_table_name']
-        interfaces.configuration.ConfigurableInterface.__init__(self, context, config_path)
-        Module.__init__(self, context, name, layer_name, offset, symbol_table_name, layer_name)
+    def __init__(
+        self, context: interfaces.context.ContextInterface, config_path: str, name: str
+    ) -> None:
+        interfaces.configuration.ConfigurableInterface.__init__(
+            self, context, config_path
+        )
+        layer_name = self.config["layer_name"]
+        offset = self.config["offset"]
+        symbol_table_name = self.config["symbol_table_name"]
+        interfaces.configuration.ConfigurableInterface.__init__(
+            self, context, config_path
+        )
+        Module.__init__(
+            self, context, name, layer_name, offset, symbol_table_name, layer_name
+        )

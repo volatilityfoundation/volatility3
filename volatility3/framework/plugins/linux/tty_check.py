@@ -24,18 +24,27 @@ class tty_check(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0)),
-            requirements.VersionRequirement(name = 'linuxutils', component = linux.LinuxUtilities, version = (2, 0, 0))
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Linux kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.PluginRequirement(
+                name="lsmod", plugin=lsmod.Lsmod, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="linuxutils", component=linux.LinuxUtilities, version=(2, 0, 0)
+            ),
         ]
 
     def _generator(self):
-        vmlinux = self.context.modules[self.config['kernel']]
+        vmlinux = self.context.modules[self.config["kernel"]]
 
         modules = lsmod.Lsmod.list_modules(self.context, vmlinux.name)
 
-        handlers = linux.LinuxUtilities.generate_kernel_handler_info(self.context, vmlinux.name, modules)
+        handlers = linux.LinuxUtilities.generate_kernel_handler_info(
+            self.context, vmlinux.name, modules
+        )
 
         try:
             tty_drivers = vmlinux.object_from_symbol("tty_drivers").cast("list_head")
@@ -49,18 +58,20 @@ class tty_check(plugins.PluginInterface):
                 "This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
             )
 
-        for tty in tty_drivers.to_list(vmlinux.symbol_table_name + constants.BANG + "tty_driver", "tty_drivers"):
-
+        for tty in tty_drivers.to_list(
+            vmlinux.symbol_table_name + constants.BANG + "tty_driver", "tty_drivers"
+        ):
             try:
-                ttys = utility.array_of_pointers(tty.ttys.dereference(),
-                                                 count = tty.num,
-                                                 subtype = vmlinux.symbol_table_name + constants.BANG + "tty_struct",
-                                                 context = self.context)
+                ttys = utility.array_of_pointers(
+                    tty.ttys.dereference(),
+                    count=tty.num,
+                    subtype=vmlinux.symbol_table_name + constants.BANG + "tty_struct",
+                    context=self.context,
+                )
             except exceptions.PagedInvalidAddressException:
                 continue
 
             for tty_dev in ttys:
-
                 if tty_dev == 0:
                     continue
 
@@ -68,10 +79,19 @@ class tty_check(plugins.PluginInterface):
 
                 recv_buf = tty_dev.ldisc.ops.receive_buf
 
-                module_name, symbol_name = linux.LinuxUtilities.lookup_module_address(vmlinux, handlers, recv_buf)
+                module_name, symbol_name = linux.LinuxUtilities.lookup_module_address(
+                    vmlinux, handlers, recv_buf
+                )
 
                 yield (0, (name, format_hints.Hex(recv_buf), module_name, symbol_name))
 
     def run(self):
-        return renderers.TreeGrid([("Name", str), ("Address", format_hints.Hex), ("Module", str), ("Symbol", str)],
-                                  self._generator())
+        return renderers.TreeGrid(
+            [
+                ("Name", str),
+                ("Address", format_hints.Hex),
+                ("Module", str),
+                ("Symbol", str),
+            ],
+            self._generator(),
+        )

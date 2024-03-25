@@ -25,12 +25,14 @@ class TimeLinerType(enum.IntEnum):
     CHANGED = 4
 
 
-class TimeLinerInterface(metaclass = abc.ABCMeta):
+class TimeLinerInterface(metaclass=abc.ABCMeta):
     """Interface defining methods that timeliner will use to generate a body
     file."""
 
     @abc.abstractmethod
-    def generate_timeline(self) -> Generator[Tuple[str, TimeLinerType, datetime.datetime], None, None]:
+    def generate_timeline(
+        self,
+    ) -> Generator[Tuple[str, TimeLinerType, datetime.datetime], None, None]:
         """Method generates Tuples of (description, timestamp_type, timestamp)
 
         These need not be generated in any particular order, sorting
@@ -69,72 +71,106 @@ class Timeliner(interfaces.plugins.PluginInterface):
         else:
             selected_list = []
 
-        return [plugin_class for plugin_class in plugin_list if filter_func(plugin_class.__name__, selected_list)]
+        return [
+            plugin_class
+            for plugin_class in plugin_list
+            if filter_func(plugin_class.__name__, selected_list)
+        ]
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.BooleanRequirement(
-                name = 'record-config',
-                description = "Whether to record the state of all the plugins once complete",
-                optional = True,
-                default = False),
-            requirements.ListRequirement(name = 'plugin-filter',
-                                         description = "Only run plugins featuring this substring",
-                                         element_type = str,
-                                         optional = True,
-                                         default = []),
-            requirements.BooleanRequirement(name = 'create-bodyfile',
-                                            description = "Whether to create a body file whilst producing results",
-                                            optional = True,
-                                            default = False)
+                name="record-config",
+                description="Whether to record the state of all the plugins once complete",
+                optional=True,
+                default=False,
+            ),
+            requirements.ListRequirement(
+                name="plugin-filter",
+                description="Only run plugins featuring this substring",
+                element_type=str,
+                optional=True,
+                default=[],
+            ),
+            requirements.BooleanRequirement(
+                name="create-bodyfile",
+                description="Whether to create a body file whilst producing results",
+                optional=True,
+                default=False,
+            ),
         ]
 
     def _sort_function(self, item):
         data = item[1]
 
         def sortable(timestamp):
-            max_date = datetime.datetime(day = 1, month = 12, year = datetime.MAXYEAR)
+            max_date = datetime.datetime(day=1, month=12, year=datetime.MAXYEAR)
             if isinstance(timestamp, interfaces.renderers.BaseAbsentValue):
                 return max_date
             return timestamp
 
         return [sortable(timestamp) for timestamp in data[2:]]
 
-    def _generator(self, runnable_plugins: List[TimeLinerInterface]) -> Optional[Iterable[Tuple[int, Tuple]]]:
+    def _generator(
+        self, runnable_plugins: List[TimeLinerInterface]
+    ) -> Optional[Iterable[Tuple[int, Tuple]]]:
         """Takes a timeline, sorts it and output the data from each relevant
         row from each plugin."""
         # Generate the results for each plugin
         data = []
 
         # Open the bodyfile now, so we can start outputting to it immediately
-        if self.config.get('create-bodyfile', True):
+        if self.config.get("create-bodyfile", True):
             file_data = self.open("volatility.body")
-            fp = io.TextIOWrapper(file_data, write_through = True)
+            fp = io.TextIOWrapper(file_data, write_through=True)
         else:
             file_data = None
             fp = None
 
         for plugin in runnable_plugins:
             plugin_name = plugin.__class__.__name__
-            self._progress_callback((runnable_plugins.index(plugin) * 100) // len(runnable_plugins),
-                                    f"Running plugin {plugin_name}...")
+            self._progress_callback(
+                (runnable_plugins.index(plugin) * 100) // len(runnable_plugins),
+                f"Running plugin {plugin_name}...",
+            )
             try:
                 vollog.log(logging.INFO, f"Running {plugin_name}")
-                for (item, timestamp_type, timestamp) in plugin.generate_timeline():
+                for item, timestamp_type, timestamp in plugin.generate_timeline():
                     times = self.timeline.get((plugin_name, item), {})
                     if times.get(timestamp_type, None) is not None:
-                        vollog.debug("Multiple timestamps for the same plugin/file combination found: {} {}".format(
-                            plugin_name, item))
+                        vollog.debug(
+                            "Multiple timestamps for the same plugin/file combination found: {} {}".format(
+                                plugin_name, item
+                            )
+                        )
                     times[timestamp_type] = timestamp
                     self.timeline[(plugin_name, item)] = times
-                    data.append((0, [
-                        plugin_name, item,
-                        times.get(TimeLinerType.CREATED, renderers.NotApplicableValue()),
-                        times.get(TimeLinerType.MODIFIED, renderers.NotApplicableValue()),
-                        times.get(TimeLinerType.ACCESSED, renderers.NotApplicableValue()),
-                        times.get(TimeLinerType.CHANGED, renderers.NotApplicableValue())
-                    ]))
+                    data.append(
+                        (
+                            0,
+                            [
+                                plugin_name,
+                                item,
+                                times.get(
+                                    TimeLinerType.CREATED,
+                                    renderers.NotApplicableValue(),
+                                ),
+                                times.get(
+                                    TimeLinerType.MODIFIED,
+                                    renderers.NotApplicableValue(),
+                                ),
+                                times.get(
+                                    TimeLinerType.ACCESSED,
+                                    renderers.NotApplicableValue(),
+                                ),
+                                times.get(
+                                    TimeLinerType.CHANGED,
+                                    renderers.NotApplicableValue(),
+                                ),
+                            ],
+                        )
+                    )
 
                     # Write each entry because the body file doesn't need to be sorted
                     if fp:
@@ -142,21 +178,35 @@ class Timeliner(interfaces.plugins.PluginInterface):
                         # Body format is: MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime
 
                         if self._any_time_present(times):
-                            fp.write("|{} - {}|0|0|0|0|0|{}|{}|{}|{}\n".format(
-                                plugin_name, self._sanitize_body_format(item),
-                                self._text_format(times.get(TimeLinerType.ACCESSED, "")),
-                                self._text_format(times.get(TimeLinerType.MODIFIED, "")),
-                                self._text_format(times.get(TimeLinerType.CHANGED, "")),
-                                self._text_format(times.get(TimeLinerType.CREATED, ""))))
+                            fp.write(
+                                "|{} - {}|0|0|0|0|0|{}|{}|{}|{}\n".format(
+                                    plugin_name,
+                                    self._sanitize_body_format(item),
+                                    self._text_format(
+                                        times.get(TimeLinerType.ACCESSED, "")
+                                    ),
+                                    self._text_format(
+                                        times.get(TimeLinerType.MODIFIED, "")
+                                    ),
+                                    self._text_format(
+                                        times.get(TimeLinerType.CHANGED, "")
+                                    ),
+                                    self._text_format(
+                                        times.get(TimeLinerType.CREATED, "")
+                                    ),
+                                )
+                            )
             except Exception:
-                vollog.log(logging.INFO, f"Exception occurred running plugin: {plugin_name}")
+                vollog.log(
+                    logging.INFO, f"Exception occurred running plugin: {plugin_name}"
+                )
                 vollog.log(logging.DEBUG, traceback.format_exc())
 
-        for data_item in sorted(data, key = self._sort_function):
+        for data_item in sorted(data, key=self._sort_function):
             yield data_item
 
         # Write out a body file if necessary
-        if self.config.get('create-bodyfile', True):
+        if self.config.get("create-bodyfile", True):
             if fp:
                 fp.close()
                 file_data.close()
@@ -166,7 +216,10 @@ class Timeliner(interfaces.plugins.PluginInterface):
 
     def _any_time_present(self, times):
         for time in TimeLinerType:
-            if not isinstance(times.get(time, renderers.NotApplicableValue), interfaces.renderers.BaseAbsentValue):
+            if not isinstance(
+                times.get(time, renderers.NotApplicableValue),
+                interfaces.renderers.BaseAbsentValue,
+            ):
                 return True
         return False
 
@@ -187,7 +240,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
         plugins_to_run = []
         requirement_configs = {}
 
-        filter_list = self.config['plugin-filter']
+        filter_list = self.config["plugin-filter"]
         # Identify plugins that we can run which output datetimes
         for plugin_class in self.usable_plugins:
             try:
@@ -197,42 +250,72 @@ class Timeliner(interfaces.plugins.PluginInterface):
                     if requirement.name in requirement_configs:
                         config_req, config_value = requirement_configs[requirement.name]
                         if requirement == config_req:
-                            self.context.config[interfaces.configuration.path_join(
-                                self.config_path, plugin_class.__name__)] = config_value
+                            self.context.config[
+                                interfaces.configuration.path_join(
+                                    self.config_path, plugin_class.__name__
+                                )
+                            ] = config_value
 
-                plugin = plugins.construct_plugin(self.context, automagics, plugin_class, self.config_path,
-                                                  self._progress_callback, self.open)
+                plugin = plugins.construct_plugin(
+                    self.context,
+                    automagics,
+                    plugin_class,
+                    self.config_path,
+                    self._progress_callback,
+                    self.open,
+                )
 
                 for requirement in plugin.get_requirements():
                     if requirement.name not in requirement_configs:
                         config_value = plugin.config.get(requirement.name, None)
                         if config_value:
-                            requirement_configs[requirement.name] = (requirement, config_value)
+                            requirement_configs[requirement.name] = (
+                                requirement,
+                                config_value,
+                            )
 
                 if isinstance(plugin, TimeLinerInterface):
                     if not len(filter_list) or any(
-                            [filter in plugin.__module__ + '.' + plugin.__class__.__name__ for filter in filter_list]):
+                        [
+                            filter
+                            in plugin.__module__ + "." + plugin.__class__.__name__
+                            for filter in filter_list
+                        ]
+                    ):
                         plugins_to_run.append(plugin)
             except exceptions.UnsatisfiedException as excp:
                 # Remove the failed plugin from the list and continue
-                vollog.debug(f"Unable to satisfy {plugin_class.__name__}: {excp.unsatisfied}")
+                vollog.debug(
+                    f"Unable to satisfy {plugin_class.__name__}: {excp.unsatisfied}"
+                )
                 continue
 
-        if self.config.get('record-config', False):
+        if self.config.get("record-config", False):
             total_config = {}
             for plugin in plugins_to_run:
                 old_dict = dict(plugin.build_configuration())
                 for entry in old_dict:
-                    total_config[interfaces.configuration.path_join(plugin.__class__.__name__, entry)] = old_dict[entry]
+                    total_config[
+                        interfaces.configuration.path_join(
+                            plugin.__class__.__name__, entry
+                        )
+                    ] = old_dict[entry]
 
             with self.open("config.json") as file_data:
-                with io.TextIOWrapper(file_data, write_through = True) as fp:
-                    json.dump(total_config, fp, sort_keys = True, indent = 2)
+                with io.TextIOWrapper(file_data, write_through=True) as fp:
+                    json.dump(total_config, fp, sort_keys=True, indent=2)
 
-        return renderers.TreeGrid(columns = [("Plugin", str), ("Description", str), ("Created Date", datetime.datetime),
-                                             ("Modified Date", datetime.datetime), ("Accessed Date", datetime.datetime),
-                                             ("Changed Date", datetime.datetime)],
-                                  generator = self._generator(plugins_to_run))
+        return renderers.TreeGrid(
+            columns=[
+                ("Plugin", str),
+                ("Description", str),
+                ("Created Date", datetime.datetime),
+                ("Modified Date", datetime.datetime),
+                ("Accessed Date", datetime.datetime),
+                ("Changed Date", datetime.datetime),
+            ],
+            generator=self._generator(plugins_to_run),
+        )
 
     def build_configuration(self):
         """Builds the configuration to save for the plugin such that it can be

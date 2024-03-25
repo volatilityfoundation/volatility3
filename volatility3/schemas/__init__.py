@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 import os
-from typing import Set, Any, Dict
+from typing import Any, Dict, Optional, Set
 
 from volatility3.framework import constants
 
@@ -37,27 +37,45 @@ cached_validations = load_cached_validations()
 
 def validate(input: Dict[str, Any], use_cache: bool = True) -> bool:
     """Validates an input JSON file based upon."""
-    format = input.get('metadata', {}).get('format', None)
+    format = input.get("metadata", {}).get("format", None)
     if not format:
         vollog.debug("No schema format defined")
         return False
     basepath = os.path.abspath(os.path.dirname(__file__))
-    schema_path = os.path.join(basepath, 'schema-' + format + '.json')
+    schema_path = os.path.join(basepath, "schema-" + format + ".json")
     if not os.path.exists(schema_path):
         vollog.debug(f"Schema for format not found: {schema_path}")
         return False
-    with open(schema_path, 'r') as s:
+    with open(schema_path, "r") as s:
         schema = json.load(s)
     return valid(input, schema, use_cache)
 
 
-def create_json_hash(input: Dict[str, Any], schema: Dict[str, Any]) -> str:
+def create_json_hash(
+    input: Dict[str, Any], schema: Optional[Dict[str, Any]] = None
+) -> Optional[str]:
     """Constructs the hash of the input and schema to create a unique
     identifier for a particular JSON file."""
-    return hashlib.sha1(bytes(json.dumps((input, schema), sort_keys = True), 'utf-8')).hexdigest()
+    if schema is None:
+        format = input.get("metadata", {}).get("format", None)
+        if not format:
+            vollog.debug("No schema format defined")
+            return None
+        basepath = os.path.abspath(os.path.dirname(__file__))
+        schema_path = os.path.join(basepath, "schema-" + format + ".json")
+        if not os.path.exists(schema_path):
+            vollog.debug(f"Schema for format not found: {schema_path}")
+            return None
+        with open(schema_path, "r") as s:
+            schema = json.load(s)
+    return hashlib.sha1(
+        bytes(json.dumps((input, schema), sort_keys=True), "utf-8")
+    ).hexdigest()
 
 
-def valid(input: Dict[str, Any], schema: Dict[str, Any], use_cache: bool = True) -> bool:
+def valid(
+    input: Dict[str, Any], schema: Dict[str, Any], use_cache: bool = True
+) -> bool:
     """Validates a json schema."""
     input_hash = create_json_hash(input, schema)
     if input_hash in cached_validations and use_cache:
@@ -75,7 +93,7 @@ def valid(input: Dict[str, Any], schema: Dict[str, Any], use_cache: bool = True)
         cached_validations.add(input_hash)
         vollog.debug("JSON validated against schema (result cached)")
     except jsonschema.exceptions.SchemaError:
-        vollog.debug("Schema validation error", exc_info = True)
+        vollog.debug("Schema validation error", exc_info=True)
         return False
 
     record_cached_validations(cached_validations)
