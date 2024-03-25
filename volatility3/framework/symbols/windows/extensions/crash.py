@@ -4,33 +4,21 @@
 
 from volatility3.framework import interfaces, constants
 from volatility3.framework import objects
+import array
 
 
 class SUMMARY_DUMP(objects.StructType):
-    def get_buffer(
-        self, sub_type: str, count: int
-    ) -> interfaces.objects.ObjectInterface:
-        symbol_table_name = self.get_symbol_table_name()
-        subtype = self._context.symbol_space.get_type(
-            symbol_table_name + constants.BANG + sub_type
-        )
-        return self._context.object(
-            object_type=symbol_table_name + constants.BANG + "array",
-            layer_name=self.vol.layer_name,
-            offset=self.BufferChar.vol.offset,
-            count=count,
-            subtype=subtype,
+    def get_buffer_char(self) -> bytes:
+        return self._context.layers[self.vol.layer_name].read(
+            self.BufferChar.vol.offset, (self.BitmapSize + 7) // 8
         )
 
-    def get_buffer_char(self) -> interfaces.objects.ObjectInterface:
-        return self.get_buffer(
-            sub_type="unsigned char", count=(self.BitmapSize + 7) // 8
-        )
+    def get_buffer_long(self) -> list:
+        unsigned_long_array = array.array("I")
+        unsigned_long_array.frombytes(self.get_buffer_char())
 
-    def get_buffer_long(self) -> interfaces.objects.ObjectInterface:
-        return self.get_buffer(
-            sub_type="unsigned long", count=(self.BitmapSize + 31) // 32
-        )
+        return list(unsigned_long_array)
 
 
-class_types = {"_SUMMARY_DUMP": SUMMARY_DUMP}
+class_types_shared = {"_SUMMARY_DUMP": SUMMARY_DUMP}
+class_types_unshared = {"_SUMMARY_DUMP_OLD": SUMMARY_DUMP}
