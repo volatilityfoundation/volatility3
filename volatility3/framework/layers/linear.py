@@ -42,7 +42,7 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
         length size."""
         current_offset = offset
         output: List[bytes] = []
-        for (offset, _, mapped_offset, mapped_length, layer) in self.mapping(
+        for offset, _, mapped_offset, mapped_length, layer in self.mapping(
             offset, length, ignore_errors=pad
         ):
             if not pad and offset > current_offset:
@@ -71,7 +71,7 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
         underlying mapping."""
         current_offset = offset
         length = len(value)
-        for (offset, _, mapped_offset, length, layer) in self.mapping(offset, length):
+        for offset, _, mapped_offset, length, layer in self.mapping(offset, length):
             if offset > current_offset:
                 raise exceptions.InvalidAddressException(
                     self.name,

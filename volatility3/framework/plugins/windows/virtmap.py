@@ -31,7 +31,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
 
     def _generator(self, map):
         for entry in sorted(map):
-            for (start, end) in map[entry]:
+            for start, end in map[entry]:
                 yield (0, (entry, format_hints.Hex(start), format_hints.Hex(end)))
 
     @classmethod

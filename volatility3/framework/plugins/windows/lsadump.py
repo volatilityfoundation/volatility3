@@ -118,12 +118,10 @@ class Lsadump(interfaces.plugins.PluginInterface):
         if enc_secret_key:
             enc_secret_value = next(enc_secret_key.get_values())
             if enc_secret_value:
-
                 enc_secret = sechive.read(
                     enc_secret_value.Data + 4, enc_secret_value.DataLength
                 )
                 if enc_secret:
-
                     if not is_vista_or_later:
                         secret = cls.decrypt_secret(enc_secret[0xC:], lsakey)
                     else:
@@ -160,7 +158,6 @@ class Lsadump(interfaces.plugins.PluginInterface):
     def _generator(
         self, syshive: registry.RegistryHive, sechive: registry.RegistryHive
     ):
-
         kernel = self.context.modules[self.config["kernel"]]
 
         vista_or_later = versions.is_vista_or_later(
@@ -171,19 +168,18 @@ class Lsadump(interfaces.plugins.PluginInterface):
         lsakey = self.get_lsa_key(sechive, bootkey, vista_or_later)
         if not bootkey:
             vollog.warning("Unable to find bootkey")
-            return
+            return None
 
         if not lsakey:
             vollog.warning("Unable to find lsa key")
-            return
+            return None
 
         secrets_key = hashdump.Hashdump.get_hive_key(sechive, "Policy\\Secrets")
         if not secrets_key:
             vollog.warning("Unable to find secrets key")
-            return
+            return None
 
         for key in secrets_key.get_subkeys():
-
             sec_val_key = hashdump.Hashdump.get_hive_key(
                 sechive,
                 "Policy\\Secrets\\" + key.get_key_path().split("\\")[3] + "\\CurrVal",
@@ -208,7 +204,6 @@ class Lsadump(interfaces.plugins.PluginInterface):
             yield (0, (key.get_name(), secret.decode("latin1"), secret))
 
     def run(self):
-
         offset = self.config.get("offset", None)
         syshive = sechive = None
         kernel = self.context.modules[self.config["kernel"]]
@@ -220,7 +215,6 @@ class Lsadump(interfaces.plugins.PluginInterface):
             kernel.symbol_table_name,
             hive_offsets=None if offset is None else [offset],
         ):
-
             if hive.get_name().split("\\")[-1].upper() == "SYSTEM":
                 syshive = hive
             if hive.get_name().split("\\")[-1].upper() == "SECURITY":

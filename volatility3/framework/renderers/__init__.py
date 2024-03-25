@@ -10,7 +10,7 @@ import collections
 import collections.abc
 import datetime
 import logging
-from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from volatility3.framework import interfaces
 from volatility3.framework.interfaces import renderers
@@ -95,6 +95,10 @@ class TreeNode(interfaces.renderers.TreeNode):
             # TODO: Consider how to deal with timezone naive/aware datetimes (and alert plugin uses to be precise)
             # if isinstance(val, datetime.datetime):
             #     tznaive = val.tzinfo is None or val.tzinfo.utcoffset(val) is None
+
+    def asdict(self) -> Dict[str, Any]:
+        """Returns the contents of the node as a dictionary"""
+        return self._values._asdict()
 
     @property
     def values(self) -> List[interfaces.renderers.BaseTypes]:
@@ -181,7 +185,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         converted_columns: List[interfaces.renderers.Column] = []
         if len(columns) < 1:
             raise ValueError("Columns must be a list containing at least one column")
-        for (name, column_type) in columns:
+        for name, column_type in columns:
             is_simple_type = issubclass(column_type, self.base_types)
             if not is_simple_type:
                 raise TypeError(
@@ -238,7 +242,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         if not self.populated:
             try:
                 prev_nodes: List[interfaces.renderers.TreeNode] = []
-                for (level, item) in self._generator:
+                for level, item in self._generator:
                     parent_index = min(len(prev_nodes), level)
                     parent = prev_nodes[parent_index - 1] if parent_index > 0 else None
                     treenode = self._append(parent, item)

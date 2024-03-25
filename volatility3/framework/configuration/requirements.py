@@ -10,7 +10,9 @@ expect to be in the context (such as particular layers or symboltables).
 """
 import abc
 import logging
+import os
 from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type
+from urllib import parse, request
 
 from volatility3.framework import constants, interfaces
 
@@ -54,6 +56,30 @@ class URIRequirement(StringRequirement):
     URI."""
 
     # TODO: Maybe a a check that to unsatisfied that the path really is a URL?
+
+    @classmethod
+    def location_from_file(cls, filename: str) -> str:
+        """Returns the URL location from a file parameter (which may be a URL)
+
+        Args:
+            filename: The path to the file (either an absolute, relative, or URL path)
+
+        Returns:
+            The URL for the location of the file
+        """
+        # We want to work in URLs, but we need to accept absolute and relative files (including on windows)
+        single_location = parse.urlparse(filename, "")
+        if single_location.scheme == "" or len(single_location.scheme) == 1:
+            single_location = parse.urlparse(
+                parse.urljoin("file:", request.pathname2url(os.path.abspath(filename)))
+            )
+        if single_location.scheme == "file":
+            if not os.path.exists(request.url2pathname(single_location.path)):
+                filename = request.url2pathname(single_location.path)
+                if not filename:
+                    raise ValueError("File URL looks incorrect (potentially missing /)")
+                raise ValueError(f"File does not exist: {filename}")
+        return parse.urlunparse(single_location)
 
 
 class BytesRequirement(interfaces.configuration.SimpleTypeRequirement):
@@ -524,9 +550,9 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
         config_path = interfaces.configuration.path_join(config_path, self.name)
         if not self.matches_required(self._version, self._component.version):
             return {config_path: self}
-        context.config[
-            interfaces.configuration.path_join(config_path, self.name)
-        ] = True
+        context.config[interfaces.configuration.path_join(config_path, self.name)] = (
+            True
+        )
         return {}
 
     @classmethod

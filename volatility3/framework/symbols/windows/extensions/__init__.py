@@ -91,7 +91,7 @@ class MMVAD_SHORT(objects.StructType):
 
         if vad_address in visited:
             vollog.log(constants.LOGLEVEL_VVV, "VAD node already seen!")
-            return
+            return None
 
         visited.add(vad_address)
         tag = self.get_tag()
@@ -111,7 +111,7 @@ class MMVAD_SHORT(objects.StructType):
                 constants.LOGLEVEL_VVV,
                 f"Skipping VAD at {self.vol.offset} depth {depth} with tag {tag}",
             )
-            return
+            return None
 
         if target:
             vad_object = self.cast(target)
@@ -202,7 +202,6 @@ class MMVAD_SHORT(objects.StructType):
 
         # this is for windows 8 and 10
         elif self.has_member("VadNode"):
-
             if self.VadNode.has_member("u1"):
                 return self.VadNode.u1.Parent & ~0x3
 
@@ -211,7 +210,6 @@ class MMVAD_SHORT(objects.StructType):
 
         # also for windows 8 and 10
         elif self.has_member("Core"):
-
             if self.Core.VadNode.has_member("u1"):
                 return self.Core.VadNode.u1.Parent & ~0x3
 
@@ -224,14 +222,12 @@ class MMVAD_SHORT(objects.StructType):
         """Get the VAD's starting virtual address. This is the first accessible byte in the range."""
 
         if self.has_member("StartingVpn"):
-
             if self.has_member("StartingVpnHigh"):
                 return (self.StartingVpn << 12) | (self.StartingVpnHigh << 44)
             else:
                 return self.StartingVpn << 12
 
         elif self.has_member("Core"):
-
             if self.Core.has_member("StartingVpnHigh"):
                 return (self.Core.StartingVpn << 12) | (self.Core.StartingVpnHigh << 44)
             else:
@@ -243,7 +239,6 @@ class MMVAD_SHORT(objects.StructType):
         """Get the VAD's ending virtual address. This is the last accessible byte in the range."""
 
         if self.has_member("EndingVpn"):
-
             if self.has_member("EndingVpnHigh"):
                 return (((self.EndingVpn + 1) << 12) | (self.EndingVpnHigh << 44)) - 1
             else:
@@ -376,7 +371,6 @@ class EX_FAST_REF(objects.StructType):
     """
 
     def dereference(self) -> interfaces.objects.ObjectInterface:
-
         if constants.BANG not in self.vol.type_name:
             raise ValueError(
                 f"Invalid symbol table name syntax (no {constants.BANG} found)"
@@ -458,9 +452,9 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
         ].is_valid(self.FileName.Buffer)
 
     def file_name_with_device(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
-        name: Union[
-            str, interfaces.renderers.BaseAbsentValue
-        ] = renderers.UnreadableValue()
+        name: Union[str, interfaces.renderers.BaseAbsentValue] = (
+            renderers.UnreadableValue()
+        )
 
         # this pointer needs to be checked against native_layer_name because the object may
         # be instantiated from a primary (virtual) layer or a memory (physical) layer.
@@ -498,8 +492,46 @@ class KMUTANT(objects.StructType, pool.ExecutiveObject):
         return header.NameInfo.Name.String  # type: ignore
 
 
-class ETHREAD(objects.StructType):
+class ETHREAD(objects.StructType, pool.ExecutiveObject):
     """A class for executive thread objects."""
+
+    def is_valid(self) -> bool:
+        """Determine if the object is valid."""
+
+        try:
+            # validation by TID:
+            if self.Cid.UniqueThread % 4 != 0:  # NT tids are divisible by 4
+                return False
+
+            # validation by PID of parent process:
+            if self.Cid.UniqueProcess % 4 != 0:
+                return False
+
+            # validation by thread creation time:
+            if (
+                self.Cid.UniqueProcess != 4
+            ):  # The System process (PID 4) has no create time
+                ctime = self.get_create_time()
+                if not isinstance(ctime, datetime.datetime):
+                    return False
+
+                if not (1998 < ctime.year < 2030):
+                    return False
+
+        except exceptions.InvalidAddressException:
+            return False
+
+        # passed all validations
+        return True
+
+    def get_create_time(self):
+        # For Windows XPs
+        if self.has_member("ThreadsProcess"):
+            return conversion.wintime_to_datetime(self.CreateTime.QuadPart >> 3)
+        return conversion.wintime_to_datetime(self.CreateTime.QuadPart)
+
+    def get_exit_time(self):
+        return conversion.wintime_to_datetime(self.ExitTime.QuadPart)
 
     def owning_process(self) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""
@@ -671,7 +703,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             ):
                 yield entry
         except exceptions.InvalidAddressException:
-            return
+            return None
 
     def init_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Generator for DLLs in the order that they were initialized"""
@@ -684,7 +716,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             ):
                 yield entry
         except exceptions.InvalidAddressException:
-            return
+            return None
 
     def mem_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Generator for DLLs in the order that they appear in memory"""
@@ -697,7 +729,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             ):
                 yield entry
         except exceptions.InvalidAddressException:
-            return
+            return None
 
     def get_handle_count(self):
         try:
@@ -771,7 +803,6 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         return False
 
     def get_vad_root(self):
-
         # windows 8 and 2012 (_MM_AVL_TABLE)
         if self.VadRoot.has_member("BalancedRoot"):
             return self.VadRoot.BalancedRoot
@@ -848,11 +879,11 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
         try:
             is_valid = trans_layer.is_valid(self.vol.offset)
             if not is_valid:
-                return
+                return None
 
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
-            return
+            return None
 
         if not sentinel:
             yield self._context.object(
@@ -867,7 +898,7 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
             obj_offset = link.vol.offset - relative_offset
 
             if not trans_layer.is_valid(obj_offset):
-                return
+                return None
 
             obj = self._context.object(
                 symbol_type,
@@ -882,7 +913,7 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
             try:
                 link = getattr(link, direction).dereference()
             except exceptions.InvalidAddressException:
-                return
+                return None
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
@@ -912,10 +943,10 @@ class TOKEN(objects.StructType):
                     sid = sid_and_attr.Sid.dereference().cast("_SID")
                     # catch invalid pointers (UserAndGroupCount is too high)
                     if sid is None:
-                        return
+                        return None
                     # this mimics the windows API IsValidSid
                     if sid.Revision & 0xF != 1 or sid.SubAuthorityCount > 15:
-                        return
+                        return None
                     id_auth = ""
                     for i in sid.IdentifierAuthority.Value:
                         id_auth = i
@@ -1346,7 +1377,6 @@ class SHARED_CACHE_MAP(objects.StructType):
         limit_depth = level_depth
 
         if section_size > self.VACB_SIZE_OF_FIRST_LEVEL:
-
             # Create an array of 128 entries for the VACB index array.
             vacb_array = self._context.object(
                 object_type=symbol_table_name + constants.BANG + "array",

@@ -138,9 +138,9 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                 config_path = join("automagic", "MacIntelHelper", new_layer_name)
                 context.config[join(config_path, "memory_layer")] = layer_name
                 context.config[join(config_path, "page_map_offset")] = dtb
-                context.config[
-                    join(config_path, MacSymbolFinder.banner_config_key)
-                ] = str(banner, "latin-1")
+                context.config[join(config_path, MacSymbolFinder.banner_config_key)] = (
+                    str(banner, "latin-1")
+                )
 
                 new_layer = intel.Intel32e(
                     context,
@@ -251,7 +251,6 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
             context=context,
             progress_callback=progress_callback,
         ):
-
             banner = context.layers[layer_name].read(offset, 128)
 
             idx = banner.find(b"\x00")

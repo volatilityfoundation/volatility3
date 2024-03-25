@@ -99,7 +99,6 @@ class MBRScan(interfaces.plugins.PluginInterface):
                     all_zeros = bootcode.count(b"\x00") == len(bootcode)
 
                 if not all_zeros:
-
                     partition_entries = [
                         partition_table.FirstEntry,
                         partition_table.SecondEntry,
@@ -155,7 +154,6 @@ class MBRScan(interfaces.plugins.PluginInterface):
                     for partition_index, partition_entry_object in enumerate(
                         partition_entries, start=1
                     ):
-
                         if not self.config.get("full", True):
                             yield (
                                 1,

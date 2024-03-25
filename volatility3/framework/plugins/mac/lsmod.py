@@ -63,7 +63,6 @@ class Lsmod(plugins.PluginInterface):
         seen: Set = set()
 
         while kmod != 0 and kmod not in seen and len(seen) < 1024:
-
             kmod_obj = kmod.dereference()
 
             if not kernel_layer.is_valid(kmod_obj.vol.offset, kmod_obj.vol.size):
@@ -76,12 +75,11 @@ class Lsmod(plugins.PluginInterface):
             try:
                 kmod = kmod.next
             except exceptions.InvalidAddressException:
-                return
+                return None
         return  # Generation finished
 
     def _generator(self):
         for module in self.list_modules(self.context, self.config["kernel"]):
-
             mod_name = utility.array_to_string(module.name)
             mod_size = module.size
 

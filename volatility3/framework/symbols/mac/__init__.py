@@ -21,12 +21,14 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("vm_map_object", extensions.vm_map_object)
         self.set_type_class("socket", extensions.socket)
         self.set_type_class("inpcb", extensions.inpcb)
-        self.set_type_class("queue_entry", extensions.queue_entry)
         self.set_type_class("ifnet", extensions.ifnet)
         self.set_type_class("sockaddr_dl", extensions.sockaddr_dl)
         self.set_type_class("sockaddr", extensions.sockaddr)
         self.set_type_class("sysctl_oid", extensions.sysctl_oid)
         self.set_type_class("kauth_scope", extensions.kauth_scope)
+        # https://developer.apple.com/documentation/kernel/queue_head_t
+        self.set_type_class("queue_entry", extensions.queue_entry)
+        self.optional_set_type_class("queue_head_t", extensions.queue_entry)
 
 
 class MacUtilities(interfaces.configuration.VersionableInterface):
@@ -70,7 +72,6 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         kernel,  # ikelos - how to type this??
         mods_list: Iterator[Any],
     ):
-
         try:
             start_addr = kernel.object_from_symbol("vm_kernel_stext")
         except exceptions.SymbolError:
@@ -170,7 +171,7 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         try:
             table_addr = task.p_fd.fd_ofiles.dereference()
         except exceptions.InvalidAddressException:
-            return
+            return None
 
         fds = objects.utility.array_of_pointers(
             table_addr, count=num_fds, subtype=file_type, context=context
@@ -205,7 +206,7 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         try:
             current = queue.member(attr=list_head_member)
         except exceptions.InvalidAddressException:
-            return
+            return None
 
         while current:
             if current.vol.offset in seen:
@@ -231,7 +232,6 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         next_member: str,
         max_elements: int = 4096,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
-
         for element in cls._walk_iterable(
             queue, "tqh_first", "tqe_next", next_member, max_elements
         ):
@@ -244,7 +244,6 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         next_member: str,
         max_elements: int = 4096,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
-
         for element in cls._walk_iterable(
             queue, "lh_first", "le_next", next_member, max_elements
         ):
@@ -257,7 +256,6 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         next_member: str,
         max_elements: int = 4096,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
-
         for element in cls._walk_iterable(
             queue, "slh_first", "sle_next", next_member, max_elements
         ):

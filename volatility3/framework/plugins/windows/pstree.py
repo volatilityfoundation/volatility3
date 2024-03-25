@@ -3,9 +3,9 @@
 #
 import datetime
 import logging
-from typing import Dict, Set, Tuple
+from typing import Callable, Dict, Set, Tuple
 
-from volatility3.framework import objects, interfaces, renderers
+from volatility3.framework import objects, interfaces, renderers, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins.windows import pslist
@@ -24,6 +24,7 @@ class PsTree(interfaces.plugins.PluginInterface):
         self._processes: Dict[int, Tuple[interfaces.objects.ObjectInterface, int]] = {}
         self._levels: Dict[int, int] = {}
         self._children: Dict[int, Set[int]] = {}
+        self._ancestors: Set[int] = set([])
 
     @classmethod
     def get_requirements(cls):
@@ -45,18 +46,26 @@ class PsTree(interfaces.plugins.PluginInterface):
             requirements.ListRequirement(
                 name="pid",
                 element_type=int,
-                description="Process ID to include (all other processes are excluded)",
+                description="Process ID to include (with ancestors and descendants, all other processes are excluded)",
                 optional=True,
             ),
         ]
 
-    def find_level(self, pid: objects.Pointer) -> None:
+    def find_level(
+        self,
+        pid: objects.Pointer,
+        filter_func: Callable[
+            [interfaces.objects.ObjectInterface], bool
+        ] = lambda _: False,
+    ) -> None:
         """Finds how deep the pid is in the processes list."""
-        seen = set([])
-        seen.add(pid)
+        seen = {pid}
         level = 0
         proc, _ = self._processes.get(pid, None)
+        filtered = not filter_func(proc)
         while proc is not None and proc.InheritedFromUniqueProcessId not in seen:
+            if filtered:
+                self._ancestors.add(proc.UniqueProcessId)
             child_list = self._children.get(proc.InheritedFromUniqueProcessId, set([]))
             child_list.add(proc.UniqueProcessId)
             self._children[proc.InheritedFromUniqueProcessId] = child_list
@@ -67,7 +76,12 @@ class PsTree(interfaces.plugins.PluginInterface):
             level += 1
         self._levels[pid] = level
 
-    def _generator(self):
+    def _generator(
+        self,
+        filter_func: Callable[
+            [interfaces.objects.ObjectInterface], bool
+        ] = lambda _: False,
+    ):
         """Generates the Tree of processes."""
         kernel = self.context.modules[self.config["kernel"]]
 
@@ -87,15 +101,21 @@ class PsTree(interfaces.plugins.PluginInterface):
 
         # Build the child/level maps
         for pid in self._processes:
-            self.find_level(pid)
+            self.find_level(pid, filter_func)
 
         process_pids = set([])
 
-        def yield_processes(pid):
+        def yield_processes(pid, descendant: bool = False):
             if pid in process_pids:
                 vollog.debug(f"Pid cycle: already processed pid {pid}")
-                return
+                return None
+
             process_pids.add(pid)
+
+            if pid not in self._ancestors and not descendant:
+                vollog.debug(f"Pid cycle: pid {pid} not in filtered tree")
+                return None
+
             proc, offset = self._processes[pid]
             row = (
                 proc.UniqueProcessId,
@@ -112,9 +132,30 @@ class PsTree(interfaces.plugins.PluginInterface):
                 proc.get_exit_time(),
             )
 
+            try:
+                audit = proc.SeAuditProcessCreationInfo.ImageFileName.Name
+                # If 'audit' is set to the empty string, display NotAvailableValue
+                row += (audit.get_string() or renderers.NotAvailableValue(),)
+            except exceptions.InvalidAddressException:
+                row += (renderers.NotAvailableValue(),)
+
+            try:
+                process_params = proc.get_peb().ProcessParameters
+                row += (
+                    process_params.CommandLine.get_string(),
+                    process_params.ImagePathName.get_string(),
+                )
+            except exceptions.InvalidAddressException:
+                row += (
+                    renderers.NotAvailableValue(),
+                    renderers.NotAvailableValue(),
+                )
+
             yield (self._levels[pid] - 1, row)
             for child_pid in self._children.get(pid, []):
-                yield from yield_processes(child_pid)
+                yield from yield_processes(
+                    child_pid, descendant or not filter_func(proc)
+                )
 
         for pid in self._levels:
             if self._levels[pid] == 1:
@@ -139,6 +180,13 @@ class PsTree(interfaces.plugins.PluginInterface):
                 ("Wow64", bool),
                 ("CreateTime", datetime.datetime),
                 ("ExitTime", datetime.datetime),
+                ("Audit", str),
+                ("Cmd", str),
+                ("Path", str),
             ],
-            self._generator(),
+            self._generator(
+                filter_func=pslist.PsList.create_pid_filter(
+                    self.config.get("pid", None)
+                ),
+            ),
         )

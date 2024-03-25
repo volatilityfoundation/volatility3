@@ -34,32 +34,58 @@ class YaraScanner(interfaces.layers.ScannerInterface):
         if rules is None:
             raise ValueError("No rules provided to YaraScanner")
         self._rules = rules
+        self.st_object = not tuple([int(x) for x in yara.__version__.split(".")]) < (
+            4,
+            3,
+        )
 
     def __call__(
         self, data: bytes, data_offset: int
     ) -> Iterable[Tuple[int, str, str, bytes]]:
         for match in self._rules.match(data=data):
-            for offset, name, value in match.strings:
-                yield (offset + data_offset, match.rule, name, value)
+            if self.st_object:
+                for match_string in match.strings:
+                    for instance in match_string.instances:
+                        yield (
+                            instance.offset + data_offset,
+                            match.rule,
+                            match_string.identifier,
+                            instance.matched_data,
+                        )
+            else:
+                for offset, name, value in match.strings:
+                    yield (offset + data_offset, match.rule, name, value)
 
 
 class YaraScan(plugins.PluginInterface):
     """Scans kernel memory using yara rules (string or file)."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 1, 0)
+    _version = (1, 2, 0)
 
     # TODO: When the major version is bumped, take the opportunity to rename the yara_rules config to yara_string
     # or something that makes more sense
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [
+        """Returns the requirements needed to run yarascan directly, combining the TranslationLayerRequirement
+        and the requirements from get_yarascan_option_requirements."""
+        return cls.get_yarascan_option_requirements() + [
             requirements.TranslationLayerRequirement(
                 name="primary",
                 description="Memory layer for the kernel",
                 architectures=["Intel32", "Intel64"],
-            ),
+            )
+        ]
+
+    @classmethod
+    def get_yarascan_option_requirements(
+        cls,
+    ) -> List[interfaces.configuration.RequirementInterface]:
+        """Returns the requirements needed for the command lines options used by yarascan. This can
+        then also be used by other plugins that are using yarascan. This does not include a
+        TranslationLayerRequirement or a ModuleRequirement."""
+        return [
             requirements.BooleanRequirement(
                 name="insensitive",
                 description="Makes the search case insensitive",

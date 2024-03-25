@@ -4,9 +4,20 @@
 
 import collections
 import collections.abc
+import datetime
 import enum
 import logging
-from typing import Any, Dict, Iterable, Iterator, TypeVar, List
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    Optional,
+    Tuple,
+    TypeVar,
+    List,
+)
 
 from volatility3.framework import constants, exceptions, interfaces, objects
 
@@ -35,9 +46,9 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
 
     def __init__(self) -> None:
         super().__init__()
-        self._dict: Dict[
-            str, interfaces.symbols.BaseSymbolTableInterface
-        ] = collections.OrderedDict()
+        self._dict: Dict[str, interfaces.symbols.BaseSymbolTableInterface] = (
+            collections.OrderedDict()
+        )
         # Permanently cache all resolved symbols
         self._resolved: Dict[str, interfaces.objects.Template] = {}
         self._resolved_symbols: Dict[str, interfaces.objects.Template] = {}
@@ -73,9 +84,9 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         self, offset: int, size: int = 0, table_name: str = None
     ) -> Iterable[str]:
         """Returns all symbols that exist at a specific relative address."""
-        table_list: Iterable[
-            interfaces.symbols.BaseSymbolTableInterface
-        ] = self._dict.values()
+        table_list: Iterable[interfaces.symbols.BaseSymbolTableInterface] = (
+            self._dict.values()
+        )
         if table_name is not None:
             if table_name in self._dict:
                 table_list = [self._dict[table_name]]
@@ -112,6 +123,42 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         # Reset the resolved list, since we're removing some symbols
         self._resolved = {}
         del self._dict[key]
+
+    def verify_table_versions(
+        self,
+        producer: str,
+        validator: Callable[[Optional[Tuple], Optional[datetime.datetime]], bool],
+        tables: List[str] = None,
+    ) -> bool:
+        """Verifies the producer metadata and version of tables
+
+        Args:
+            producer: String name of a table producer to have validation performed
+            validator: callable that takes an optional version and an optional datetime that returns False if table is invalid
+
+        Returns:
+            False if an invalid table was found or True if no invalid table was found
+        """
+        if tables is None:
+            tables = self._dict.keys()
+        for table_name in tables:
+            table = self._dict[table_name]
+            if not table.producer:
+                vollog.debug(
+                    f"Symbol table {table_name} could not be validated because no producer metadata was found"
+                )
+                continue
+            if table.producer.name == producer:
+                # Run the verification
+                if not validator(
+                    table.producer.version,
+                    table.producer.datetime,
+                ):
+                    vollog.debug(f"Symbol table {table_name} does not pass validator")
+                    return False
+            else:
+                continue
+        return True
 
     ### Resolution functions
 
@@ -179,20 +226,20 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
                         if child.vol.type_name not in self._resolved:
                             traverse_list.append(child.vol.type_name)
                             try:
-                                self._resolved[
-                                    child.vol.type_name
-                                ] = self._weak_resolve(
-                                    SymbolType.TYPE, child.vol.type_name
+                                self._resolved[child.vol.type_name] = (
+                                    self._weak_resolve(
+                                        SymbolType.TYPE, child.vol.type_name
+                                    )
                                 )
                             except exceptions.SymbolError:
-                                self._resolved[
-                                    child.vol.type_name
-                                ] = self.UnresolvedTemplate(child.vol.type_name)
+                                self._resolved[child.vol.type_name] = (
+                                    self.UnresolvedTemplate(child.vol.type_name)
+                                )
                         # Stash the replacement
                         replacements.add((traverser, child))
                     elif child.children:
                         template_traverse_list.append(child)
-        for (parent, child) in replacements:
+        for parent, child in replacements:
             parent.replace_child(child, self._resolved[child.vol.type_name])
 
     def get_type(self, type_name: str) -> interfaces.objects.Template:

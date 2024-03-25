@@ -39,7 +39,6 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     def __init__(
         self, context: interfaces.context.ContextInterface, config_path: str, name: str
     ) -> None:
-
         # Construct these so we can use self.config
         self._context = context
         self._config_path = config_path
@@ -302,11 +301,15 @@ class WindowsCrashDumpStacker(interfaces.automagic.StackerLayerInterface):
         progress_callback: constants.ProgressCallback = None,
     ) -> Optional[interfaces.layers.DataLayerInterface]:
         for layer in [WindowsCrashDump32Layer, WindowsCrashDump64Layer]:
-            with contextlib.suppress(WindowsCrashDumpFormatException):
+            try:
                 layer.check_header(context.layers[layer_name])
                 new_name = context.layers.free_layer_name(layer.__name__)
                 context.config[
                     interfaces.configuration.path_join(new_name, "base_layer")
                 ] = layer_name
                 return layer(context, new_name, new_name)
+            except WindowsCrashDumpFormatException as excp:
+                vollog.log(
+                    constants.LOGLEVEL_VVVV, f"Exception reading crashdump: {excp}"
+                )
         return None

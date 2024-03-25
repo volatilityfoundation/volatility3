@@ -602,7 +602,6 @@ class Hashdump(interfaces.plugins.PluginInterface):
             kernel.symbol_table_name,
             hive_offsets=None if offset is None else [offset],
         ):
-
             if hive.get_name().split("\\")[-1].upper() == "SYSTEM":
                 syshive = hive
             if hive.get_name().split("\\")[-1].upper() == "SAM":

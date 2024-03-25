@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-from typing import Iterator, List, Tuple, Optional
+from typing import Iterator, List, Tuple, Optional, Union
 
 from volatility3 import framework
 from volatility3.framework import constants, exceptions, interfaces, objects
@@ -28,8 +28,12 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("fs_struct", extensions.fs_struct)
         self.set_type_class("files_struct", extensions.files_struct)
         self.set_type_class("kobject", extensions.kobject)
+        self.set_type_class("cred", extensions.cred)
         # Might not exist in the current symbols
         self.optional_set_type_class("module", extensions.module)
+        self.optional_set_type_class("bpf_prog", extensions.bpf_prog)
+        self.optional_set_type_class("kernel_cap_struct", extensions.kernel_cap_struct)
+        self.optional_set_type_class("kernel_cap_t", extensions.kernel_cap_t)
 
         # Mount
         self.set_type_class("vfsmount", extensions.vfsmount)
@@ -50,93 +54,113 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.optional_set_type_class("bt_sock", extensions.bt_sock)
         self.optional_set_type_class("xdp_sock", extensions.xdp_sock)
 
+        # Only found in 6.1+ kernels
+        self.optional_set_type_class("maple_tree", extensions.maple_tree)
+
 
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""
 
-    _version = (2, 0, 0)
+    _version = (2, 1, 0)
     _required_framework_version = (2, 0, 0)
 
     framework.require_interface_version(*_required_framework_version)
 
-    # based on __d_path from the Linux kernel
     @classmethod
-    def _do_get_path(cls, rdentry, rmnt, dentry, vfsmnt) -> str:
+    def _get_path_file(cls, task, filp) -> str:
+        """Returns the file pathname relative to the task's root directory.
 
-        ret_path: List[str] = []
+        Args:
+            task (task_struct): A reference task
+            filp (file *): A pointer to an open file
 
-        while dentry != rdentry or vfsmnt != rmnt:
-            dname = dentry.path()
-            if dname == "":
-                break
+        Returns:
+            str: File pathname relative to the task's root directory.
+        """
+        rdentry = task.fs.get_root_dentry()
+        rmnt = task.fs.get_root_mnt()
+        vfsmnt = filp.get_vfsmnt()
+        dentry = filp.get_dentry()
 
-            ret_path.insert(0, dname.strip("/"))
-            if dentry == vfsmnt.get_mnt_root() or dentry == dentry.d_parent:
-                if vfsmnt.get_mnt_parent() == vfsmnt:
+        return cls.do_get_path(rdentry, rmnt, dentry, vfsmnt)
+
+    @classmethod
+    def get_path_mnt(cls, task, mnt) -> str:
+        """Returns the mount point pathname relative to the task's root directory.
+
+        Args:
+            task (task_struct): A reference task
+            mnt (vfsmount or mount): A mounted filesystem or a mount point.
+                - kernels < 3.3.8 type is 'vfsmount'
+                - kernels >= 3.3.8 type is 'mount'
+
+        Returns:
+            str: Pathname of the mount point relative to the task's root directory.
+        """
+        rdentry = task.fs.get_root_dentry()
+        rmnt = task.fs.get_root_mnt()
+
+        vfsmnt = mnt.get_vfsmnt_current()
+        dentry = mnt.get_dentry_current()
+
+        return cls.do_get_path(rdentry, rmnt, dentry, vfsmnt)
+
+    @classmethod
+    def do_get_path(cls, rdentry, rmnt, dentry, vfsmnt) -> Union[None, str]:
+        """Returns a pathname of the mount point or file
+        It mimics the Linux kernel prepend_path function.
+
+        Args:
+            rdentry (dentry *): A pointer to the root dentry
+            rmnt (vfsmount *): A pointer to the root vfsmount
+            dentry (dentry *): A pointer to the dentry
+            vfsmnt (vfsmount *): A pointer to the vfsmount
+
+        Returns:
+            str: Pathname of the mount point or file
+        """
+
+        path_reversed = []
+        while dentry != rdentry or not vfsmnt.is_equal(rmnt):
+            if dentry == vfsmnt.get_mnt_root() or dentry.is_root():
+                # Escaped?
+                if dentry != vfsmnt.get_mnt_root():
                     break
 
-                dentry = vfsmnt.get_mnt_mountpoint()
-                vfsmnt = vfsmnt.get_mnt_parent()
+                # Global root?
+                if not vfsmnt.has_parent():
+                    break
+
+                dentry = vfsmnt.get_dentry_parent()
+                vfsmnt = vfsmnt.get_vfsmnt_parent()
 
                 continue
 
             parent = dentry.d_parent
+            dname = dentry.d_name.name_as_str()
+            path_reversed.append(dname.strip("/"))
             dentry = parent
 
-        # if we did not gather any valid dentrys in the path, then the entire file is
-        # either 1) smeared out of memory or 2) de-allocated and corresponding structures overwritten
-        # we return an empty string in this case to avoid confusion with something like a handle to the root
-        # directory (e.g., "/")
-        if not ret_path:
-            return ""
-
-        ret_val = "/".join([str(p) for p in ret_path if p != ""])
-
-        if ret_val.startswith(("socket:", "pipe:")):
-            if ret_val.find("]") == -1:
-                try:
-                    inode = dentry.d_inode
-                    ino = inode.i_ino
-                except exceptions.InvalidAddressException:
-                    ino = 0
-
-                ret_val = ret_val[:-1] + f":[{ino}]"
-            else:
-                ret_val = ret_val.replace("/", "")
-
-        elif ret_val != "inotify":
-            ret_val = "/" + ret_val
-
-        return ret_val
-
-    # method used by 'older' kernels
-    # TODO: lookup when dentry_operations->d_name was merged into the mainline kernel for exact version
-    @classmethod
-    def _get_path_file(cls, task, filp) -> str:
-        rdentry = task.fs.get_root_dentry()
-        rmnt = task.fs.get_root_mnt()
-        dentry = filp.get_dentry()
-        vfsmnt = filp.get_vfsmnt()
-
-        return LinuxUtilities._do_get_path(rdentry, rmnt, dentry, vfsmnt)
+        path = "/" + "/".join(reversed(path_reversed))
+        return path
 
     @classmethod
     def _get_new_sock_pipe_path(cls, context, task, filp) -> str:
+        """Returns the sock pipe pathname relative to the task's root directory.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            task (task_struct): A reference task
+            filp (file *): A pointer to a sock pipe open file
+
+        Returns:
+            str: Sock pipe pathname relative to the task's root directory.
+        """
         dentry = filp.get_dentry()
 
+        kernel_module = cls.get_module_from_volobj_type(context, dentry)
+
         sym_addr = dentry.d_op.d_dname
-
-        symbol_table_arr = sym_addr.vol.type_name.split("!")
-        symbol_table = None
-        if len(symbol_table_arr) == 2:
-            symbol_table = symbol_table_arr[0]
-
-        for module_name in context.modules.get_modules_by_symbol_tables(symbol_table):
-            kernel_module = context.modules[module_name]
-            break
-        else:
-            raise ValueError(f"No module using the symbol table {symbol_table}")
-
         symbs = list(kernel_module.get_symbols_by_absolute_location(sym_addr))
 
         if len(symbs) == 1:
@@ -164,12 +188,26 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
 
         return ret
 
-    # a 'file' structure doesn't have enough information to properly restore its full path
-    # we need the root mount information from task_struct to determine this
     @classmethod
     def path_for_file(cls, context, task, filp) -> str:
+        """Returns a file (or sock pipe) pathname relative to the task's root directory.
+
+        A 'file' structure doesn't have enough information to properly restore its
+        full path we need the root mount information from task_struct to determine this
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            task (task_struct): A reference task
+            filp (file *): A pointer to an open file
+
+        Returns:
+            str: A file (or sock pipe) pathname relative to the task's root directory.
+        """
+
+        # Memory smear protection: Check that both the file and dentry pointers are valid.
         try:
             dentry = filp.get_dentry()
+            dentry.is_root()
         except exceptions.InvalidAddressException:
             return ""
 
@@ -204,20 +242,19 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         symbol_table: str,
         task: interfaces.objects.ObjectInterface,
     ):
-
         # task.files can be null
         if not task.files:
-            return
+            return None
 
         fd_table = task.files.get_fds()
         if fd_table == 0:
-            return
+            return None
 
         max_fds = task.files.get_max_fds()
 
         # corruption check
         if max_fds > 500000:
-            return
+            return None
 
         file_type = symbol_table + constants.BANG + "file"
 
@@ -225,7 +262,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             fd_table, count=max_fds, subtype=file_type, context=context
         )
 
-        for (fd_num, filp) in enumerate(fds):
+        for fd_num, filp in enumerate(fds):
             if filp != 0:
                 full_path = LinuxUtilities.path_for_file(context, task, filp)
 
@@ -342,7 +379,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         """
 
         if not addr:
-            return
+            return None
 
         type_dec = vmlinux.get_type(type_name)
         member_offset = type_dec.relative_child_offset(member_name)
@@ -350,3 +387,35 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         return vmlinux.object(
             object_type=type_name, offset=container_addr, absolute=True
         )
+
+    @classmethod
+    def get_module_from_volobj_type(
+        cls,
+        context: interfaces.context.ContextInterface,
+        volobj: interfaces.objects.ObjectInterface,
+    ) -> interfaces.context.ModuleInterface:
+        """Get the vmlinux from a vol obj
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            volobj (vol object): A vol object
+
+        Raises:
+            ValueError: If it cannot obtain any module from the symbol table
+
+        Returns:
+            A kernel object (vmlinux)
+        """
+        symbol_table_arr = volobj.vol.type_name.split("!", 1)
+        symbol_table = symbol_table_arr[0] if len(symbol_table_arr) == 2 else None
+
+        module_names = context.modules.get_modules_by_symbol_tables(symbol_table)
+        module_names = list(module_names)
+
+        if not module_names:
+            raise ValueError(f"No module using the symbol table '{symbol_table}'")
+
+        kernel_module_name = module_names[0]
+        kernel = context.modules[kernel_module_name]
+
+        return kernel

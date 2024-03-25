@@ -161,7 +161,8 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         """Returns ISF statistics based on the location
 
         Returns:
-            A tuple of base_types, types, enums, symbols, or None is location not found"""
+            A tuple of base_types, types, enums, symbols, or None is location not found
+        """
 
     def get_hash(self, location: str) -> Optional[str]:
         """Returns the hash of the JSON from within a location ISF"""
@@ -309,6 +310,14 @@ class SqliteCache(CacheManagerInterface):
         new_locations = on_disk_locations.difference(cached_locations)
         missing_locations = cached_locations.difference(on_disk_locations)
 
+        # Missing entries
+        if missing_locations:
+            self._database.cursor().execute(
+                f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})",
+                [x for x in missing_locations],
+            )
+            self._database.commit()
+
         cache_update = set()
         files_to_timestamp = on_disk_locations.intersection(cached_locations)
         if files_to_timestamp:
@@ -331,7 +340,7 @@ class SqliteCache(CacheManagerInterface):
                     if inner_url.scheme == "file":
                         pathname = inner_url.path.split("!")[0]
 
-                if pathname:
+                if pathname and os.path.exists(pathname):
                     timestamp = datetime.datetime.fromtimestamp(
                         os.stat(pathname).st_mtime
                     )
@@ -370,7 +379,7 @@ class SqliteCache(CacheManagerInterface):
 
                         # Get stats
                         stats_base_types = len(json_obj.get("base_types", {}))
-                        stats_types = len(json_obj.get("types", {}))
+                        stats_types = len(json_obj.get("user_types", {}))
                         stats_enums = len(json_obj.get("enums", {}))
                         stats_symbols = len(json_obj.get("symbols", {}))
 
@@ -420,7 +429,7 @@ class SqliteCache(CacheManagerInterface):
             progress_callback(0, "Reading remote ISF list")
             cursor = self._database.cursor()
             cursor.execute(
-                f"SELECT cached FROM cache WHERE local = 0 and cached < datetime('now', {self.cache_period})"
+                f"SELECT cached FROM cache WHERE local = 0 and cached < datetime('now', '{self.cache_period}')"
             )
             remote_identifiers = RemoteIdentifierFormat(constants.REMOTE_ISF_URL)
             progress_callback(50, "Reading remote ISF list")
@@ -429,20 +438,15 @@ class SqliteCache(CacheManagerInterface):
                     {}, operating_system=operating_system
                 )
                 for identifier, location in identifiers:
+                    identifier = identifier.rstrip()
+                    identifier = (
+                        identifier[:-1] if identifier.endswith(b"\x00") else identifier
+                    )  # Linux banners dumped by dwarf2json end with "\x00\n". If not stripped, the banner cannot match.
                     cursor.execute(
                         "INSERT OR REPLACE INTO cache(identifier, location, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
-                        (location, identifier, operating_system, False),
+                        (identifier, location, operating_system, False),
                     )
             progress_callback(100, "Reading remote ISF list")
-            self._database.commit()
-
-        # Missing entries
-
-        if missing_locations:
-            self._database.cursor().execute(
-                f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})",
-                [x for x in missing_locations],
-            )
             self._database.commit()
 
     def get_identifier_dictionary(

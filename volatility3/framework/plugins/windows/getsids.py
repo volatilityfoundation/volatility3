@@ -112,7 +112,6 @@ class GetSIDs(interfaces.plugins.PluginInterface):
             filter_string="config\\software",
             hive_offsets=None,
         ):
-
             try:
                 for subkey in hive.get_key(key).get_subkeys():
                     sid = str(subkey.get_name())
@@ -165,7 +164,6 @@ class GetSIDs(interfaces.plugins.PluginInterface):
         return sids
 
     def _generator(self, procs):
-
         user_sids = self.lookup_user_sids()
 
         # Go all over the process list, get the token
@@ -214,7 +212,6 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                 )
 
     def run(self):
-
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
         kernel = self.context.modules[self.config["kernel"]]
 
