@@ -196,7 +196,7 @@ def test_windows_thrdscan(image, volatility, python):
     assert out.find(b"\t4\t8") != -1
     assert out.find(b"\t4\t12") != -1
     assert out.find(b"\t4\t16") != -1
-    #assert out.find(b"this raieses AssertionError") != -1
+    # assert out.find(b"this raieses AssertionError") != -1
     assert rc == 0
 
 
@@ -365,6 +365,27 @@ def test_linux_library_list(image, volatility, python):
     )
 
     assert out.count(b"\n") >= 2677
+    assert rc == 0
+
+
+def test_linux_sockscan(image, volatility, python):
+    # designed for linux-sample-1.dmp SHA1:1C3A4627EDCA94A7ADE3414592BEF0E62D7D3BB6
+    rc, out, err = runvol_plugin("linux.sockscan.Sockscan", image, volatility, python)
+
+    assert re.search(
+        rb"AF_UNIX\s+STREAM\s+-\s+/tmp/pulse-JldaJj8OxQLa/native\s+14054\s+-\s+14053\s+ESTABLISHED\s+-",
+        out,
+    )
+    assert re.search(
+        rb"AF_INET\s+STREAM\s+TCP\s+192.168.201.161\s+22\s+192.168.201.1\s+59982\s+ESTABLISHED\s+-",
+        out,
+    )
+    assert re.search(
+        rb"AF_INET\s+STREAM\s+TCP\s+0.0.0.0\s+901\s+0.0.0.0\s+0\s+LISTEN\s+-",
+        out,
+    )
+
+    assert out.count(b"\n") >= 50
     assert rc == 0
 
 
