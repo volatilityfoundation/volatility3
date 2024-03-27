@@ -22,6 +22,7 @@ import traceback
 from typing import Any, Dict, List, Tuple, Type, Union
 from urllib import parse, request
 
+from volatility3.cli import text_filter
 import volatility3.plugins
 import volatility3.symbols
 from volatility3 import framework
@@ -233,6 +234,12 @@ class CommandLine:
             default=False,
             action="store_true",
         )
+        parser.add_argument(
+            "--filters",
+            help="List of filters to apply to the output (in the form of [+-]columname,pattern[!])",
+            default=[],
+            action="append",
+        )
 
         parser.set_defaults(**default_config)
 
@@ -257,12 +264,14 @@ class CommandLine:
             file_logger.setFormatter(file_formatter)
             rootlog.addHandler(file_logger)
             vollog.info("Logging started")
+
+        self.order_extra_verbose_levels()
         if partial_args.verbosity < 3:
             if partial_args.verbosity < 1:
                 sys.tracebacklimit = None
-            console.setLevel(30 - (partial_args.verbosity * 10))
+            console.setLevel(logging.WARNING - (partial_args.verbosity * 10))
         else:
-            console.setLevel(10 - (partial_args.verbosity - 2))
+            console.setLevel(logging.DEBUG - (partial_args.verbosity - 2))
 
         for level, msg in delayed_logs:
             vollog.log(level, msg)
@@ -454,7 +463,10 @@ class CommandLine:
         try:
             # Construct and run the plugin
             if constructed:
-                renderers[args.renderer]().render(constructed.run())
+                grid = constructed.run()
+                renderer = renderers[args.renderer]()
+                renderer.filter = text_filter.CLIFilter(grid, args.filters)
+                renderer.render(grid)
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
 
@@ -685,6 +697,17 @@ class CommandLine:
                     )
                     context.config[extended_path] = value
 
+    def order_extra_verbose_levels(self):
+        for level, level_value in enumerate(
+            [
+                constants.LOGLEVEL_V,
+                constants.LOGLEVEL_VV,
+                constants.LOGLEVEL_VVV,
+                constants.LOGLEVEL_VVVV,
+            ]
+        ):
+            logging.addLevelName(level_value, f"DETAIL {level+1}")
+
     def file_handler_class_factory(self, direct=True):
         output_dir = self.output_dir
 
@@ -817,7 +840,11 @@ class CommandLine:
                 requirement,
                 volatility3.framework.configuration.requirements.ListRequirement,
             ):
-                additional["type"] = requirement.element_type
+                # Allow a list of integers, specified with the convenient 0x hexadecimal format
+                if requirement.element_type == int:
+                    additional["type"] = lambda x: int(x, 0)
+                else:
+                    additional["type"] = requirement.element_type
                 nargs = "*" if requirement.optional else "+"
                 additional["nargs"] = nargs
             elif isinstance(

@@ -198,7 +198,9 @@ class ABCKmsg(ABC):
 class Kmsg_pre_3_5(ABCKmsg):
     """The kernel ring buffer (log_buf) is a char array that sequentially stores
     log lines, each separated by newline (LF) characters. i.e:
-        <6>[ 9565.250411] line1!\n<6>[ 9565.250412] line2\n...
+
+        <6>[ 9565.250411] line1!\\n<6>[ 9565.250412] line2\\n...
+
     """
 
     @classmethod

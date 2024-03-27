@@ -10,6 +10,7 @@ import string
 import sys
 from functools import wraps
 from typing import Any, Callable, Dict, List, Tuple
+from volatility3.cli import text_filter
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.renderers import format_hints
@@ -134,6 +135,7 @@ class CLIRenderer(interfaces.renderers.Renderer):
 
     name = "unnamed"
     structured_output = False
+    filter: text_filter.CLIFilter = None
 
 
 class QuickTextRenderer(CLIRenderer):
@@ -172,6 +174,9 @@ class QuickTextRenderer(CLIRenderer):
         outfd.write("\n{}\n".format("\t".join(line)))
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
+            if self.filter and self.filter.filter(node.values):
+                return accumulator
+
             accumulator.write("\n")
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             accumulator.write(
@@ -306,6 +311,10 @@ class PrettyTextRenderer(CLIRenderer):
             max_column_widths[tree_indent_column] = max(
                 max_column_widths.get(tree_indent_column, 0), node.path_depth
             )
+
+            if self.filter and self.filter.filter(node.values):
+                return accumulator
+
             line = {}
             for column_index in range(len(grid.columns)):
                 column = grid.columns[column_index]

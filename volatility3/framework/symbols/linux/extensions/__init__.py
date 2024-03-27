@@ -7,14 +7,13 @@ import logging
 import socket as socket_module
 from typing import Generator, Iterable, Iterator, Optional, Tuple, List
 
-from volatility3.framework import constants
+from volatility3.framework import constants, exceptions, objects, interfaces, symbols
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
 from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
 from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
 from volatility3.framework.constants.linux import CAPABILITIES
-from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import generic, linux, intermed
@@ -26,14 +25,58 @@ vollog = logging.getLogger(__name__)
 
 
 class module(generic.GenericIntelProcess):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._mod_mem_type = None  # Initialize _mod_mem_type to None for memoization
+
+    @property
+    def mod_mem_type(self):
+        """Return the mod_mem_type enum choices if available or an empty dict if not"""
+        # mod_mem_type and module_memory were added in kernel 6.4 which replaces
+        # module_layout for storing the information around core_layout etc.
+        # see commit ac3b43283923440900b4f36ca5f9f0b1ca43b70e for more information
+
+        if self._mod_mem_type is None:
+            try:
+                self._mod_mem_type = self._context.symbol_space.get_enumeration(
+                    self.get_symbol_table_name() + constants.BANG + "mod_mem_type"
+                ).choices
+            except exceptions.SymbolError:
+                vollog.debug(
+                    f"Unable to find mod_mem_type enum. This message can be ignored for kernels < 6.4"
+                )
+                # set to empty dict to show that the enum was not found, and so shouldn't be searched for again
+                self._mod_mem_type = {}
+        return self._mod_mem_type
+
     def get_module_base(self):
-        if self.has_member("core_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return self.mem[self.mod_mem_type["MOD_TEXT"]].base
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_module_base: Unable to get module base. Cannot read base from MOD_TEXT."
+                )
+        elif self.has_member("core_layout"):
             return self.core_layout.base
-        else:
+        elif self.has_member("module_core"):
             return self.module_core
+        raise AttributeError("module -> get_module_base: Unable to get module base")
 
     def get_init_size(self):
-        if self.has_member("init_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return (
+                    self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].size
+                    + self.mem[self.mod_mem_type["MOD_INIT_DATA"]].size
+                    + self.mem[self.mod_mem_type["MOD_INIT_RODATA"]].size
+                )
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_init_size: Unable to determine .init section size of module. Cannot read size of MOD_INIT_TEXT, MOD_INIT_DATA, and MOD_INIT_RODATA"
+                )
+        elif self.has_member("init_layout"):
             return self.init_layout.size
         elif self.has_member("init_size"):
             return self.init_size
@@ -42,7 +85,19 @@ class module(generic.GenericIntelProcess):
         )
 
     def get_core_size(self):
-        if self.has_member("core_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return (
+                    self.mem[self.mod_mem_type["MOD_TEXT"]].size
+                    + self.mem[self.mod_mem_type["MOD_DATA"]].size
+                    + self.mem[self.mod_mem_type["MOD_RODATA"]].size
+                    + self.mem[self.mod_mem_type["MOD_RO_AFTER_INIT"]].size
+                )
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_core_size: Unable to determine core size of module. Cannot read size of MOD_TEXT, MOD_DATA, MOD_RODATA, and MOD_RO_AFTER_INIT."
+                )
+        elif self.has_member("core_layout"):
             return self.core_layout.size
         elif self.has_member("core_size"):
             return self.core_size
@@ -51,18 +106,32 @@ class module(generic.GenericIntelProcess):
         )
 
     def get_module_core(self):
-        if self.has_member("core_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return self.mem[self.mod_mem_type["MOD_TEXT"]].base
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_module_core: Unable to get module core. Cannot read base from MOD_TEXT."
+                )
+        elif self.has_member("core_layout"):
             return self.core_layout.base
         elif self.has_member("module_core"):
             return self.module_core
         raise AttributeError("module -> get_module_core: Unable to get module core")
 
     def get_module_init(self):
-        if self.has_member("init_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].base
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_module_core: Unable to get module init. Cannot read base from MOD_INIT_TEXT."
+                )
+        elif self.has_member("init_layout"):
             return self.init_layout.base
         elif self.has_member("module_init"):
             return self.module_init
-        raise AttributeError("module -> get_module_core: Unable to get module init")
+        raise AttributeError("module -> get_module_init: Unable to get module init")
 
     def get_name(self):
         """Get the name of the module as a string"""
@@ -637,7 +706,8 @@ class vm_area_struct(objects.StructType):
     def get_page_offset(self) -> int:
         if self.vm_file == 0:
             return 0
-        return self.vm_pgoff << constants.linux.PAGE_SHIFT
+        parent_layer = self._context.layers[self.vol.layer_name]
+        return self.vm_pgoff << parent_layer.page_shift
 
     def get_name(self, context, task):
         if self.vm_file != 0:
@@ -666,7 +736,7 @@ class vm_area_struct(objects.StructType):
         elif flags_str == "r-x" and self.vm_file.dereference().vol.offset == 0:
             ret = True
         elif proclayer and "x" in flags_str:
-            for i in range(self.vm_start, self.vm_end, 1 << constants.linux.PAGE_SHIFT):
+            for i in range(self.vm_start, self.vm_end, proclayer.page_size):
                 try:
                     if proclayer.is_dirty(i):
                         vollog.warning(
@@ -1067,17 +1137,17 @@ class vfsmount(objects.StructType):
         """Helper to make sure it is comparing two pointers to 'vfsmount'.
 
         Depending on the kernel version, the calling object (self) could be
-        a 'vfsmount \*' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
+        a 'vfsmount \\*' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
         in the framework "auto" dereferencing ability to assure that when we
         reach this point 'self' will be a 'vfsmount' already and self.vol.offset
-        a 'vfsmount \*' and not a 'vfsmount \*\*'. The argument must be a 'vfsmount \*'.
+        a 'vfsmount \\*' and not a 'vfsmount \\*\\*'. The argument must be a 'vfsmount \\*'.
         Typically, it's called from do_get_path().
 
         Args:
-            vfsmount_ptr (vfsmount \*): A pointer to a 'vfsmount'
+            vfsmount_ptr (vfsmount *): A pointer to a 'vfsmount'
 
         Raises:
-            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount \*'
+            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount \\*'
 
         Returns:
             bool: 'True' if the given argument points to the the same 'vfsmount'
