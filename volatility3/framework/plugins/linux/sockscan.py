@@ -182,6 +182,9 @@ class Sockscan(plugins.PluginInterface):
         # sk_error_report_symbol_names = ['sock_def_error_report', 'inet_sk_rebuild_header', 'inet_listen']
         # this would be similar to Method 2, but using a different pointer within sock.
 
+        # add a set of seen addresses to stop possible duplication of results.
+        seen_sock_physical_addr = set()
+
         # Using the calculated needles, scan the memory layer and attempt to parse the sockets located.
         for needle_addr, match in memory_layer.scan(
             self.context,
@@ -251,7 +254,8 @@ class Sockscan(plugins.PluginInterface):
                         f"Unable to follow file at {hex(needle_addr)} to socket due to invalid address: {error}",
                     )
 
-            if psock is not None:
+            if psock is not None and sock_physical_addr not in seen_sock_physical_addr:
+                seen_sock_physical_addr.add(sock_physical_addr)
                 try:
                     sock_type = psock.get_type()
 
