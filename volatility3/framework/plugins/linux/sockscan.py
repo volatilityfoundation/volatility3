@@ -257,7 +257,7 @@ class Sockscan(plugins.PluginInterface):
 
                     family = psock.get_family()
                     # remove results with no family
-                    if family == None:
+                    if family is None:
                         vollog.log(
                             constants.LOGLEVEL_VVVV,
                             f"Skipping socket at {hex(sock_physical_addr)} as unable to determin family.",
