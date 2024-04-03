@@ -12,7 +12,6 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.symbols import linux
 from volatility3.plugins.linux import sockstat
-from volatility3.framework import symbols
 from volatility3.framework import symbols, constants
 from volatility3.framework.layers import scanners
 
