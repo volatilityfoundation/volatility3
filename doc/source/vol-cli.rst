@@ -143,3 +143,18 @@ Options
     `hivescan` would match `windows.registry.hivescan.HiveScan`, but
     `pslist` is ambiguous because it could match `windows.pslist` or
     `linux.pslist`.
+
+Overriding options
+------------------
+
+The default values for the command line interface are defined by constants within the code,
+but can be overridden by creating a JSON file (`%APPDATA%/volatility3/vol.json` for Windows
+systems, or `~/.config/volatility3/vol.json` or `volshell.json` for all others).
+
+The format of this file is a JSON dictionary, containing the options above and their value.
+It should be noted that the ordering is (`<` means is overridden by):
+
+`in-built default value < config file value < command line parameter`
+
+It should also be noted that boolean flags (such as `offline`) that are overridden as true will
+not be unset by not specifying the command line flag.

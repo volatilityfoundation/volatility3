@@ -10,6 +10,7 @@ from typing import Generator, Iterator, List, Tuple
 from volatility3.framework import (
     class_subclasses,
     constants,
+    exceptions,
     interfaces,
     renderers,
 )
@@ -197,7 +198,9 @@ class ABCKmsg(ABC):
 class Kmsg_pre_3_5(ABCKmsg):
     """The kernel ring buffer (log_buf) is a char array that sequentially stores
     log lines, each separated by newline (LF) characters. i.e:
-        <6>[ 9565.250411] line1!\n<6>[ 9565.250412] line2\n...
+
+        <6>[ 9565.250411] line1!\\n<6>[ 9565.250412] line2\\n...
+
     """
 
     @classmethod
@@ -495,7 +498,7 @@ class Kmsg_5_10_to_(ABCKmsg):
 class Kmsg(interfaces.plugins.PluginInterface):
     """Kernel log buffer reader"""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (2, 6, 0)
 
     _version = (1, 0, 2)
 
@@ -514,6 +517,13 @@ class Kmsg(interfaces.plugins.PluginInterface):
             yield (0, values)
 
     def run(self):
+        if not self.context.symbol_space.verify_table_versions(
+            "dwarf2json", lambda version, _: (not version) or version > (0, 4, 1)
+        ):
+            raise exceptions.SymbolSpaceError(
+                "Invalid symbol table, please ensure the ISF table produced by dwarf2json was produced using a version > 0.4.1"
+            )
+
         return renderers.TreeGrid(
             [
                 ("facility", str),
