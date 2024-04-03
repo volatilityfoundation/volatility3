@@ -1,16 +1,6 @@
 name: build-pypi
 
-on:
-  push:
-    branches:
-      - stable
-      - develop
-      - 'release/**'
-
-  pull_request:
-    branches:
-      - stable
-      - 'release/**'
+on: [push, pull_request]
 
 inputs:
   pyinstaller_version:
