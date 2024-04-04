@@ -567,6 +567,6 @@ class AArch64(linear.LinearlyMappedLayer):
             requirements.StringRequirement(
                 name="kernel_banner",
                 optional=True,
-                description="Linux banner (/proc/version)",
+                description="Kernel unique identifier, including compiler name and version, kernel version, compile time.",
             ),
         ]
