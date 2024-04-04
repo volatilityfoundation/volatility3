@@ -89,7 +89,11 @@ class AArch64(linear.LinearlyMappedLayer):
         # [1], see D8.1.9, page 5818
         self._ttb_bitsize = 64 - self._ttbs_tnsz[self._virtual_addr_space]
         self._ttb_granule = self._ttbs_granules[self._virtual_addr_space]
-
+        """
+        Translation Table Granule is in fact the page size, as it is the
+        smallest block of memory that can be described.
+        Possibles values are 4, 16 or 64 (kB).
+        """
         self._is_52bits = (
             True if self._ttbs_tnsz[self._virtual_addr_space] < 16 else False
         )
