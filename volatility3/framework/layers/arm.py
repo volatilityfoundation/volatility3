@@ -228,9 +228,8 @@ class AArch64(linear.LinearlyMappedLayer):
                 ta_51_x_bits = (15, 12)
 
         table_address = self._page_map_offset
-        level = 0
         max_level = len(self._ttb_lookup_indexes) - 1
-        for high_bit, low_bit in self._ttb_lookup_indexes:
+        for level, (high_bit, low_bit) in enumerate(self._ttb_lookup_indexes):
             index = self._mask(virtual_offset, high_bit, low_bit)
             descriptor = int.from_bytes(
                 base_layer.read(
@@ -290,7 +289,6 @@ class AArch64(linear.LinearlyMappedLayer):
                     invalid_bits=low_bit,
                     entry=descriptor,
                 )
-            level += 1
 
         if self._translation_debug:
             vollog.debug(
