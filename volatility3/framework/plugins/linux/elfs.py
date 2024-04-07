@@ -84,6 +84,7 @@ class Elfs(plugins.PluginInterface):
         )
 
         if not elf_object.is_valid():
+            vollog.debug("ELF object to be dumped is not valid")
             return None
 
         sections = {}
