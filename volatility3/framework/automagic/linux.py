@@ -319,8 +319,9 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
             return False
 
         if not banner_value == target_banner:
-            vollog.error(
-                f"Mismatch between scanned and virtually translated linux banner : {target_banner} != {banner_value}."
+            vollog.log(
+                constants.LOGLEVEL_VV,
+                f"Mismatch between scanned and virtually translated linux banner : {target_banner} != {banner_value}.",
             )
             return False
 
