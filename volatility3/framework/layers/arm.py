@@ -136,6 +136,13 @@ class AArch64(linear.LinearlyMappedLayer):
         """Page mask for this layer."""
         return ~(cls.page_size - 1)
 
+    @classproperty
+    @functools.lru_cache()
+    def bits_per_register(cls) -> int:
+        """Returns the bits_per_register to determine the range of an
+        AArch64TranslationLayer."""
+        return cls._bits_per_register
+
     def _print_layer_debug_informations(self) -> None:
         vollog.debug(f"Base layer : {self._base_layer}")
         vollog.debug(
