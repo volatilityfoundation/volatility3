@@ -114,35 +114,6 @@ class AArch64(linear.LinearlyMappedLayer):
         if self._layer_debug:
             self._print_layer_debug_informations()
 
-    @property
-    @functools.lru_cache()
-    def page_shift(self) -> int:
-        """Page shift for this layer, which is the page size bit length.
-        - Typical values : 12, 14, 16
-        """
-        return self.page_size.bit_length() - 1
-
-    @property
-    @functools.lru_cache()
-    def page_size(self) -> int:
-        """Page size of this layer, in bytes.
-        - Typical values : 4096, 16384, 65536
-        """
-        return self._ttb_granule * 1024
-
-    @property
-    @functools.lru_cache()
-    def page_mask(cls) -> int:
-        """Page mask for this layer."""
-        return ~(cls.page_size - 1)
-
-    @classproperty
-    @functools.lru_cache()
-    def bits_per_register(cls) -> int:
-        """Returns the bits_per_register to determine the range of an
-        AArch64TranslationLayer."""
-        return cls._bits_per_register
-
     def _print_layer_debug_informations(self) -> None:
         vollog.debug(f"Base layer : {self._base_layer}")
         vollog.debug(
@@ -468,6 +439,35 @@ class AArch64(linear.LinearlyMappedLayer):
         # The following is based on Linux software implementation :
         # [2], see arch/arm64/include/asm/pgtable-prot.h#L18
         return bool(entry & (1 << 55))
+
+    @property
+    @functools.lru_cache()
+    def page_shift(self) -> int:
+        """Page shift for this layer, which is the page size bit length.
+        - Typical values : 12, 14, 16
+        """
+        return self.page_size.bit_length() - 1
+
+    @property
+    @functools.lru_cache()
+    def page_size(self) -> int:
+        """Page size of this layer, in bytes.
+        - Typical values : 4096, 16384, 65536
+        """
+        return self._ttb_granule * 1024
+
+    @property
+    @functools.lru_cache()
+    def page_mask(cls) -> int:
+        """Page mask for this layer."""
+        return ~(cls.page_size - 1)
+
+    @classproperty
+    @functools.lru_cache()
+    def bits_per_register(cls) -> int:
+        """Returns the bits_per_register to determine the range of an
+        AArch64TranslationLayer."""
+        return cls._bits_per_register
 
     @classproperty
     @functools.lru_cache()
