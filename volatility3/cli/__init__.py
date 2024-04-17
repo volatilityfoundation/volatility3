@@ -264,12 +264,14 @@ class CommandLine:
             file_logger.setFormatter(file_formatter)
             rootlog.addHandler(file_logger)
             vollog.info("Logging started")
+
+        self.order_extra_verbose_levels()
         if partial_args.verbosity < 3:
             if partial_args.verbosity < 1:
                 sys.tracebacklimit = None
-            console.setLevel(30 - (partial_args.verbosity * 10))
+            console.setLevel(logging.WARNING - (partial_args.verbosity * 10))
         else:
-            console.setLevel(10 - (partial_args.verbosity - 2))
+            console.setLevel(logging.DEBUG - (partial_args.verbosity - 2))
 
         for level, msg in delayed_logs:
             vollog.log(level, msg)
@@ -694,6 +696,17 @@ class CommandLine:
                         config_path, requirement.name
                     )
                     context.config[extended_path] = value
+
+    def order_extra_verbose_levels(self):
+        for level, level_value in enumerate(
+            [
+                constants.LOGLEVEL_V,
+                constants.LOGLEVEL_VV,
+                constants.LOGLEVEL_VVV,
+                constants.LOGLEVEL_VVVV,
+            ]
+        ):
+            logging.addLevelName(level_value, f"DETAIL {level+1}")
 
     def file_handler_class_factory(self, direct=True):
         output_dir = self.output_dir

@@ -142,6 +142,8 @@ class PsList(interfaces.plugins.PluginInterface):
                         file_output = str(file_handle.preferred_filename)
                         file_handle.close()
                     break
+            else:
+                file_output = "VMA start matching task start_code not found"
         return file_output
 
     def _generator(
