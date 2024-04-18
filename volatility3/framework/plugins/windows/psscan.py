@@ -57,6 +57,18 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 default=False,
                 optional=True,
             ),
+            requirements.IntRequirement(
+                name="maxPid",
+                description="List processes with ID <= maxPid",
+                default=1000000,
+                optional=True,
+            ),
+            requirements.IntRequirement(
+                name="maxThreads",
+                description="List processes with thread count < maxThreads",
+                default=100000,
+                optional=True,
+            ),
         ]
 
     @classmethod
@@ -260,6 +272,13 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             kernel.symbol_table_name,
             filter_func=pslist.PsList.create_pid_filter(self.config.get("pid", None)),
         ):
+            # Filter out processes with PID > maxPid (default=1000000)
+            if proc.UniqueProcessId > self.config.get("maxPid"):
+                continue
+            # Filter out processes with thread count >= maxThreads (default=100000)
+            if proc.ActiveThreads >= self.config.get("maxThreads"):
+                continue
+
             file_output = "Disabled"
             if self.config["dump"]:
                 # windows 10 objects (maybe others in the future) are already in virtual memory
