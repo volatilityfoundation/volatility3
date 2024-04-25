@@ -240,6 +240,12 @@ class CommandLine:
             default=[],
             action="append",
         )
+        parser.add_argument(
+            "--output-filename",
+            help="Write output in this file (like in Volatility2). Default is stdout.",
+            default=None,
+            type=str
+        )
 
         parser.set_defaults(**default_config)
 
@@ -433,6 +439,9 @@ class CommandLine:
                 progress_callback,
                 self.file_handler_class_factory(),
             )
+            
+            if args.output_filename:
+                vollog.debug("Output file is set as", args.output_filename[0])
 
             if args.write_config:
                 vollog.warning(
@@ -463,10 +472,7 @@ class CommandLine:
         try:
             # Construct and run the plugin
             if constructed:
-                grid = constructed.run()
-                renderer = renderers[args.renderer]()
-                renderer.filter = text_filter.CLIFilter(grid, args.filters)
-                renderer.render(grid)
+                renderers[args.renderer](output_filename = args.output_filename).render(constructed.run())
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
 

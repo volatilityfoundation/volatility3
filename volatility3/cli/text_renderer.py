@@ -165,7 +165,10 @@ class QuickTextRenderer(CLIRenderer):
         """
         # TODO: Docstrings
         # TODO: Improve text output
-        outfd = sys.stdout
+        if self.output_filename:
+        	outfd = open(self.output_filename, 'w', encoding="utf-8")
+        else:
+        	outfd = sys.stdout
 
         line = []
         for column in grid.columns:
@@ -239,7 +242,10 @@ class CSVRenderer(CLIRenderer):
         Args:
             grid: The TreeGrid object to render
         """
-        outfd = sys.stdout
+        if self.output_filename:
+            outfd = open(self.output_filename, 'w', encoding="utf-8")
+        else:
+            outfd = sys.stdout
 
         header_list = ["TreeDepth"]
         for column in grid.columns:
@@ -289,7 +295,10 @@ class PrettyTextRenderer(CLIRenderer):
         """
         # TODO: Docstrings
         # TODO: Improve text output
-        outfd = sys.stdout
+        if self.output_filename:
+            outfd = open(self.output_filename, 'w', encoding="utf-8")
+        else:
+            outfd = sys.stdout
 
         sys.stderr.write("Formatting...\n")
 
@@ -417,7 +426,10 @@ class JsonRenderer(CLIRenderer):
         outfd.write("{}\n".format(json.dumps(result, indent=2, sort_keys=True)))
 
     def render(self, grid: interfaces.renderers.TreeGrid):
-        outfd = sys.stdout
+        if self.output_filename:
+            outfd = open(self.output_filename, 'w', encoding="utf-8")
+        else:
+            outfd = sys.stdout
 
         outfd.write("\n")
         final_output: Tuple[
@@ -462,6 +474,10 @@ class JsonLinesRenderer(JsonRenderer):
 
     def output_result(self, outfd, result):
         """Outputs the JSON results as JSON lines"""
+        if self.output_filename:
+            outfd = open(self.output_filename, 'w', encoding="utf-8")
+        else:
+            outfd = sys.stdout
         for line in result:
             outfd.write(json.dumps(line, sort_keys=True))
             outfd.write("\n")
