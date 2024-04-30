@@ -223,7 +223,7 @@ def list_plugins() -> Dict[str, Type[interfaces.plugins.PluginInterface]]:
     return plugin_list
 
 
-def clear_cache(complete=False):
+def clear_cache(complete=True):
     try:
         if complete:
             glob_pattern = "*.cache"
