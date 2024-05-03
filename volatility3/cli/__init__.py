@@ -242,7 +242,7 @@ class CommandLine:
         )
         parser.add_argument(
             "--output-filename",
-            help="Write output in this file (like in Volatility2). Default is stdout.",
+            help="Write output in this file. Default is stdout.",
             default=None,
             type=str
         )
@@ -441,7 +441,11 @@ class CommandLine:
             )
             
             if args.output_filename:
-                vollog.debug("Output file is set as", args.output_filename[0])
+                vollog.debug("Output file is set as {args.output_filename[0]}")
+                if os.path.exists(os.path.abspath(args.output_filename[0])):
+                	parser.error(
+                		f"Cannot write output file: file {args.output_filename[0]} already exists"
+                	)
 
             if args.write_config:
                 vollog.warning(
