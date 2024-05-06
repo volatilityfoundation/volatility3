@@ -38,6 +38,10 @@ class LayerWriter(plugins.PluginInterface):
                 default=False,
                 optional=True,
             ),
+            requirements.StringRequirement(
+                name="output",
+                description="Output filename",
+            ),
             requirements.ListRequirement(
                 name="layers",
                 element_type=str,
