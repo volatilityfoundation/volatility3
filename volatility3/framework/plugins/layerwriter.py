@@ -115,9 +115,7 @@ class LayerWriter(plugins.PluginInterface):
                         )
                         file_handle.close()
                     except IOError as excp:
-                        yield 0, (
-                            f"Layer cannot be written to {self.config['output_name']}: {excp}",
-                        )
+                        yield 0, (f"Layer cannot be written to {output_name}: {excp}",)
 
                     yield 0, (f"Layer has been written to {output_name}",)
 
