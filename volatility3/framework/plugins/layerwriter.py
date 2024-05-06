@@ -41,6 +41,7 @@ class LayerWriter(plugins.PluginInterface):
             requirements.StringRequirement(
                 name="output",
                 description="Output filename",
+                optional=True,
             ),
             requirements.ListRequirement(
                 name="layers",
