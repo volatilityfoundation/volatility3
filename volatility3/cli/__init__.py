@@ -790,8 +790,8 @@ class CommandLine:
                     return None
 
                 self._file.close()
-                output_filename = self._get_final_filename()
-                os.rename(self._name, output_filename)
+                self._output_filename = self._get_final_filename()
+                os.rename(self._name, self._output_filename)
 
         if direct:
             return CLIDirectFileHandler
