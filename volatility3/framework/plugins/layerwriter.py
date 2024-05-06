@@ -18,7 +18,7 @@ class LayerWriter(plugins.PluginInterface):
     default_block_size = 0x500000
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+    _version = (2, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -81,7 +81,7 @@ class LayerWriter(plugins.PluginInterface):
 
         file_handle = open_method(preferred_name)
         for i in range(0, layer.maximum_address, chunk_size):
-            current_chunk_size = min(chunk_size, layer.maximum_address - i)
+            current_chunk_size = min(chunk_size, layer.maximum_address + 1 - i)
             data = layer.read(i, current_chunk_size, pad=True)
             file_handle.write(data)
             if progress_callback:
