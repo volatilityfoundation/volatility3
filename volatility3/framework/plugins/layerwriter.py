@@ -95,7 +95,7 @@ class LayerWriter(plugins.PluginInterface):
             if not self.config["layers"]:
                 self.config["layers"] = []
                 for name in self.context.layers:
-                    if not self.context.layers[name].metadata.get("mapped", False):
+                    if "mapped" not in self.context.layers[name].metadata:
                         self.config["layers"] = [name]
 
             for name in self.config["layers"]:
@@ -103,7 +103,8 @@ class LayerWriter(plugins.PluginInterface):
                 if name not in self.context.layers:
                     yield 0, (f"Layer Name {name} does not exist",)
                 else:
-                    output_name = self.config.get("output", ".".join([name, "raw"]))
+                    default_output_name = f"{name}.raw"
+                    output_name = self.config.get("output", default_output_name)
                     try:
                         file_handle = self.write_layer(
                             self.context,
