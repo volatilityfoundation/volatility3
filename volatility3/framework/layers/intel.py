@@ -180,7 +180,7 @@ class Intel(linear.LinearlyMappedLayer):
         position = self._initial_position
         entry = self._initial_entry
 
-        if self.minimum_address > offset > self.maximum_address:
+        if not (self.minimum_address <= offset <= self.maximum_address):
             raise exceptions.PagedInvalidAddressException(
                 self.name,
                 offset,
