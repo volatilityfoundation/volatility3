@@ -244,6 +244,8 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 symbol_table=kernel.symbol_table_name,
             )
 
+            dumped_files = set()
+
             for proc in procs:
                 try:
                     object_table = proc.ObjectTable
@@ -266,6 +268,10 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                                     continue
                                 if not file_re.search(name):
                                     continue
+
+                            if file_obj.vol.offset in dumped_files:
+                                continue
+                            dumped_files.add(file_obj.vol.offset)
 
                             for result in self.process_file_object(
                                 self.context, kernel.layer_name, self.open, file_obj
@@ -302,6 +308,10 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                                 continue
                             if not file_re.search(name):
                                 continue
+
+                        if file_obj.vol.offset in dumped_files:
+                            continue
+                        dumped_files.add(file_obj.vol.offset)
 
                         for result in self.process_file_object(
                             self.context, kernel.layer_name, self.open, file_obj
