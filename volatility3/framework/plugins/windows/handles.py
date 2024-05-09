@@ -161,8 +161,11 @@ class Handles(interfaces.plugins.PluginInterface):
             except exceptions.SymbolError:
                 return None
 
-            data = self.context.layers.read(virtual_layer_name, kvo + func_addr, 0x200)
-            if data is None:
+            try:
+                data = self.context.layers.read(
+                    virtual_layer_name, kvo + func_addr, 0x200
+                )
+            except exceptions.InvalidAddressException:
                 return None
 
             md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
