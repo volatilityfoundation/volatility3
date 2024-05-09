@@ -162,7 +162,9 @@ class Handles(interfaces.plugins.PluginInterface):
                 return None
 
             try:
-                data = self.context.layers.read(virtual_layer_name, kvo + func_addr, 0x200)
+                data = self.context.layers.read(
+                    virtual_layer_name, kvo + func_addr, 0x200
+                )
             except exceptions.InvalidAddressException:
                 return None
 
