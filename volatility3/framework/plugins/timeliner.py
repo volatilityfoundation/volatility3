@@ -183,16 +183,16 @@ class Timeliner(interfaces.plugins.PluginInterface):
                                     plugin_name,
                                     self._sanitize_body_format(item),
                                     self._text_format(
-                                        times.get(TimeLinerType.ACCESSED, "")
+                                        times.get(TimeLinerType.ACCESSED, "0")
                                     ),
                                     self._text_format(
-                                        times.get(TimeLinerType.MODIFIED, "")
+                                        times.get(TimeLinerType.MODIFIED, "0")
                                     ),
                                     self._text_format(
-                                        times.get(TimeLinerType.CHANGED, "")
+                                        times.get(TimeLinerType.CHANGED, "0")
                                     ),
                                     self._text_format(
-                                        times.get(TimeLinerType.CREATED, "")
+                                        times.get(TimeLinerType.CREATED, "0")
                                     ),
                                 )
                             )
