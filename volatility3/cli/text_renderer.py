@@ -134,7 +134,7 @@ class CLIRenderer(interfaces.renderers.Renderer):
     """Class to add specific requirements for CLI renderers.
     
     Args:
-        output_filename (optionnal): The name of the output file to save the output of a module inside 
+        output_filename (optionnal): The output file descriptor to save the output of a module inside 
     """
 
     name = "unnamed"
