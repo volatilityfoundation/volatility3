@@ -446,6 +446,10 @@ class CommandLine:
                 	parser.error(
                 		f"Cannot write output file: file {args.output_filename[0]} already exists"
                 	)
+                else:
+                    args.output_filename = open(args.output_filename, 'w', encoding='utf-8')
+            else:
+                args.output_filename = sys.stdout
 
             if args.write_config:
                 vollog.warning(
@@ -476,7 +480,10 @@ class CommandLine:
         try:
             # Construct and run the plugin
             if constructed:
-                renderers[args.renderer](output_filename = args.output_filename).render(constructed.run())
+                grid = constructed.run()
+                renderer = renderers[args.renderer](args.output_filename)
+                renderer.filter = text_filter.CLIFilter(grid, args.filters)
+                renderer.render(grid)
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
 

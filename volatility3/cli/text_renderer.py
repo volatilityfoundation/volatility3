@@ -131,11 +131,18 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
 
 
 class CLIRenderer(interfaces.renderers.Renderer):
-    """Class to add specific requirements for CLI renderers."""
+    """Class to add specific requirements for CLI renderers.
+    
+    Args:
+        output_filename (optionnal): The name of the output file to save the output of a module inside 
+    """
 
     name = "unnamed"
     structured_output = False
     filter: text_filter.CLIFilter = None
+
+    def __init__(self, outfd):
+        self.outfd = outfd
 
 
 class QuickTextRenderer(CLIRenderer):
@@ -165,16 +172,12 @@ class QuickTextRenderer(CLIRenderer):
         """
         # TODO: Docstrings
         # TODO: Improve text output
-        if self.output_filename:
-        	outfd = open(self.output_filename, 'w', encoding="utf-8")
-        else:
-        	outfd = sys.stdout
 
         line = []
         for column in grid.columns:
             # Ignore the type because namedtuples don't realize they have accessible attributes
             line.append(f"{column.name}")
-        outfd.write("\n{}\n".format("\t".join(line)))
+        self.outfd.write("\n{}\n".format("\t".join(line)))
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
             if self.filter and self.filter.filter(node.values):
@@ -198,11 +201,11 @@ class QuickTextRenderer(CLIRenderer):
             return accumulator
 
         if not grid.populated:
-            grid.populate(visitor, outfd)
+            grid.populate(visitor, self.outfd)
         else:
-            grid.visit(node=None, function=visitor, initial_accumulator=outfd)
+            grid.visit(node=None, function=visitor, initial_accumulator=self.outfd)
 
-        outfd.write("\n")
+        self.outfd.write("\n")
 
 
 class NoneRenderer(CLIRenderer):
@@ -242,10 +245,6 @@ class CSVRenderer(CLIRenderer):
         Args:
             grid: The TreeGrid object to render
         """
-        if self.output_filename:
-            outfd = open(self.output_filename, 'w', encoding="utf-8")
-        else:
-            outfd = sys.stdout
 
         header_list = ["TreeDepth"]
         for column in grid.columns:
@@ -253,7 +252,7 @@ class CSVRenderer(CLIRenderer):
             header_list.append(f"{column.name}")
 
         writer = csv.DictWriter(
-            outfd, header_list, lineterminator="\n", escapechar="\\"
+            self.outfd, header_list, lineterminator="\n", escapechar="\\"
         )
         writer.writeheader()
 
@@ -274,7 +273,7 @@ class CSVRenderer(CLIRenderer):
         else:
             grid.visit(node=None, function=visitor, initial_accumulator=writer)
 
-        outfd.write("\n")
+        self.outfd.write("\n")
 
 
 class PrettyTextRenderer(CLIRenderer):
@@ -295,10 +294,6 @@ class PrettyTextRenderer(CLIRenderer):
         """
         # TODO: Docstrings
         # TODO: Improve text output
-        if self.output_filename:
-            outfd = open(self.output_filename, 'w', encoding="utf-8")
-        else:
-            outfd = sys.stdout
 
         sys.stderr.write("Formatting...\n")
 
@@ -365,14 +360,14 @@ class PrettyTextRenderer(CLIRenderer):
         format_string = column_separator.join(format_string_list) + "\n"
 
         column_titles = [""] + [column.name for column in grid.columns]
-        outfd.write(format_string.format(*column_titles))
+        self.outfd.write(format_string.format(*column_titles))
         for depth, line in final_output:
             nums_line = max([len(line[column]) for column in line])
             for column in line:
                 line[column] = line[column] + ([""] * (nums_line - len(line[column])))
             for index in range(nums_line):
                 if index == 0:
-                    outfd.write(
+                    self.outfd.write(
                         format_string.format(
                             "*" * depth,
                             *[
@@ -382,7 +377,7 @@ class PrettyTextRenderer(CLIRenderer):
                         )
                     )
                 else:
-                    outfd.write(
+                    self.outfd.write(
                         format_string.format(
                             " " * depth,
                             *[
@@ -426,12 +421,7 @@ class JsonRenderer(CLIRenderer):
         outfd.write("{}\n".format(json.dumps(result, indent=2, sort_keys=True)))
 
     def render(self, grid: interfaces.renderers.TreeGrid):
-        if self.output_filename:
-            outfd = open(self.output_filename, 'w', encoding="utf-8")
-        else:
-            outfd = sys.stdout
-
-        outfd.write("\n")
+        self.outfd.write("\n")
         final_output: Tuple[
             Dict[str, List[interfaces.renderers.TreeNode]],
             List[interfaces.renderers.TreeNode],
@@ -466,7 +456,7 @@ class JsonRenderer(CLIRenderer):
         else:
             grid.visit(node=None, function=visitor, initial_accumulator=final_output)
 
-        self.output_result(outfd, final_output[1])
+        self.output_result(self.outfd, final_output[1])
 
 
 class JsonLinesRenderer(JsonRenderer):
@@ -474,10 +464,6 @@ class JsonLinesRenderer(JsonRenderer):
 
     def output_result(self, outfd, result):
         """Outputs the JSON results as JSON lines"""
-        if self.output_filename:
-            outfd = open(self.output_filename, 'w', encoding="utf-8")
-        else:
-            outfd = sys.stdout
         for line in result:
             outfd.write(json.dumps(line, sort_keys=True))
             outfd.write("\n")
