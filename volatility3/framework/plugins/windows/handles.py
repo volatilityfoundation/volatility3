@@ -25,7 +25,7 @@ class Handles(interfaces.plugins.PluginInterface):
     """Lists process open handles."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -145,6 +145,9 @@ class Handles(interfaces.plugins.PluginInterface):
 
         if self._sar_value is None:
             if not has_capstone:
+                vollog.debug(
+                    "capstone module is missing, unable to create disassembly of ObpCaptureHandleInformationEx"
+                )
                 return None
             kernel = self.context.modules[self.config["kernel"]]
 
@@ -159,27 +162,45 @@ class Handles(interfaces.plugins.PluginInterface):
             try:
                 func_addr = ntkrnlmp.get_symbol("ObpCaptureHandleInformationEx").address
             except exceptions.SymbolError:
+                vollog.debug("Unable to locate ObpCaptureHandleInformationEx symbol")
                 return None
 
             try:
+                func_addr_to_read = kvo + func_addr
+                num_bytes_to_read = 0x200
+                vollog.debug(
+                    f"ObpCaptureHandleInformationEx symbol located at {hex(func_addr_to_read)}"
+                )
                 data = self.context.layers.read(
-                    virtual_layer_name, kvo + func_addr, 0x200
+                    virtual_layer_name, func_addr_to_read, num_bytes_to_read
                 )
             except exceptions.InvalidAddressException:
+                vollog.debug(
+                    f"Failed to read {hex(num_bytes_to_read)} bytes at symbol {hex(func_addr_to_read)}"
+                )
                 return None
 
             md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
 
+            instruction_count = 0
             for address, size, mnemonic, op_str in md.disasm_lite(
                 data, kvo + func_addr
             ):
                 # print("{} {} {} {}".format(address, size, mnemonic, op_str))
-
+                instruction_count += 1
                 if mnemonic.startswith("sar"):
                     # if we don't want to parse op strings, we can disasm the
                     # single sar instruction again, but we use disasm_lite for speed
                     self._sar_value = int(op_str.split(",")[1].strip(), 16)
+                    vollog.debug(
+                        f"SAR located at {hex(address)} with value of {hex(self._sar_value)}"
+                    )
                     break
+
+            if self._sar_value is None:
+                vollog.debug(
+                    f"Failed to to locate SAR value having parsed {instruction_count} instructions"
+                )
 
         return self._sar_value
 
