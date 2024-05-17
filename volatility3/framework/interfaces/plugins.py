@@ -60,7 +60,7 @@ class FileHandlerInterface(io.RawIOBase):
     @staticmethod
     def sanitize_filename(filename: str) -> str:
         """Sanititizes the filename to ensure only a specific whitelist of characters is allowed through"""
-        allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.- ()[]\{\}!$%^:#~?<>,|"
+        allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.- ()[]{}!$%^:#~?<>,|"
         result = ""
         for char in filename:
             if char in allowed:

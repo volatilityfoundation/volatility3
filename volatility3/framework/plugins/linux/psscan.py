@@ -28,7 +28,7 @@ class PsScan(interfaces.plugins.PluginInterface):
     """Scans for processes present in a particular linux image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -139,7 +139,7 @@ class PsScan(interfaces.plugins.PluginInterface):
                 kernel_layer_name, f"Layer {kernel_layer_name} has no dependencies"
             )
         memory_layer_name = kernel_layer.dependencies[0]
-        memory_layer = context.layers[kernel_layer.dependencies[0]]
+        memory_layer = context.layers[memory_layer_name]
 
         # scan the memory_layer for these needles
         for address, _ in memory_layer.scan(

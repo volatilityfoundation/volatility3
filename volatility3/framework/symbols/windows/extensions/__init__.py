@@ -452,9 +452,9 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
         ].is_valid(self.FileName.Buffer)
 
     def file_name_with_device(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
-        name: Union[
-            str, interfaces.renderers.BaseAbsentValue
-        ] = renderers.UnreadableValue()
+        name: Union[str, interfaces.renderers.BaseAbsentValue] = (
+            renderers.UnreadableValue()
+        )
 
         # this pointer needs to be checked against native_layer_name because the object may
         # be instantiated from a primary (virtual) layer or a memory (physical) layer.
@@ -492,8 +492,46 @@ class KMUTANT(objects.StructType, pool.ExecutiveObject):
         return header.NameInfo.Name.String  # type: ignore
 
 
-class ETHREAD(objects.StructType):
+class ETHREAD(objects.StructType, pool.ExecutiveObject):
     """A class for executive thread objects."""
+
+    def is_valid(self) -> bool:
+        """Determine if the object is valid."""
+
+        try:
+            # validation by TID:
+            if self.Cid.UniqueThread % 4 != 0:  # NT tids are divisible by 4
+                return False
+
+            # validation by PID of parent process:
+            if self.Cid.UniqueProcess % 4 != 0:
+                return False
+
+            # validation by thread creation time:
+            if (
+                self.Cid.UniqueProcess != 4
+            ):  # The System process (PID 4) has no create time
+                ctime = self.get_create_time()
+                if not isinstance(ctime, datetime.datetime):
+                    return False
+
+                if not (1998 < ctime.year < 2030):
+                    return False
+
+        except exceptions.InvalidAddressException:
+            return False
+
+        # passed all validations
+        return True
+
+    def get_create_time(self):
+        # For Windows XPs
+        if self.has_member("ThreadsProcess"):
+            return conversion.wintime_to_datetime(self.CreateTime.QuadPart >> 3)
+        return conversion.wintime_to_datetime(self.CreateTime.QuadPart)
+
+    def get_exit_time(self):
+        return conversion.wintime_to_datetime(self.ExitTime.QuadPart)
 
     def owning_process(self) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""

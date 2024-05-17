@@ -1,5 +1,5 @@
-# The following packages are required for core functionality.
-pefile>=2023.2.7
+# Include the minimal requirements
+-r requirements-minimal.txt
 
 # The following packages are optional.
 # If certain packages are not necessary, place a comment (#) at the start of the line.
