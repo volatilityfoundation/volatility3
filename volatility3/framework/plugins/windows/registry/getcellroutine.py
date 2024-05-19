@@ -13,6 +13,7 @@ from volatility3.plugins.windows.registry import hivelist
 
 vollog = logging.getLogger(__name__)
 
+
 class GetCellRoutine(interfaces.plugins.PluginInterface):
     """Reports registry hives with a hooked GetCellRoutine handler"""
 
