@@ -71,7 +71,7 @@ class GetCellRoutine(interfaces.plugins.PluginInterface):
                                 hive_object.get_name() or "",
                                 module_name,
                                 format_hints.Hex(cellroutine),
-                            )
+                            ),
                         )
             # Doesn't map to any module...
             else:
@@ -82,7 +82,7 @@ class GetCellRoutine(interfaces.plugins.PluginInterface):
                         hive_object.get_name() or "",
                         renderers.NotAvailableValue(),
                         format_hints.Hex(cellroutine),
-                    )
+                    ),
                 )
 
     def run(self):
@@ -91,7 +91,7 @@ class GetCellRoutine(interfaces.plugins.PluginInterface):
                 ("Hive Offset", renderers.format_hints.Hex),
                 ("Hive Name", str),
                 ("GetCellRoutine Module", str),
-                ("GetCellRoutine Handler", renderers.format_hints.Hex)
+                ("GetCellRoutine Handler", renderers.format_hints.Hex),
             ],
             self._generator(),
         )
