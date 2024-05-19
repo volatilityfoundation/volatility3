@@ -14,7 +14,7 @@ from volatility3.plugins.windows.registry import hivelist
 vollog = logging.getLogger(__name__)
 
 class GetCellRoutine(interfaces.plugins.PluginInterface):
-    """ Reports registry hives with a hooked GetCellRoutine handler """
+    """Reports registry hives with a hooked GetCellRoutine handler"""
 
     _required_framework_version = (2, 0, 0)
 
@@ -32,7 +32,7 @@ class GetCellRoutine(interfaces.plugins.PluginInterface):
             requirements.PluginRequirement(
                 name="ssdt", plugin=ssdt.SSDT, version=(1, 0, 0)
             ),
-     ]
+        ]
 
     def _generator(self):
         kernel = self.context.modules[self.config["kernel"]]
@@ -47,7 +47,7 @@ class GetCellRoutine(interfaces.plugins.PluginInterface):
             context=self.context,
             base_config_path=self.config_path,
             layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name
+            symbol_table=kernel.symbol_table_name,
         ):
             hive = hive_object.hive
 
@@ -70,7 +70,7 @@ class GetCellRoutine(interfaces.plugins.PluginInterface):
                                 format_hints.Hex(hive.vol.offset),
                                 hive_object.get_name() or "",
                                 module_name,
-                                format_hints.Hex(cellroutine)
+                                format_hints.Hex(cellroutine),
                             )
                         )
             # Doesn't map to any module...
@@ -81,7 +81,7 @@ class GetCellRoutine(interfaces.plugins.PluginInterface):
                         format_hints.Hex(hive.vol.offset),
                         hive_object.get_name() or "",
                         renderers.NotAvailableValue(),
-                        format_hints.Hex(cellroutine)
+                        format_hints.Hex(cellroutine),
                     )
                 )
 
