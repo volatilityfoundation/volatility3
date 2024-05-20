@@ -159,7 +159,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
 
             # This we get for free
             aslr_shift = (
-                init_task.files.cast("long unsigned int")
+                init_task.files.cast("pointer")
                 - module.get_symbol("init_files").address
             )
             kaslr_shift = init_task_address - cls.virtual_to_physical_address(
