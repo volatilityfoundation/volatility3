@@ -120,7 +120,7 @@ class Vmscan(plugins.PluginInterface):
 
     @classmethod
     def _verify_vmcs_page(
-        self,
+        cls,
         context: interfaces.context.ContextInterface,
         vmcs: interfaces.objects.ObjectInterface,
     ) -> List[str]:
