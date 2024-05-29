@@ -81,7 +81,10 @@ class DriverIrp(interfaces.plugins.PluginInterface):
                     address
                 )
 
+                module_found = False
+
                 for module_name, symbol_generator in module_symbols:
+                    module_found = True
                     symbols_found = False
 
                     for symbol in symbol_generator:
@@ -110,6 +113,19 @@ class DriverIrp(interfaces.plugins.PluginInterface):
                                 renderers.NotAvailableValue(),
                             ),
                         )
+
+                if not module_found:
+                    yield (
+                        0,
+                        (
+                            format_hints.Hex(driver.vol.offset),
+                            driver_name,
+                            MAJOR_FUNCTIONS[i],
+                            format_hints.Hex(address),
+                            renderers.NotAvailableValue(),
+                            renderers.NotAvailableValue(),
+                        ),
+                    )
 
     def run(self):
         return renderers.TreeGrid(
