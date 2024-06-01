@@ -10,12 +10,12 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 
-def get_install_requires():
+def get_requires(filename):
     requirements = []
-    with open("requirements-minimal.txt", "r", encoding="utf-8") as fh:
+    with open(filename, "r", encoding="utf-8") as fh:
         for line in fh.readlines():
             stripped_line = line.strip()
-            if stripped_line == "" or stripped_line.startswith("#"):
+            if stripped_line == "" or stripped_line.startswith(("#", "-r")):
                 continue
             requirements.append(stripped_line)
     return requirements
@@ -49,5 +49,9 @@ setuptools.setup(
             "volshell = volatility3.cli.volshell:main",
         ],
     },
-    install_requires=get_install_requires(),
+    install_requires=get_requires("requirements-minimal.txt"),
+    extras_require={
+        "dev": get_requires("requirements-dev.txt"),
+        "full": get_requires("requirements.txt"),
+    },
 )
