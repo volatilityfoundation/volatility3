@@ -86,21 +86,18 @@ class AbstractNetfilter(ABC):
 
     @classmethod
     def run_all(
-        cls,
-        context: interfaces.context.ContextInterface,
-        config: interfaces.configuration.HierarchicalDict,
+        cls, context: interfaces.context.ContextInterface, kernel_module_name: str
     ) -> Iterator[Tuple[int, str, str, int, int, str, bool]]:
         """It calls each subclass symtab_checks() to test the required
         conditions to that specific kernel implementation.
 
         Args:
             context: The volatility3 context on which to operate
-            config: Core configuration
+            kernel_module_name: The name of the table containing the kernel symbols
 
         Yields:
             The kmsg records. Same as _run()
         """
-        kernel_module_name = config["kernel"]
         vmlinux = context.modules[kernel_module_name]
 
         implementation_inst = None  # type: ignore
@@ -698,8 +695,9 @@ class Netfilter(interfaces.plugins.PluginInterface):
         )
 
     def _generator(self):
+        kernel_module_name = self.config["kernel"]
         for fields in AbstractNetfilter.run_all(
-            context=self.context, config=self.config
+            context=self.context, kernel_module_name=kernel_module_name
         ):
             yield (0, self._format_fields(fields))
 
