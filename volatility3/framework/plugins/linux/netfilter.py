@@ -6,8 +6,8 @@ from abc import ABC, abstractmethod
 import logging
 
 from typing import Iterator, List, Tuple
+from volatility3 import framework
 from volatility3.framework import (
-    class_subclasses,
     constants,
     interfaces,
     renderers,
@@ -106,7 +106,7 @@ class AbstractNetfilter(ABC):
         vmlinux = context.modules[kernel_module_name]
 
         implementation_inst = None  # type: ignore
-        for subclass in class_subclasses(cls):
+        for subclass in framework.class_subclasses(cls):
             if not subclass.symtab_checks(vmlinux=vmlinux):
                 vollog.log(
                     constants.LOGLEVEL_VVVV,
