@@ -69,13 +69,9 @@ class AbstractNetfilter(ABC):
     NF_MAX_HOOKS = LARGEST_HOOK_NUMBER + 1
 
     def __init__(
-        self,
-        context: interfaces.context.ContextInterface,
-        config: interfaces.configuration.HierarchicalDict,
+        self, context: interfaces.context.ContextInterface, kernel_module_name: str
     ):
         self._context = context
-        self._config = config
-        kernel_module_name = self._config["kernel"]
         self.vmlinux = context.modules[kernel_module_name]
         self.layer_name = self.vmlinux.layer_name
 
@@ -106,7 +102,8 @@ class AbstractNetfilter(ABC):
         Yields:
             The kmsg records. Same as _run()
         """
-        vmlinux = context.modules[config["kernel"]]
+        kernel_module_name = config["kernel"]
+        vmlinux = context.modules[kernel_module_name]
 
         implementation_inst = None  # type: ignore
         for subclass in class_subclasses(cls):
@@ -123,7 +120,9 @@ class AbstractNetfilter(ABC):
                 "Netfilter implementation '%s' matches!",
                 subclass.__name__,
             )
-            implementation_inst = subclass(context=context, config=config)
+            implementation_inst = subclass(
+                context=context, kernel_module_name=kernel_module_name
+            )
             # More than one class could be executed for an specific kernel version
             # For instance: Netfilter Ingress hooks
             yield from implementation_inst._run()
