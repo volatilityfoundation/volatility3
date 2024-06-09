@@ -75,16 +75,14 @@ class AbstractNetfilter(ABC):
         self.vmlinux = context.modules[kernel_module_name]
         self.layer_name = self.vmlinux.layer_name
 
+        # Set data sizes
+        self.ptr_size = self.vmlinux.get_type("pointer").size
+        self.list_head_size = self.vmlinux.get_type("list_head").size
+
         modules = lsmod.Lsmod.list_modules(context, kernel_module_name)
         self.handlers = linux.LinuxUtilities.generate_kernel_handler_info(
             context, kernel_module_name, modules
         )
-
-        self._set_data_sizes()
-
-    def _set_data_sizes(self):
-        self.ptr_size = self.vmlinux.get_type("pointer").size
-        self.list_head_size = self.vmlinux.get_type("list_head").size
 
     @classmethod
     def run_all(
