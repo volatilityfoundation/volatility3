@@ -75,13 +75,13 @@ class AbstractNetfilter(ABC):
     ):
         self._context = context
         self._config = config
-        symbol_table = self._config["kernel"]
-        self.vmlinux = context.modules[symbol_table]
+        kernel_module_name = self._config["kernel"]
+        self.vmlinux = context.modules[kernel_module_name]
         self.layer_name = self.vmlinux.layer_name
 
-        modules = lsmod.Lsmod.list_modules(context, symbol_table)
+        modules = lsmod.Lsmod.list_modules(context, kernel_module_name)
         self.handlers = linux.LinuxUtilities.generate_kernel_handler_info(
-            context, symbol_table, modules
+            context, kernel_module_name, modules
         )
 
         self._set_data_sizes()
