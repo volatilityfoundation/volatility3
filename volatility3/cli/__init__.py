@@ -789,8 +789,16 @@ class CommandLine:
                 if self._file.closed:
                     return None
 
-                self._file.close()
                 output_filename = self._get_final_filename()
+
+                # Update the filename, which may have changed if a file with
+                # the same name already existed. This needs to be done before
+                # closing the file, otherwise FileHandlerInterface will raise
+                # an exception. Also, the preferred_filename setter only allows
+                #  a specific set of characters, where '/' is not in that list
+                self.preferred_filename = os.path.basename(output_filename)
+
+                self._file.close()
                 os.rename(self._name, output_filename)
 
         if direct:
