@@ -264,9 +264,10 @@ class ADS(interfaces.plugins.PluginInterface):
                                             disasm = interfaces.renderers.Disassembly(
                                                 content, 0, architecture.lower()
                                             )
+                                        content = format_hints.HexBytes(content)
                                     else:
-                                        content = renderers.NotAvailableValue
-                                        disasm = interfaces.renderers.BaseAbsentValue
+                                        content = renderers.NotAvailableValue()
+                                        disasm = interfaces.renderers.BaseAbsentValue()
 
                                     yield 0, (
                                         format_hints.Hex(attr_data.vol.offset),
@@ -275,7 +276,7 @@ class ADS(interfaces.plugins.PluginInterface):
                                         attr.Attr_Header.AttrType.lookup(),
                                         file_name,
                                         ads_name,
-                                        format_hints.HexBytes(content),
+                                        content,
                                         disasm,
                                     )
                         else:
