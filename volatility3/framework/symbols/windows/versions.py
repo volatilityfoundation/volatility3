@@ -141,6 +141,15 @@ is_win10_15063 = OsDistinguisher(
     ],
 )
 
+is_win10_15063_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0, 15063),
+    fallback_checks=[
+        ("ObHeaderCookie", None, True),
+        ("_HANDLE_TABLE", "HandleCount", False),
+        ("_EPROCESS", "KeepAliveCounter", False),
+    ],
+)
+
 is_win10_16299_or_later = OsDistinguisher(
     version_check=lambda x: x >= (10, 0, 16299),
     fallback_checks=[

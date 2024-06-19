@@ -19,7 +19,7 @@ from volatility3.framework.layers import scanners
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import versions
-from volatility3.framework.symbols.windows.extensions import services
+from volatility3.framework.symbols.windows.extensions import services as services_types
 from volatility3.plugins.windows import poolscanner, pslist, vadyarascan
 from volatility3.plugins.windows.registry import hivelist
 
@@ -140,7 +140,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
             config_path,
             os.path.join("windows", "services"),
             symbol_filename,
-            class_types=services.class_types,
+            class_types=services_types.class_types,
             native_types=native_types,
         )
 
@@ -232,27 +232,43 @@ class SvcScan(interfaces.plugins.PluginInterface):
             for service_key in services
         }
 
-    def _generator(self):
+    def enumerate_vista_or_later_header(
+        self,
+        service_table_name,
+        service_binary_dll_map,
+        proc_layer_name,
+        offset
+    ):
+        if offset % 8:
+            return
+
+        service_header = self.context.object(
+            service_table_name + constants.BANG + "_SERVICE_HEADER",
+            offset=offset,
+            layer_name=proc_layer_name,
+        )
+
+        if not service_header.is_valid():
+            return
+
+        # since we walk the s-list backwards, if we've seen
+        # an object, then we've also seen all objects that
+        # exist before it, thus we can break at that time.
+        for service_record in service_header.ServiceRecord.traverse():
+            service_info = service_binary_dll_map.get(
+                service_record.get_name(),
+                ServiceBinaryInfo(
+                    renderers.UnreadableValue(), renderers.UnreadableValue()
+                ),
+            )
+            yield self.get_record_tuple(service_record, service_info)
+
+    def service_scan(self, service_table_name, service_binary_dll_map, filter_func):
         kernel = self.context.modules[self.config["kernel"]]
-
-        service_table_name = self.create_service_table(
-            self.context, kernel.symbol_table_name, self.config_path
-        )
-
-        # Building the dictionary ahead of time is much better for performance
-        # vs looking up each service's DLL individually.
-        services_key = self._get_service_key(kernel)
-        service_binary_dll_map = (
-            self._get_service_binary_map(services_key)
-            if services_key is not None
-            else {}
-        )
 
         relative_tag_offset = self.context.symbol_space.get_type(
             service_table_name + constants.BANG + "_SERVICE_RECORD"
         ).relative_child_offset("Tag")
-
-        filter_func = pslist.PsList.create_name_filter(["services.exe"])
 
         is_vista_or_later = versions.is_vista_or_later(
             context=self.context, symbol_table=kernel.symbol_table_name
@@ -306,37 +322,42 @@ class SvcScan(interfaces.plugins.PluginInterface):
                             renderers.UnreadableValue(), renderers.UnreadableValue()
                         ),
                     )
-                    yield (
-                        0,
-                        self.get_record_tuple(service_record, service_info),
-                    )
+                    yield self.get_record_tuple(service_record, service_info)
                 else:
-                    service_header = self.context.object(
-                        service_table_name + constants.BANG + "_SERVICE_HEADER",
-                        offset=offset,
-                        layer_name=proc_layer_name,
-                    )
-
-                    if not service_header.is_valid():
-                        continue
-
-                    # since we walk the s-list backwards, if we've seen
-                    # an object, then we've also seen all objects that
-                    # exist before it, thus we can break at that time.
-                    for service_record in service_header.ServiceRecord.traverse():
+                    for service_record in self.enumerate_vista_or_later_header(service_table_name, service_binary_dll_map, proc_layer_name, offset):
                         if service_record in seen:
                             break
                         seen.append(service_record)
-                        service_info = service_binary_dll_map.get(
-                            service_record.get_name(),
-                            ServiceBinaryInfo(
-                                renderers.UnreadableValue(), renderers.UnreadableValue()
-                            ),
-                        )
-                        yield (
-                            0,
-                            self.get_record_tuple(service_record, service_info),
-                        )
+                        yield service_record
+
+
+    def get_prereq_info(self):
+        """
+        Data structures and information needed to analyze service information
+        """
+        kernel = self.context.modules[self.config["kernel"]]
+
+        service_table_name = self.create_service_table(
+            self.context, kernel.symbol_table_name, self.config_path
+        )
+
+        services_key = self._get_service_key(kernel)
+
+        service_binary_dll_map = (
+            self._get_service_binary_map(services_key)
+            if services_key is not None
+            else {}
+        )
+
+        filter_func = pslist.PsList.create_name_filter(["services.exe"])
+
+        return service_table_name, service_binary_dll_map, filter_func
+
+    def _generator(self):
+        service_table_name, service_binary_dll_map, filter_func = self.get_prereq_info()
+
+        for record in self.service_scan(service_table_name, service_binary_dll_map, filter_func):
+            yield (0, record)
 
     def run(self):
         return renderers.TreeGrid(
