@@ -151,12 +151,12 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         """
 
         return lambda x: not (
-            x.is_valid() and
-            x.ActiveThreads > 0 and
-            x.UniqueProcessId != 4 and
-            x.InheritedFromUniqueProcessId != 4 and
-            x.ExitTime.QuadPart == 0 and
-            x.get_handle_count() != renderers.UnreadableValue()
+            x.is_valid()
+            and x.ActiveThreads > 0
+            and x.UniqueProcessId != 4
+            and x.InheritedFromUniqueProcessId != 4
+            and x.ExitTime.QuadPart == 0
+            and x.get_handle_count() != renderers.UnreadableValue()
         )
 
     @classmethod
