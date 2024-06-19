@@ -56,7 +56,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             class_types={
                 "FILE_NAME_ENTRY": mft.MFTFileName,
                 "MFT_ENTRY": mft.MFTEntry,
-                "ATTRIBUTE": mft.MFTAttribute
+                "ATTRIBUTE": mft.MFTAttribute,
             },
         )
 
