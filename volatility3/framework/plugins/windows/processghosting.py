@@ -33,11 +33,12 @@ class ProcessGhosting(interfaces.plugins.PluginInterface):
         ]
 
     def _generator(self, procs):
-        # determine if we're on a 32 or 64 bit kernel
         kernel = self.context.modules[self.config["kernel"]]
 
         if not kernel.get_type("_EPROCESS").has_member("ImageFilePointer"):
-            vollog.warning("This plugin only supports Windows 10 builds when the ImageFilePointer member of _EPROCESS is present")
+            vollog.warning(
+                "This plugin only supports Windows 10 builds when the ImageFilePointer member of _EPROCESS is present"
+            )
             return
 
         for proc in procs:
@@ -72,7 +73,7 @@ class ProcessGhosting(interfaces.plugins.PluginInterface):
                         process_name,
                         format_hints.Hex(file_object),
                         delete_pending,
-                        path
+                        path,
                     ),
                 )
 
