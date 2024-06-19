@@ -53,7 +53,11 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             config_path=self.config_path,
             sub_path="windows",
             filename="mft",
-            class_types={"FILE_NAME_ENTRY": mft.MFTFileName, "MFT_ENTRY": mft.MFTEntry, "ATTRIBUTE": mft.MFTAttribute},
+            class_types={
+                "FILE_NAME_ENTRY": mft.MFTFileName,
+                "MFT_ENTRY": mft.MFTEntry,
+                "ATTRIBUTE": mft.MFTAttribute
+            },
         )
 
         # get each of the individual Field Sets
@@ -185,6 +189,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             self._generator(),
         )
 
+
 class ADS(MFTScan):
     """Scans for Alternate Data Stream"""
 
@@ -242,7 +247,7 @@ class ADS(MFTScan):
     def parse_data_records(self, mft_record, attr):
         rec_num = mft_record.RecordNumber
         if rec_num not in self._record_map:
-                                        # file name, DATA count, offset
+            # file name, DATA count, offset
             self._record_map[rec_num] = [renderers.NotAvailableValue(), 0, None]
 
         if attr.Attr_Header.AttrType.lookup() == "FILE_NAME":
@@ -267,15 +272,11 @@ class ADS(MFTScan):
                 display_data = True
 
             if display_data:
-                for record in self._parse_data_record(
-                    mft_record, attr
-                ):
+                for record in self._parse_data_record(mft_record, attr):
                     yield record
 
     def _generator(self):
-        for record in self.enumerate_mft_records(
-            self.parse_data_records
-        ):
+        for record in self.enumerate_mft_records(self.parse_data_records):
             yield record
 
     def run(self):
@@ -291,6 +292,7 @@ class ADS(MFTScan):
             ],
             self._generator(),
         )
+
 
 class ResidentData(ADS):
     """Scans for Alternate Data Stream"""
@@ -315,4 +317,3 @@ class ResidentData(ADS):
             ],
             self._generator(),
         )
-
