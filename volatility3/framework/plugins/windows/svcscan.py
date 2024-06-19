@@ -233,11 +233,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
         }
 
     def enumerate_vista_or_later_header(
-        self,
-        service_table_name,
-        service_binary_dll_map,
-        proc_layer_name,
-        offset
+        self, service_table_name, service_binary_dll_map, proc_layer_name, offset
     ):
         if offset % 8:
             return
@@ -324,12 +320,16 @@ class SvcScan(interfaces.plugins.PluginInterface):
                     )
                     yield self.get_record_tuple(service_record, service_info)
                 else:
-                    for service_record in self.enumerate_vista_or_later_header(service_table_name, service_binary_dll_map, proc_layer_name, offset):
+                    for service_record in self.enumerate_vista_or_later_header(
+                        service_table_name,
+                        service_binary_dll_map,
+                        proc_layer_name,
+                        offset
+                    ):
                         if service_record in seen:
                             break
                         seen.append(service_record)
                         yield service_record
-
 
     def get_prereq_info(self):
         """
@@ -356,7 +356,9 @@ class SvcScan(interfaces.plugins.PluginInterface):
     def _generator(self):
         service_table_name, service_binary_dll_map, filter_func = self.get_prereq_info()
 
-        for record in self.service_scan(service_table_name, service_binary_dll_map, filter_func):
+        for record in self.service_scan(
+            service_table_name, service_binary_dll_map, filter_func
+        ):
             yield (0, record)
 
     def run(self):

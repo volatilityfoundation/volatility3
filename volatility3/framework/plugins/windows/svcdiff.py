@@ -48,27 +48,36 @@ class SvcDiff(svclist.SvcList, svcscan.SvcScan):
         """
         kernel = self.context.modules[self.config["kernel"]]
 
-        if not symbols.symbol_table_is_64bit(self.context, kernel.symbol_table_name) or \
-           not versions.is_win10_15063_or_later(context=self.context, symbol_table=kernel.symbol_table_name):
-            vollog.info("This plugin only supports Windows 10 version 15063+ 64bit Windows memory samples")
+        if not symbols.symbol_table_is_64bit(
+            self.context, kernel.symbol_table_name
+        ) or not versions.is_win10_15063_or_later(
+            context=self.context, symbol_table=kernel.symbol_table_name
+        ):
+            vollog.info(
+                "This plugin only supports Windows 10 version 15063+ 64bit Windows memory samples"
+            )
             return
 
         from_scan = set()
         from_list = set()
         records = {}
-        
+
         service_table_name, service_binary_dll_map, filter_func = self.get_prereq_info()
 
         # collect unique service names from scanning
-        for service in self.service_scan(service_table_name, service_binary_dll_map, filter_func):
+        for service in self.service_scan(
+            service_table_name, service_binary_dll_map, filter_func
+        ):
             from_scan.add(service[6])
             records[service[6]] = service
 
         # collect services from listing walking
-        for service in self.service_list(service_table_name, service_binary_dll_map, filter_func):
+        for service in self.service_list(
+            service_table_name, service_binary_dll_map, filter_func
+        ):
             from_list.add(service[6])
 
         # report services found from scanning but not list walking
-        for hidden_service in from_scan-from_list:
+        for hidden_service in from_scan - from_list:
             yield (0, records[hidden_service])
 
