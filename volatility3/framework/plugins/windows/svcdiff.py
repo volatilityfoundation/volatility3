@@ -20,6 +20,7 @@ from volatility3.framework.symbols.windows import versions
 
 vollog = logging.getLogger(__name__)
 
+
 class SvcDiff(svclist.SvcList, svcscan.SvcScan):
     """Compares services found through list walking versus scanning to find rootkits"""
 
@@ -80,4 +81,3 @@ class SvcDiff(svclist.SvcList, svcscan.SvcScan):
         # report services found from scanning but not list walking
         for hidden_service in from_scan - from_list:
             yield (0, records[hidden_service])
-
