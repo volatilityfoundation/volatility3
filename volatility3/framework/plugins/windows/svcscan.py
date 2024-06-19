@@ -324,7 +324,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
                         service_table_name,
                         service_binary_dll_map,
                         proc_layer_name,
-                        offset
+                        offset,
                     ):
                         if service_record in seen:
                             break

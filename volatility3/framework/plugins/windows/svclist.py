@@ -96,5 +96,7 @@ class SvcList(svcscan.SvcScan):
     def _generator(self):
         service_table_name, service_binary_dll_map, filter_func = self.get_prereq_info()
 
-        for record in self.service_list(service_table_name, service_binary_dll_map, filter_func):
+        for record in self.service_list(
+            service_table_name, service_binary_dll_map, filter_func
+        ):
             yield (0, record)
