@@ -22,6 +22,10 @@ class Modules(interfaces.plugins.PluginInterface):
     _required_framework_version = (2, 0, 0)
     _version = (1, 1, 0)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._enumeration_method = self.list_modules
+
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
@@ -42,6 +46,11 @@ class Modules(interfaces.plugins.PluginInterface):
                 default=False,
                 optional=True,
             ),
+            requirements.IntRequirement(
+                name="base",
+                description="Extract a single module with BASE address",
+                optional=True,
+            ),
             requirements.StringRequirement(
                 name="name",
                 description="module name/sub string",
@@ -50,49 +59,74 @@ class Modules(interfaces.plugins.PluginInterface):
             ),
         ]
 
+    def dump_module(self, session_layers, pe_table_name, mod):
+        session_layer_name = self.find_session_layer(
+            self.context, session_layers, mod.DllBase
+        )
+        file_output = f"Cannot find a viable session layer for {mod.DllBase:#x}"
+        if session_layer_name:
+            file_handle = dlllist.DllList.dump_pe(
+                self.context,
+                pe_table_name,
+                mod,
+                self.open,
+                layer_name=session_layer_name,
+            )
+            file_output = "Error outputting file"
+            if file_handle:
+                file_output = file_handle.preferred_filename
+
+        return file_output
+
+    def process_module(self, session_layers, pe_table_name, mod):
+        if self.config["base"] and self.config["base"] != mod.DllBase:
+            return None
+
+        try:
+            BaseDllName = mod.BaseDllName.get_string()
+        except exceptions.InvalidAddressException:
+            BaseDllName = ""
+
+        if self.config["name"] and self.config["name"] not in BaseDllName:
+            return None
+
+        try:
+            FullDllName = mod.FullDllName.get_string()
+        except exceptions.InvalidAddressException:
+            FullDllName = ""
+
+        file_output = "Disabled"
+        if self.config["dump"]:
+            file_output = self.dump_module(session_layers, pe_table_name, mod)
+
+        return (
+            format_hints.Hex(mod.vol.offset),
+            format_hints.Hex(mod.DllBase),
+            format_hints.Hex(mod.SizeOfImage),
+            BaseDllName,
+            FullDllName,
+            file_output,
+        )
+
     def _generator(self):
         kernel = self.context.modules[self.config["kernel"]]
+
         pe_table_name = intermed.IntermediateSymbolTable.create(
             self.context, self.config_path, "windows", "pe", class_types=pe.class_types
         )
 
-        for mod in self.list_modules(
+        session_layers = list(
+            self.get_session_layers(
+                self.context, kernel.layer_name, kernel.symbol_table_name
+            )
+        )
+
+        for mod in self._enumeration_method(
             self.context, kernel.layer_name, kernel.symbol_table_name
         ):
-            try:
-                BaseDllName = mod.BaseDllName.get_string()
-            except exceptions.InvalidAddressException:
-                BaseDllName = ""
-
-            try:
-                FullDllName = mod.FullDllName.get_string()
-            except exceptions.InvalidAddressException:
-                FullDllName = ""
-
-            if self.config["name"] and self.config["name"] not in BaseDllName:
-                continue
-
-            file_output = "Disabled"
-            if self.config["dump"]:
-                file_handle = dlllist.DllList.dump_pe(
-                    self.context, pe_table_name, mod, self.open
-                )
-                file_output = "Error outputting file"
-                if file_handle:
-                    file_handle.close()
-                    file_output = file_handle.preferred_filename
-
-            yield (
-                0,
-                (
-                    format_hints.Hex(mod.vol.offset),
-                    format_hints.Hex(mod.DllBase),
-                    format_hints.Hex(mod.SizeOfImage),
-                    BaseDllName,
-                    FullDllName,
-                    file_output,
-                ),
-            )
+            record = self.process_module(session_layers, pe_table_name, mod)
+            if record:
+                yield (0, record)
 
     @classmethod
     def get_session_layers(
