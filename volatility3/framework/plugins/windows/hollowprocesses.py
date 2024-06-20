@@ -1,4 +1,4 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
@@ -17,14 +17,14 @@ VadInfo = NamedTuple(
     [
         ("protection", str),
         ("path", str),
-   ],
+    ],
 )
 
 DLLInfo = NamedTuple(
     "DLLInfo",
     [
         ("path", str),
-   ],
+    ],
 )
 
 class HollowProcesses(interfaces.plugins.PluginInterface):
@@ -111,15 +111,21 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
     def _check_load_address(self, proc, _, __):
         image_base = self._get_image_base(proc)
         if image_base is not None and image_base != proc.SectionBaseAddress:
-            yield "The ImageBaseAddress reported from the PEB ({:#x}) does not match the process SectionBaseAddress ({:#x})".format(image_base, proc.SectionBaseAddress)
+            yield "The ImageBaseAddress reported from the PEB ({:#x}) does not match the process SectionBaseAddress ({:#x})".format(
+                image_base, proc.SectionBaseAddress
+            )
 
     def _check_exe_protection(self, proc, vads, __):
         base = proc.SectionBaseAddress
 
         if base not in vads:
-            yield "There is no VAD starting at the base address of the process executable ({:#x})".format(base)
+            yield "There is no VAD starting at the base address of the process executable ({:#x})".format(
+                base
+            )
         elif vads[base].protection != "PAGE_EXECUTE_WRITECOPY":
-            yield "Unexpected protection ({}) for VAD hosting the process executable ({:#x}) with path {}".format(vads[base].protection, base, vads[base].path)
+            yield "Unexpected protection ({}) for VAD hosting the process executable ({:#x}) with path {}".format(
+                vads[base].protection, base, vads[base].path
+            )
 
     def _check_dlls_protection(self, _, vads, dlls):
         for dll_base in dlls:
@@ -128,10 +134,16 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
                 continue
 
             if vads[dll_base].protection != "PAGE_EXECUTE_WRITECOPY":
-                yield "Unexpected protection ({}) for DLL in the PEB's load order list ({:#x}) with path {}".format(vads[dll_base].protection, dll_base, dlls[dll_base].path)
+                yield "Unexpected protection ({}) for DLL in the PEB's load order list ({:#x}) with path {}".format(
+                    vads[dll_base].protection, dll_base, dlls[dll_base].path
+                )
 
     def _generator(self, procs):
-        checks = [self._check_load_address, self._check_exe_protection, self._check_dlls_protection]
+        checks = [
+            self._check_load_address,
+            self._check_exe_protection,
+            self._check_dlls_protection
+        ]
 
         for proc in procs:
             proc_name = utility.array_to_string(proc.ImageFileName)
