@@ -190,7 +190,6 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
                                     )
                                 )
                                 seg_first_bit = None
-            else:
                 last_bit_seen = outer_index * 32 + 31
 
             if seg_first_bit is not None:
