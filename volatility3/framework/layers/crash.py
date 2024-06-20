@@ -4,7 +4,7 @@
 import contextlib
 import logging
 import struct
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.layers import segmented
@@ -30,7 +30,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     VALIDDUMP = 0x504D5544
 
     crashdump_json = "crash"
-    supported_dumptypes = [0x01, 0x05]  # we need 0x5 for 32-bit bitmaps
+    supported_dumptypes = [0x01, 0x02, 0x05, 0x06]  # we need 0x5 for 32-bit bitmaps
     dump_header_name = "_DUMP_HEADER"
 
     _magic_struct = struct.Struct("<II")
@@ -45,10 +45,13 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         self._page_size = 0x1000
         # no try/except needed. as seen in vmware.py
         self._base_layer = self.config["base_layer"]
-
         # Create a custom SymbolSpace
         self._crash_table_name = intermed.IntermediateSymbolTable.create(
-            context, self._config_path, "windows", self.crashdump_json
+            context,
+            self._config_path,
+            "windows",
+            self.crashdump_json,
+            class_types=crash.class_types_unshared,
         )
 
         # the _SUMMARY_DUMP is shared between 32- and 64-bit
@@ -57,7 +60,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             self._config_path,
             "windows",
             "crash_common",
-            class_types=crash.class_types,
+            class_types=crash.class_types_shared,
         )
 
         # Check Header
@@ -86,6 +89,16 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         # Then call the super, which will call load_segments (which needs the base_layer before it'll work)
         super().__init__(context, config_path, name)
 
+        self._metadata["page_map_offset"] = self.dtb
+        self._metadata["os"] = "Windows"
+        if header.has_member("PaeEnabled"):
+            self._metadata["pae"] = header.PaeEnabled != 0
+
+        if self.dump_header_name == "_DUMP_HEADER64":
+            self._metadata["architecture"] = "Intel64"
+        else:
+            self._metadata["architecture"] = "Intel32"
+
     def get_header(self) -> interfaces.objects.ObjectInterface:
         return self.context.object(
             self._crash_table_name + constants.BANG + self.dump_header_name,
@@ -94,103 +107,122 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         )
 
     def get_summary_header(self) -> interfaces.objects.ObjectInterface:
+        struct_name = "_SUMMARY_DUMP"
+        table_name = self._crash_common_table_name
+        if self.dump_type in [0x02]:
+            struct_name = "_SUMMARY_DUMP_OLD"
+            table_name = self._crash_table_name
+
         return self.context.object(
-            self._crash_common_table_name + constants.BANG + "_SUMMARY_DUMP",
+            table_name + constants.BANG + struct_name,
             offset=0x1000 * self.headerpages,
             layer_name=self._base_layer,
         )
 
+    def handle_run_based_dump(self) -> List[Tuple[int, int, int, int]]:
+        segments = []
+        header = self.context.object(
+            self._crash_table_name + constants.BANG + self.dump_header_name,
+            offset=0,
+            layer_name=self._base_layer,
+        )
+
+        offset = self.headerpages
+        header.PhysicalMemoryBlockBuffer.Run.count = (
+            header.PhysicalMemoryBlockBuffer.NumberOfRuns
+        )
+        for run in header.PhysicalMemoryBlockBuffer.Run:
+            segments.append(
+                (
+                    run.BasePage * 0x1000,
+                    offset * 0x1000,
+                    run.PageCount * 0x1000,
+                    run.PageCount * 0x1000,
+                )
+            )
+            offset += run.PageCount
+
+        return segments
+
+    def handle_summary_dump(self) -> List[Tuple[int, int, int, int]]:
+        segments = []
+        summary_header = self.get_summary_header()
+        first_bit = None  # First bit in a run
+        first_offset = 0  # File offset of first bit
+        last_bit_seen = 0  # Most recent bit processed
+        offset = summary_header.HeaderSize  # Size of file headers
+        buffer_char = summary_header.get_buffer_char()
+        buffer_long = summary_header.get_buffer_long()
+
+        for outer_index in range(0, ((summary_header.BitmapSize + 31) // 32)):
+            if buffer_long[outer_index] == 0:
+                if first_bit is not None:
+                    last_bit = ((outer_index - 1) * 32) + 31
+                    segment_length = (last_bit - first_bit + 1) * 0x1000
+                    segments.append(
+                        (
+                            first_bit * 0x1000,
+                            first_offset,
+                            segment_length,
+                            segment_length,
+                        )
+                    )
+                    first_bit = None
+            elif buffer_long[outer_index] == 0xFFFFFFFF:
+                if first_bit is None:
+                    first_offset = offset
+                    first_bit = outer_index * 32
+                offset = offset + (32 * 0x1000)
+            else:
+                for inner_index in range(0, 32):
+                    bit_addr = outer_index * 32 + inner_index
+                    if (buffer_char[bit_addr >> 3] >> (bit_addr & 0x7)) & 1:
+                        if first_bit is None:
+                            first_offset = offset
+                            first_bit = bit_addr
+                        offset = offset + 0x1000
+                    else:
+                        if first_bit is not None:
+                            segment_length = ((bit_addr - 1) - first_bit + 1) * 0x1000
+                            segments.append(
+                                (
+                                    first_bit * 0x1000,
+                                    first_offset,
+                                    segment_length,
+                                    segment_length,
+                                )
+                            )
+                            first_bit = None
+            last_bit_seen = (outer_index * 32) + 31
+
+        if first_bit is not None:
+            segment_length = (last_bit_seen - first_bit + 1) * 0x1000
+            segments.append(
+                (first_bit * 0x1000, first_offset, segment_length, segment_length)
+            )
+
+        return segments
+
     def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer."""
+        type_to_handler_dict = {
+            0x01: self.handle_run_based_dump,
+            0x02: self.handle_summary_dump,
+            0x05: self.handle_summary_dump,
+            0x06: self.handle_summary_dump,
+        }
 
-        segments = []
-
-        if self.dump_type == 0x1:
-            header = self.context.object(
-                self._crash_table_name + constants.BANG + self.dump_header_name,
-                offset=0,
-                layer_name=self._base_layer,
-            )
-
-            offset = self.headerpages
-            header.PhysicalMemoryBlockBuffer.Run.count = (
-                header.PhysicalMemoryBlockBuffer.NumberOfRuns
-            )
-            for run in header.PhysicalMemoryBlockBuffer.Run:
-                segments.append(
-                    (
-                        run.BasePage * 0x1000,
-                        offset * 0x1000,
-                        run.PageCount * 0x1000,
-                        run.PageCount * 0x1000,
-                    )
-                )
-                offset += run.PageCount
-
-        elif self.dump_type == 0x05:
-            summary_header = self.get_summary_header()
-            first_bit = None  # First bit in a run
-            first_offset = 0  # File offset of first bit
-            last_bit_seen = 0  # Most recent bit processed
-            offset = summary_header.HeaderSize  # Size of file headers
-            buffer_char = summary_header.get_buffer_char()
-            buffer_long = summary_header.get_buffer_long()
-
-            for outer_index in range(0, ((summary_header.BitmapSize + 31) // 32)):
-                if buffer_long[outer_index] == 0:
-                    if first_bit is not None:
-                        last_bit = ((outer_index - 1) * 32) + 31
-                        segment_length = (last_bit - first_bit + 1) * 0x1000
-                        segments.append(
-                            (
-                                first_bit * 0x1000,
-                                first_offset,
-                                segment_length,
-                                segment_length,
-                            )
-                        )
-                        first_bit = None
-                elif buffer_long[outer_index] == 0xFFFFFFFF:
-                    if first_bit is None:
-                        first_offset = offset
-                        first_bit = outer_index * 32
-                    offset = offset + (32 * 0x1000)
-                else:
-                    for inner_index in range(0, 32):
-                        bit_addr = outer_index * 32 + inner_index
-                        if (buffer_char[bit_addr >> 3] >> (bit_addr & 0x7)) & 1:
-                            if first_bit is None:
-                                first_offset = offset
-                                first_bit = bit_addr
-                            offset = offset + 0x1000
-                        else:
-                            if first_bit is not None:
-                                segment_length = (
-                                    (bit_addr - 1) - first_bit + 1
-                                ) * 0x1000
-                                segments.append(
-                                    (
-                                        first_bit * 0x1000,
-                                        first_offset,
-                                        segment_length,
-                                        segment_length,
-                                    )
-                                )
-                                first_bit = None
-                last_bit_seen = (outer_index * 32) + 31
-
-            if first_bit is not None:
-                segment_length = (last_bit_seen - first_bit + 1) * 0x1000
-                segments.append(
-                    (first_bit * 0x1000, first_offset, segment_length, segment_length)
-                )
-        else:
+        if self.dump_type not in type_to_handler_dict:
             vollog.log(
                 constants.LOGLEVEL_VVVV, f"unsupported dump format 0x{self.dump_type:x}"
             )
             raise WindowsCrashDumpFormatException(
                 self.name, f"unsupported dump format 0x{self.dump_type:x}"
             )
+
+        segments = []
+        type_handler = type_to_handler_dict[self.dump_type]
+        segments = type_handler()
 
         if len(segments) == 0:
             raise WindowsCrashDumpFormatException(
@@ -199,12 +231,20 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         else:
             # report the segments for debugging. this is valuable for dev/troubleshooting but
             # not important enough for a dedicated plugin.
-            for idx, (start_position, mapped_offset, length, _) in enumerate(segments):
+            if len(segments) < 25:
+                for idx, (start_position, mapped_offset, length, _) in enumerate(
+                    segments
+                ):
+                    vollog.log(
+                        constants.LOGLEVEL_VVVV,
+                        "Segment {}: Position {:#x} Offset {:#x} Length {:#x}".format(
+                            idx, start_position, mapped_offset, length
+                        ),
+                    )
+            else:
                 vollog.log(
                     constants.LOGLEVEL_VVVV,
-                    "Segment {}: Position {:#x} Offset {:#x} Length {:#x}".format(
-                        idx, start_position, mapped_offset, length
-                    ),
+                    f"segments has {len(segments)} entries. Not logging for performance",
                 )
 
         self._segments = segments
@@ -246,7 +286,7 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
     VALIDDUMP = 0x34365544
     crashdump_json = "crash64"
     dump_header_name = "_DUMP_HEADER64"
-    supported_dumptypes = [0x1, 0x05]
+    supported_dumptypes = [0x1, 0x02, 0x05, 0x06]
     headerpages = 2
 
 
