@@ -27,6 +27,7 @@ DLLInfo = NamedTuple(
     ],
 )
 
+
 class HollowProcesses(interfaces.plugins.PluginInterface):
     """Lists hollowed processes"""
 
@@ -142,7 +143,7 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
         checks = [
             self._check_load_address,
             self._check_exe_protection,
-            self._check_dlls_protection
+            self._check_dlls_protection,
         ]
 
         for proc in procs:
