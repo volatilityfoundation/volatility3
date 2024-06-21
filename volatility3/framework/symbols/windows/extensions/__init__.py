@@ -1045,7 +1045,6 @@ class KTIMER(objects.StructType):
                 object_type="unsigned long long",
                 offset=ntkrnlmp.get_symbol("KiWaitNever").address,
             )
-
             wait_always = ntkrnlmp.object(
                 object_type="unsigned long long",
                 offset=ntkrnlmp.get_symbol("KiWaitAlways").address,

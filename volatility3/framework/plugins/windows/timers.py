@@ -7,7 +7,6 @@ import logging
 from typing import Iterator, List, Tuple, Iterable
 
 from volatility3.framework import (
-    exceptions,
     layers,
     renderers,
     interfaces,
