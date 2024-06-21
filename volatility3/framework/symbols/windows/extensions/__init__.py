@@ -1040,7 +1040,7 @@ class KTIMER(objects.StructType):
             native_layer_name=self.vol.native_layer_name,
         )
 
-        try:
+        if ntkrnlmp.has_symbol("KiWaitNever") and ntkrnlmp.has_symbol("KiWaitAlways"):
             wait_never = ntkrnlmp.object(
                 object_type="unsigned long long",
                 offset=ntkrnlmp.get_symbol("KiWaitNever").address,
@@ -1049,13 +1049,7 @@ class KTIMER(objects.StructType):
                 object_type="unsigned long long",
                 offset=ntkrnlmp.get_symbol("KiWaitAlways").address,
             )
-        except exceptions.SymbolError:
-            wait_never = None
-            wait_always = None
 
-        if wait_never is None or wait_always is None:
-            return self.Dpc
-        else:
             low_byte = (wait_never) & 0xFF
             entry = utility.rol(self.get_raw_dpc() ^ wait_never, low_byte)
             swap_xor = self.vol.offset | 0xFFFF000000000000
@@ -1072,6 +1066,8 @@ class KTIMER(objects.StructType):
                 layer_name=self.vol.layer_name,
                 offset=dpc,
             )
+        else:
+            return self.Dpc
 
 
 class KTHREAD(objects.StructType):
