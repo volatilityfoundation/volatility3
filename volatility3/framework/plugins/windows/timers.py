@@ -6,7 +6,14 @@ import logging
 
 from typing import Iterator, List, Tuple, Iterable
 
-from volatility3.framework import exceptions, layers, renderers, interfaces, constants, symbols
+from volatility3.framework import (
+    exceptions,
+    layers,
+    renderers,
+    interfaces,
+    constants,
+    symbols,
+)
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
@@ -117,9 +124,7 @@ class Timers(interfaces.plugins.PluginInterface):
 
         if versions.is_windows_7(
             context=context, symbol_table=symbol_table
-        ) or versions.is_windows_8_or_later(
-            context=context, symbol_table=symbol_table
-        ):
+        ) or versions.is_windows_8_or_later(context=context, symbol_table=symbol_table):
             # Starting with Windows 7, there is no more KiTimerTableListHead. The list is
             # at _KPCR.PrcbData.TimerTable.TimerEntries
             # See http://pastebin.com/FiRsGW3f
@@ -143,11 +148,11 @@ class Timers(interfaces.plugins.PluginInterface):
 
         elif versions.is_xp_or_2003(
             context=context, symbol_table=symbol_table
-        ) or versions.is_vista_or_later(
-            context=context, symbol_table=symbol_table
-        ):
+        ) or versions.is_vista_or_later(context=context, symbol_table=symbol_table):
             is_64bit = symbols.symbol_table_is_64bit(context, symbol_table)
-            if is_64bit or versions.is_vista_or_later(context=context, symbol_table=symbol_table):
+            if is_64bit or versions.is_vista_or_later(
+                context=context, symbol_table=symbol_table
+            ):
                 # On XP x64, Windows 2003 SP1-SP2, and Vista SP0-SP2, KiTimerTableListHead
                 # is an array of 512 _KTIMER_TABLE_ENTRY structs.
                 array_size = 512
@@ -171,7 +176,6 @@ class Timers(interfaces.plugins.PluginInterface):
 
         else:
             raise NotImplementedError("This version of Windows is not supported!")
-
 
     def _generator(self) -> Iterator[Tuple]:
         kernel = self.context.modules[self.config["kernel"]]
@@ -247,7 +251,6 @@ class Timers(interfaces.plugins.PluginInterface):
                         renderers.NotAvailableValue(),
                     ),
                 )
-
 
     def run(self):
         return renderers.TreeGrid(
