@@ -152,7 +152,7 @@ class NonLinearlySegmentedLayer(
             raise ValueError("SegmentedLayer must contain some segments")
         if self._maxaddr is None:
             mapped, _, length, _ = self._segments[-1]
-            self._maxaddr = mapped + length
+            self._maxaddr = mapped + length - 1
         return self._maxaddr
 
     @property
