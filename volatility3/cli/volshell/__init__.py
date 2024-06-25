@@ -11,7 +11,7 @@ import sys
 import volatility3.plugins
 import volatility3.symbols
 from volatility3 import cli, framework
-from volatility3.cli.volshell import generic, linux, mac, windows
+from volatility3.cli.volshell import freebsd, generic, linux, mac, windows
 from volatility3.framework import (
     automagic,
     constants,
@@ -167,6 +167,7 @@ class VolShell(cli.CommandLine):
             action="store_true",
             help="Run a Windows volshell",
         )
+        os_specific.add_argument("--freebsd", default = False, action = "store_true", help = "Run a Freebsd volshell")
         os_specific.add_argument(
             "-l",
             "--linux",
@@ -285,6 +286,8 @@ class VolShell(cli.CommandLine):
         plugin = generic.Volshell
         if args.windows:
             plugin = windows.Volshell
+        if args.freebsd:
+            plugin = freebsd.Volshell
         if args.linux:
             plugin = linux.Volshell
         if args.mac:
