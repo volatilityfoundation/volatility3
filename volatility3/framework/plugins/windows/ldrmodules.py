@@ -1,3 +1,9 @@
+# This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
+#
+
+import logging
+
 from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
@@ -5,12 +11,14 @@ from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
 from volatility3.plugins.windows import pslist, vadinfo
 
+vollog = logging.getLogger(__name__)
+
 
 class LdrModules(interfaces.plugins.PluginInterface):
     """Lists the loaded modules in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls):
@@ -71,7 +79,11 @@ class LdrModules(interfaces.plugins.PluginInterface):
                     # Filter out VADs that do not start with a MZ header
                     if dos_header.e_magic != 0x5A4D:
                         continue
-                except exceptions.PagedInvalidAddressException:
+                except exceptions.InvalidAddressException:
+                    vollog.log(
+                        constants.LOGLEVEL_VVVV,
+                        f"Skipping vad at {hex(dos_header.vol.offset)} due to InvalidAddressException",
+                    )
                     continue
 
                 mapped_files[vad.get_start()] = vad.get_file_name()

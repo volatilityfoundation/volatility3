@@ -69,12 +69,24 @@ class Intel(linear.LinearlyMappedLayer):
 
     @classproperty
     @functools.lru_cache()
+    def page_shift(cls) -> int:
+        """Page shift for the intel memory layers."""
+        return cls._page_size_in_bits
+
+    @classproperty
+    @functools.lru_cache()
     def page_size(cls) -> int:
         """Page size for the intel memory layers.
 
         All Intel layers work on 4096 byte pages
         """
         return 1 << cls._page_size_in_bits
+
+    @classproperty
+    @functools.lru_cache()
+    def page_mask(cls) -> int:
+        """Page mask for the intel memory layers."""
+        return ~(cls.page_size - 1)
 
     @classproperty
     @functools.lru_cache()

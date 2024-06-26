@@ -38,7 +38,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         # Yara Rule to scan for MFT Header Signatures
         rules = yarascan.YaraScan.process_yara_options(
-            {"yara_rules": "/FILE0|FILE\*|BAAD/"}
+            {"yara_rules": "/FILE0|FILE\\*|BAAD/"}
         )
 
         # Read in the Symbol File
@@ -197,7 +197,7 @@ class ADS(interfaces.plugins.PluginInterface):
 
         # Yara Rule to scan for MFT Header Signatures
         rules = yarascan.YaraScan.process_yara_options(
-            {"yara_rules": "/FILE0|FILE\*|BAAD/"}
+            {"yara_rules": "/FILE0|FILE\\*|BAAD/"}
         )
 
         # Read in the Symbol File
@@ -264,9 +264,10 @@ class ADS(interfaces.plugins.PluginInterface):
                                             disasm = interfaces.renderers.Disassembly(
                                                 content, 0, architecture.lower()
                                             )
+                                        content = format_hints.HexBytes(content)
                                     else:
-                                        content = renderers.NotAvailableValue
-                                        disasm = interfaces.renderers.BaseAbsentValue
+                                        content = renderers.NotAvailableValue()
+                                        disasm = interfaces.renderers.BaseAbsentValue()
 
                                     yield 0, (
                                         format_hints.Hex(attr_data.vol.offset),
@@ -275,7 +276,7 @@ class ADS(interfaces.plugins.PluginInterface):
                                         attr.Attr_Header.AttrType.lookup(),
                                         file_name,
                                         ads_name,
-                                        format_hints.HexBytes(content),
+                                        content,
                                         disasm,
                                     )
                         else:

@@ -83,11 +83,11 @@ class PsList(interfaces.plugins.PluginInterface):
         cls, task: interfaces.objects.ObjectInterface, decorate_comm: bool = False
     ) -> Tuple[int, int, int, str]:
         """Extract the fields needed for the final output
+
         Args:
             task: A task object from where to get the fields.
-            decorate_comm: If True, it decorates the comm string of
-                            - User threads: in curly brackets,
-                            - Kernel threads: in square brackets
+            decorate_comm: If True, it decorates the comm string of user threads in curly brackets,
+                           and of Kernel threads in square brackets.
                            Defaults to False.
         Returns:
             A tuple with the fields to show in the plugin output.
@@ -142,6 +142,8 @@ class PsList(interfaces.plugins.PluginInterface):
                         file_output = str(file_handle.preferred_filename)
                         file_handle.close()
                     break
+            else:
+                file_output = "VMA start matching task start_code not found"
         return file_output
 
     def _generator(
