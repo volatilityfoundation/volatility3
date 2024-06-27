@@ -336,7 +336,6 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
             )
             yield result
 
-
     def generate_timeline(self):
         self._reg_table_name = intermed.IntermediateSymbolTable.create(
             self.context, self._config_path, "windows", "registry"
@@ -345,7 +344,9 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
         for row in self._generator():
             _depth, row_data = row
             # check the name and the timestamp to not be empty
-            if isinstance(row_data[5], str) and not isinstance(row_data[10], renderers.NotApplicableValue):
+            if isinstance(row_data[5], str) and not isinstance(
+                row_data[10], renderers.NotApplicableValue
+            ):
                 description = f"UserAssist: {row_data[5]} {row_data[2]} ({row_data[7]})"
                 yield (description, timeliner.TimeLinerType.MODIFIED, row_data[10])
 
