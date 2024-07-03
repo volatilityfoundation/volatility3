@@ -50,13 +50,13 @@ class PEDump(interfaces.plugins.PluginInterface):
             ),
         ]
 
-    def _write_pe(self, pe_table_name, layer_name, proc_offset, pid):
+    def _dump_pe(self, pe_table_name, layer_name, proc_offset, pid, base):
         try:
             file_handle = self.open(
                 "PE.{:#x}.{:d}.{:#x}.dmp".format(
                     proc_offset,
                     pid,
-                    self.config["base"],
+                    base,
                 )
             )
 
@@ -77,23 +77,25 @@ class PEDump(interfaces.plugins.PluginInterface):
         ) as excp:
             vollog.debug(f"Unable to dump dll at offset {self.config['base']}: {excp}")
             return None
+        finally:
+            file_handle.close()
 
-        file_handle.close()
         return file_handle.preferred_filename
 
-    def _dump_kernel(self, _, pe_table_name, session_layers):
+    def _dump_kernel(self, kernel, pe_table_name, base):
+        session_layers = modules.Modules.get_session_layers(
+            self.context, kernel.layer_name, kernel.symbol_table_name
+        )
+
         session_layer_name = modules.Modules.find_session_layer(
-            self.context, session_layers, self.config["base"]
+            self.context, session_layers, base
         )
 
         if session_layer_name:
             system_pid = 4
 
-            file_output = self._write_pe(
-                pe_table_name,
-                session_layer_name,
-                0,
-                system_pid,
+            file_output = self._dump_pe(
+                pe_table_name, session_layer_name, 0, system_pid, base
             )
 
             if file_output:
@@ -103,9 +105,8 @@ class PEDump(interfaces.plugins.PluginInterface):
                 "Unable to find a session layer with the provided base address mapped in the kernel."
             )
 
-    def _dump_processes(self, kernel, pe_table_name, _):
+    def _dump_processes(self, kernel, pe_table_name, base):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
-        kernel = self.context.modules[self.config["kernel"]]
 
         for proc in pslist.PsList.list_processes(
             context=self.context,
@@ -121,11 +122,8 @@ class PEDump(interfaces.plugins.PluginInterface):
             )
             proc_layer_name = proc.add_process_layer()
 
-            file_output = self._write_pe(
-                pe_table_name,
-                proc_layer_name,
-                proc.vol.offset,
-                pid,
+            file_output = self._dump_pe(
+                pe_table_name, proc_layer_name, proc.vol.offset, pid, base
             )
 
             if file_output:
@@ -147,17 +145,11 @@ class PEDump(interfaces.plugins.PluginInterface):
             return
 
         if self.config["kernel_module"]:
-            session_layers = modules.Modules.get_session_layers(
-                self.context, kernel.layer_name, kernel.symbol_table_name
-            )
-            method = self._dump_kernel
+            pe_files = self._dump_kernel(kernel, pe_table_name, self.config["base"])
         else:
-            session_layers = None
-            method = self._dump_processes
+            pe_files = self._dump_processes(kernel, pe_table_name, self.config["base"])
 
-        for pid, proc_name, file_output in method(
-            kernel, pe_table_name, session_layers
-        ):
+        for pid, proc_name, file_output in pe_files:
             yield (
                 0,
                 (
