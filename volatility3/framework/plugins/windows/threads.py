@@ -3,12 +3,10 @@
 #
 
 import logging
-from typing import Callable, List, Generator, Iterable, Type, Optional
+from typing import List, Generator
 
-from volatility3.framework import renderers, interfaces, constants, exceptions
+from volatility3.framework import interfaces, constants
 from volatility3.framework.configuration import requirements
-from volatility3.framework.objects import utility
-from volatility3.framework.renderers import format_hints
 from volatility3.plugins.windows import pslist, thrdscan
 
 vollog = logging.getLogger(__name__)
@@ -64,7 +62,6 @@ class Threads(thrdscan.ThrdScan):
 
     def _generator(self):
         kernel = self.context.modules[self.config["kernel"]]
-        kernel_layer = self.context.layers[kernel.layer_name]
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 

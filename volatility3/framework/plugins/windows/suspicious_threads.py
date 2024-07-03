@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import List
+from typing import List, Dict, Tuple, Generator
 from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
@@ -42,7 +42,12 @@ class SupsiciousThreads(interfaces.plugins.PluginInterface):
             ),
         ]
 
-    def _get_ranges(self, kernel, all_ranges, proc):
+    def _get_ranges(
+        self,
+        kernel: interfaces.context.ModuleInterface,
+        all_ranges: Dict[int, List[Tuple[int, int, str, str]]],
+        proc,
+    ) -> Tuple[int, int, str, str]:
         """
         Maintains a hash table so each process' VADs
         are only enumerated once per plugin run
@@ -70,14 +75,24 @@ class SupsiciousThreads(interfaces.plugins.PluginInterface):
 
         return all_ranges[key]
 
-    def _get_range(self, ranges, address):
+    def _get_range(
+        self, ranges: Dict[int, List[Tuple[int, int, str, str]]], address: int
+    ) -> Tuple[int, str, str]:
+        """
+        Walks a process' VADs looking for the one
+        containing `address`
+
+        Returns its base address, protection string, and mapped file, if any
+        """
         for start, end, protection_string, fn in ranges:
             if start <= address < end:
                 return start, protection_string, fn
 
         return None, None, None
 
-    def _check_thread_address(self, exe_path, ranges, thread_address):
+    def _check_thread_address(
+        self, exe_path: str, ranges, thread_address: int
+    ) -> Generator[Tuple[str, str], None, None]:
         vad_base, prot, vad_path = self._get_range(ranges, thread_address)
 
         # threads outside of a VAD means either smear from this thread or this process' VAD tree
@@ -90,19 +105,17 @@ class SupsiciousThreads(interfaces.plugins.PluginInterface):
 
             yield (
                 vad_path,
-                "This thread started execution in the VAD starting at base address ({:#x}), which is not backed by a file".format(
-                    vad_base
-                ),
+                f"This thread started execution in the VAD starting at base address ({vad_base:#x}), which is not backed by a file",
             )
 
+        # All threads should point to PAGE_EXECUTE_WRITECOPY mapped regions
         if prot != "PAGE_EXECUTE_WRITECOPY":
             yield (
                 vad_path,
-                "VAD at base address ({:#x}) hosting this thread has an unexpected starting protection {}".format(
-                    vad_base, prot
-                ),
+                f"VAD at base address ({vad_base:#x}) hosting this thread has an unexpected starting protection {prot}",
             )
 
+        # check for process hollowing type techniques that mapped in a second, malicious exe file
         if (
             exe_path
             and vad_path.lower().endswith(".exe")
@@ -110,12 +123,12 @@ class SupsiciousThreads(interfaces.plugins.PluginInterface):
         ):
             yield (
                 vad_path,
-                "VAD at base address ({:#x}) hosting this thread maps an application executable that is not the process exectuable".format(
-                    vad_base
-                ),
+                "VAD at base address ({vad_base:#x}) hosting this thread maps an application executable that is not the process exectuable",
             )
 
-    def _enumerate_processes(self, kernel, all_ranges):
+    def _enumerate_processes(
+        self, kernel: interfaces.context.ModuleInterface, all_ranges
+    ):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
         for proc in pslist.PsList.list_processes(
@@ -147,7 +160,7 @@ class SupsiciousThreads(interfaces.plugins.PluginInterface):
         for proc, pid, proc_name, exe_path, ranges in self._enumerate_processes(
             kernel, all_ranges
         ):
-            # processes often schedule multiple threads at the same address
+            # processes often create multiple threads at the same address
             # there is no benefit to checking the same address more than once per process
             checked = set()
 
@@ -161,7 +174,7 @@ class SupsiciousThreads(interfaces.plugins.PluginInterface):
                 if not info:
                     continue
 
-                tid, start_address = info[2], info[3]
+                _, _, tid, start_address, _, _ = info
 
                 addresses = [
                     (start_address, "Start"),
