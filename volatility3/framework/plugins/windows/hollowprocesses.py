@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from typing import NamedTuple
+from typing import NamedTuple, Dict
 
 from volatility3.framework import interfaces, exceptions, constants
 from volatility3.framework import renderers
@@ -12,20 +12,24 @@ from volatility3.plugins.windows import pslist, vadinfo
 
 vollog = logging.getLogger(__name__)
 
-VadInfo = NamedTuple(
-    "VadInfo",
+VadData = NamedTuple(
+    "VadData",
     [
         ("protection", str),
         ("path", str),
     ],
 )
 
-DLLInfo = NamedTuple(
-    "DLLInfo",
+DLLData = NamedTuple(
+    "DLLData",
     [
         ("path", str),
     ],
 )
+
+### Useful references on process hollowing
+# https://cysinfo.com/detecting-deceptive-hollowing-techniques/
+# https://github.com/m0n0ph1/Process-Hollowing
 
 
 class HollowProcesses(interfaces.plugins.PluginInterface):
@@ -56,7 +60,16 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
             ),
         ]
 
-    def _get_vads_map(self, proc):
+    def _get_vads_data(
+        self, proc: interfaces.objects.ObjectInterface
+    ) -> Dict[int, VadData]:
+        """
+        Returns a dictionary of:
+            base address -> (protection string, file name)
+        For each mapped VAD in the process. This is used
+        for quick lookups of data and matching the DLL
+        at the same base address as the VAD
+        """
         vads = {}
 
         kernel = self.context.modules[self.config["kernel"]]
@@ -73,11 +86,23 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
             if not fn or not isinstance(fn, str):
                 fn = "<Non-File Backed Region>"
 
-            vads[vad.get_start()] = VadInfo(protection_string, fn)
+            vads[vad.get_start()] = VadData(protection_string, fn)
 
         return vads
 
-    def _get_dlls_map(self, proc):
+    def _get_dlls_map(
+        self, proc: interfaces.objects.ObjectInterface
+    ) -> Dict[int, DLLData]:
+        """
+        Returns a dictionary of:
+            base address -> path
+        for each DLL loaded in the process
+
+        This is used to cross compare with
+        the corresponding VAD and to have a
+        backup path source in case of smear
+        in the VAD
+        """
         dlls = {}
 
         for entry in proc.load_order_modules():
@@ -91,11 +116,14 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 FullDllName = renderers.UnreadableValue()
 
-            dlls[base] = DLLInfo(FullDllName)
+            dlls[base] = DLLData(FullDllName)
 
         return dlls
 
-    def _get_image_base(self, proc):
+    def _get_image_base(self, proc: interfaces.objects.ObjectInterface) -> int:
+        """
+        Uses the PEB to get the image base of the process
+        """
         kernel = self.context.modules[self.config["kernel"]]
 
         try:
@@ -110,6 +138,12 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
             return None
 
     def _check_load_address(self, proc, _, __):
+        """
+        Detects when the image base in the PEB, which is writable by process malware,
+        does not match the section base address - whose value lives in kernel memory.
+        Many malware samples will manipulate their image base to fool AVs/EDRs and
+        as a necessary part of certain hollowing techniques
+        """
         image_base = self._get_image_base(proc)
         if image_base is not None and image_base != proc.SectionBaseAddress:
             yield "The ImageBaseAddress reported from the PEB ({:#x}) does not match the process SectionBaseAddress ({:#x})".format(
@@ -117,6 +151,16 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
             )
 
     def _check_exe_protection(self, proc, vads, __):
+        """
+        Legitimately mapped application executables and DLLs
+        will have a VAD present and its initial protection will be
+        PAGE_EXECUTE_WRITECOPY.
+        Many process hollowing and code injection techniques will
+        unmap the real executable and/or map in executables with
+        incorrect permissions.
+        This check verifies the VAD for the application exe.
+        `_check_dlls_protection` checks for DLLs mapped in the process.
+        """
         base = proc.SectionBaseAddress
 
         if base not in vads:
@@ -134,6 +178,7 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
             if dll_base not in vads:
                 continue
 
+            # PAGE_EXECUTE_WRITECOPY is the only valid permission for mapped DLLs and .exe files
             if vads[dll_base].protection != "PAGE_EXECUTE_WRITECOPY":
                 yield "Unexpected protection ({}) for DLL in the PEB's load order list ({:#x}) with path {}".format(
                     vads[dll_base].protection, dll_base, dlls[dll_base].path
@@ -155,7 +200,7 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
             if len(dlls) < 3:
                 continue
 
-            vads = self._get_vads_map(proc)
+            vads = self._get_vads_data(proc)
             if len(vads) < 5:
                 continue
 
