@@ -17,6 +17,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("_KTHREAD", extensions.KTHREAD)
         self.set_type_class("_LIST_ENTRY", extensions.LIST_ENTRY)
         self.set_type_class("_EPROCESS", extensions.EPROCESS)
+        self.set_type_class("_ERESOURCE", extensions.ERESOURCE)
         self.set_type_class("_UNICODE_STRING", extensions.UNICODE_STRING)
         self.set_type_class("_EX_FAST_REF", extensions.EX_FAST_REF)
         self.set_type_class("_TOKEN", extensions.TOKEN)
