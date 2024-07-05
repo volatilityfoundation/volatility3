@@ -5,6 +5,7 @@ import contextlib
 import datetime
 import logging
 import ntpath
+import re
 from typing import List, Optional, Type
 
 from volatility3.framework import constants, exceptions, interfaces, renderers
@@ -22,7 +23,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the loaded modules in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+    _version = (2, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -51,6 +52,22 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             requirements.IntRequirement(
                 name="offset",
                 description="Process offset in the physical address space",
+                optional=True,
+            ),
+            requirements.StringRequirement(
+                name="name",
+                description="Specify a regular expression to match dll name(s)",
+                optional=True,
+            ),
+            requirements.IntRequirement(
+                name="base",
+                description="Specify a base virtual address in process memory",
+                optional=True,
+            ),
+            requirements.BooleanRequirement(
+                name="ignore-case",
+                description="Specify case insensitivity for the regular expression name matching",
+                default=False,
                 optional=True,
             ),
             requirements.BooleanRequirement(
@@ -144,8 +161,34 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 BaseDllName = FullDllName = renderers.UnreadableValue()
                 with contextlib.suppress(exceptions.InvalidAddressException):
                     BaseDllName = entry.BaseDllName.get_string()
-                    # We assume that if the BaseDllName points to an invalid buffer, so will FullDllName
+                    # We assume that if BaseDllName points to invalid buffer, so will FullDllName
                     FullDllName = entry.FullDllName.get_string()
+
+                # Check if a name regex was passed and apply it to only show matches
+                if self.config["name"]:
+                    try:
+                        flags = re.I if self.config["ignore-case"] else 0
+                        mod_re = re.compile(self.config["name"], flags)
+                    except re.error:
+                        vollog.debug(
+                            "Error parsing regular expression: %s", self.config["name"]
+                        )
+                        return None
+
+                    # If Base or Full Dll Name are invalid, move on
+                    if isinstance(BaseDllName, renderers.UnreadableValue) or isinstance(
+                        FullDllName, renderers.UnreadableValue
+                    ):
+                        continue
+
+                    # If regex does not match, move on
+                    if not mod_re.search(BaseDllName) and not mod_re.search(
+                        FullDllName
+                    ):
+                        continue
+
+                if self.config["base"] and self.config["base"] != entry.DllBase:
+                    continue
 
                 if dll_load_time_field:
                     # Versions prior to 6.1 won't have the LoadTime attribute
