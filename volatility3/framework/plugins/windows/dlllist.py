@@ -61,7 +61,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             ),
             requirements.IntRequirement(
                 name="base",
-                description="Specify a base address",
+                description="Specify a base virtual address in process memory",
                 optional=True,
             ),
             requirements.BooleanRequirement(
