@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from typing import NamedTuple, Dict
+from typing import NamedTuple, Dict, Generator
 
 from volatility3.framework import interfaces, exceptions, constants
 from volatility3.framework import renderers
@@ -137,7 +137,7 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
         except exceptions.InvalidAddressException:
             return None
 
-    def _check_load_address(self, proc, _, __):
+    def _check_load_address(self, proc, _, __) -> Generator[str, None, None]:
         """
         Detects when the image base in the PEB, which is writable by process malware,
         does not match the section base address - whose value lives in kernel memory.
@@ -150,7 +150,9 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
                 image_base, proc.SectionBaseAddress
             )
 
-    def _check_exe_protection(self, proc, vads, __):
+    def _check_exe_protection(
+        self, proc, vads: Dict[int, VadData], __
+    ) -> Generator[str, None, None]:
         """
         Legitimately mapped application executables and DLLs
         will have a VAD present and its initial protection will be
@@ -172,7 +174,9 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
                 vads[base].protection, base, vads[base].path
             )
 
-    def _check_dlls_protection(self, _, vads, dlls):
+    def _check_dlls_protection(
+        self, _, vads: Dict[int, VadData], dlls: Dict[int, DLLData]
+    ) -> Generator[str, None, None]:
         for dll_base in dlls:
             # could be malicious but triggers too many FPs from smear
             if dll_base not in vads:
@@ -192,9 +196,6 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
         ]
 
         for proc in procs:
-            proc_name = utility.array_to_string(proc.ImageFileName)
-            pid = proc.UniqueProcessId
-
             # smear and/or terminated process
             dlls = self._get_dlls_map(proc)
             if len(dlls) < 3:
@@ -203,6 +204,9 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
             vads = self._get_vads_data(proc)
             if len(vads) < 5:
                 continue
+
+            proc_name = utility.array_to_string(proc.ImageFileName)
+            pid = proc.UniqueProcessId
 
             for check in checks:
                 for note in check(proc, vads, dlls):
