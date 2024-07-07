@@ -2,10 +2,11 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
+import io
 import logging
 from typing import Any, Dict, Iterable, List, Tuple
 
-from volatility3.framework import interfaces, renderers
+from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.layers import resources
@@ -43,7 +44,7 @@ class YaraScanner(interfaces.layers.ScannerInterface):
         self, data: bytes, data_offset: int
     ) -> Iterable[Tuple[int, str, str, bytes]]:
         for match in self._rules.match(data=data):
-            if self.st_object:
+            if YaraScan.yara_returns_instances():
                 for match_string in match.strings:
                     for instance in match_string.instances:
                         yield (
@@ -61,7 +62,7 @@ class YaraScan(plugins.PluginInterface):
     """Scans kernel memory using yara rules (string or file)."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 2, 0)
+    _version = (1, 3, 0)
 
     # TODO: When the major version is bumped, take the opportunity to rename the yara_rules config to yara_string
     # or something that makes more sense
@@ -118,6 +119,14 @@ class YaraScan(plugins.PluginInterface):
                 optional=True,
             ),
         ]
+
+    @classmethod
+    def yara_returns_instances(self) -> bool:
+        st_object = not tuple([int(x) for x in yara.__version__.split(".")]) < (
+            4,
+            3,
+        )
+        return st_object
 
     @classmethod
     def process_yara_options(cls, config: Dict[str, Any]):
