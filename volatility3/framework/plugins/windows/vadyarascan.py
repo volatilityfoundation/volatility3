@@ -2,11 +2,10 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import io
 import logging
 from typing import Iterable, List, Tuple
 
-from volatility3.framework import exceptions, interfaces, renderers
+from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins import yarascan

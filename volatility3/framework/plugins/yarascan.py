@@ -2,11 +2,10 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import io
 import logging
 from typing import Any, Dict, Iterable, List, Tuple
 
-from volatility3.framework import exceptions, interfaces, renderers
+from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.layers import resources
@@ -121,7 +120,7 @@ class YaraScan(plugins.PluginInterface):
         ]
 
     @classmethod
-    def yara_returns_instances(self) -> bool:
+    def yara_returns_instances(cls) -> bool:
         st_object = not tuple([int(x) for x in yara.__version__.split(".")]) < (
             4,
             3,
