@@ -2,13 +2,10 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from typing import Iterable, List, Generator
+from typing import Iterable
 
-from volatility3.framework import renderers, interfaces, exceptions, constants
+from volatility3.framework import interfaces
 from volatility3.framework.configuration import requirements
-from volatility3.framework.renderers import format_hints
-from volatility3.framework.symbols import intermed
-from volatility3.framework.symbols.windows.extensions import pe
 from volatility3.plugins.windows import poolscanner, dlllist, pslist, modules
 
 vollog = logging.getLogger(__name__)
@@ -36,7 +33,7 @@ class ModScan(modules.Modules):
                 name="poolscanner", component=poolscanner.PoolScanner, version=(1, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="modules", component=modules.Modules, version=(1, 1, 0)
+                name="modules", component=modules.Modules, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="pslist", component=pslist.PsList, version=(2, 0, 0)

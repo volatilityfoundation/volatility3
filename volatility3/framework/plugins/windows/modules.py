@@ -4,9 +4,7 @@
 import logging
 from typing import List, Iterable, Generator
 
-from volatility3.framework import constants
-from volatility3.framework import exceptions, interfaces
-from volatility3.framework import renderers
+from volatility3.framework import exceptions, interfaces, constants, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
@@ -20,7 +18,7 @@ class Modules(interfaces.plugins.PluginInterface):
     """Lists the loaded kernel modules."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 1, 0)
+    _version = (2, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -78,55 +76,58 @@ class Modules(interfaces.plugins.PluginInterface):
 
         return file_output
 
-    def process_module(self, session_layers, pe_table_name, mod):
-        if self.config["base"] and self.config["base"] != mod.DllBase:
-            return None
-
-        try:
-            BaseDllName = mod.BaseDllName.get_string()
-        except exceptions.InvalidAddressException:
-            BaseDllName = ""
-
-        if self.config["name"] and self.config["name"] not in BaseDllName:
-            return None
-
-        try:
-            FullDllName = mod.FullDllName.get_string()
-        except exceptions.InvalidAddressException:
-            FullDllName = ""
-
-        file_output = "Disabled"
-        if self.config["dump"]:
-            file_output = self.dump_module(session_layers, pe_table_name, mod)
-
-        return (
-            format_hints.Hex(mod.vol.offset),
-            format_hints.Hex(mod.DllBase),
-            format_hints.Hex(mod.SizeOfImage),
-            BaseDllName,
-            FullDllName,
-            file_output,
-        )
-
     def _generator(self):
         kernel = self.context.modules[self.config["kernel"]]
 
-        pe_table_name = intermed.IntermediateSymbolTable.create(
-            self.context, self.config_path, "windows", "pe", class_types=pe.class_types
-        )
+        pe_table_name = None
+        session_layers = None
 
-        session_layers = list(
-            self.get_session_layers(
-                self.context, kernel.layer_name, kernel.symbol_table_name
+        if self.config["dump"]:
+            pe_table_name = intermed.IntermediateSymbolTable.create(
+                self.context,
+                self.config_path,
+                "windows",
+                "pe",
+                class_types=pe.class_types,
             )
-        )
+
+            session_layers = list(
+                self.get_session_layers(
+                    self.context, kernel.layer_name, kernel.symbol_table_name
+                )
+            )
 
         for mod in self._enumeration_method(
             self.context, kernel.layer_name, kernel.symbol_table_name
         ):
-            record = self.process_module(session_layers, pe_table_name, mod)
-            if record:
-                yield (0, record)
+            if self.config["base"] and self.config["base"] != mod.DllBase:
+                continue
+
+            try:
+                BaseDllName = mod.BaseDllName.get_string()
+            except exceptions.InvalidAddressException:
+                BaseDllName = interfaces.renderers.BaseAbsentValue()
+
+            if self.config["name"] and self.config["name"] not in BaseDllName:
+                continue
+
+            try:
+                FullDllName = mod.FullDllName.get_string()
+            except exceptions.InvalidAddressException:
+                FullDllName = interfaces.renderers.BaseAbsentValue()
+
+            file_output = "Disabled"
+            if self.config["dump"]:
+                file_output = self.dump_module(session_layers, pe_table_name, mod)
+
+            yield 0, (
+                format_hints.Hex(mod.vol.offset),
+                format_hints.Hex(mod.DllBase),
+                format_hints.Hex(mod.SizeOfImage),
+                BaseDllName,
+                FullDllName,
+                file_output,
+            )
 
     @classmethod
     def get_session_layers(
