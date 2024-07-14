@@ -7,7 +7,7 @@ import glob
 import sys
 import zipfile
 
-required_python_version = (3, 7, 0)
+required_python_version = (3, 7, 3)
 if (
     sys.version_info.major != required_python_version[0]
     or sys.version_info.minor < required_python_version[1]
