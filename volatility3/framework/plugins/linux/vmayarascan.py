@@ -33,9 +33,6 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
             requirements.PluginRequirement(
                 name="yarascan", plugin=yarascan.YaraScan, version=(1, 2, 0)
             ),
-            requirements.VersionRequirement(
-                name="yarascanner", component=yarascan.YaraScanner, version=(2, 0, 0)
-            ),
             requirements.ModuleRequirement(
                 name="kernel",
                 description="Linux kernel",
@@ -69,19 +66,29 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
             # get the proc_layer object from the context
             proc_layer = self.context.layers[proc_layer_name]
 
-            # scan the process layer with the yarascanner
-            for offset, rule_name, name, value in proc_layer.scan(
-                context=self.context,
-                scanner=yarascan.YaraScanner(rules=rules),
-                sections=self.get_vma_maps(task),
-            ):
-                yield 0, (
-                    format_hints.Hex(offset),
-                    task.tgid,
-                    rule_name,
-                    name,
-                    value,
-                )
+            for start, end in self.get_vma_maps(task):
+                for match in rules.match(
+                    data=proc_layer.read(start, end - start, True)
+                ):
+                    if yarascan.YaraScan.yara_returns_instances():
+                        for match_string in match.strings:
+                            for instance in match_string.instances:
+                                yield 0, (
+                                    format_hints.Hex(instance.offset + start),
+                                    task.UniqueProcessId,
+                                    match.rule,
+                                    match_string.identifier,
+                                    instance.matched_data,
+                                )
+                    else:
+                        for offset, name, value in match.strings:
+                            yield 0, (
+                                format_hints.Hex(offset + start),
+                                task.tgid,
+                                match.rule,
+                                name,
+                                value,
+                            )
 
     @staticmethod
     def get_vma_maps(
