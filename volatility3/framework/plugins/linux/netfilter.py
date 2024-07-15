@@ -11,6 +11,7 @@ from volatility3.framework import (
     constants,
     interfaces,
     renderers,
+    exceptions,
 )
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.configuration import requirements
@@ -80,6 +81,16 @@ class AbstractNetfilter(ABC):
         self.list_head_size = self.vmlinux.get_type("list_head").size
 
         modules = lsmod.Lsmod.list_modules(context, kernel_module_name)
+
+        linuxutils_required_version = Netfilter._required_linuxutils_version
+        linuxutils_current_version = linux.LinuxUtilities._version
+        if not requirements.VersionRequirement.matches_required(
+            linuxutils_required_version, linuxutils_current_version
+        ):
+            raise exceptions.PluginRequirementException(
+                f"linux.LinuxUtilities version not suitable: required {linuxutils_required_version} found {linuxutils_current_version}"
+            )
+
         self.handlers = linux.LinuxUtilities.generate_kernel_handler_info(
             context, kernel_module_name, modules
         )
@@ -658,6 +669,8 @@ class Netfilter(interfaces.plugins.PluginInterface):
 
     _version = (1, 0, 0)
 
+    _required_linuxutils_version = (2, 1, 0)
+
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
@@ -670,7 +683,9 @@ class Netfilter(interfaces.plugins.PluginInterface):
                 name="lsmod", plugin=lsmod.Lsmod, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="linuxutils", component=linux.LinuxUtilities, version=(2, 1, 0)
+                name="linuxutils",
+                component=linux.LinuxUtilities,
+                version=cls._required_linuxutils_version,
             ),
         ]
 
