@@ -80,7 +80,14 @@ class AbstractNetfilter(ABC):
         self.ptr_size = self.vmlinux.get_type("pointer").size
         self.list_head_size = self.vmlinux.get_type("list_head").size
 
-        modules = lsmod.Lsmod.list_modules(context, kernel_module_name)
+        lsmod_required_version = Netfilter._required_lsmod_version
+        lsmod_current_version = lsmod.Lsmod._version
+        if not requirements.VersionRequirement.matches_required(
+            lsmod_required_version, lsmod_current_version
+        ):
+            raise exceptions.PluginRequirementException(
+                f"linux.lsmod.Lsmod version not suitable: required {lsmod_required_version} found {lsmod_current_version}"
+            )
 
         linuxutils_required_version = Netfilter._required_linuxutils_version
         linuxutils_current_version = linux.LinuxUtilities._version
@@ -91,6 +98,7 @@ class AbstractNetfilter(ABC):
                 f"linux.LinuxUtilities version not suitable: required {linuxutils_required_version} found {linuxutils_current_version}"
             )
 
+        modules = lsmod.Lsmod.list_modules(context, kernel_module_name)
         self.handlers = linux.LinuxUtilities.generate_kernel_handler_info(
             context, kernel_module_name, modules
         )
@@ -670,6 +678,7 @@ class Netfilter(interfaces.plugins.PluginInterface):
     _version = (1, 0, 0)
 
     _required_linuxutils_version = (2, 1, 0)
+    _required_lsmod_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -680,7 +689,7 @@ class Netfilter(interfaces.plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.PluginRequirement(
-                name="lsmod", plugin=lsmod.Lsmod, version=(2, 0, 0)
+                name="lsmod", plugin=lsmod.Lsmod, version=cls._required_lsmod_version
             ),
             requirements.VersionRequirement(
                 name="linuxutils",
