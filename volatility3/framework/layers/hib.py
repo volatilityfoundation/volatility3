@@ -263,8 +263,8 @@ class HibernationFileStacker(interfaces.automagic.StackerLayerInterface):
         except exceptions.LayerException:
             return None
         new_name = context.layers.free_layer_name("HibernationLayer")
-        context.config[
-            interfaces.configuration.path_join(new_name, "base_layer")
-        ] = layer_name
+        context.config[interfaces.configuration.path_join(new_name, "base_layer")] = (
+            layer_name
+        )
         layer = HibernationLayer(context, new_name, new_name)
         return layer
