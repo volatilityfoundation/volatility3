@@ -22,7 +22,7 @@ from volatility3.framework.interfaces.objects import ObjectInterface
 from volatility3.framework.layers import intel
 from volatility3.framework.renderers import conversion
 from volatility3.framework.symbols import generic
-from volatility3.framework.symbols.windows.extensions import kdbg, pe, pool
+from volatility3.framework.symbols.windows.extensions import pool
 
 vollog = logging.getLogger(__name__)
 
@@ -611,10 +611,22 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
                 ctime = self.get_create_time()
                 if not isinstance(ctime, datetime.datetime):
+                    # A process must have a creation time
                     return False
 
-                if not (1998 < ctime.year < 2030):
+                current_year = datetime.datetime.now().year
+                if not (1998 < ctime.year < current_year + 10):
                     return False
+
+                etime = self.get_exit_time()
+                if isinstance(etime, datetime.datetime):
+                    if not (1998 < etime.year < current_year + 10):
+                        return False
+
+                    # Exit time, if available, must be after the creation time
+                    # At this point, we are sure both are datetimes, so let's compare them
+                    if ctime > etime:
+                        return False
 
             # NT pids are divisible by 4
             if self.UniqueProcessId % 4 != 0:
@@ -633,7 +645,11 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             if dtb & ~0xFFF == 0:
                 return False
 
-            ## TODO: we can also add the thread Flink and Blink tests if necessary
+            # Quick smear test on thread Flink and Blink
+            kernel = 0x80000000  # Yes, it's a quick test
+            list_head = self.ThreadListHead
+            if list_head.Flink < kernel or list_head.Blink < kernel:
+                return False
 
         except exceptions.InvalidAddressException:
             return False
