@@ -7,13 +7,12 @@
 #   - https://www.vergiliusproject.com/kernels/x64/ : Windows kernel structures used to track the evolution of the hibernation file structure in time.
 
 from typing import Optional
-import logging, struct
+import logging, struct, codecs
+
+# import xpress_lz77 <- coming soon with pyo3
 from volatility3.framework import interfaces, constants, exceptions
 from volatility3.framework.layers import segmented
-from volatility3.framework.layers.codecs import (
-    lz77_plain_decompress,
-    lz77_huffman_decompress,
-)
+
 
 vollog = logging.getLogger(__name__)
 
@@ -28,9 +27,12 @@ def uncompress(data: bytes, flag):
     Return: The decompressed data (consecutive pages).
     """
     if flag == 0 or flag == 1:
-        return lz77_plain_decompress(data)  # See layers.codecs
+        # Comming soon with pyo3
+        # return bytes(xpress_lz77.lz77_plain_decompress_py(data))
+        return codecs.decode(data, "lz77_plain")  # See layers.codecs
+
     elif flag == 2 or flag == 3:
-        return lz77_huffman_decompress(data, 65536)[0]  # See layers.codecs
+        return codecs.decode(data, "lz77_huffman")  # See layers.codecs
     else:
         vollog.warning(
             f"A compression set could not be decompressed: Compression algorithm : {flag}"
@@ -84,10 +86,10 @@ class HibernationLayer(segmented.NonLinearlySegmentedLayer):
         """
         Mapping for each 'group' of Windows version sharing the same offsets
         ---------------------------------------------------------------------------------------------------------
-        | Windows Versions                          | FirstKernelRestorePage (FKRP) | KernelPagesProcessed (KPP)|   
+        | Windows Versions                          | FirstKernelRestorePage (FKRP) | KernelPagesProcessed (KPP)|
         | ------------------------------------------|:-----------------------------:|:-------------------------:|
-        | Windows 8/8.1                             |               0x68            |	        0x1C8           | 
-        | Windows 10 2016 1507-1511                 |               0x70            |	        0x218           | 
+        | Windows 8/8.1                             |               0x68            |	        0x1C8           |
+        | Windows 10 2016 1507-1511                 |               0x70            |	        0x218           |
         | Windows 10 2016 1607                      |               0x70            |	        0x220           |
         | Windows 10 2016 1703 - Windows 11 23H2    |               0x70            |	        0x230           |
         ---------------------------------------------------------------------------------------------------------
@@ -261,9 +263,8 @@ class HibernationFileStacker(interfaces.automagic.StackerLayerInterface):
         except exceptions.LayerException:
             return None
         new_name = context.layers.free_layer_name("HibernationLayer")
-        context.config[interfaces.configuration.path_join(new_name, "base_layer")] = (
-            layer_name
-        )
+        context.config[
+            interfaces.configuration.path_join(new_name, "base_layer")
+        ] = layer_name
         layer = HibernationLayer(context, new_name, new_name)
-        cls.stacker_slow_warning()
         return layer
