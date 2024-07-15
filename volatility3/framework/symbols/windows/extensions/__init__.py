@@ -1011,12 +1011,12 @@ class KTIMER(objects.StructType):
     def get_raw_dpc(self):
         """Returns the encoded DPC since it may not look like a pointer after encoding"""
         symbol_table_name = self.get_symbol_table_name()
-        ulonglong_type = self._context.symbol_space.get_type(
-            symbol_table_name + constants.BANG + "unsigned long long"
+        pointer_type = self._context.symbol_space.get_type(
+            symbol_table_name + constants.BANG + "pointer"
         )
 
         return self._context.object(
-            object_type=ulonglong_type,
+            object_type=pointer_type,
             layer_name=self.vol.layer_name,
             offset=self.Dpc.vol.offset,
         )
