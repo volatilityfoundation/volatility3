@@ -1052,7 +1052,7 @@ class KTIMER(objects.StructType):
 
             low_byte = (wait_never) & 0xFF
             entry = utility.rol(self.get_raw_dpc() ^ wait_never, low_byte)
-            swap_xor = self.vol.offset | 0xFFFF000000000000
+            swap_xor = self._context.layers[self.vol.native_layer_name].canonicalize(self.vol.offset)
             entry = utility.bswap_64(entry ^ swap_xor)
             dpc = entry ^ wait_always
 
