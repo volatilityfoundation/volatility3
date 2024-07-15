@@ -10,6 +10,7 @@ from volatility3.framework import constants
 from volatility3.framework import interfaces, symbols
 from volatility3.framework import renderers
 from volatility3.framework.configuration import requirements
+from volatility3.framework.interfaces import configuration
 from volatility3.framework.renderers import format_hints, conversion
 from volatility3.framework.symbols import intermed
 from volatility3.plugins import timeliner
@@ -60,7 +61,7 @@ class UnloadedModules(interfaces.plugins.PluginInterface, timeliner.TimeLinerInt
 
         return intermed.IntermediateSymbolTable.create(
             context,
-            config_path,
+            configuration.path_join(config_path, "unloadedmodules"),
             "windows",
             symbol_filename,
             native_types=native_types,
