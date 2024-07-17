@@ -56,7 +56,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
-        sanity_check = 0x2000 * 0x1000 * 0x1000
+        sanity_check = 1024 * 1024 * 1024  # 1 GB
 
         for task in pslist.PsList.list_processes(
             context=self.context,
