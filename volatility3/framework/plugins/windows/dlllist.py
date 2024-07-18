@@ -78,7 +78,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             requirements.VersionRequirement(
                 name="pedump", component=pedump.PEDump, version=(1, 0, 0)
             ),
-         ]
+        ]
 
     def _generator(self, procs):
         pe_table_name = intermed.IntermediateSymbolTable.create(

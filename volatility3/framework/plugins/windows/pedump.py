@@ -59,7 +59,7 @@ class PEDump(interfaces.plugins.PluginInterface):
         layer_name: str,
         open_method: Type[interfaces.plugins.FileHandlerInterface],
         file_name: str,
-        base: int
+        base: int,
     ) -> Optional[str]:
         """
         Returns the filename of the dump file or None
@@ -120,13 +120,20 @@ class PEDump(interfaces.plugins.PluginInterface):
             layer_name = ldr_entry.vol.layer_name
 
         file_name = "{}{}.{:#x}.{:#x}.dmp".format(
-                prefix,
-                ntpath.basename(name),
-                ldr_entry.vol.offset,
-                ldr_entry.DllBase,
-            )
+            prefix,
+            ntpath.basename(name),
+            ldr_entry.vol.offset,
+            ldr_entry.DllBase,
+        )
 
-        return PEDump.dump_pe(context, pe_table_name, layer_name, open_method, file_name, ldr_entry.DllBase)
+        return PEDump.dump_pe(
+            context,
+            pe_table_name,
+            layer_name,
+            open_method,
+            file_name,
+            ldr_entry.DllBase,
+        )
 
     @classmethod
     def dump_pe_at_base(
@@ -140,12 +147,14 @@ class PEDump(interfaces.plugins.PluginInterface):
         base: int,
     ) -> Optional[str]:
         file_name = "PE.{:#x}.{:d}.{:#x}.dmp".format(
-                    proc_offset,
-                    pid,
-                    base,
-                )
+            proc_offset,
+            pid,
+            base,
+        )
 
-        return PEDump.dump_pe(context, pe_table_name, layer_name, open_method, file_name, base)
+        return PEDump.dump_pe(
+            context, pe_table_name, layer_name, open_method, file_name, base
+        )
 
     @classmethod
     def dump_kernel_pe_at_base(cls, context, kernel, pe_table_name, open_method, base):
@@ -161,7 +170,13 @@ class PEDump(interfaces.plugins.PluginInterface):
             system_pid = 4
 
             file_output = PEDump.dump_pe_at_base(
-                context, pe_table_name, session_layer_name, open_method, 0, system_pid, base
+                context,
+                pe_table_name,
+                session_layer_name,
+                open_method,
+                0,
+                system_pid,
+                base,
             )
 
             if file_output:
@@ -172,9 +187,10 @@ class PEDump(interfaces.plugins.PluginInterface):
             )
 
     @classmethod
-    def dump_processes(cls, context, kernel, pe_table_name, open_method, filter_func, base):
-        """
-        """
+    def dump_processes(
+        cls, context, kernel, pe_table_name, open_method, filter_func, base
+    ):
+        """ """
 
         for proc in pslist.PsList.list_processes(
             context=context,
@@ -191,7 +207,13 @@ class PEDump(interfaces.plugins.PluginInterface):
             proc_layer_name = proc.add_process_layer()
 
             file_output = PEDump.dump_pe_at_base(
-                context, pe_table_name, proc_layer_name, open_method, proc.vol.offset, pid, base
+                context,
+                pe_table_name,
+                proc_layer_name,
+                open_method,
+                proc.vol.offset,
+                pid,
+                base,
             )
 
             if file_output:
@@ -213,10 +235,19 @@ class PEDump(interfaces.plugins.PluginInterface):
             return
 
         if self.config["kernel_module"]:
-            pe_files = self.dump_kernel_pe_at_base(self.context, kernel, pe_table_name, self.open, self.config["base"])
+            pe_files = self.dump_kernel_pe_at_base(
+                self.context, kernel, pe_table_name, self.open, self.config["base"]
+            )
         else:
             filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
-            pe_files = self.dump_processes(self.context, kernel, pe_table_name, self.open, filter_func, self.config["base"])
+            pe_files = self.dump_processes(
+                self.context,
+                kernel,
+                pe_table_name,
+                self.open,
+                filter_func,
+                self.config["base"],
+            )
 
         for pid, proc_name, file_output in pe_files:
             yield (
