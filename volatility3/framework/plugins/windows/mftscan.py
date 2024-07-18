@@ -5,6 +5,8 @@ import contextlib
 import datetime
 import logging
 
+from typing import Generator, Iterable
+
 from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import conversion, format_hints
@@ -23,6 +25,10 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._record_map = {}
+        self.mft_object = None
+        self.attribute_object = None
+        self.si_object = None
+        self.fn_object = None
 
     @classmethod
     def get_requirements(cls):
@@ -201,12 +207,17 @@ class ADS(MFTScan):
         # which DATA attribute should be displayed
         self._display_first_data = False
 
-    def _parse_data_record(self, mft_record, attr):
+    def _parse_data_record(
+        self,
+        mft_record: interfaces.objects.ObjectInterface,
+        attr: interfaces.objects.ObjectInterface,
+    ) -> Generator[Iterable, None, None]:
+        # we only care about resident data
         if attr.Attr_Header.NonResidentFlag:
             return
 
         # regular $DATA
-        if self._display_first_data:
+        elif self._display_first_data:
             content = attr.get_resident_filecontent()
             if content:
                 content = format_hints.HexBytes(content)
@@ -244,7 +255,11 @@ class ADS(MFTScan):
                 content,
             )
 
-    def parse_data_records(self, mft_record, attr):
+    def parse_data_records(
+        self,
+        mft_record: interfaces.objects.ObjectInterface,
+        attr: interfaces.objects.ObjectInterface,
+    ) -> Generator[Iterable, None, None]:
         rec_num = mft_record.RecordNumber
         if rec_num not in self._record_map:
             # file name, DATA count, offset
