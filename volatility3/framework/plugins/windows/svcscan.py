@@ -238,12 +238,17 @@ class SvcScan(interfaces.plugins.PluginInterface):
 
     @classmethod
     def enumerate_vista_or_later_header(
-        cls, context, service_table_name, service_binary_dll_map, proc_layer_name, offset
+        cls,
+        context,
+        service_table_name,
+        service_binary_dll_map,
+        proc_layer_name,
+        offset,
     ):
         if offset % 8:
             return
 
-        service_header =context.object(
+        service_header = context.object(
             service_table_name + constants.BANG + "_SERVICE_HEADER",
             offset=offset,
             layer_name=proc_layer_name,
@@ -265,7 +270,14 @@ class SvcScan(interfaces.plugins.PluginInterface):
             yield cls.get_record_tuple(service_record, service_info)
 
     @classmethod
-    def service_scan(cls, context: interfaces.context.ContextInterface, kernel, service_table_name: str, service_binary_dll_map, filter_func):
+    def service_scan(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel,
+        service_table_name: str,
+        service_binary_dll_map,
+        filter_func,
+    ):
         relative_tag_offset = context.symbol_space.get_type(
             service_table_name + constants.BANG + "_SERVICE_RECORD"
         ).relative_child_offset("Tag")
@@ -359,10 +371,16 @@ class SvcScan(interfaces.plugins.PluginInterface):
         return kernel, service_table_name, service_binary_dll_map, filter_func
 
     def _generator(self):
-        kernel, service_table_name, service_binary_dll_map, filter_func = self.get_prereq_info()
+        kernel, service_table_name, service_binary_dll_map, filter_func = (
+            self.get_prereq_info()
+        )
 
         for record in self._enumeration_method(
-            self.context, kernel, service_table_name, service_binary_dll_map, filter_func
+            self.context,
+            kernel,
+            service_table_name,
+            service_binary_dll_map,
+            filter_func,
         ):
             yield (0, record)
 
