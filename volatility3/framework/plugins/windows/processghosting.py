@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
+import contextlib
 
 from volatility3.framework import interfaces, exceptions
 from volatility3.framework import renderers
@@ -57,14 +58,15 @@ class ProcessGhosting(interfaces.plugins.PluginInterface):
             else:
                 file_object = 0
 
+            if isinstance(delete_pending, int) and delete_pending not in [0, 1]:
+                vollog.debug(f"Invalid delete_pending value {delete_pending} found for {process_name} {proc.UniqueProcessId}")
+
             # delete_pending besides 0 or 1 = smear
             if file_object == 0 or delete_pending == 1:
                 path = renderers.UnreadableValue()
                 if file_object:
-                    try:
+                    with contextlib.suppress(exceptions.InvalidAddressException):
                         path = file_object.FileName.String
-                    except exceptions.InvalidAddressException:
-                        path = renderers.UnreadableValue()
 
                 yield (
                     0,
