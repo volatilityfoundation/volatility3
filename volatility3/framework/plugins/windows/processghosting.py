@@ -59,7 +59,9 @@ class ProcessGhosting(interfaces.plugins.PluginInterface):
                 file_object = 0
 
             if isinstance(delete_pending, int) and delete_pending not in [0, 1]:
-                vollog.debug(f"Invalid delete_pending value {delete_pending} found for {process_name} {proc.UniqueProcessId}")
+                vollog.debug(
+                    f"Invalid delete_pending value {delete_pending} found for {process_name} {proc.UniqueProcessId}"
+                )
 
             # delete_pending besides 0 or 1 = smear
             if file_object == 0 or delete_pending == 1:
