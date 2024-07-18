@@ -1,10 +1,9 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import contextlib
 import datetime
 import logging
-import ntpath
 import re
 from typing import List, Optional, Type
 
@@ -14,7 +13,7 @@ from volatility3.framework.renderers import conversion, format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
 from volatility3.plugins import timeliner
-from volatility3.plugins.windows import info, pslist, psscan
+from volatility3.plugins.windows import info, pslist, psscan, pedump
 
 vollog = logging.getLogger(__name__)
 
@@ -23,7 +22,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the loaded modules in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 1)
+    _version = (3, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -76,66 +75,10 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 default=False,
                 optional=True,
             ),
-        ]
-
-    @classmethod
-    def dump_pe(
-        cls,
-        context: interfaces.context.ContextInterface,
-        pe_table_name: str,
-        dll_entry: interfaces.objects.ObjectInterface,
-        open_method: Type[interfaces.plugins.FileHandlerInterface],
-        layer_name: str = None,
-        prefix: str = "",
-    ) -> Optional[interfaces.plugins.FileHandlerInterface]:
-        """Extracts the complete data for a process as a FileInterface
-
-        Args:
-            context: the context to operate upon
-            pe_table_name: the name for the symbol table containing the PE format symbols
-            dll_entry: the object representing the module
-            layer_name: the layer that the DLL lives within
-            open_method: class for constructing output files
-
-        Returns:
-            An open FileHandlerInterface object containing the complete data for the DLL or None in the case of failure
-        """
-        try:
-            try:
-                name = dll_entry.FullDllName.get_string()
-            except exceptions.InvalidAddressException:
-                name = "UnreadableDLLName"
-
-            if layer_name is None:
-                layer_name = dll_entry.vol.layer_name
-
-            file_handle = open_method(
-                "{}{}.{:#x}.{:#x}.dmp".format(
-                    prefix,
-                    ntpath.basename(name),
-                    dll_entry.vol.offset,
-                    dll_entry.DllBase,
-                )
-            )
-
-            dos_header = context.object(
-                pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
-                offset=dll_entry.DllBase,
-                layer_name=layer_name,
-            )
-
-            for offset, data in dos_header.reconstruct():
-                file_handle.seek(offset)
-                file_handle.write(data)
-        except (
-            IOError,
-            exceptions.VolatilityException,
-            OverflowError,
-            ValueError,
-        ) as excp:
-            vollog.debug(f"Unable to dump dll at offset {dll_entry.DllBase}: {excp}")
-            return None
-        return file_handle
+            requirements.VersionRequirement(
+                name="pedump", component=pedump.PEDump, version=(1, 0, 0)
+            ),
+         ]
 
     def _generator(self, procs):
         pe_table_name = intermed.IntermediateSymbolTable.create(
@@ -204,7 +147,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
                 file_output = "Disabled"
                 if self.config["dump"]:
-                    file_handle = self.dump_pe(
+                    file_handle = pedump.PEDump.dump_ldr_entry(
                         self.context,
                         pe_table_name,
                         entry,
@@ -214,8 +157,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     )
                     file_output = "Error outputting file"
                     if file_handle:
-                        file_handle.close()
-                        file_output = file_handle.preferred_filename
+                        file_output = file_handle
                 try:
                     dllbase = format_hints.Hex(entry.DllBase)
                 except exceptions.InvalidAddressException:
