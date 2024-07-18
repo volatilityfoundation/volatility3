@@ -20,8 +20,7 @@ from volatility3.framework.symbols.windows import versions
 
 vollog = logging.getLogger(__name__)
 
-
-class SvcDiff(svclist.SvcList, svcscan.SvcScan):
+class SvcDiff(svcscan.SvcScan):
     """Compares services found through list walking versus scanning to find rootkits"""
 
     _required_framework_version = (2, 4, 0)
@@ -39,22 +38,23 @@ class SvcDiff(svclist.SvcList, svcscan.SvcScan):
                 name="svclist", component=svclist.SvcList, version=(1, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="svcscan", component=svcscan.SvcScan, version=(2, 0, 0)
+                name="svcscan", component=svcscan.SvcScan, version=(3, 0, 0)
             ),
         ]
 
     def _generator(self):
         """
-        Finds services by walking the services.exe list on supported Windows 10 versions
+        On Windows 10 version 15063+ 64bit Windows memory samples, walk the services list
+        and scan for services then report differences
         """
-        kernel = self.context.modules[self.config["kernel"]]
+        kernel, service_table_name, service_binary_dll_map, filter_func = self.get_prereq_info()
 
         if not symbols.symbol_table_is_64bit(
             self.context, kernel.symbol_table_name
         ) or not versions.is_win10_15063_or_later(
             context=self.context, symbol_table=kernel.symbol_table_name
         ):
-            vollog.info(
+            vollog.warning(
                 "This plugin only supports Windows 10 version 15063+ 64bit Windows memory samples"
             )
             return
@@ -63,18 +63,16 @@ class SvcDiff(svclist.SvcList, svcscan.SvcScan):
         from_list = set()
         records = {}
 
-        service_table_name, service_binary_dll_map, filter_func = self.get_prereq_info()
-
         # collect unique service names from scanning
-        for service in self.service_scan(
-            service_table_name, service_binary_dll_map, filter_func
+        for service in svcscan.SvcScan.service_scan(
+            self.context, kernel, service_table_name, service_binary_dll_map, filter_func
         ):
             from_scan.add(service[6])
             records[service[6]] = service
 
         # collect services from listing walking
-        for service in self.service_list(
-            service_table_name, service_binary_dll_map, filter_func
+        for service in svclist.SvcList.service_list(
+            self.context, kernel, service_table_name, service_binary_dll_map, filter_func
         ):
             from_list.add(service[6])
 

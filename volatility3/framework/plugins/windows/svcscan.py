@@ -39,7 +39,11 @@ class SvcScan(interfaces.plugins.PluginInterface):
     """Scans for windows services."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+    _version = (3, 0, 0)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._enumeration_method = self.service_scan
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -232,13 +236,14 @@ class SvcScan(interfaces.plugins.PluginInterface):
             for service_key in services
         }
 
+    @classmethod
     def enumerate_vista_or_later_header(
-        self, service_table_name, service_binary_dll_map, proc_layer_name, offset
+        cls, context, service_table_name, service_binary_dll_map, proc_layer_name, offset
     ):
         if offset % 8:
             return
 
-        service_header = self.context.object(
+        service_header =context.object(
             service_table_name + constants.BANG + "_SERVICE_HEADER",
             offset=offset,
             layer_name=proc_layer_name,
@@ -257,17 +262,16 @@ class SvcScan(interfaces.plugins.PluginInterface):
                     renderers.UnreadableValue(), renderers.UnreadableValue()
                 ),
             )
-            yield self.get_record_tuple(service_record, service_info)
+            yield cls.get_record_tuple(service_record, service_info)
 
-    def service_scan(self, service_table_name, service_binary_dll_map, filter_func):
-        kernel = self.context.modules[self.config["kernel"]]
-
-        relative_tag_offset = self.context.symbol_space.get_type(
+    @classmethod
+    def service_scan(cls, context: interfaces.context.ContextInterface, kernel, service_table_name: str, service_binary_dll_map, filter_func):
+        relative_tag_offset = context.symbol_space.get_type(
             service_table_name + constants.BANG + "_SERVICE_RECORD"
         ).relative_child_offset("Tag")
 
         is_vista_or_later = versions.is_vista_or_later(
-            context=self.context, symbol_table=kernel.symbol_table_name
+            context=context, symbol_table=kernel.symbol_table_name
         )
 
         if is_vista_or_later:
@@ -278,7 +282,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
         seen = []
 
         for task in pslist.PsList.list_processes(
-            context=self.context,
+            context=context,
             layer_name=kernel.layer_name,
             symbol_table=kernel.symbol_table_name,
             filter_func=filter_func,
@@ -295,15 +299,15 @@ class SvcScan(interfaces.plugins.PluginInterface):
                 )
                 continue
 
-            layer = self.context.layers[proc_layer_name]
+            layer = context.layers[proc_layer_name]
 
             for offset in layer.scan(
-                context=self.context,
+                context=context,
                 scanner=scanners.BytesScanner(needle=service_tag),
                 sections=vadyarascan.VadYaraScan.get_vad_maps(task),
             ):
                 if not is_vista_or_later:
-                    service_record = self.context.object(
+                    service_record = context.object(
                         service_table_name + constants.BANG + "_SERVICE_RECORD",
                         offset=offset - relative_tag_offset,
                         layer_name=proc_layer_name,
@@ -318,9 +322,10 @@ class SvcScan(interfaces.plugins.PluginInterface):
                             renderers.UnreadableValue(), renderers.UnreadableValue()
                         ),
                     )
-                    yield self.get_record_tuple(service_record, service_info)
+                    yield cls.get_record_tuple(service_record, service_info)
                 else:
-                    for service_record in self.enumerate_vista_or_later_header(
+                    for service_record in cls.enumerate_vista_or_later_header(
+                        context,
                         service_table_name,
                         service_binary_dll_map,
                         proc_layer_name,
@@ -351,13 +356,13 @@ class SvcScan(interfaces.plugins.PluginInterface):
 
         filter_func = pslist.PsList.create_name_filter(["services.exe"])
 
-        return service_table_name, service_binary_dll_map, filter_func
+        return kernel, service_table_name, service_binary_dll_map, filter_func
 
     def _generator(self):
-        service_table_name, service_binary_dll_map, filter_func = self.get_prereq_info()
+        kernel, service_table_name, service_binary_dll_map, filter_func = self.get_prereq_info()
 
-        for record in self.service_scan(
-            service_table_name, service_binary_dll_map, filter_func
+        for record in self._enumeration_method(
+            self.context, kernel, service_table_name, service_binary_dll_map, filter_func
         ):
             yield (0, record)
 
