@@ -5,7 +5,7 @@ import contextlib
 import enum
 import logging
 import struct
-from typing import Iterable, Optional, Union
+from typing import Iterator, Optional, Union, cast
 
 from volatility3.framework import constants, exceptions, interfaces, objects
 from volatility3.framework.layers.registry import (
@@ -37,6 +37,29 @@ class RegValueTypes(enum.Enum):
     @classmethod
     def _missing_(cls, value):
         return cls(RegValueTypes.REG_UNKNOWN)
+
+
+INTEGER_TYPES = [
+    RegValueTypes.REG_DWORD,
+    RegValueTypes.REG_QWORD,
+    RegValueTypes.REG_DWORD_BIG_ENDIAN,
+    RegValueTypes.REG_DWORD_BIG_ENDIAN,
+]
+
+STRING_TYPES = [
+    RegValueTypes.REG_SZ,
+    RegValueTypes.REG_MULTI_SZ,
+    RegValueTypes.REG_EXPAND_SZ,
+    RegValueTypes.REG_LINK,
+]
+
+BINARY_TYPES = [
+    RegValueTypes.REG_RESOURCE_LIST,
+    RegValueTypes.REG_BINARY,
+    RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR,
+    RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST,
+    RegValueTypes.REG_NONE,
+]
 
 
 class RegKeyFlags(enum.IntEnum):
@@ -142,7 +165,7 @@ class CM_KEY_NODE(objects.StructType):
             )
         return bool(self.vol.offset & 0x80000000)
 
-    def get_subkeys(self) -> Iterable[interfaces.objects.ObjectInterface]:
+    def get_subkeys(self) -> Iterator["CM_KEY_NODE"]:
         """Returns a list of the key nodes."""
         hive = self._context.layers[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
@@ -152,9 +175,18 @@ class CM_KEY_NODE(objects.StructType):
             subkey_node = hive.get_cell(self.SubKeyLists[index]).u.KeyIndex
             yield from self._get_subkeys_recursive(hive, subkey_node)
 
+    def get_value(self, value_name) -> Optional["CM_KEY_VALUE"]:
+        for value in self.get_values():
+            if value.name == value_name:
+                return value
+        return next(
+            (value for value in self.get_values() if value.get_name() == value_name),
+            None,
+        )
+
     def _get_subkeys_recursive(
         self, hive: RegistryHive, node: interfaces.objects.ObjectInterface
-    ) -> Iterable[interfaces.objects.ObjectInterface]:
+    ) -> Iterator["CM_KEY_NODE"]:
         """Recursively descend a node returning subkeys."""
         # The keylist appears to include 4 bytes of key name after each value
         # We can either double the list and only use the even items, or
@@ -170,7 +202,7 @@ class CM_KEY_NODE(objects.StructType):
         elif signature == "lh" or signature == "lf":
             listjump = 2
         elif node.vol.type_name.endswith(constants.BANG + "_CM_KEY_NODE"):
-            yield node
+            yield cast("CM_KEY_NODE", node)
         else:
             vollog.debug(
                 "Unexpected node type encountered when traversing subkeys: {}, signature: {}".format(
@@ -200,7 +232,7 @@ class CM_KEY_NODE(objects.StructType):
                         continue
                     yield from self._get_subkeys_recursive(hive, subnode)
 
-    def get_values(self) -> Iterable[interfaces.objects.ObjectInterface]:
+    def get_values(self) -> Iterator["CM_KEY_VALUE"]:
         """Returns a list of the Value nodes for a key."""
         hive = self._context.layers[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
@@ -216,13 +248,14 @@ class CM_KEY_NODE(objects.StructType):
                     except (RegistryInvalidIndex, RegistryFormatException) as excp:
                         vollog.debug(f"Invalid address {excp}")
                         continue
-                    if node.vol.type_name.endswith(constants.BANG + "_CM_KEY_VALUE"):
+                    if isinstance(node, CM_KEY_VALUE):
                         yield node
+
         except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
             vollog.debug(f"Invalid address in get_values iteration: {excp}")
             return None
 
-    def get_name(self) -> interfaces.objects.ObjectInterface:
+    def get_name(self) -> str:
         """Gets the name for the current key node"""
         namelength = self.NameLength
         self.Name.count = namelength
@@ -248,6 +281,10 @@ class CM_KEY_VALUE(objects.StructType):
         namelength = self.NameLength
         self.Name.count = namelength
         return self.Name.cast("string", max_length=namelength, encoding="latin-1")
+
+    def get_type(self) -> RegValueTypes:
+        """Get the type of the registry value"""
+        return RegValueTypes(self.Type)
 
     def decode_data(self) -> Union[int, bytes]:
         """Properly decodes the data associated with the value node"""
@@ -293,29 +330,28 @@ class CM_KEY_VALUE(objects.StructType):
             # but the length at the start could be negative so just adding 4 to jump past it
             data = layer.read(self.Data + 4, datalen)
 
-        self_type = RegValueTypes(self.Type)
-        if self_type == RegValueTypes.REG_DWORD:
+        if self.get_type() == RegValueTypes.REG_DWORD:
             if len(data) != struct.calcsize("<L"):
                 raise ValueError(
                     f"Size of data does not match the type of registry value {self.get_name()}"
                 )
             (res,) = struct.unpack("<L", data)
             return res
-        if self_type == RegValueTypes.REG_DWORD_BIG_ENDIAN:
+        if self.get_type() == RegValueTypes.REG_DWORD_BIG_ENDIAN:
             if len(data) != struct.calcsize(">L"):
                 raise ValueError(
                     f"Size of data does not match the type of registry value {self.get_name()}"
                 )
             (res,) = struct.unpack(">L", data)
             return res
-        if self_type == RegValueTypes.REG_QWORD:
+        if self.get_type() == RegValueTypes.REG_QWORD:
             if len(data) != struct.calcsize("<Q"):
                 raise ValueError(
                     f"Size of data does not match the type of registry value {self.get_name()}"
                 )
             (res,) = struct.unpack("<Q", data)
             return res
-        if self_type in [
+        if self.get_type() in [
             RegValueTypes.REG_SZ,
             RegValueTypes.REG_EXPAND_SZ,
             RegValueTypes.REG_LINK,
@@ -326,7 +362,7 @@ class CM_KEY_VALUE(objects.StructType):
             RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST,
         ]:
             return data
-        if self_type == RegValueTypes.REG_NONE:
+        if self.get_type() == RegValueTypes.REG_NONE:
             return b""
 
         # Fall back if it's something weird
