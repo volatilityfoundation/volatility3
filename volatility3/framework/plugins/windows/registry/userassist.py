@@ -286,6 +286,10 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
             hive_offsets = [self.config.get("offset", None)]
         kernel = self.context.modules[self.config["kernel"]]
 
+        self._reg_table_name = intermed.IntermediateSymbolTable.create(
+            self.context, self._config_path, "windows", "registry"
+        )
+
         # get all the user hive offsets or use the one specified
         for hive in hivelist.HiveList.list_hives(
             context=self.context,
@@ -337,10 +341,6 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
             yield result
 
     def generate_timeline(self):
-        self._reg_table_name = intermed.IntermediateSymbolTable.create(
-            self.context, self._config_path, "windows", "registry"
-        )
-
         for row in self._generator():
             _depth, row_data = row
             # check the name and the timestamp to not be empty
@@ -351,10 +351,6 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
                 yield (description, timeliner.TimeLinerType.MODIFIED, row_data[10])
 
     def run(self):
-        self._reg_table_name = intermed.IntermediateSymbolTable.create(
-            self.context, self._config_path, "windows", "registry"
-        )
-
         return renderers.TreeGrid(
             [
                 ("Hive Offset", renderers.format_hints.Hex),
