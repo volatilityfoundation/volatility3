@@ -20,6 +20,7 @@ from volatility3.framework.symbols.windows import versions
 
 vollog = logging.getLogger(__name__)
 
+
 class SvcDiff(svcscan.SvcScan):
     """Compares services found through list walking versus scanning to find rootkits"""
 
@@ -47,7 +48,9 @@ class SvcDiff(svcscan.SvcScan):
         On Windows 10 version 15063+ 64bit Windows memory samples, walk the services list
         and scan for services then report differences
         """
-        kernel, service_table_name, service_binary_dll_map, filter_func = self.get_prereq_info()
+        kernel, service_table_name, service_binary_dll_map, filter_func = (
+            self.get_prereq_info()
+        )
 
         if not symbols.symbol_table_is_64bit(
             self.context, kernel.symbol_table_name
@@ -65,14 +68,22 @@ class SvcDiff(svcscan.SvcScan):
 
         # collect unique service names from scanning
         for service in svcscan.SvcScan.service_scan(
-            self.context, kernel, service_table_name, service_binary_dll_map, filter_func
+            self.context,
+            kernel,
+            service_table_name,
+            service_binary_dll_map,
+            filter_func,
         ):
             from_scan.add(service[6])
             records[service[6]] = service
 
         # collect services from listing walking
         for service in svclist.SvcList.service_list(
-            self.context, kernel, service_table_name, service_binary_dll_map, filter_func
+            self.context,
+            kernel,
+            service_table_name,
+            service_binary_dll_map,
+            filter_func,
         ):
             from_list.add(service[6])
 
