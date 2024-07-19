@@ -3,6 +3,7 @@
 #
 import os
 import textwrap
+from typing import Dict, List, Tuple
 
 BASE_COMPLETION = """
 # Volatility3 {shell} completion start{script}# Volatility3 {shell} completion end
@@ -52,7 +53,7 @@ class AutoCompletion(object):
         self._main_options, self._plugins_options = self._extract_options()
 
     @classmethod
-    def is_enabled(cls) -> None:
+    def is_enabled(cls) -> bool:
         """Check if autocompletion is enabled in the shell"""
         return (
             cls.AUTOCOMPLETION_ACTIVATION_ENV in os.environ
@@ -61,9 +62,18 @@ class AutoCompletion(object):
         )
 
     @staticmethod
-    def get_script_template(shell_name):
-        """Return the autocompletion script template for a given shell"""
+    def get_script_template(shell_name) -> str:
+        """Return the autocompletion script template for a given shell
 
+        Args:
+            shell_name (str): The name of the script. It needs to match the COMPLETION_SCRIPTS keys
+
+        Raises:
+            RuntimeError: If the requested shell is not supported.
+
+        Returns:
+            str: The activation script template for the requested shell.
+        """
         script_template = COMPLETION_SCRIPTS.get(shell_name)
         if not script_template:
             raise RuntimeError(f"Shell '{shell_name}' not supported for autocompletion")
@@ -74,7 +84,12 @@ class AutoCompletion(object):
         )
         return activation_script
 
-    def _extract_options(self):
+    def _extract_options(self) -> Tuple[Dict, Dict]:
+        """Extract the options from argparse.
+
+        Returns:
+            tuple: containing the main options and the plugins options
+        """
         action_groups = self._parser._action_groups
 
         # Option groups - There are n groups, one per each main option
@@ -117,26 +132,33 @@ class AutoCompletion(object):
 
         return main_options, plugins_options
 
-    def _get_current_plugin(self):
+    def _get_current_plugin(self) -> str:
         # The first word matching a plugin name is the current plugin name
         for comp_word in self._comp_words[1:]:
             if comp_word in self._plugins_options:
                 return comp_word
 
-    def _incomplete_argument(self):
+    def _incomplete_argument(self) -> bool:
         return self._comp_cword < len(self._comp_words)
 
     def _autocomplete_dash_option(self):
         return self._incomplete_argument() and self._comp_words[-1].startswith("-")
 
-    def _in_dash_argument(self):
+    def _in_dash_argument(self) -> bool:
         len_comp_words = len(self._comp_words)
         return not self._autocomplete_dash_option() and (
             (len_comp_words >= 2 and self._comp_words[-1].startswith("-"))
             or (len_comp_words >= 3 and self._comp_words[-2].startswith("-"))
         )
 
-    def _cmdline_context_words(self):
+    def _cmdline_context_words(self) -> List[str]:
+        """Identify where the command line is standing, providing the correct
+        options for such context.
+
+        Returns:
+            List[str]: The appropriate list of options for the current command
+                       line
+        """
         current_plugin = self._get_current_plugin()
         all_options = list(self._main_options) + list(self._plugins_options)
         if current_plugin:
@@ -167,7 +189,7 @@ class AutoCompletion(object):
 
         return list(sub_options)
 
-    def process_commandline(self):
+    def process_commandline(self) -> bool:
         """Process the current command line and print the autocompletion tokens"""
         if not self.is_enabled():
             return False
