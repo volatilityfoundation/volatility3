@@ -3,7 +3,7 @@
 #
 import os
 import textwrap
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 BASE_COMPLETION = """
 # Volatility3 {shell} completion start{script}# Volatility3 {shell} completion end
@@ -132,11 +132,13 @@ class AutoCompletion(object):
 
         return main_options, plugins_options
 
-    def _get_current_plugin(self) -> str:
+    def _get_current_plugin(self) -> Union[None, str]:
         # The first word matching a plugin name is the current plugin name
         for comp_word in self._comp_words[1:]:
             if comp_word in self._plugins_options:
                 return comp_word
+
+        return None
 
     def _incomplete_argument(self) -> bool:
         return self._comp_cword < len(self._comp_words)
