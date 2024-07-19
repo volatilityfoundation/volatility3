@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Tuple, Type, Union
 from urllib import parse, request
 
 from volatility3.cli import text_filter
+from volatility3.cli.autocompletion import AutoCompletion
 import volatility3.plugins
 import volatility3.symbols
 from volatility3 import framework
@@ -240,7 +241,14 @@ class CommandLine:
             default=[],
             action="append",
         )
-
+        parser.add_argument(
+            "--autocompletion",
+            help="Show autocompletion code for a shell",
+            nargs="?",
+            choices=AutoCompletion.AVAILABLE_SHELLS,
+            default=None,
+            type=str,
+        )
         parser.set_defaults(**default_config)
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
@@ -248,10 +256,24 @@ class CommandLine:
         known_args = [arg for arg in sys.argv if arg != "--help" and arg != "-h"]
         partial_args, _ = parser.parse_known_args(known_args)
 
-        banner_output = sys.stdout
-        if renderers[partial_args.renderer].structured_output:
-            banner_output = sys.stderr
-        banner_output.write(f"Volatility 3 Framework {constants.PACKAGE_VERSION}\n")
+        if partial_args.autocompletion:
+            script_template = AutoCompletion.get_script_template(
+                shell_name=partial_args.autocompletion
+            )
+            print(
+                script_template.format(
+                    prog="vol",
+                    vol3_env_var=AutoCompletion.AUTOCOMPLETION_ACTIVATION_ENV,
+                )
+            )
+            sys.exit(0)
+
+        if not AutoCompletion.is_enabled():
+            # We cannot write to stdout when autocompletion is enabled
+            banner_output = sys.stdout
+            if renderers[partial_args.renderer].structured_output:
+                banner_output = sys.stderr
+            banner_output.write(f"Volatility 3 Framework {constants.PACKAGE_VERSION}\n")
 
         ### Start up logging
         if partial_args.log:
@@ -344,6 +366,13 @@ class CommandLine:
                 plugin, help=plugin_list[plugin].__doc__
             )
             self.populate_requirements_argparse(plugin_parser, plugin_list[plugin])
+
+        # The following will only work if autocompletion is enabled
+        must_exit = AutoCompletion(parser).process_commandline()
+        if must_exit:
+            # If enabled, it will exit here. It avoids calling sys.exit() to
+            # allow the autocompletion testcases to gather the stdout
+            return
 
         ###
         # PASS TO UI
