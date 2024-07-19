@@ -14,14 +14,9 @@ from volatility3.framework.renderers import format_hints
 vollog = logging.getLogger(__name__)
 
 try:
-    import yara
+    import yara_x
 
-    if tuple([int(x) for x in yara.__version__.split(".")]) < (3, 8):
-        raise ImportError
 except ImportError:
-    vollog.info(
-        "Python Yara (>3.8.0) module not found, plugin (and dependent plugins) not available"
-    )
     raise
 
 
@@ -34,27 +29,20 @@ class YaraScanner(interfaces.layers.ScannerInterface):
         if rules is None:
             raise ValueError("No rules provided to YaraScanner")
         self._rules = rules
-        self.st_object = not tuple([int(x) for x in yara.__version__.split(".")]) < (
-            4,
-            3,
-        )
 
     def __call__(
         self, data: bytes, data_offset: int
     ) -> Iterable[Tuple[int, str, str, bytes]]:
-        for match in self._rules.match(data=data):
-            if YaraScan.yara_returns_instances():
-                for match_string in match.strings:
-                    for instance in match_string.instances:
-                        yield (
-                            instance.offset + data_offset,
-                            match.rule,
-                            match_string.identifier,
-                            instance.matched_data,
-                        )
-            else:
-                for offset, name, value in match.strings:
-                    yield (offset + data_offset, match.rule, name, value)
+        results = self._rules.scan(data)
+        for match in results.matching_rules:
+            for match_string in match.patterns:
+                for instance in match_string.matches:
+                    yield (
+                        instance.offset + data_offset,
+                        f"{match.namespace}.{match.identifier}",
+                        match_string.identifier,
+                        data[instance.offset : instance.offset + instance.length],
+                    )
 
 
 class YaraScan(plugins.PluginInterface):
@@ -62,9 +50,6 @@ class YaraScan(plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
     _version = (1, 3, 0)
-
-    # TODO: When the major version is bumped, take the opportunity to rename the yara_rules config to yara_string
-    # or something that makes more sense
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -99,16 +84,13 @@ class YaraScan(plugins.PluginInterface):
                 optional=True,
             ),
             requirements.StringRequirement(
-                name="yara_rules", description="Yara rules (as a string)", optional=True
+                name="yara_string",
+                description="Yara rules (as a string)",
+                optional=True,
             ),
-            requirements.URIRequirement(
-                name="yara_file", description="Yara rules (as a file)", optional=True
-            ),
-            # This additional requirement is to follow suit with upstream, who feel that compiled rules could potentially be used to execute malicious code
-            # As such, there's a separate option to run compiled files, as happened with yara-3.9 and later
             requirements.URIRequirement(
                 name="yara_compiled_file",
-                description="Yara compiled rules (as a file)",
+                description="Yara-x compiled rules (as a file)",
                 optional=True,
             ),
             requirements.IntRequirement(
@@ -120,35 +102,19 @@ class YaraScan(plugins.PluginInterface):
         ]
 
     @classmethod
-    def yara_returns_instances(cls) -> bool:
-        st_object = not tuple([int(x) for x in yara.__version__.split(".")]) < (
-            4,
-            3,
-        )
-        return st_object
-
-    @classmethod
     def process_yara_options(cls, config: Dict[str, Any]):
         rules = None
-        if config.get("yara_rules", None) is not None:
-            rule = config["yara_rules"]
+        if config.get("yara_string") is not None:
+            rule = config["yara_string"]
             if rule[0] not in ["{", "/"]:
                 rule = f'"{rule}"'
             if config.get("case", False):
                 rule += " nocase"
             if config.get("wide", False):
                 rule += " wide ascii"
-            rules = yara.compile(
-                sources={"n": f"rule r1 {{strings: $a = {rule} condition: $a}}"}
-            )
-        elif config.get("yara_source", None) is not None:
-            rules = yara.compile(source=config["yara_source"])
-        elif config.get("yara_file", None) is not None:
-            rules = yara.compile(
-                file=resources.ResourceAccessor().open(config["yara_file"], "rb")
-            )
-        elif config.get("yara_compiled_file", None) is not None:
-            rules = yara.load(
+            rules = yara_x.compile(f"rule r1 {{strings: $a = {rule} condition: $a}}")
+        elif config.get("yara_compiled_file") is not None:
+            rules = yara_x.Rules.deserialize_from(
                 file=resources.ResourceAccessor().open(
                     config["yara_compiled_file"], "rb"
                 )
