@@ -110,7 +110,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
     ]
 
     @staticmethod
-    def create_service_table(
+    def _create_service_table(
         context: interfaces.context.ContextInterface,
         symbol_table: str,
         config_path: str,
@@ -148,9 +148,9 @@ class SvcScan(interfaces.plugins.PluginInterface):
             native_types=native_types,
         )
 
-    @classmethod
+    @staticmethod
     def _get_service_key(
-        cls, context, config_path: str, layer_name: str, symbol_table: str
+        context, config_path: str, layer_name: str, symbol_table: str
     ) -> Optional[objects.StructType]:
         for hive in hivelist.HiveList.list_hives(
             context=context,
@@ -358,7 +358,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
         Data structures and information needed to analyze service information
         """
 
-        service_table_name = cls.create_service_table(
+        service_table_name = cls._create_service_table(
             context, symbol_table, config_path
         )
 
