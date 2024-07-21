@@ -7,7 +7,7 @@ import glob
 import sys
 import zipfile
 
-required_python_version = (3, 7, 0)
+required_python_version = (3, 7, 3)
 if (
     sys.version_info.major != required_python_version[0]
     or sys.version_info.minor < required_python_version[1]
@@ -223,8 +223,14 @@ def list_plugins() -> Dict[str, Type[interfaces.plugins.PluginInterface]]:
     return plugin_list
 
 
-def clear_cache(complete=False):
+def clear_cache(complete=True):
     try:
+        if complete:
+            glob_pattern = "*.cache"
+            for cache_filename in glob.glob(
+                os.path.join(constants.CACHE_PATH, glob_pattern)
+            ):
+                os.unlink(cache_filename)
         os.unlink(os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME))
     except FileNotFoundError:
         vollog.log(constants.LOGLEVEL_VVVV, "Attempting to clear a non-existant cache")

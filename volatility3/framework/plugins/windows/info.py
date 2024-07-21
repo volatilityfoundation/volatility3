@@ -7,6 +7,7 @@ import struct
 from typing import List, Tuple, Iterable
 
 from volatility3.framework import constants, interfaces, layers, symbols
+from volatility3.framework.symbols.windows.extensions import kdbg, pe
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins, configuration
 from volatility3.framework.renderers import TreeGrid
@@ -116,16 +117,16 @@ class Info(plugins.PluginInterface):
             "windows",
             "kdbg",
             native_types=native_types,
-            class_types=extensions.kdbg.class_types,
+            class_types=kdbg.class_types,
         )
 
-        kdbg = context.object(
+        kdbg_obj = context.object(
             kdbg_table_name + constants.BANG + "_KDDEBUGGER_DATA64",
             offset=ntkrnlmp.offset + kdbg_offset,
             layer_name=layer_name,
         )
 
-        return kdbg
+        return kdbg_obj
 
     @classmethod
     def is_kdbg_encoded(
@@ -327,7 +328,7 @@ class Info(plugins.PluginInterface):
             interfaces.configuration.path_join(config_path, "pe"),
             "windows",
             "pe",
-            class_types=extensions.pe.class_types,
+            class_types=pe.class_types,
         )
 
         dos_header = context.object(

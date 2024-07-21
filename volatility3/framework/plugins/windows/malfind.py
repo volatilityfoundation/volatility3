@@ -155,12 +155,12 @@ class Malfind(interfaces.plugins.PluginInterface):
 
         for proc in procs:
             # by default, "Notes" column will be set to N/A
-            notes = renderers.NotApplicableValue()
             process_name = utility.array_to_string(proc.ImageFileName)
 
             for vad, data in self.list_injections(
                 self.context, kernel.layer_name, kernel.symbol_table_name, proc
             ):
+                notes = renderers.NotApplicableValue()
                 # Check for unique headers and update "Notes" column if criteria is met
                 if data[0:2] in refined_criteria:
                     notes = refined_criteria[data[0:2]]

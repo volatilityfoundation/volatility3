@@ -266,20 +266,28 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 if proc.vol.layer_name == kernel.layer_name:
                     vproc = proc
                 else:
-                    vproc = self.virtual_process_from_physical(
-                        self.context, kernel.layer_name, kernel.symbol_table_name, proc
+                    try:
+                        vproc = self.virtual_process_from_physical(
+                            self.context,
+                            kernel.layer_name,
+                            kernel.symbol_table_name,
+                            proc,
+                        )
+                    except exceptions.PagedInvalidAddressException:
+                        vproc = None
+
+                file_output = "Error outputting file"
+                if vproc:
+                    file_handle = pslist.PsList.process_dump(
+                        self.context,
+                        kernel.symbol_table_name,
+                        pe_table_name,
+                        vproc,
+                        self.open,
                     )
 
-                file_handle = pslist.PsList.process_dump(
-                    self.context,
-                    kernel.symbol_table_name,
-                    pe_table_name,
-                    vproc,
-                    self.open,
-                )
-                file_output = "Error outputting file"
-                if file_handle:
-                    file_output = file_handle.preferred_filename
+                    if file_handle:
+                        file_output = file_handle.preferred_filename
 
             if not self.config["physical"]:
                 offset = proc.vol.offset

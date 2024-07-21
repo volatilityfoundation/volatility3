@@ -1,5 +1,5 @@
-# The following packages are required for core functionality.
-pefile>=2023.2.7
+# Include the minimal requirements
+-r requirements-minimal.txt
 
 # The following packages are optional.
 # If certain packages are not necessary, place a comment (#) at the start of the line.
@@ -15,7 +15,7 @@ capstone>=3.0.5
 pycryptodome
 
 # This is required for memory acquisition via leechcore/pcileech.
-leechcorepyc>=2.4.0
+leechcorepyc>=2.4.0; sys_platform != 'darwin'
 
 # This is required for memory analysis on a Amazon/MinIO S3 and Google Cloud object storage
 gcsfs>=2023.1.0

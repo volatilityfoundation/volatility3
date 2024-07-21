@@ -43,7 +43,7 @@ class YaraScanner(interfaces.layers.ScannerInterface):
         self, data: bytes, data_offset: int
     ) -> Iterable[Tuple[int, str, str, bytes]]:
         for match in self._rules.match(data=data):
-            if self.st_object:
+            if YaraScan.yara_returns_instances():
                 for match_string in match.strings:
                     for instance in match_string.instances:
                         yield (
@@ -61,7 +61,7 @@ class YaraScan(plugins.PluginInterface):
     """Scans kernel memory using yara rules (string or file)."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 2, 0)
+    _version = (1, 3, 0)
 
     # TODO: When the major version is bumped, take the opportunity to rename the yara_rules config to yara_string
     # or something that makes more sense
@@ -118,6 +118,14 @@ class YaraScan(plugins.PluginInterface):
                 optional=True,
             ),
         ]
+
+    @classmethod
+    def yara_returns_instances(cls) -> bool:
+        st_object = not tuple([int(x) for x in yara.__version__.split(".")]) < (
+            4,
+            3,
+        )
+        return st_object
 
     @classmethod
     def process_yara_options(cls, config: Dict[str, Any]):
