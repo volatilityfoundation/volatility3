@@ -62,42 +62,41 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
             _constraint, mem_object, _header = result
             yield mem_object
 
+    @classmethod
+    def gather_thread_info(cls, ethread):
+        try:
+            thread_offset = ethread.vol.offset
+            owner_proc_pid = ethread.Cid.UniqueProcess
+            thread_tid = ethread.Cid.UniqueThread
+            thread_start_addr = ethread.StartAddress
+            thread_create_time = (
+                ethread.get_create_time()
+            )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
+            thread_exit_time = (
+                ethread.get_exit_time()
+            )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
+        except exceptions.InvalidAddressException:
+            vollog.debug("Thread invalid address {:#x}".format(thread.vol.offset))
+            return None
+
+        return (
+            format_hints.Hex(thread_offset),
+            owner_proc_pid,
+            thread_tid,
+            format_hints.Hex(thread_start_addr),
+            thread_create_time,
+            thread_exit_time,
+        )
+
     def _generator(self):
         kernel = self.context.modules[self.config["kernel"]]
 
         for ethread in self.scan_threads(
             self.context, kernel.layer_name, kernel.symbol_table_name
         ):
-            try:
-                thread_offset = ethread.vol.offset
-                owner_proc_pid = ethread.Cid.UniqueProcess
-                thread_tid = ethread.Cid.UniqueThread
-                thread_start_addr = ethread.StartAddress
-                thread_create_time = (
-                    ethread.get_create_time()
-                )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
-                thread_exit_time = (
-                    ethread.get_exit_time()
-                )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
-            except (ValueError, exceptions.InvalidAddressException):
-                vollog.debug(
-                    "Thread :{}, invalid address {} in layer {}".format(
-                        thread_tid, thread_start_addr, kernel.layer_name
-                    )
-                )
-                continue
-
-            yield (
-                0,
-                (
-                    format_hints.Hex(thread_offset),
-                    owner_proc_pid,
-                    thread_tid,
-                    format_hints.Hex(thread_start_addr),
-                    thread_create_time,
-                    thread_exit_time,
-                ),
-            )
+            info = self.gather_thread_info(ethread)
+            if info:
+                yield (0, info)
 
     def generate_timeline(self):
         for row in self._generator():

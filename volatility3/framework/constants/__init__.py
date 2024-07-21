@@ -14,6 +14,13 @@ from typing import Callable, Optional
 
 import volatility3.framework.constants.linux
 import volatility3.framework.constants.windows
+from volatility3.framework.constants._version import (
+    PACKAGE_VERSION,
+    VERSION_MAJOR,
+    VERSION_MINOR,
+    VERSION_PATCH,
+    VERSION_SUFFIX,
+)
 
 PLUGINS_PATH = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "plugins")),
@@ -41,20 +48,6 @@ if hasattr(sys, "frozen") and sys.frozen:
 
 BANG = "!"
 """Constant used to delimit table names from type names when referring to a symbol"""
-
-# We use the SemVer 2.0.0 versioning scheme
-VERSION_MAJOR = 2  # Number of releases of the library with a breaking change
-VERSION_MINOR = 7  # Number of changes that only add to the interface
-VERSION_PATCH = 0  # Number of changes that do not change the interface
-VERSION_SUFFIX = ""
-
-# TODO: At version 2.0.0, remove the symbol_shift feature
-
-PACKAGE_VERSION = (
-    ".".join([str(x) for x in [VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH]])
-    + VERSION_SUFFIX
-)
-"""The canonical version of the volatility3 package"""
 
 AUTOMAGIC_CONFIG_PATH = "automagic"
 """The root section within the context configuration for automagic values"""
