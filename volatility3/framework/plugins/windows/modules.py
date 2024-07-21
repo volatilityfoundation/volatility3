@@ -63,16 +63,15 @@ class Modules(interfaces.plugins.PluginInterface):
         )
         file_output = f"Cannot find a viable session layer for {mod.DllBase:#x}"
         if session_layer_name:
-            file_handle = pedump.PEDump.dump_ldr_entry(
+            file_output = pedump.PEDump.dump_ldr_entry(
                 self.context,
                 pe_table_name,
                 mod,
                 self.open,
                 layer_name=session_layer_name,
             )
-            file_output = "Error outputting file"
-            if file_handle:
-                file_output = file_handle
+            if not file_output:
+                file_output = "Error outputting file"
 
         return file_output
 

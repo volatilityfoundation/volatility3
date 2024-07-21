@@ -147,7 +147,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
                 file_output = "Disabled"
                 if self.config["dump"]:
-                    file_handle = pedump.PEDump.dump_ldr_entry(
+                    file_output = pedump.PEDump.dump_ldr_entry(
                         self.context,
                         pe_table_name,
                         entry,
@@ -155,9 +155,10 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         proc_layer_name,
                         prefix=f"pid.{proc_id}.",
                     )
-                    file_output = "Error outputting file"
-                    if file_handle:
-                        file_output = file_handle
+
+                    if not file_output:
+                        file_output = "Error outputting file"
+
                 try:
                     dllbase = format_hints.Hex(entry.DllBase)
                 except exceptions.InvalidAddressException:

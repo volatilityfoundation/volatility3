@@ -126,7 +126,7 @@ class PEDump(interfaces.plugins.PluginInterface):
             ldr_entry.DllBase,
         )
 
-        return PEDump.dump_pe(
+        return cls.dump_pe(
             context,
             pe_table_name,
             layer_name,
