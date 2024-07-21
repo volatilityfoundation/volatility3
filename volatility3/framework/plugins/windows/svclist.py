@@ -59,15 +59,16 @@ class SvcList(svcscan.SvcScan):
     def service_list(
         cls,
         context: interfaces.context.ContextInterface,
-        kernel,
+        layer_name: str,
+        symbol_table: str,
         service_table_name: str,
         service_binary_dll_map,
         filter_func,
     ):
         if not symbols.symbol_table_is_64bit(
-            context, kernel.symbol_table_name
+            context, symbol_table
         ) or not versions.is_win10_15063_or_later(
-            context=context, symbol_table=kernel.symbol_table_name
+            context=context, symbol_table=symbol_table
         ):
             vollog.warning(
                 "This plugin only supports Windows 10 version 15063+ 64bit Windows memory samples"
@@ -76,8 +77,8 @@ class SvcList(svcscan.SvcScan):
 
         for proc in pslist.PsList.list_processes(
             context=context,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            layer_name=layer_name,
+            symbol_table=symbol_table,
             filter_func=filter_func,
         ):
             try:

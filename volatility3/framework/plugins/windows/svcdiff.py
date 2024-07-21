@@ -13,7 +13,7 @@
 
 import logging
 
-from volatility3.framework import symbols
+from volatility3.framework import symbols, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.plugins.windows import svclist, svcscan
 from volatility3.framework.symbols.windows import versions
@@ -25,6 +25,10 @@ class SvcDiff(svcscan.SvcScan):
     """Compares services found through list walking versus scanning to find rootkits"""
 
     _required_framework_version = (2, 4, 0)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._enumeration_method = self.service_diff
 
     @classmethod
     def get_requirements(cls):
@@ -43,19 +47,24 @@ class SvcDiff(svcscan.SvcScan):
             ),
         ]
 
-    def _generator(self):
+    @classmethod
+    def service_diff(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        symbol_table: str,
+        service_table_name: str,
+        service_binary_dll_map,
+        filter_func,
+    ):
         """
         On Windows 10 version 15063+ 64bit Windows memory samples, walk the services list
         and scan for services then report differences
         """
-        kernel, service_table_name, service_binary_dll_map, filter_func = (
-            self.get_prereq_info()
-        )
-
         if not symbols.symbol_table_is_64bit(
-            self.context, kernel.symbol_table_name
+            context, symbol_table
         ) or not versions.is_win10_15063_or_later(
-            context=self.context, symbol_table=kernel.symbol_table_name
+            context=context, symbol_table=symbol_table
         ):
             vollog.warning(
                 "This plugin only supports Windows 10 version 15063+ 64bit Windows memory samples"
@@ -68,8 +77,9 @@ class SvcDiff(svcscan.SvcScan):
 
         # collect unique service names from scanning
         for service in svcscan.SvcScan.service_scan(
-            self.context,
-            kernel,
+            context,
+            layer_name,
+            symbol_table,
             service_table_name,
             service_binary_dll_map,
             filter_func,
@@ -79,8 +89,9 @@ class SvcDiff(svcscan.SvcScan):
 
         # collect services from listing walking
         for service in svclist.SvcList.service_list(
-            self.context,
-            kernel,
+            context,
+            layer_name,
+            symbol_table,
             service_table_name,
             service_binary_dll_map,
             filter_func,
@@ -89,4 +100,4 @@ class SvcDiff(svcscan.SvcScan):
 
         # report services found from scanning but not list walking
         for hidden_service in from_scan - from_list:
-            yield (0, records[hidden_service])
+            yield records[hidden_service]

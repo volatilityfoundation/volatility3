@@ -148,14 +148,17 @@ class SvcScan(interfaces.plugins.PluginInterface):
             native_types=native_types,
         )
 
-    def _get_service_key(self, kernel) -> Optional[objects.StructType]:
+    @classmethod
+    def _get_service_key(
+        cls, context, config_path: str, layer_name: str, symbol_table: str
+    ) -> Optional[objects.StructType]:
         for hive in hivelist.HiveList.list_hives(
-            context=self.context,
+            context=context,
             base_config_path=interfaces.configuration.path_join(
-                self.config_path, "hivelist"
+                config_path, "hivelist"
             ),
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            layer_name=layer_name,
+            symbol_table=symbol_table,
             filter_string="machine\\system",
         ):
             # Get ControlSet\Services.
@@ -273,7 +276,8 @@ class SvcScan(interfaces.plugins.PluginInterface):
     def service_scan(
         cls,
         context: interfaces.context.ContextInterface,
-        kernel,
+        layer_name: str,
+        symbol_table: str,
         service_table_name: str,
         service_binary_dll_map,
         filter_func,
@@ -283,7 +287,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
         ).relative_child_offset("Tag")
 
         is_vista_or_later = versions.is_vista_or_later(
-            context=context, symbol_table=kernel.symbol_table_name
+            context=context, symbol_table=symbol_table
         )
 
         if is_vista_or_later:
@@ -295,8 +299,8 @@ class SvcScan(interfaces.plugins.PluginInterface):
 
         for task in pslist.PsList.list_processes(
             context=context,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            layer_name=layer_name,
+            symbol_table=symbol_table,
             filter_func=filter_func,
         ):
             proc_id = "Unknown"
@@ -348,36 +352,41 @@ class SvcScan(interfaces.plugins.PluginInterface):
                         seen.append(service_record)
                         yield service_record
 
-    def get_prereq_info(self):
+    @classmethod
+    def get_prereq_info(cls, context, config_path, layer_name: str, symbol_table: str):
         """
         Data structures and information needed to analyze service information
         """
-        kernel = self.context.modules[self.config["kernel"]]
 
-        service_table_name = self.create_service_table(
-            self.context, kernel.symbol_table_name, self.config_path
+        service_table_name = cls.create_service_table(
+            context, symbol_table, config_path
         )
 
-        services_key = self._get_service_key(kernel)
+        services_key = cls._get_service_key(
+            context, config_path, layer_name, symbol_table
+        )
 
         service_binary_dll_map = (
-            self._get_service_binary_map(services_key)
+            cls._get_service_binary_map(services_key)
             if services_key is not None
             else {}
         )
 
         filter_func = pslist.PsList.create_name_filter(["services.exe"])
 
-        return kernel, service_table_name, service_binary_dll_map, filter_func
+        return service_table_name, service_binary_dll_map, filter_func
 
     def _generator(self):
-        kernel, service_table_name, service_binary_dll_map, filter_func = (
-            self.get_prereq_info()
+        kernel = self.context.modules[self.config["kernel"]]
+
+        service_table_name, service_binary_dll_map, filter_func = self.get_prereq_info(
+            self.context, self.config_path, kernel.layer_name, kernel.symbol_table_name
         )
 
         for record in self._enumeration_method(
             self.context,
-            kernel,
+            kernel.layer_name,
+            kernel.symbol_table_name,
             service_table_name,
             service_binary_dll_map,
             filter_func,
