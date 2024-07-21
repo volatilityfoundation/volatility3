@@ -44,7 +44,17 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     def enumerate_mft_records(self, attr_callback):
-        phys_layer = self.context.layers[self.config["primary"]].config["memory_layer"]
+        try:
+            primary = self.context.layers[self.config["primary"]]
+        except KeyError:
+            vollog.error("Unable to obtain primary layer for scanning. Please file a bug on GitHub about this issue.")
+            return
+
+        try:
+            phys_layer = primary.config["memory_layer"]
+        except KeyError:
+            vollog.error("Unable to obtain memory layer from primary layer. Please file a bug on GitHub about this issue.")
+            return
 
         layer = self.context.layers[phys_layer]
 
