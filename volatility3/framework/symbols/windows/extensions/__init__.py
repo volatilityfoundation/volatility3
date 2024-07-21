@@ -307,16 +307,19 @@ class MMVAD_SHORT(objects.StructType):
 
         raise AttributeError("Unable to find the private memory member")
 
+    @property
+    def Protection(self):
+        if self.has_member("u"):
+            return self.u.VadFlags.Protection
+        elif self.has_member("Core"):
+            return self.Core.u.VadFlags.Protection
+        else:
+            return None
+
     def get_protection(self, protect_values, winnt_protections):
         """Get the VAD's protection constants as a string."""
 
-        protect = None
-
-        if self.has_member("u"):
-            protect = self.u.VadFlags.Protection
-
-        elif self.has_member("Core"):
-            protect = self.Core.u.VadFlags.Protection
+        protect = self.Protection
 
         try:
             value = protect_values[protect]
@@ -592,6 +595,38 @@ class UNICODE_STRING(objects.StructType):
         )
 
     String = property(get_string)
+
+
+class ERESOURCE(objects.StructType):
+    def is_valid(self) -> bool:
+        vollog.debug(f"Checking ERESOURCE Validity: {hex(self.vol.offset)}")
+
+        if not self._context.layers[self.vol.layer_name].is_valid(self.vol.offset):
+            return False
+
+        sym_table = self.get_symbol_table_name()
+
+        waiters_valid = self.SharedWaiters == 0 or self._context.layers[
+            self.vol.layer_name
+        ].is_valid(
+            self.SharedWaiters.vol.offset,
+            self._context.symbol_space.get_type(
+                sym_table + constants.BANG + "_KSEMAPHORE"
+            ).size,
+        )
+
+        try:
+            return (
+                waiters_valid
+                and self.SystemResourcesList.Flink is not None
+                and self.SystemResourcesList.Blink is not None
+                and self.SystemResourcesList.Flink != self.SystemResourcesList.Blink
+                and self.SystemResourcesList.Flink.Blink == self.vol.offset
+                and self.SystemResourcesList.Blink.Flink == self.vol.offset
+                and self.NumberOfSharedWaiters == 0
+            )
+        except exceptions.InvalidAddressException:
+            return False
 
 
 class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
