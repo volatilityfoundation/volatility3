@@ -39,6 +39,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("_VACB", extensions.VACB)
         self.set_type_class("_POOL_TRACKER_BIG_PAGES", pool.POOL_TRACKER_BIG_PAGES)
         self.set_type_class("_IMAGE_DOS_HEADER", pe.IMAGE_DOS_HEADER)
+        self.set_type_class("_KTIMER", extensions.KTIMER)
 
         # Might not necessarily defined in every version of windows
         self.optional_set_type_class("_IMAGE_NT_HEADERS", pe.IMAGE_NT_HEADERS)

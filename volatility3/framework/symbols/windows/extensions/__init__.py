@@ -20,6 +20,7 @@ from volatility3.framework import (
 )
 from volatility3.framework.interfaces.objects import ObjectInterface
 from volatility3.framework.layers import intel
+from volatility3.framework.objects import utility
 from volatility3.framework.renderers import conversion
 from volatility3.framework.symbols import generic
 from volatility3.framework.symbols.windows.extensions import pool
@@ -1008,6 +1009,83 @@ class TOKEN(objects.StructType):
                     yield luid.Luid.LowPart, True, enabled, default
             else:
                 vollog.log(constants.LOGLEVEL_VVVV, "Broken Token Privileges.")
+
+
+class KTIMER(objects.StructType):
+    """A class for Kernel Timers"""
+
+    VALID_TYPES = {
+        8: "TimerNotificationObject",
+        9: "TimerSynchronizationObject",
+    }
+
+    def get_signaled(self):
+        if self.Header.SignalState:
+            return "Yes"
+        return "-"
+
+    def get_raw_dpc(self):
+        """Returns the encoded DPC since it may not look like a pointer after encoding"""
+        symbol_table_name = self.get_symbol_table_name()
+        pointer_type = self._context.symbol_space.get_type(
+            symbol_table_name + constants.BANG + "pointer"
+        )
+
+        return self._context.object(
+            object_type=pointer_type,
+            layer_name=self.vol.layer_name,
+            offset=self.Dpc.vol.offset,
+        )
+
+    def valid_type(self):
+        return self.Header.Type in self.VALID_TYPES
+
+    def get_due_time(self):
+        return "{0:#010x}:{1:#010x}".format(self.DueTime.HighPart, self.DueTime.LowPart)
+
+    def get_dpc(self):
+        """Return Dpc, and if Windows 7 or later, decode it"""
+        symbol_table_name = self.get_symbol_table_name()
+        kvo = self._context.layers[self.vol.native_layer_name].config[
+            "kernel_virtual_offset"
+        ]
+        ntkrnlmp = self._context.module(
+            symbol_table_name,
+            layer_name=self.vol.native_layer_name,
+            offset=kvo,
+            native_layer_name=self.vol.native_layer_name,
+        )
+
+        if ntkrnlmp.has_symbol("KiWaitNever") and ntkrnlmp.has_symbol("KiWaitAlways"):
+            wait_never = ntkrnlmp.object(
+                object_type="unsigned long long",
+                offset=ntkrnlmp.get_symbol("KiWaitNever").address,
+            )
+            wait_always = ntkrnlmp.object(
+                object_type="unsigned long long",
+                offset=ntkrnlmp.get_symbol("KiWaitAlways").address,
+            )
+
+            low_byte = (wait_never) & 0xFF
+            entry = utility.rol(self.get_raw_dpc() ^ wait_never, low_byte)
+            swap_xor = self._context.layers[self.vol.native_layer_name].canonicalize(
+                self.vol.offset
+            )
+            entry = utility.bswap_64(entry ^ swap_xor)
+            dpc = entry ^ wait_always
+
+            symbol_table_name = self.get_symbol_table_name()
+            kdpc_type = self._context.symbol_space.get_type(
+                symbol_table_name + constants.BANG + "_KDPC"
+            )
+
+            return self._context.object(
+                object_type=kdpc_type,
+                layer_name=self.vol.layer_name,
+                offset=dpc,
+            )
+        else:
+            return self.Dpc
 
 
 class KTHREAD(objects.StructType):
