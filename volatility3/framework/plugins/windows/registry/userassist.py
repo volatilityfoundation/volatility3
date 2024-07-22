@@ -17,11 +17,12 @@ from volatility3.framework.layers.registry import RegistryHive
 from volatility3.framework.renderers import conversion, format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.plugins.windows.registry import hivelist
+from volatility3.plugins import timeliner
 
 vollog = logging.getLogger(__name__)
 
 
-class UserAssist(interfaces.plugins.PluginInterface):
+class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Print userassist registry keys and information."""
 
     _required_framework_version = (2, 0, 0)
@@ -285,6 +286,10 @@ class UserAssist(interfaces.plugins.PluginInterface):
             hive_offsets = [self.config.get("offset", None)]
         kernel = self.context.modules[self.config["kernel"]]
 
+        self._reg_table_name = intermed.IntermediateSymbolTable.create(
+            self.context, self._config_path, "windows", "registry"
+        )
+
         # get all the user hive offsets or use the one specified
         for hive in hivelist.HiveList.list_hives(
             context=self.context,
@@ -335,11 +340,17 @@ class UserAssist(interfaces.plugins.PluginInterface):
             )
             yield result
 
-    def run(self):
-        self._reg_table_name = intermed.IntermediateSymbolTable.create(
-            self.context, self._config_path, "windows", "registry"
-        )
+    def generate_timeline(self):
+        for row in self._generator():
+            _depth, row_data = row
+            # check the name and the timestamp to not be empty
+            if isinstance(row_data[5], str) and not isinstance(
+                row_data[10], renderers.NotApplicableValue
+            ):
+                description = f"UserAssist: {row_data[5]} {row_data[2]} ({row_data[7]})"
+                yield (description, timeliner.TimeLinerType.MODIFIED, row_data[10])
 
+    def run(self):
         return renderers.TreeGrid(
             [
                 ("Hive Offset", renderers.format_hints.Hex),

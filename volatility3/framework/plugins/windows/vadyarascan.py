@@ -56,7 +56,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
-        sanity_check = 0x1000 * 0x1000 * 0x1000
+        sanity_check = 1024 * 1024 * 1024  # 1 GB
 
         for task in pslist.PsList.list_processes(
             context=self.context,
@@ -66,15 +66,14 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
         ):
             layer_name = task.add_process_layer()
             layer = self.context.layers[layer_name]
-            for start, end in self.get_vad_maps(task):
-                size = end - start
+            for start, size in self.get_vad_maps(task):
                 if size > sanity_check:
                     vollog.warn(
                         f"VAD at 0x{start:x} over sanity-check size, not scanning"
                     )
                     continue
 
-                for match in rules.match(data=layer.read(start, end - start, True)):
+                for match in rules.match(data=layer.read(start, size, True)):
                     if yarascan.YaraScan.yara_returns_instances():
                         for match_string in match.strings:
                             for instance in match_string.instances:
@@ -106,7 +105,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
             task: The EPROCESS object of which to traverse the vad tree
 
         Returns:
-            An iterable of tuples containing start and end addresses for each descriptor
+            An iterable of tuples containing start and size for each descriptor
         """
         vad_root = task.get_vad_root()
         for vad in vad_root.traverse():

@@ -6,7 +6,7 @@ from typing import Iterable
 
 from volatility3.framework import interfaces
 from volatility3.framework.configuration import requirements
-from volatility3.plugins.windows import poolscanner, dlllist, pslist, modules
+from volatility3.plugins.windows import poolscanner, modules, pedump
 
 vollog = logging.getLogger(__name__)
 
@@ -35,12 +35,6 @@ class ModScan(modules.Modules):
             requirements.VersionRequirement(
                 name="modules", component=modules.Modules, version=(2, 0, 0)
             ),
-            requirements.VersionRequirement(
-                name="pslist", component=pslist.PsList, version=(2, 0, 0)
-            ),
-            requirements.VersionRequirement(
-                name="dlllist", component=dlllist.DllList, version=(2, 0, 0)
-            ),
             requirements.BooleanRequirement(
                 name="dump",
                 description="Extract listed modules",
@@ -57,6 +51,9 @@ class ModScan(modules.Modules):
                 description="module name/sub string",
                 optional=True,
                 default=None,
+            ),
+            requirements.VersionRequirement(
+                name="pedump", component=pedump.PEDump, version=(1, 0, 0)
             ),
         ]
 
