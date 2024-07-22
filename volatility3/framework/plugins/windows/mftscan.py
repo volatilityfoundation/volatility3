@@ -42,7 +42,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         context: interfaces.context.ContextInterface,
         config: interfaces.configuration.HierarchicalDict,
         config_path: str,
-        attr_callback
+        attr_callback,
     ) -> interfaces.objects.ObjectInterface:
         try:
             primary = context.layers[config["primary"]]
