@@ -13,14 +13,73 @@ from volatility3.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
 
+USE_YARA_X = False
+
 try:
     import yara_x
 
+    USE_YARA_X = True
+
 except ImportError:
-    raise
+    try:
+        import yara
+
+        if tuple(int(x) for x in yara.__version__.split(".")) < (3, 8):
+            raise ImportError
+
+        vollog.info("Using yara-python module")
+
+    except ImportError:
+        vollog.info(
+            "Python Yara (>3.8.0) module not found, plugin (and dependent plugins) not available"
+        )
+        raise
 
 
-class YaraScanner(interfaces.layers.ScannerInterface):
+class YaraPythonScanner(interfaces.layers.ScannerInterface):
+    _version = (2, 0, 0)
+
+    # yara.Rules isn't exposed, so we can't type this properly
+    def __init__(self, rules) -> None:
+        super().__init__()
+        if rules is None:
+            raise ValueError("No rules provided to YaraScanner")
+        self._rules = rules
+        self.st_object = not tuple(int(x) for x in yara.__version__.split(".")) < (4, 3)
+
+    def __call__(
+        self, data: bytes, data_offset: int
+    ) -> Iterable[Tuple[int, str, str, bytes]]:
+        for match in self._rules.match(data=data):
+            if self.st_object:
+                for match_string in match.strings:
+                    for instance in match_string.instances:
+                        yield (
+                            instance.offset + data_offset,
+                            match.rule,
+                            match_string.identifier,
+                            instance.matched_data,
+                        )
+            else:
+                for offset, name, value in match.strings:
+                    yield (offset + data_offset, match.rule, name, value)
+
+    @staticmethod
+    def get_rule(rule):
+        return yara.compile(
+            sources={"n": f"rule r1 {{strings: $a = {rule} condition: $a}}"}
+        )
+
+    @staticmethod
+    def from_compiled_file(filepath):
+        return yara.load(file=resources.ResourceAccessor().open(filepath, "rb"))
+
+    @staticmethod
+    def from_file(filepath):
+        return yara.compile(file=resources.ResourceAccessor().open(filepath, "rb"))
+
+
+class YaraXScanner(interfaces.layers.ScannerInterface):
     _version = (2, 0, 0)
 
     # yara.Rules isn't exposed, so we can't type this properly
@@ -43,6 +102,25 @@ class YaraScanner(interfaces.layers.ScannerInterface):
                         match_string.identifier,
                         data[instance.offset : instance.offset + instance.length],
                     )
+
+    @staticmethod
+    def get_rule(rule):
+        return yara_x.compile(f"rule r1 {{strings: $a = {rule} condition: $a}}")
+
+    @staticmethod
+    def from_compiled_file(filepath):
+        return yara_x.Rules.deserialize_from(
+            file=resources.ResourceAccessor().open(filepath, "rb")
+        )
+
+    @staticmethod
+    def from_file(filepath):
+        return yara_x.compile(
+            resources.ResourceAccessor().open(filepath, "rb").read().decode()
+        )
+
+
+YaraScanner = YaraXScanner if USE_YARA_X else YaraPythonScanner
 
 
 class YaraScan(plugins.PluginInterface):
@@ -89,8 +167,13 @@ class YaraScan(plugins.PluginInterface):
                 optional=True,
             ),
             requirements.URIRequirement(
+                name="yara_file",
+                description="Yara rules (as a file)",
+                optional=True,
+            ),
+            requirements.URIRequirement(
                 name="yara_compiled_file",
-                description="Yara-x compiled rules (as a file)",
+                description="Yara compiled rules (as a file)",
                 optional=True,
             ),
             requirements.IntRequirement(
@@ -112,13 +195,15 @@ class YaraScan(plugins.PluginInterface):
                 rule += " nocase"
             if config.get("wide", False):
                 rule += " wide ascii"
-            rules = yara_x.compile(f"rule r1 {{strings: $a = {rule} condition: $a}}")
+            rules = YaraScanner.get_rule(rule)
+        elif config.get("yara_file") is not None:
+            vollog.debug(f"Plain file: {config["yara_file"]} - yara-x: {USE_YARA_X}")
+            rules = YaraScanner.from_file(config["yara_file"])
         elif config.get("yara_compiled_file") is not None:
-            rules = yara_x.Rules.deserialize_from(
-                file=resources.ResourceAccessor().open(
-                    config["yara_compiled_file"], "rb"
-                )
+            vollog.debug(
+                f"Compiled file: {config["yara_compiled_file"]} - yara-x: {USE_YARA_X}"
             )
+            rules = YaraScanner.from_compiled_file(config["yara_compiled_file"])
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
         return rules

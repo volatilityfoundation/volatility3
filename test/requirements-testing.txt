@@ -5,6 +5,7 @@ pefile>=2017.8.1 #foo
 # If certain packages are not necessary, place a comment (#) at the start of the line.
 
 # This is required for the yara plugins
+yara-python>=3.8.0
 yara-x>=0.5.0
 
 pytest>=7.0.0
