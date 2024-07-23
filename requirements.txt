@@ -20,3 +20,6 @@ leechcorepyc>=2.4.0; sys_platform != 'darwin'
 # This is required for memory analysis on a Amazon/MinIO S3 and Google Cloud object storage
 gcsfs>=2023.1.0
 s3fs>=2023.1.0
+
+# This is required for memory to work with the hibernation layer
+xpress-lz77>=1.0.0
