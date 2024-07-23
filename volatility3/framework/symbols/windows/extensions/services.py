@@ -110,7 +110,7 @@ class SERVICE_RECORD(objects.StructType):
                     yield rec
                     rec = rec.ServiceList.Blink.dereference()
         except exceptions.InvalidAddressException:
-            return
+            return None
 
 
 class SERVICE_HEADER(objects.StructType):

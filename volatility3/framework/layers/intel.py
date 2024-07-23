@@ -69,12 +69,24 @@ class Intel(linear.LinearlyMappedLayer):
 
     @classproperty
     @functools.lru_cache()
+    def page_shift(cls) -> int:
+        """Page shift for the intel memory layers."""
+        return cls._page_size_in_bits
+
+    @classproperty
+    @functools.lru_cache()
     def page_size(cls) -> int:
         """Page size for the intel memory layers.
 
         All Intel layers work on 4096 byte pages
         """
         return 1 << cls._page_size_in_bits
+
+    @classproperty
+    @functools.lru_cache()
+    def page_mask(cls) -> int:
+        """Page mask for the intel memory layers."""
+        return ~(cls.page_size - 1)
 
     @classproperty
     @functools.lru_cache()
@@ -277,9 +289,9 @@ class Intel(linear.LinearlyMappedLayer):
         This allows translation layers to provide maps of contiguous
         regions in one layer
         """
-        stashed_offset = (
-            stashed_mapped_offset
-        ) = stashed_size = stashed_mapped_size = stashed_map_layer = None
+        stashed_offset = stashed_mapped_offset = stashed_size = stashed_mapped_size = (
+            stashed_map_layer
+        ) = None
         for offset, size, mapped_offset, mapped_size, map_layer in self._mapping(
             offset, length, ignore_errors
         ):
@@ -331,9 +343,9 @@ class Intel(linear.LinearlyMappedLayer):
             except exceptions.InvalidAddressException:
                 if not ignore_errors:
                     raise
-                return
+                return None
             yield offset, length, mapped_offset, length, layer_name
-            return
+            return None
         while length > 0:
             try:
                 chunk_offset, page_size, layer_name = self._translate(offset)

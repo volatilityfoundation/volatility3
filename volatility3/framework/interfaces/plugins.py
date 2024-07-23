@@ -43,7 +43,7 @@ class FileHandlerInterface(io.RawIOBase):
         return self._preferred_filename
 
     @preferred_filename.setter
-    def preferred_filename(self, filename):
+    def preferred_filename(self, filename: str):
         """Sets the preferred filename"""
         if self.closed:
             raise IOError("FileHandler name cannot be changed once closed")
@@ -56,6 +56,18 @@ class FileHandlerInterface(io.RawIOBase):
     @abstractmethod
     def close(self):
         """Method that commits the file and fixes the final filename for use"""
+
+    @staticmethod
+    def sanitize_filename(filename: str) -> str:
+        """Sanititizes the filename to ensure only a specific whitelist of characters is allowed through"""
+        allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.- ()[]{}!$%^:#~?<>,|"
+        result = ""
+        for char in filename:
+            if char in allowed:
+                result += char
+            else:
+                result += "?"
+        return result
 
     def __enter__(self):
         return self

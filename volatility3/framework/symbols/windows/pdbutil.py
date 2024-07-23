@@ -2,13 +2,13 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import binascii
 import json
 import logging
 import lzma
 import os
 import re
 import struct
+from pathlib import PureWindowsPath
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from urllib import parse, request
 
@@ -226,13 +226,12 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
             return None
 
         pdb_name = debug_entry.PdbFileName.decode("utf-8").strip("\x00")
+
+        # Let pathlib do the filename extraction. This will likely always be a Windows path though.
+        pdb_name = PureWindowsPath(pdb_name).name
+
         age = debug_entry.Age
-        guid = "{:08x}{:04x}{:04x}{}".format(
-            debug_entry.Signature_Data1,
-            debug_entry.Signature_Data2,
-            debug_entry.Signature_Data3,
-            binascii.hexlify(debug_entry.Signature_Data4).decode("utf-8"),
-        )
+        guid = debug_entry.Signature_String[:32]  # Removes the Age from the GUID
         return guid, age, pdb_name
 
     @classmethod

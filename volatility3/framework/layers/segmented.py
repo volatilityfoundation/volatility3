@@ -126,9 +126,9 @@ class NonLinearlySegmentedLayer(
                     current_offset = logical_offset
                     # If it starts too late then we're done
                     if logical_offset > offset + length:
-                        return
+                        return None
                 except exceptions.InvalidAddressException:
-                    return
+                    return None
             # Crop it to the amount we need left
             chunk_size = min(size, length + offset - logical_offset)
             yield logical_offset, chunk_size, mapped_offset, mapped_size, self._base_layer

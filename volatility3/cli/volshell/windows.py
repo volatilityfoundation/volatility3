@@ -32,7 +32,7 @@ class Volshell(generic.Volshell):
             if process.UniqueProcessId == pid:
                 process_layer = process.add_process_layer()
                 self.change_layer(process_layer)
-                return
+                return None
         print(f"No process with process ID {pid} found")
 
     def list_processes(self):

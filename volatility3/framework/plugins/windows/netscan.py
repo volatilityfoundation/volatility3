@@ -487,10 +487,12 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if not isinstance(row_data[9], datetime.datetime):
                 continue
             row_data = [
-                "N/A"
-                if isinstance(i, renderers.UnreadableValue)
-                or isinstance(i, renderers.UnparsableValue)
-                else i
+                (
+                    "N/A"
+                    if isinstance(i, renderers.UnreadableValue)
+                    or isinstance(i, renderers.UnparsableValue)
+                    else i
+                )
                 for i in row_data
             ]
             description = (
