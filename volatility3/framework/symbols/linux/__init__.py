@@ -1,6 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import stat, datetime
 from typing import Iterator, List, Tuple, Optional, Union
 
 from volatility3 import framework
@@ -265,8 +266,26 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         for fd_num, filp in enumerate(fds):
             if filp != 0:
                 full_path = LinuxUtilities.path_for_file(context, task, filp)
+                dentry = filp.get_dentry()
+                if dentry != 0:
+                    inode_object = dentry.d_inode
+                    inode_num = inode_object.i_ino
+                    file_size = inode_object.i_size  # file size in bytes
+                    imode = stat.filemode(
+                        inode_object.i_mode
+                    )  # file type & Permissions
 
-                yield fd_num, filp, full_path
+                    # Timestamps
+                    ctime = datetime.datetime.fromtimestamp(
+                        inode_object.i_ctime.tv_sec
+                    )  # last change time
+                    mtime = datetime.datetime.fromtimestamp(
+                        inode_object.i_mtime.tv_sec
+                    )  # last modify time
+                    atime = datetime.datetime.fromtimestamp(
+                        inode_object.i_atime.tv_sec
+                    )  # last access time
+                yield fd_num, filp, full_path, inode_num, imode, ctime, mtime, atime, file_size
 
     @classmethod
     def mask_mods_list(

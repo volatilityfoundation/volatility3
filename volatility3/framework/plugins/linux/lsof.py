@@ -3,7 +3,7 @@
 #
 """A module containing a collection of plugins that produce data typically
 found in Linux's /proc file system."""
-import logging
+import logging, datetime
 from typing import List, Callable
 
 from volatility3.framework import renderers, interfaces, constants
@@ -76,14 +76,59 @@ class Lsof(plugins.PluginInterface):
         )
 
         for pid, task_comm, _task, fd_fields in fds_generator:
-            fd_num, _filp, full_path = fd_fields
+            (
+                fd_num,
+                _filp,
+                full_path,
+                inode_num,
+                imode,
+                ctime,
+                mtime,
+                atime,
+                file_size,
+            ) = fd_fields
 
-            fields = (pid, task_comm, fd_num, full_path)
+            fields = (
+                pid,
+                task_comm,
+                fd_num,
+                full_path,
+                inode_num,
+                imode,
+                ctime,
+                mtime,
+                atime,
+                file_size,
+            )
             yield (0, fields)
 
     def run(self):
         pids = self.config.get("pid", None)
         symbol_table = self.config["kernel"]
 
-        tree_grid_args = [("PID", int), ("Process", str), ("FD", int), ("Path", str)]
+        tree_grid_args = [
+            ("PID", int),
+            ("Process", str),
+            ("FD", int),
+            ("Path", str),
+            ("Inode", int),
+            ("Mode", str),
+            ("LastChange", datetime.datetime),
+            ("LastModify", datetime.datetime),
+            ("LastAccessed", datetime.datetime),
+            ("Size", int),
+        ]
         return renderers.TreeGrid(tree_grid_args, self._generator(pids, symbol_table))
+
+    def generate_timeline(self):
+        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
+        for row in self._generator(
+            pslist.PsList.list_tasks(
+                self.context, self.config["kernel"], filter_func=filter_func
+            )
+        ):
+            _depth, row_data = row
+            description = f'Process {row_data[1]} ({row_data[0]}) Open "{row_data[4]}"'
+            yield description, timeliner.TimeLinerType.CHANGED, row_data[5]
+            yield description, timeliner.TimeLinerType.MODIFIED, row_data[6]
+            yield description, timeliner.TimeLinerType.ACCESSED, row_data[7]
