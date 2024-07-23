@@ -16,3 +16,6 @@ pycryptodome
 
 # This is required for memory acquisition via leechcore/pcileech.
 leechcorepyc>=2.4.0
+
+# This is required for hibernation dump
+xpress_lz77 >=1.0.0

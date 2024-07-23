@@ -5,11 +5,11 @@
 #   - https://www.forensicxlab.com/posts/hibernation/ : Vulgarized description of the hibernation file structure and the implementation of this layer.
 #   - https://www.cct.lsu.edu/~golden/Papers/sylvehiber.pdf : Scientific paper.
 #   - https://www.vergiliusproject.com/kernels/x64/ : Windows kernel structures used to track the evolution of the hibernation file structure in time.
+#   - https://pypi.org/project/xpress-lz77/: The decompression algorithm developped for the integration to volatility3
 
 from typing import Optional
-import logging, struct, codecs
+import logging, struct, codecs, xpress_lz77
 
-# import xpress_lz77 <- coming soon with pyo3
 from volatility3.framework import interfaces, constants, exceptions
 from volatility3.framework.layers import segmented
 
@@ -27,12 +27,10 @@ def uncompress(data: bytes, flag):
     Return: The decompressed data (consecutive pages).
     """
     if flag == 0 or flag == 1:
-        # Comming soon with pyo3
-        # return bytes(xpress_lz77.lz77_plain_decompress_py(data))
-        return codecs.decode(data, "lz77_plain")  # See layers.codecs
+        return bytes(xpress_lz77.lz77_plain_decompress_py(data))
 
     elif flag == 2 or flag == 3:
-        return codecs.decode(data, "lz77_huffman")  # See layers.codecs
+        return bytes(xpress_lz77.lz77_huffman_decompress_py(data, 65536))
     else:
         vollog.warning(
             f"A compression set could not be decompressed: Compression algorithm : {flag}"
