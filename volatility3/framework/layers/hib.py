@@ -8,7 +8,7 @@
 #   - https://pypi.org/project/xpress-lz77/: The decompression algorithm developped for the integration to volatility3
 
 from typing import Optional
-import logging, struct, codecs, xpress_lz77
+import logging, struct, xpress_lz77
 
 from volatility3.framework import interfaces, constants, exceptions
 from volatility3.framework.layers import segmented
