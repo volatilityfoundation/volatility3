@@ -1,5 +1,5 @@
-# The following packages are required for core functionality.
-pefile>=2017.8.1
+# Include the minimal requirements
+-r requirements-minimal.txt
 
 # The following packages are optional.
 # If certain packages are not necessary, place a comment (#) at the start of the line.
@@ -16,6 +16,10 @@ pycryptodome
 
 # This is required for memory acquisition via leechcore/pcileech.
 leechcorepyc>=2.4.0
+
+# This is required for memory analysis on a Amazon/MinIO S3 and Google Cloud object storage
+gcsfs>=2023.1.0
+s3fs>=2023.1.0
 
 # This is required for hibernation dump
 xpress_lz77 >=1.0.0
