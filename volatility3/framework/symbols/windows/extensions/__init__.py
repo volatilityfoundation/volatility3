@@ -20,9 +20,10 @@ from volatility3.framework import (
 )
 from volatility3.framework.interfaces.objects import ObjectInterface
 from volatility3.framework.layers import intel
+from volatility3.framework.objects import utility
 from volatility3.framework.renderers import conversion
 from volatility3.framework.symbols import generic
-from volatility3.framework.symbols.windows.extensions import kdbg, pe, pool
+from volatility3.framework.symbols.windows.extensions import pool
 
 vollog = logging.getLogger(__name__)
 
@@ -306,16 +307,19 @@ class MMVAD_SHORT(objects.StructType):
 
         raise AttributeError("Unable to find the private memory member")
 
+    @property
+    def Protection(self):
+        if self.has_member("u"):
+            return self.u.VadFlags.Protection
+        elif self.has_member("Core"):
+            return self.Core.u.VadFlags.Protection
+        else:
+            return None
+
     def get_protection(self, protect_values, winnt_protections):
         """Get the VAD's protection constants as a string."""
 
-        protect = None
-
-        if self.has_member("u"):
-            protect = self.u.VadFlags.Protection
-
-        elif self.has_member("Core"):
-            protect = self.Core.u.VadFlags.Protection
+        protect = self.Protection
 
         try:
             value = protect_values[protect]
@@ -593,6 +597,38 @@ class UNICODE_STRING(objects.StructType):
     String = property(get_string)
 
 
+class ERESOURCE(objects.StructType):
+    def is_valid(self) -> bool:
+        vollog.debug(f"Checking ERESOURCE Validity: {hex(self.vol.offset)}")
+
+        if not self._context.layers[self.vol.layer_name].is_valid(self.vol.offset):
+            return False
+
+        sym_table = self.get_symbol_table_name()
+
+        waiters_valid = self.SharedWaiters == 0 or self._context.layers[
+            self.vol.layer_name
+        ].is_valid(
+            self.SharedWaiters.vol.offset,
+            self._context.symbol_space.get_type(
+                sym_table + constants.BANG + "_KSEMAPHORE"
+            ).size,
+        )
+
+        try:
+            return (
+                waiters_valid
+                and self.SystemResourcesList.Flink is not None
+                and self.SystemResourcesList.Blink is not None
+                and self.SystemResourcesList.Flink != self.SystemResourcesList.Blink
+                and self.SystemResourcesList.Flink.Blink == self.vol.offset
+                and self.SystemResourcesList.Blink.Flink == self.vol.offset
+                and self.NumberOfSharedWaiters == 0
+            )
+        except exceptions.InvalidAddressException:
+            return False
+
+
 class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
     """A class for executive kernel processes objects."""
 
@@ -611,10 +647,22 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
                 ctime = self.get_create_time()
                 if not isinstance(ctime, datetime.datetime):
+                    # A process must have a creation time
                     return False
 
-                if not (1998 < ctime.year < 2030):
+                current_year = datetime.datetime.now().year
+                if not (1998 < ctime.year < current_year + 10):
                     return False
+
+                etime = self.get_exit_time()
+                if isinstance(etime, datetime.datetime):
+                    if not (1998 < etime.year < current_year + 10):
+                        return False
+
+                    # Exit time, if available, must be after the creation time
+                    # At this point, we are sure both are datetimes, so let's compare them
+                    if ctime > etime:
+                        return False
 
             # NT pids are divisible by 4
             if self.UniqueProcessId % 4 != 0:
@@ -633,7 +681,11 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             if dtb & ~0xFFF == 0:
                 return False
 
-            ## TODO: we can also add the thread Flink and Blink tests if necessary
+            # Quick smear test on thread Flink and Blink
+            kernel = 0x80000000  # Yes, it's a quick test
+            list_head = self.ThreadListHead
+            if list_head.Flink < kernel or list_head.Blink < kernel:
+                return False
 
         except exceptions.InvalidAddressException:
             return False
@@ -992,6 +1044,83 @@ class TOKEN(objects.StructType):
                     yield luid.Luid.LowPart, True, enabled, default
             else:
                 vollog.log(constants.LOGLEVEL_VVVV, "Broken Token Privileges.")
+
+
+class KTIMER(objects.StructType):
+    """A class for Kernel Timers"""
+
+    VALID_TYPES = {
+        8: "TimerNotificationObject",
+        9: "TimerSynchronizationObject",
+    }
+
+    def get_signaled(self):
+        if self.Header.SignalState:
+            return "Yes"
+        return "-"
+
+    def get_raw_dpc(self):
+        """Returns the encoded DPC since it may not look like a pointer after encoding"""
+        symbol_table_name = self.get_symbol_table_name()
+        pointer_type = self._context.symbol_space.get_type(
+            symbol_table_name + constants.BANG + "pointer"
+        )
+
+        return self._context.object(
+            object_type=pointer_type,
+            layer_name=self.vol.layer_name,
+            offset=self.Dpc.vol.offset,
+        )
+
+    def valid_type(self):
+        return self.Header.Type in self.VALID_TYPES
+
+    def get_due_time(self):
+        return "{0:#010x}:{1:#010x}".format(self.DueTime.HighPart, self.DueTime.LowPart)
+
+    def get_dpc(self):
+        """Return Dpc, and if Windows 7 or later, decode it"""
+        symbol_table_name = self.get_symbol_table_name()
+        kvo = self._context.layers[self.vol.native_layer_name].config[
+            "kernel_virtual_offset"
+        ]
+        ntkrnlmp = self._context.module(
+            symbol_table_name,
+            layer_name=self.vol.native_layer_name,
+            offset=kvo,
+            native_layer_name=self.vol.native_layer_name,
+        )
+
+        if ntkrnlmp.has_symbol("KiWaitNever") and ntkrnlmp.has_symbol("KiWaitAlways"):
+            wait_never = ntkrnlmp.object(
+                object_type="unsigned long long",
+                offset=ntkrnlmp.get_symbol("KiWaitNever").address,
+            )
+            wait_always = ntkrnlmp.object(
+                object_type="unsigned long long",
+                offset=ntkrnlmp.get_symbol("KiWaitAlways").address,
+            )
+
+            low_byte = (wait_never) & 0xFF
+            entry = utility.rol(self.get_raw_dpc() ^ wait_never, low_byte)
+            swap_xor = self._context.layers[self.vol.native_layer_name].canonicalize(
+                self.vol.offset
+            )
+            entry = utility.bswap_64(entry ^ swap_xor)
+            dpc = entry ^ wait_always
+
+            symbol_table_name = self.get_symbol_table_name()
+            kdpc_type = self._context.symbol_space.get_type(
+                symbol_table_name + constants.BANG + "_KDPC"
+            )
+
+            return self._context.object(
+                object_type=kdpc_type,
+                layer_name=self.vol.layer_name,
+                offset=dpc,
+            )
+        else:
+            return self.Dpc
 
 
 class KTHREAD(objects.StructType):

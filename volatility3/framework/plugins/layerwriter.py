@@ -18,7 +18,7 @@ class LayerWriter(plugins.PluginInterface):
     default_block_size = 0x500000
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+    _version = (2, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -77,7 +77,7 @@ class LayerWriter(plugins.PluginInterface):
 
         file_handle = open_method(preferred_name)
         for i in range(0, layer.maximum_address, chunk_size):
-            current_chunk_size = min(chunk_size, layer.maximum_address - i)
+            current_chunk_size = min(chunk_size, layer.maximum_address + 1 - i)
             data = layer.read(i, current_chunk_size, pad=True)
             file_handle.write(data)
             if progress_callback:
@@ -95,7 +95,7 @@ class LayerWriter(plugins.PluginInterface):
             if not self.config["layers"]:
                 self.config["layers"] = []
                 for name in self.context.layers:
-                    if not self.context.layers[name].metadata.get("mapped", False):
+                    if "mapped" not in self.context.layers[name].metadata:
                         self.config["layers"] = [name]
 
             for name in self.config["layers"]:
@@ -103,7 +103,8 @@ class LayerWriter(plugins.PluginInterface):
                 if name not in self.context.layers:
                     yield 0, (f"Layer Name {name} does not exist",)
                 else:
-                    output_name = self.config.get("output", ".".join([name, "raw"]))
+                    default_output_name = f"{name}.raw"
+                    output_name = self.config.get("output", default_output_name)
                     try:
                         file_handle = self.write_layer(
                             self.context,
@@ -114,10 +115,12 @@ class LayerWriter(plugins.PluginInterface):
                             progress_callback=self._progress_callback,
                         )
                         file_handle.close()
+
+                        # Update the filename, which may have changed if a file
+                        # with the same name already existed.
+                        output_name = file_handle.preferred_filename
                     except IOError as excp:
-                        yield 0, (
-                            f"Layer cannot be written to {self.config['output_name']}: {excp}",
-                        )
+                        yield 0, (f"Layer cannot be written to {output_name}: {excp}",)
 
                     yield 0, (f"Layer has been written to {output_name}",)
 

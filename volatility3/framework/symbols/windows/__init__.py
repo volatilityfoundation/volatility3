@@ -17,6 +17,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("_KTHREAD", extensions.KTHREAD)
         self.set_type_class("_LIST_ENTRY", extensions.LIST_ENTRY)
         self.set_type_class("_EPROCESS", extensions.EPROCESS)
+        self.set_type_class("_ERESOURCE", extensions.ERESOURCE)
         self.set_type_class("_UNICODE_STRING", extensions.UNICODE_STRING)
         self.set_type_class("_EX_FAST_REF", extensions.EX_FAST_REF)
         self.set_type_class("_TOKEN", extensions.TOKEN)
@@ -39,6 +40,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("_VACB", extensions.VACB)
         self.set_type_class("_POOL_TRACKER_BIG_PAGES", pool.POOL_TRACKER_BIG_PAGES)
         self.set_type_class("_IMAGE_DOS_HEADER", pe.IMAGE_DOS_HEADER)
+        self.set_type_class("_KTIMER", extensions.KTIMER)
 
         # Might not necessarily defined in every version of windows
         self.optional_set_type_class("_IMAGE_NT_HEADERS", pe.IMAGE_NT_HEADERS)

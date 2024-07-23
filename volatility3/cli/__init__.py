@@ -716,19 +716,17 @@ class CommandLine:
                 """Gets the final filename"""
                 if output_dir is None:
                     raise TypeError("Output directory is not a string")
+
                 os.makedirs(output_dir, exist_ok=True)
 
-                pref_name_array = self.preferred_filename.split(".")
-                filename, extension = (
-                    os.path.join(output_dir, ".".join(pref_name_array[:-1])),
-                    pref_name_array[-1],
-                )
-                output_filename = f"{filename}.{extension}"
+                output_filename = os.path.join(output_dir, self.preferred_filename)
+                filename, extension = os.path.splitext(output_filename)
 
                 counter = 1
                 while os.path.exists(output_filename):
-                    output_filename = f"{filename}-{counter}.{extension}"
+                    output_filename = f"{filename}-{counter}{extension}"
                     counter += 1
+
                 return output_filename
 
         class CLIMemFileHandler(io.BytesIO, CLIFileHandler):
@@ -791,8 +789,16 @@ class CommandLine:
                 if self._file.closed:
                     return None
 
-                self._file.close()
                 output_filename = self._get_final_filename()
+
+                # Update the filename, which may have changed if a file with
+                # the same name already existed. This needs to be done before
+                # closing the file, otherwise FileHandlerInterface will raise
+                # an exception. Also, the preferred_filename setter only allows
+                #  a specific set of characters, where '/' is not in that list
+                self.preferred_filename = os.path.basename(output_filename)
+
+                self._file.close()
                 os.rename(self._name, output_filename)
 
         if direct:

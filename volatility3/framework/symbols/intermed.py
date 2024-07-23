@@ -282,7 +282,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         urls = list(cls.file_symbol_url(sub_path, filename))
         if not urls:
             raise FileNotFoundError(
-                "No symbol files found at provided filename: {}", filename
+                f"No symbol files found at provided filename: {filename}",
             )
         table_name = context.symbol_space.free_table_name(filename)
         table = cls(

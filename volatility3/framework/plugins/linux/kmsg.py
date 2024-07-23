@@ -66,7 +66,7 @@ class ABCKmsg(ABC):
         self._config = config
         self.vmlinux = context.modules[self._config["kernel"]]
         self.layer_name = self.vmlinux.layer_name  # type: ignore
-        self.long_unsigned_int_size = self.vmlinux.get_type("long unsigned int").size
+        self.long_unsigned_int_size = self.vmlinux.get_type("pointer").size
 
     @classmethod
     def run_all(

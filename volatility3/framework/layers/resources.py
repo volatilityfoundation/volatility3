@@ -151,6 +151,12 @@ class ResourceAccessor(object):
                     raise excp
             else:
                 raise excp
+        except ValueError as excp:
+            # Reraise errors such as proxy auth errors as offline exception errors
+            # Example Proxy auth error - ValueError: AbstractDigestAuthHandler does not support the following scheme: 'Negotiate'
+            vollog.info(f"Cannot access {url} due to {excp} - Setting OFFLINE")
+            constants.OFFLINE = True
+            raise exceptions.OfflineException(url)
         except exceptions.OfflineException:
             vollog.info(f"Not accessing {url} in offline mode")
             raise
