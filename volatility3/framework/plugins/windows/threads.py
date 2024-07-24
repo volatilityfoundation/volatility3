@@ -20,6 +20,7 @@ class Threads(thrdscan.ThrdScan):
 
     def __init__(self):
         self.implementation = self.list_process_threads
+        super().__init__()
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
