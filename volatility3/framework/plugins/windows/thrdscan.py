@@ -19,7 +19,7 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
 
     # version 2.6.0 adds support for scanning for 'Ethread' structures by pool tags
     _required_framework_version = (2, 6, 0)
-    _version = (1, 0, 0)
+    _version = (1, 1, 0)
 
     def __init__(self, *args, **kwargs):
         self.implementation = self.scan_threads
@@ -100,11 +100,14 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
 
         for ethread in self.implementation(self.context, kernel_name):
             info = self.gather_thread_info(ethread)
+
             if info:
                 yield (0, info)
 
     def generate_timeline(self):
-        for row in self._generator():
+        filt_func = self.filter_func(self.config)
+
+        for row in self._generator(filt_func):
             _depth, row_data = row
             row_dict = {}
             (

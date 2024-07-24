@@ -38,7 +38,7 @@ class Threads(thrdscan.ThrdScan):
                 optional=True,
             ),
             requirements.PluginRequirement(
-                name="thrdscan", plugin=thrdscan.ThrdScan, version=(1, 0, 0)
+                name="thrdscan", plugin=thrdscan.ThrdScan, version=(1, 1, 0)
             ),
         ]
 
