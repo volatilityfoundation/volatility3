@@ -204,11 +204,11 @@ class YaraScan(plugins.PluginInterface):
                 rule += " wide ascii"
             rules = YaraScanner.get_rule(rule)
         elif config.get("yara_file") is not None:
-            vollog.debug(f"Plain file: {config["yara_file"]} - yara-x: {USE_YARA_X}")
+            vollog.debug(f"Plain file: {config['yara_file']} - yara-x: {USE_YARA_X}")
             rules = YaraScanner.from_file(config["yara_file"])
         elif config.get("yara_compiled_file") is not None:
             vollog.debug(
-                f"Compiled file: {config["yara_compiled_file"]} - yara-x: {USE_YARA_X}"
+                f"Compiled file: {config['yara_compiled_file']} - yara-x: {USE_YARA_X}"
             )
             rules = YaraScanner.from_compiled_file(config["yara_compiled_file"])
         else:
