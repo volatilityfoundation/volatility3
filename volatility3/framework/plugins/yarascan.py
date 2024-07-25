@@ -27,11 +27,11 @@ except ImportError:
         if tuple(int(x) for x in yara.__version__.split(".")) < (3, 8):
             raise ImportError
 
-        vollog.info("Using yara-python module")
+        vollog.debug("Using yara-python module")
 
     except ImportError:
         vollog.info(
-            "Python Yara (>3.8.0) module not found, plugin (and dependent plugins) not available"
+            "Neither yara-x nor yara-python (>3.8.0) module not found, plugin (and dependent plugins) not available"
         )
         raise
 
@@ -51,7 +51,7 @@ class YaraPythonScanner(interfaces.layers.ScannerInterface):
         self, data: bytes, data_offset: int
     ) -> Iterable[Tuple[int, str, str, bytes]]:
         for match in self._rules.match(data=data):
-            if self.st_object:
+            if YaraScan.yara_returns_instances():
                 for match_string in match.strings:
                     for instance in match_string.instances:
                         yield (
@@ -72,11 +72,13 @@ class YaraPythonScanner(interfaces.layers.ScannerInterface):
 
     @staticmethod
     def from_compiled_file(filepath):
-        return yara.load(file=resources.ResourceAccessor().open(filepath, "rb"))
+        with resources.ResourceAccessor().open(filepath, "rb") as fp:
+            return yara.load(file=fp)
 
     @staticmethod
     def from_file(filepath):
-        return yara.compile(file=resources.ResourceAccessor().open(filepath, "rb"))
+        with resources.ResourceAccessor().open(filepath, "rb") as fp:
+            return yara.compile(file=fp)
 
 
 class YaraXScanner(interfaces.layers.ScannerInterface):
@@ -109,15 +111,13 @@ class YaraXScanner(interfaces.layers.ScannerInterface):
 
     @staticmethod
     def from_compiled_file(filepath):
-        return yara_x.Rules.deserialize_from(
-            file=resources.ResourceAccessor().open(filepath, "rb")
-        )
+        with resources.ResourceAccessor().open(filepath, "rb") as fp:
+            return yara_x.Rules.deserialize_from(file=fp)
 
     @staticmethod
     def from_file(filepath):
-        return yara_x.compile(
-            resources.ResourceAccessor().open(filepath, "rb").read().decode()
-        )
+        with resources.ResourceAccessor().open(filepath, "rb") as fp:
+            return yara_x.compile(fp.read().decode())
 
 
 YaraScanner = YaraXScanner if USE_YARA_X else YaraPythonScanner
@@ -127,7 +127,7 @@ class YaraScan(plugins.PluginInterface):
     """Scans kernel memory using yara rules (string or file)."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 3, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -183,6 +183,11 @@ class YaraScan(plugins.PluginInterface):
                 optional=True,
             ),
         ]
+
+    @classmethod
+    def yara_returns_instances(cls) -> bool:
+        st_object = not tuple([int(x) for x in yara.__version__.split(".")]) < (4, 3)
+        return st_object
 
     @classmethod
     def process_yara_options(cls, config: Dict[str, Any]):
