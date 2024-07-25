@@ -171,6 +171,8 @@ class YaraScan(plugins.PluginInterface):
                 description="Yara rules (as a file)",
                 optional=True,
             ),
+            # This additional requirement is to follow suit with upstream, who feel that compiled rules could potentially be used to execute malicious code
+            # As such, there's a separate option to run compiled files, as happened with yara-3.9 and later
             requirements.URIRequirement(
                 name="yara_compiled_file",
                 description="Yara compiled rules (as a file)",
