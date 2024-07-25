@@ -25,7 +25,7 @@ class Handles(interfaces.plugins.PluginInterface):
     """Lists process open handles."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 1)
+    _version = (1, 0, 2)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -142,6 +142,7 @@ class Handles(interfaces.plugins.PluginInterface):
         pointers in the _HANDLE_TABLE_ENTRY which allows us to find the
         associated _OBJECT_HEADER.
         """
+        DEFAULT_SAR_VALUE = 0x10  # to be used only when decoding fails
 
         if self._sar_value is None:
             if not has_capstone:
@@ -175,10 +176,11 @@ class Handles(interfaces.plugins.PluginInterface):
                     virtual_layer_name, func_addr_to_read, num_bytes_to_read
                 )
             except exceptions.InvalidAddressException:
-                vollog.debug(
-                    f"Failed to read {hex(num_bytes_to_read)} bytes at symbol {hex(func_addr_to_read)}"
+                vollog.warning(
+                    f"Failed to read {hex(num_bytes_to_read)} bytes at symbol {hex(func_addr_to_read)}. Unable to decode SAR value. Failing back to a common value of 0x10"
                 )
-                return None
+                self._sar_value = DEFAULT_SAR_VALUE
+                return self._sar_value
 
             md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
 
@@ -198,9 +200,10 @@ class Handles(interfaces.plugins.PluginInterface):
                     break
 
             if self._sar_value is None:
-                vollog.debug(
-                    f"Failed to to locate SAR value having parsed {instruction_count} instructions"
+                vollog.warning(
+                    f"Failed to to locate SAR value having parsed {instruction_count} instructions, failing back to a common value of 0x10"
                 )
+                self._sar_value = DEFAULT_SAR_VALUE
 
         return self._sar_value
 
