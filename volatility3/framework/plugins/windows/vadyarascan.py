@@ -33,7 +33,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
             requirements.PluginRequirement(
-                name="yarascan", plugin=yarascan.YaraScan, version=(1, 3, 0)
+                name="yarascan", plugin=yarascan.YaraScan, version=(2, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -73,26 +73,43 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                     )
                     continue
 
-                for match in rules.match(data=layer.read(start, size, True)):
-                    if yarascan.YaraScan.yara_returns_instances():
-                        for match_string in match.strings:
-                            for instance in match_string.instances:
+                if not yarascan.YaraScan._yara_x:
+                    for match in rules.match(data=layer.read(start, size, True)):
+                        if yarascan.YaraScan.yara_returns_instances():
+                            for match_string in match.strings:
+                                for instance in match_string.instances:
+                                    yield 0, (
+                                        format_hints.Hex(instance.offset + start),
+                                        task.UniqueProcessId,
+                                        match.rule,
+                                        match_string.identifier,
+                                        instance.matched_data,
+                                    )
+                        else:
+                            for offset, name, value in match.strings:
+                                yield 0, (
+                                    format_hints.Hex(offset + start),
+                                    task.UniqueProcessId,
+                                    match.rule,
+                                    name,
+                                    value,
+                                )
+                else:
+                    data = layer.read(start, size, True)
+                    results = rules.scan(data)
+                    for match in results.matching_rules:
+                        for match_string in match.patterns:
+                            for instance in match_string.matches:
                                 yield 0, (
                                     format_hints.Hex(instance.offset + start),
                                     task.UniqueProcessId,
-                                    match.rule,
+                                    f"{match.namespace}.{match.identifier}",
                                     match_string.identifier,
-                                    instance.matched_data,
+                                    data[
+                                        instance.offset : instance.offset
+                                        + instance.length
+                                    ],
                                 )
-                    else:
-                        for offset, name, value in match.strings:
-                            yield 0, (
-                                format_hints.Hex(offset + start),
-                                task.UniqueProcessId,
-                                match.rule,
-                                name,
-                                value,
-                            )
 
     @staticmethod
     def get_vad_maps(

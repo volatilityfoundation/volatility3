@@ -36,8 +36,8 @@ except ImportError:
         raise
 
 
-class YaraPythonScanner(interfaces.layers.ScannerInterface):
-    _version = (2, 0, 0)
+class BaseYaraScanner(interfaces.layers.ScannerInterface):
+    _version = (2, 1, 0)
 
     # yara.Rules isn't exposed, so we can't type this properly
     def __init__(self, rules) -> None:
@@ -45,6 +45,11 @@ class YaraPythonScanner(interfaces.layers.ScannerInterface):
         if rules is None:
             raise ValueError("No rules provided to YaraScanner")
         self._rules = rules
+
+
+class YaraPythonScanner(BaseYaraScanner):
+    def __init__(self, rules) -> None:
+        super().__init__(rules)
         self.st_object = not tuple(int(x) for x in yara.__version__.split(".")) < (4, 3)
 
     def __call__(
@@ -81,16 +86,7 @@ class YaraPythonScanner(interfaces.layers.ScannerInterface):
             return yara.compile(file=fp)
 
 
-class YaraXScanner(interfaces.layers.ScannerInterface):
-    _version = (2, 0, 0)
-
-    # yara.Rules isn't exposed, so we can't type this properly
-    def __init__(self, rules) -> None:
-        super().__init__()
-        if rules is None:
-            raise ValueError("No rules provided to YaraScanner")
-        self._rules = rules
-
+class YaraXScanner(BaseYaraScanner):
     def __call__(
         self, data: bytes, data_offset: int
     ) -> Iterable[Tuple[int, str, str, bytes]]:
@@ -128,6 +124,7 @@ class YaraScan(plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
     _version = (2, 0, 0)
+    _yara_x = USE_YARA_X
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -188,8 +185,7 @@ class YaraScan(plugins.PluginInterface):
 
     @classmethod
     def yara_returns_instances(cls) -> bool:
-        st_object = not tuple([int(x) for x in yara.__version__.split(".")]) < (4, 3)
-        return st_object
+        return not tuple(int(x) for x in yara.__version__.split(".")) < (4, 3)
 
     @classmethod
     def process_yara_options(cls, config: Dict[str, Any]):
