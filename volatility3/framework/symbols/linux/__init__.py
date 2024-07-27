@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 from typing import Iterator, List, Tuple, Optional, Union
-import logging, datetime, stat
+import datetime, stat
 from volatility3 import framework
 from volatility3.framework import constants, exceptions, interfaces, objects
 from volatility3.framework.objects import utility

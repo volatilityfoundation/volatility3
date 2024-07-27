@@ -135,7 +135,6 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
     def generate_timeline(self):
         pids = self.config.get("pid", None)
         symbol_table = self.config["kernel"]
-        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
         for row in self._generator(pids, symbol_table):
             _depth, row_data = row
             description = f'Process {row_data[1]} ({row_data[0]}) Open "{row_data[3]}"'
