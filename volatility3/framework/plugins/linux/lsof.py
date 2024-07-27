@@ -1,4 +1,4 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 """A module containing a collection of plugins that produce data typically
@@ -12,16 +12,17 @@ from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import linux
 from volatility3.plugins.linux import pslist
+from volatility3.plugins import timeliner
 
 vollog = logging.getLogger(__name__)
 
 
-class Lsof(plugins.PluginInterface):
+class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists all memory maps for all processes."""
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 1, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -46,7 +47,7 @@ class Lsof(plugins.PluginInterface):
         ]
 
     @classmethod
-    def list_fds(
+    def list_fds_and_inodes(
         cls,
         context: interfaces.context.ContextInterface,
         symbol_table: str,
@@ -67,27 +68,38 @@ class Lsof(plugins.PluginInterface):
             )
 
             for fd_fields in fd_generator:
-                yield pid, task_comm, task, fd_fields
+                fd_num, filp, full_path = fd_fields
+                inode_metadata = linux.LinuxUtilities.get_inode_metadata(context, filp)
+                try:
+                    inode_num, file_size, imode, ctime, mtime, atime = next(
+                        inode_metadata
+                    )
+                except Exception as e:
+                    vollog.warning(
+                        f"Can't get inode metadata for file descriptor {fd_num}: {e}"
+                    )
+                    continue
+                yield pid, task_comm, task, fd_num, filp, full_path, inode_num, imode, ctime, mtime, atime, file_size
 
     def _generator(self, pids, symbol_table):
         filter_func = pslist.PsList.create_pid_filter(pids)
-        fds_generator = self.list_fds(
+        fds_generator = self.list_fds_and_inodes(
             self.context, symbol_table, filter_func=filter_func
         )
-
-        for pid, task_comm, _task, fd_fields in fds_generator:
-            (
-                fd_num,
-                _filp,
-                full_path,
-                inode_num,
-                imode,
-                ctime,
-                mtime,
-                atime,
-                file_size,
-            ) = fd_fields
-
+        for (
+            pid,
+            task_comm,
+            task,
+            fd_num,
+            filp,
+            full_path,
+            inode_num,
+            imode,
+            ctime,
+            mtime,
+            atime,
+            file_size,
+        ) in fds_generator:
             fields = (
                 pid,
                 task_comm,
@@ -113,22 +125,20 @@ class Lsof(plugins.PluginInterface):
             ("Path", str),
             ("Inode", int),
             ("Mode", str),
-            ("LastChange", datetime.datetime),
-            ("LastModify", datetime.datetime),
-            ("LastAccessed", datetime.datetime),
+            ("Changed", datetime.datetime),
+            ("Modified", datetime.datetime),
+            ("Accessed", datetime.datetime),
             ("Size", int),
         ]
         return renderers.TreeGrid(tree_grid_args, self._generator(pids, symbol_table))
 
     def generate_timeline(self):
+        pids = self.config.get("pid", None)
+        symbol_table = self.config["kernel"]
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
-        for row in self._generator(
-            pslist.PsList.list_tasks(
-                self.context, self.config["kernel"], filter_func=filter_func
-            )
-        ):
+        for row in self._generator(pids, symbol_table):
             _depth, row_data = row
-            description = f'Process {row_data[1]} ({row_data[0]}) Open "{row_data[4]}"'
-            yield description, timeliner.TimeLinerType.CHANGED, row_data[5]
-            yield description, timeliner.TimeLinerType.MODIFIED, row_data[6]
-            yield description, timeliner.TimeLinerType.ACCESSED, row_data[7]
+            description = f'Process {row_data[1]} ({row_data[0]}) Open "{row_data[3]}"'
+            yield description, timeliner.TimeLinerType.CHANGED, row_data[6]
+            yield description, timeliner.TimeLinerType.MODIFIED, row_data[7]
+            yield description, timeliner.TimeLinerType.ACCESSED, row_data[8]

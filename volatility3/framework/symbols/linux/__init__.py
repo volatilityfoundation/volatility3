@@ -1,9 +1,8 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-import stat, datetime
 from typing import Iterator, List, Tuple, Optional, Union
-
+import logging, datetime, stat
 from volatility3 import framework
 from volatility3.framework import constants, exceptions, interfaces, objects
 from volatility3.framework.objects import utility
@@ -62,7 +61,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""
 
-    _version = (2, 1, 0)
+    _version = (2, 2, 0)
     _required_framework_version = (2, 0, 0)
 
     framework.require_interface_version(*_required_framework_version)
@@ -266,26 +265,32 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         for fd_num, filp in enumerate(fds):
             if filp != 0:
                 full_path = LinuxUtilities.path_for_file(context, task, filp)
-                dentry = filp.get_dentry()
-                if dentry != 0:
-                    inode_object = dentry.d_inode
-                    inode_num = inode_object.i_ino
-                    file_size = inode_object.i_size  # file size in bytes
-                    imode = stat.filemode(
-                        inode_object.i_mode
-                    )  # file type & Permissions
 
-                    # Timestamps
-                    ctime = datetime.datetime.fromtimestamp(
-                        inode_object.i_ctime.tv_sec
-                    )  # last change time
-                    mtime = datetime.datetime.fromtimestamp(
-                        inode_object.i_mtime.tv_sec
-                    )  # last modify time
-                    atime = datetime.datetime.fromtimestamp(
-                        inode_object.i_atime.tv_sec
-                    )  # last access time
-                yield fd_num, filp, full_path, inode_num, imode, ctime, mtime, atime, file_size
+                yield fd_num, filp, full_path
+
+    @classmethod
+    def get_inode_metadata(cls, context: interfaces.context.ContextInterface, filp):
+        """
+        A helper function that gets the inodes metadata from a file descriptor
+        """
+        dentry = filp.get_dentry()
+        if dentry != 0:
+            inode_object = dentry.d_inode
+            inode_num = inode_object.i_ino
+            file_size = inode_object.i_size  # file size in bytes
+            imode = stat.filemode(inode_object.i_mode)  # file type & Permissions
+
+            # Timestamps
+            ctime = datetime.datetime.fromtimestamp(
+                inode_object.i_ctime.tv_sec
+            )  # last change time
+            mtime = datetime.datetime.fromtimestamp(
+                inode_object.i_mtime.tv_sec
+            )  # last modify time
+            atime = datetime.datetime.fromtimestamp(
+                inode_object.i_atime.tv_sec
+            )  # last access time
+            yield inode_num, file_size, imode, ctime, mtime, atime
 
     @classmethod
     def mask_mods_list(
