@@ -78,7 +78,13 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
                     vollog.warning(
                         f"Can't get inode metadata for file descriptor {fd_num}: {e}"
                     )
-                    continue
+                    # Yield NotAvailableValue for each field in case of an exception
+                    inode_num = renderers.NotAvailableValue()
+                    file_size = renderers.NotAvailableValue()
+                    imode = renderers.NotAvailableValue()
+                    ctime = renderers.NotAvailableValue()
+                    mtime = renderers.NotAvailableValue()
+                    atime = renderers.NotAvailableValue()
                 yield pid, task_comm, task, fd_num, filp, full_path, inode_num, imode, ctime, mtime, atime, file_size
 
     def _generator(self, pids, symbol_table):
