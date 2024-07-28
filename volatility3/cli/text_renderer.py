@@ -25,7 +25,7 @@ except ImportError:
     vollog.debug("Disassembly library capstone not found")
 
 
-def hex_bytes_as_text(value: bytes) -> str:
+def hex_bytes_as_text(value: bytes, width: int = 16) -> str:
     """Renders HexBytes as text.
 
     Args:
@@ -36,19 +36,24 @@ def hex_bytes_as_text(value: bytes) -> str:
     """
     if not isinstance(value, bytes):
         raise TypeError(f"hex_bytes_as_text takes bytes not: {type(value)}")
-    ascii = []
-    hex = []
-    count = 0
-    output = ""
-    for byte in value:
-        hex.append(f"{byte:02x}")
-        ascii.append(chr(byte) if 0x20 < byte <= 0x7E else ".")
-        if (count % 8) == 7:
-            output += "\n"
-            output += " ".join(hex[count - 7 : count + 1])
-            output += "\t"
-            output += "".join(ascii[count - 7 : count + 1])
-        count += 1
+
+    printables = ""
+    output = "\n"
+    for count, byte in enumerate(value):
+        output += f"{byte:02x} "
+        char = chr(byte)
+        printables += char if 0x20 <= byte <= 0x7E else "."
+        if count % width == width - 1:
+            output += printables
+            if count < len(value) - 1:
+                output += "\n"
+            printables = ""
+
+    # Handle leftovers when the lenght is not mutiple of width
+    if printables:
+        output += "   " * (width - len(printables))
+        output += printables
+
     return output
 
 

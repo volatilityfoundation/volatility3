@@ -96,12 +96,13 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     def get_summary_header(self) -> interfaces.objects.ObjectInterface:
         return self.context.object(
             self._crash_common_table_name + constants.BANG + "_SUMMARY_DUMP",
-            offset=0x1000 * self.headerpages,
+            offset=self._page_size * self.headerpages,
             layer_name=self._base_layer,
         )
 
     def _load_segments(self) -> None:
-        """Loads up the segments from the meta_layer."""
+        """Loads up the segments from the meta_layer.
+        A segment is a set of contiguous memory pages."""
 
         segments = []
 
@@ -119,70 +120,87 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             for run in header.PhysicalMemoryBlockBuffer.Run:
                 segments.append(
                     (
-                        run.BasePage * 0x1000,
-                        offset * 0x1000,
-                        run.PageCount * 0x1000,
-                        run.PageCount * 0x1000,
+                        run.BasePage * self._page_size,
+                        offset * self._page_size,
+                        run.PageCount * self._page_size,
+                        run.PageCount * self._page_size,
                     )
                 )
                 offset += run.PageCount
 
         elif self.dump_type == 0x05:
             summary_header = self.get_summary_header()
-            first_bit = None  # First bit in a run
-            first_offset = 0  # File offset of first bit
-            last_bit_seen = 0  # Most recent bit processed
-            offset = summary_header.HeaderSize  # Size of file headers
-            buffer_char = summary_header.get_buffer_char()
-            buffer_long = summary_header.get_buffer_long()
-
-            for outer_index in range(0, ((summary_header.BitmapSize + 31) // 32)):
-                if buffer_long[outer_index] == 0:
-                    if first_bit is not None:
-                        last_bit = ((outer_index - 1) * 32) + 31
-                        segment_length = (last_bit - first_bit + 1) * 0x1000
+            seg_first_bit = None  # First bit in a run
+            seg_first_offset = 0  # File offset of first bit
+            offset = (
+                summary_header.HeaderSize
+            )  # Offset to the start of actual memory dump
+            ulong_bitmap_array = summary_header.get_buffer_long()
+            # outer_index points to a 32 bits array inside a list of arrays,
+            # each bit indicating a page mapping state
+            for outer_index in range(0, ulong_bitmap_array.vol.count):
+                ulong_bitmap = ulong_bitmap_array[outer_index]
+                # All pages in this 32 bits array are mapped (speedup iteration process)
+                if ulong_bitmap == 0xFFFFFFFF:
+                    # New segment
+                    if seg_first_bit is None:
+                        seg_first_offset = offset
+                        seg_first_bit = outer_index * 32
+                    offset += 32 * self._page_size
+                # No pages in this 32 bits array are mapped (speedup iteration process)
+                elif ulong_bitmap == 0:
+                    # End of segment
+                    if seg_first_bit is not None:
+                        last_bit = (outer_index - 1) * 32 + 31
+                        segment_length = (
+                            last_bit - seg_first_bit + 1
+                        ) * self._page_size
                         segments.append(
                             (
-                                first_bit * 0x1000,
-                                first_offset,
+                                seg_first_bit * self._page_size,
+                                seg_first_offset,
                                 segment_length,
                                 segment_length,
                             )
                         )
-                        first_bit = None
-                elif buffer_long[outer_index] == 0xFFFFFFFF:
-                    if first_bit is None:
-                        first_offset = offset
-                        first_bit = outer_index * 32
-                    offset = offset + (32 * 0x1000)
+                        seg_first_bit = None
+                # Some pages in this 32 bits array are mapped and some aren't
                 else:
-                    for inner_index in range(0, 32):
-                        bit_addr = outer_index * 32 + inner_index
-                        if (buffer_char[bit_addr >> 3] >> (bit_addr & 0x7)) & 1:
-                            if first_bit is None:
-                                first_offset = offset
-                                first_bit = bit_addr
-                            offset = offset + 0x1000
+                    for inner_bit_position in range(0, 32):
+                        current_bit = outer_index * 32 + inner_bit_position
+                        page_mapped = ulong_bitmap & (1 << inner_bit_position)
+                        if page_mapped:
+                            # New segment
+                            if seg_first_bit is None:
+                                seg_first_offset = offset
+                                seg_first_bit = current_bit
+                            offset += self._page_size
                         else:
-                            if first_bit is not None:
+                            # End of segment
+                            if seg_first_bit is not None:
                                 segment_length = (
-                                    (bit_addr - 1) - first_bit + 1
-                                ) * 0x1000
+                                    current_bit - 1 - seg_first_bit + 1
+                                ) * self._page_size
                                 segments.append(
                                     (
-                                        first_bit * 0x1000,
-                                        first_offset,
+                                        seg_first_bit * self._page_size,
+                                        seg_first_offset,
                                         segment_length,
                                         segment_length,
                                     )
                                 )
-                                first_bit = None
-                last_bit_seen = (outer_index * 32) + 31
+                                seg_first_bit = None
+                last_bit_seen = outer_index * 32 + 31
 
-            if first_bit is not None:
-                segment_length = (last_bit_seen - first_bit + 1) * 0x1000
+            if seg_first_bit is not None:
+                segment_length = (last_bit_seen - seg_first_bit + 1) * self._page_size
                 segments.append(
-                    (first_bit * 0x1000, first_offset, segment_length, segment_length)
+                    (
+                        seg_first_bit * self._page_size,
+                        seg_first_offset,
+                        segment_length,
+                        segment_length,
+                    )
                 )
         else:
             vollog.log(
