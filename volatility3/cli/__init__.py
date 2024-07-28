@@ -23,11 +23,11 @@ from typing import Any, Dict, List, Tuple, Type, Union
 from urllib import parse, request
 
 try:
-    import shtab
+    import argcomplete
 
-    HAS_SHTAB = True
+    HAS_ARGCOMPLETE = True
 except ImportError:
-    HAS_SHTAB = False
+    HAS_ARGCOMPLETE = False
 
 from volatility3.cli import text_filter
 import volatility3.plugins
@@ -112,9 +112,6 @@ class CommandLine:
                 for x in framework.class_subclasses(text_renderer.CLIRenderer)
             ]
         )
-
-        # Argument for doing autocompletion
-        print_completion_arg = "--print-completion"
 
         # Load up system defaults
         delayed_logs, default_config = self.load_system_defaults("vol.json")
@@ -256,12 +253,10 @@ class CommandLine:
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
         known_args = [arg for arg in sys.argv if arg != "--help" and arg != "-h"]
-        partial_args, unknown_args = parser.parse_known_args(known_args)
+        partial_args, _ = parser.parse_known_args(known_args)
+
         banner_output = sys.stdout
-        if (
-            renderers[partial_args.renderer].structured_output
-            or print_completion_arg in unknown_args
-        ):
+        if renderers[partial_args.renderer].structured_output:
             banner_output = sys.stderr
         banner_output.write(f"Volatility 3 Framework {constants.PACKAGE_VERSION}\n")
 
@@ -363,10 +358,10 @@ class CommandLine:
         # Hand the plugin requirements over to the CLI (us) and let it construct the config tree
 
         # Run the argparser
-        if HAS_SHTAB:
+        if HAS_ARGCOMPLETE:
             # The autocompletion line must be after the partial_arg handling, so that it doesn't trip it
             # before all the plugins have been added
-            shtab.add_argument_to(parser, [print_completion_arg])
+            argcomplete.autocomplete(parser)
         args = parser.parse_args()
         if args.plugin is None:
             parser.error("Please select a plugin to run")
