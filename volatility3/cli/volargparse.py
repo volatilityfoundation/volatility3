@@ -21,8 +21,6 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        # We don't want the action self-check to kick in, so we remove the choices list, the check happens in __call__
-        self.choices = None
 
     def __call__(
         self,
@@ -100,3 +98,7 @@ class HelpfulArgParser(argparse.ArgumentParser):
 
         # return the number of arguments matched
         return len(match.group(1))
+
+    def _check_value(self, action, value):
+        if not isinstance(action, HelpfulSubparserAction):
+            return super()._check_value(action, value)
