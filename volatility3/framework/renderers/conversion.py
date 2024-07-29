@@ -20,8 +20,8 @@ def wintime_to_datetime(
     unix_time = unix_time - 11644473600
     try:
         return datetime.datetime.fromtimestamp(unix_time, datetime.timezone.utc)
-        # Windows sometimes throws OSErrors rather than ValueErrors when it can't convert a value
-    except (ValueError, OSError):
+        # Windows sometimes throws OSErrors rather than OverflowError when it can't convert a value
+    except (OverflowError, OSError):
         return renderers.UnparsableValue()
 
 
@@ -33,7 +33,7 @@ def unixtime_to_datetime(
     )
 
     if unixtime > 0:
-        with contextlib.suppress(ValueError):
+        with contextlib.suppress(OverflowError):
             ret = datetime.datetime.fromtimestamp(unixtime, datetime.timezone.utc)
 
     return ret
