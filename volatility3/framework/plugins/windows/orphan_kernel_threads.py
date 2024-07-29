@@ -92,4 +92,3 @@ class Threads(thrdscan.ThrdScan):
             # alert on threads that do not map to a module
             if not module_symbols:
                 yield thread
-
