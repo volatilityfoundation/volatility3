@@ -112,6 +112,29 @@ class PESymbols(interfaces.plugins.PluginInterface):
     ):
         """
         Attempts to resolve the symbols in `wanted_symbols` through export table analysis
+        wanted_symbols is a dictionary of lower case DLL names, whose values are a list of symbols
+        to resolve per-DLL. Example from apihooks:
+
+        userland_apis = {
+            "wininet.dll": [
+                "HttpSendRequestA",
+                "HttpSendRequestW",
+                "HttpSendRequestExA",
+                ...
+                ],
+
+            "kernel32.dll": [
+                "GetProcAddress",
+                "LoadLibrary",
+                "LoadLibraryA",
+                "LoadLibraryExA",
+                ...
+                ],
+        }
+
+        found_symbols is populated with symbols as they are resolved.
+        It holds a dictionary of DLL names and its values are a list of
+        (function name, runtime address) of each symbol found
         """
         pe_table_name = intermed.IntermediateSymbolTable.create(
             context, config_path, "windows", "pe", class_types=pe.class_types
