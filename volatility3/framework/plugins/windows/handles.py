@@ -177,7 +177,7 @@ class Handles(interfaces.plugins.PluginInterface):
                 )
             except exceptions.InvalidAddressException:
                 vollog.warning(
-                    f"Failed to read {hex(num_bytes_to_read)} bytes at symbol {hex(func_addr_to_read)}. Unable to decode SAR value. Failing back to a common value of 0x10"
+                    f"Failed to read {hex(num_bytes_to_read)} bytes at symbol {hex(func_addr_to_read)}. Unable to decode SAR value. Failing back to a common value of {hex(DEFAULT_SAR_VALUE)}"
                 )
                 self._sar_value = DEFAULT_SAR_VALUE
                 return self._sar_value
@@ -201,7 +201,7 @@ class Handles(interfaces.plugins.PluginInterface):
 
             if self._sar_value is None:
                 vollog.warning(
-                    f"Failed to to locate SAR value having parsed {instruction_count} instructions, failing back to a common value of 0x10"
+                    f"Failed to to locate SAR value having parsed {instruction_count} instructions, failing back to a common value of {hex(DEFAULT_SAR_VALUE)}"
                 )
                 self._sar_value = DEFAULT_SAR_VALUE
 
