@@ -99,6 +99,7 @@ class HelpfulArgParser(argparse.ArgumentParser):
         # return the number of arguments matched
         return len(match.group(1))
 
-    def _check_value(self, action, value):
+    def _check_value(self, action: argparse.Action, value: Any) -> None:
         if not isinstance(action, HelpfulSubparserAction):
             return super()._check_value(action, value)
+        return None
