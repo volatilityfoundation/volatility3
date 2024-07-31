@@ -22,8 +22,8 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
     _version = (1, 1, 0)
 
     def __init__(self, *args, **kwargs):
-        self.implementation = self.scan_threads
         super().__init__(*args, **kwargs)
+        self.implementation = self.scan_threads
 
     @classmethod
     def get_requirements(cls):
