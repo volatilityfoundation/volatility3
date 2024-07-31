@@ -98,9 +98,8 @@ class PsXView(plugins.PluginInterface):
             _, _, offset, _, _ = list(
                 self.context.layers[layer_name].mapping(offset=offset, length=0)
             )[0]
-        except:
-            # already have physical address
-            pass
+        except exceptions.PagedInvalidAddressException:
+            vollog.debug(f"Page fault: unable to translate {offset:0x}")
 
         return offset
 
