@@ -84,8 +84,10 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         mft_object = symbol_table + constants.BANG + "MFT_ENTRY"
         attribute_object = symbol_table + constants.BANG + "ATTRIBUTE"
 
+        record_map = {}
+
         # Scan the layer for Raw MFT records and parse the fields
-        for offset, _, _, _ in layer.scan(
+        for offset, _rule_name, _name, _value in layer.scan(
             context=context, scanner=yarascan.YaraScanner(rules=rules)
         ):
             with contextlib.suppress(exceptions.InvalidAddressException):
@@ -103,7 +105,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 # There is no field that has a count of Attributes
                 # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
                 while attr.Attr_Header.AttrType.is_valid_choice:
-                    for record in attr_callback(mft_record, attr, symbol_table):
+                    for record in attr_callback(record_map, mft_record, attr, symbol_table):
                         yield record
 
                     # If there's no advancement the loop will never end, so break it now
@@ -120,7 +122,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     )
 
     @staticmethod
-    def parse_mft_records(mft_record, attr, symbol_table):
+    def parse_mft_records(record_map, mft_record, attr, symbol_table):
         # MFT Flags determine the file type or dir
         # If we don't have a valid enum, coerce to hex so we can keep the record
         try:
@@ -189,20 +191,26 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         if attr.Attr_Header.NonResidentFlag:
             return
 
+        # we aren't looking ADS when we want the first data record
+        if return_first_record:
+            ads_name = renderers.NotApplicableValue()
+
+        # skip records without a name if we want ADS entries
+        elif attr.Attr_Header.NameLength == 0:
+            return
+
+        else:
+            # past the first $DATA record, attempt to get the ADS name
+            # NotAvailableValue = > 1st Data, but name was not parsable
+            ads_name = attr.get_resident_filename()
+            if not ads_name:
+                ads_name = renderers.NotAvailableValue()
+
         content = attr.get_resident_filecontent()
         if content:
             content = format_hints.HexBytes(content)
         else:
             content = renderers.NotAvailableValue()
-
-        # past the first $DATA record, attempt to get the ADS name
-        # NotApplicableValue = 1st Data
-        # NotAvailableValue = > 1st Data, but name was not parsable
-        ads_name = renderers.NotApplicableValue()
-        if not return_first_record and attr.Attr_Header.NameLength > 0:
-            ads_name = attr.get_resident_filename()
-            if not ads_name:
-                ads_name = renderers.NotAvailableValue()
 
         yield (
             format_hints.Hex(record_map[mft_record.RecordNumber][2]),
@@ -246,14 +254,15 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             display_data = False
 
             # first DATA attribute of this record
-            if record_map[rec_num][1] == 0 and return_first_record:
+            if record_map[rec_num][1] == 0:
                 if return_first_record:
                     display_data = True
-                else:
-                    record_map[rec_num][1] = 1
+
+                record_map[rec_num][1] = 1
 
             # at the second DATA attribute of this record
-            elif not return_first_record:
+            elif record_map[rec_num][1] == 1 and not return_first_record:
+                print("at second record")
                 display_data = True
 
             if display_data:
@@ -265,6 +274,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     @classmethod
     def parse_data_records(
         cls,
+        record_map: Dict[int, Tuple[str, int, int]],
         mft_record: interfaces.objects.ObjectInterface,
         attr: interfaces.objects.ObjectInterface,
         symbol_table,
@@ -273,7 +283,6 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         """
         Callback for parsing data records through enumerate_mft_records
         """
-        record_map = {}
         for record in cls._do_parse_data_records(
             mft_record, attr, symbol_table, record_map, return_first_record
         ):
@@ -343,11 +352,12 @@ class ADS(interfaces.plugins.PluginInterface):
 
     @staticmethod
     def parse_ads_data_records(
+        record_map: Dict[int, Tuple[str, int, int]],
         mft_record: interfaces.objects.ObjectInterface,
         attr: interfaces.objects.ObjectInterface,
         symbol_table,
     ):
-        return MFTScan.parse_data_records(mft_record, attr, symbol_table, False)
+        return MFTScan.parse_data_records(record_map, mft_record, attr, symbol_table, False)
 
     def _generator(self):
         for (
@@ -382,7 +392,7 @@ class ADS(interfaces.plugins.PluginInterface):
 
 
 class ResidentData(interfaces.plugins.PluginInterface):
-    """Scans for Alternate Data Stream"""
+    """Scans for MFT Records with Resident Data"""
 
     _required_framework_version = (2, 7, 0)
 
@@ -406,11 +416,12 @@ class ResidentData(interfaces.plugins.PluginInterface):
 
     @staticmethod
     def parse_first_data_records(
+        record_map: Dict[int, Tuple[str, int, int]],
         mft_record: interfaces.objects.ObjectInterface,
         attr: interfaces.objects.ObjectInterface,
         symbol_table,
     ):
-        return MFTScan.parse_data_records(mft_record, attr, symbol_table, True)
+        return MFTScan.parse_data_records(record_map, mft_record, attr, symbol_table, True)
 
     def _generator(self):
         for (
