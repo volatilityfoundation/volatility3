@@ -17,17 +17,14 @@ vollog = logging.getLogger(__name__)
 
 
 class PsXView(plugins.PluginInterface):
-    """Lists all processes found via 6 of the methods described in \"The Art of Memory Forensics,\" which may help
+    """Lists all processes found via four of the methods described in \"The Art of Memory Forensics,\" which may help
     identify processes that are trying to hide themselves. I recommend using -r pretty if you are looking at this
     plugin's output in a terminal."""
 
     # I've omitted the desktop thread scanning method because Volatility3 doesn't appear to have the funcitonality
     # which the original plugin used to do it.
 
-    # I don't think it's worth including the sessions method either because both the original psxview plugin
-    # and Volatility3's sessions plugin begin with the list of processes found by PsList.
-    # The original psxview plugin's session code essentially just filters the pslist for processes
-    # whose session ID is not None. I've matched this in my code, but again, it doesn't seem worth including.
+    # The sessions method is omitted because it begins with the list of processes found by Pslist anyway.
 
     # Lastly, I've omitted the pspcid method because I could not for the life of me get it to work. I saved the
     # code I do have from it, and will happily share it if anyone else wants to add it.
@@ -64,7 +61,7 @@ class PsXView(plugins.PluginInterface):
             ),
             requirements.BooleanRequirement(
                 name="physical-offsets",
-                description="List processes with phyiscall offsets instead of virtual offsets.",
+                description="List processes with physical offsets instead of virtual offsets.",
                 optional=True,
             ),
         ]
