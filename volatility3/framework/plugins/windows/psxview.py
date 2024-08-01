@@ -92,7 +92,7 @@ class PsXView(plugins.PluginInterface):
         layer_name = kernel.layer_name
 
         try:
-            _, _, offset, _, _ = list(
+            _original_offset, _original_length, offset, _length, _layer_name = list(
                 self.context.layers[layer_name].mapping(offset=offset, length=0)
             )[0]
         except exceptions.PagedInvalidAddressException:
@@ -190,15 +190,15 @@ class PsXView(plugins.PluginInterface):
         # print results
 
         # list of lists of offsets
-        todo_offsets = [list(processes[source].keys()) for source in processes]
+        offsets = [list(processes[source].keys()) for source in processes]
 
         # flatten to one list
-        todo_offsets = sum(todo_offsets, [])
+        offsets = sum(offsets, [])
 
         # remove duplicates
-        todo_offsets = set(todo_offsets)
+        offsets = set(offsets)
 
-        for offset in todo_offsets:
+        for offset in offsets:
             proc = None
 
             in_sources = {src: False for src in processes}
