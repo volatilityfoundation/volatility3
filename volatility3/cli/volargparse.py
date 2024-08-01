@@ -100,6 +100,11 @@ class HelpfulArgParser(argparse.ArgumentParser):
         return len(match.group(1))
 
     def _check_value(self, action: argparse.Action, value: Any) -> None:
+        """This is called to ensure a value is correct/valid
+        This fails when we want to accept partial values for the plugin name,
+        so we disable the check (which will throw ArgumentErrors for failed checks)
+        but only for our plugin subparser, so all other arguments are checked correctly
+        """
         if not isinstance(action, HelpfulSubparserAction):
-            return super()._check_value(action, value)
+            super()._check_value(action, value)
         return None
