@@ -232,7 +232,7 @@
                         "kind": "base",
                         "name": "unsigned int"
                     },
-                    "offset": 20
+                    "offset": 24
                 }
             },
             "kind": "struct",

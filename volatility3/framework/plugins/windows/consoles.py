@@ -363,7 +363,7 @@ class Consoles(interfaces.plugins.PluginInterface):
         interfaces.context.ContextInterface,
         Dict[str, Any],
     ]:
-        """Extracts the cmdline from PEB
+        """Gets the Console Information structure and its related properties for each conhost process
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from

@@ -220,6 +220,12 @@ class CONSOLE_INFORMATION(objects.StructType):
 class COMMAND(objects.StructType):
     """A Command Structure"""
 
+    def is_valid(self):
+        if self.Length < 1 or self.Allocated < 1 or self.Length > 1024 or self.Allocated > 1024:
+            return False
+
+        return True
+
     def get_command(self):
         if self.Length < 8:
             return self.Chars.cast(
@@ -243,6 +249,26 @@ class COMMAND_HISTORY(objects.StructType):
         command_size = self._context.symbol_space.get_type(command_type).size
         return int((self.CommandBucket.End - self.CommandBucket.Begin) / command_size)
 
+    @property
+    def ProcessHandle(self):
+        """ Allow ProcessHandle to be referenced regardless of OS version """
+        return self.ConsoleProcessHandle.ProcessHandle
+
+    def is_valid(self, max_history=50):
+        # The count must be between zero and max
+        if self.CommandCount < 0 or self.CommandCount > max_history:
+            return False
+
+        # Last displayed must be between -1 and max
+        if self.LastDisplayed < -1 or self.LastDisplayed > max_history:
+            return False
+
+        # Process handle must be a valid pid
+        if self.ProcessHandle <= 0 or self.ProcessHandle > 0xFFFF or self.ProcessHandle % 4 != 0:
+            return False
+
+        return True
+
     def get_application(self):
         if self.Application.Length < 8:
             return self.Application.Chars.cast(
@@ -265,6 +291,7 @@ class COMMAND_HISTORY(objects.StructType):
             self.vol.type_name
         ).size
         command_size = self._context.symbol_space.get_type(command_type).size
+
         if end is None:
             end = max(
                 self.CommandBucket.EndCapacity,
@@ -272,7 +299,9 @@ class COMMAND_HISTORY(objects.StructType):
             )
 
         for i, pointer in enumerate(range(self.CommandBucket.Begin, end, command_size)):
-            yield i, self._context.object(command_type, self.vol.layer_name, pointer)
+            cmd = self._context.object(command_type, self.vol.layer_name, pointer)
+            if cmd.is_valid():
+                yield i, cmd
 
     def get_commands(self):
         """Generator for commands in the history buffer.
