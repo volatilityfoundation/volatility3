@@ -23,7 +23,7 @@ class Sockscan(plugins.PluginInterface):
 
     _required_framework_version = (2, 6, 0)
     _version = (1, 0, 0)
-    
+
     @classmethod
     def get_requirements(cls):
         return [
@@ -176,7 +176,9 @@ class Sockscan(plugins.PluginInterface):
         # get sock struct to find the offset to the sk_destruct pointer
         # this is so that the sock object can be created at the correct offset,
         # the results of the scanner will be for the sk_destruct member within the scock
-        sk_destruct_offset = vmlinux.get_type("sock").relative_child_offset("sk_destruct")
+        sk_destruct_offset = vmlinux.get_type("sock").relative_child_offset(
+            "sk_destruct"
+        )
 
         # TODO Method 3 - find sock by sk_error_report symbols
         # sk_error_report_symbol_names = ['sock_def_error_report', 'inet_sk_rebuild_header', 'inet_listen']
