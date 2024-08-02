@@ -22,7 +22,8 @@ class Sockscan(plugins.PluginInterface):
     """Scans for network connections found in memory layer."""
 
     _required_framework_version = (2, 6, 0)
-
+    _version = (1, 0, 0)
+    
     @classmethod
     def get_requirements(cls):
         return [
@@ -35,12 +36,12 @@ class Sockscan(plugins.PluginInterface):
                 name="SockHandlers", component=sockstat.SockHandlers, version=(1, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="linuxutils", component=linux.LinuxUtilities, version=(2, 0, 0)
+                name="linuxutils", component=linux.LinuxUtilities, version=(2, 1, 0)
             ),
         ]
 
     def _canonicalize_symbol_addrs(
-        self, symbol_table_name: List[str], symbol_names: str
+        self, symbol_table_name: str, symbol_names: List[str]
     ) -> Set[bytes]:
         """Takes a list of symbol names and converts the address of each to the bytes
         as they would appear in memory so that they can be scanned for.
@@ -88,9 +89,9 @@ class Sockscan(plugins.PluginInterface):
             )
 
         # make a warning if no symbols at all could be resolved.
-        if len(packed_needles) == 0:
+        if not packed_needles:
             vollog.warning(
-                f"_canonicalize_symbol_addrs was unable to resolve any symbols, use -vvvv for more information."
+                "_canonicalize_symbol_addrs was unable to resolve any symbols, use -vvvv for more information."
             )
 
         return packed_needles
@@ -159,7 +160,7 @@ class Sockscan(plugins.PluginInterface):
         # get file struct to find the offset to the f_op pointer
         # this is so that the file object can be created at the correct offset,
         # the results of the scanner will be for the f_op member within the file
-        f_op_offset = vmlinux.get_type("file").members["f_op"][0]
+        f_op_offset = vmlinux.get_type("file").relative_child_offset("f_op")
 
         # Method 2 - find sockets by socket destructor directly inside sock objects
         socket_destructor_symbol_names = [
@@ -175,7 +176,7 @@ class Sockscan(plugins.PluginInterface):
         # get sock struct to find the offset to the sk_destruct pointer
         # this is so that the sock object can be created at the correct offset,
         # the results of the scanner will be for the sk_destruct member within the scock
-        sk_destruct_offset = vmlinux.get_type("sock").members["sk_destruct"][0]
+        sk_destruct_offset = vmlinux.get_type("sock").relative_child_offset("sk_destruct")
 
         # TODO Method 3 - find sock by sk_error_report symbols
         # sk_error_report_symbol_names = ['sock_def_error_report', 'inet_sk_rebuild_header', 'inet_listen']
