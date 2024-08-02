@@ -21,7 +21,6 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists all memory maps for all processes."""
 
     _required_framework_version = (2, 0, 0)
-
     _version = (2, 0, 0)
 
     @classmethod
@@ -53,7 +52,7 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
         symbol_table: str,
         filter_func: Callable[[int], bool] = lambda _: False,
     ):
-        linuxutils_symbol_table = None  # type: ignore
+        linuxutils_symbol_table = None
         for task in pslist.PsList.list_tasks(context, symbol_table, filter_func):
             if linuxutils_symbol_table is None:
                 if constants.BANG not in task.vol.type_name:
@@ -71,21 +70,17 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 fd_num, filp, full_path = fd_fields
                 inode_metadata = linux.LinuxUtilities.get_inode_metadata(context, filp)
                 try:
-                    inode_num, file_size, imode, ctime, mtime, atime = next(
+                    inode_num, itype, file_size, imode, ctime, mtime, atime = next(
                         inode_metadata
                     )
                 except Exception as e:
                     vollog.warning(
                         f"Can't get inode metadata for file descriptor {fd_num}: {e}"
                     )
-                    # Yield NotAvailableValue for each field in case of an exception
-                    inode_num = renderers.NotAvailableValue()
-                    file_size = renderers.NotAvailableValue()
-                    imode = renderers.NotAvailableValue()
-                    ctime = renderers.NotAvailableValue()
-                    mtime = renderers.NotAvailableValue()
-                    atime = renderers.NotAvailableValue()
-                yield pid, task_comm, task, fd_num, filp, full_path, inode_num, imode, ctime, mtime, atime, file_size
+                    inode_num = itype = file_size = imode = ctime = mtime = atime = (
+                        renderers.NotAvailableValue()
+                    )
+                yield pid, task_comm, task, fd_num, filp, full_path, inode_num, itype, imode, ctime, mtime, atime, file_size
 
     def _generator(self, pids, symbol_table):
         filter_func = pslist.PsList.create_pid_filter(pids)
@@ -100,6 +95,7 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
             filp,
             full_path,
             inode_num,
+            itype,
             imode,
             ctime,
             mtime,
@@ -112,6 +108,7 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 fd_num,
                 full_path,
                 inode_num,
+                itype,
                 imode,
                 ctime,
                 mtime,
@@ -130,6 +127,7 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
             ("FD", int),
             ("Path", str),
             ("Inode", int),
+            ("Type", str),
             ("Mode", str),
             ("Changed", datetime.datetime),
             ("Modified", datetime.datetime),
@@ -144,6 +142,6 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
         for row in self._generator(pids, symbol_table):
             _depth, row_data = row
             description = f'Process {row_data[1]} ({row_data[0]}) Open "{row_data[3]}"'
-            yield description, timeliner.TimeLinerType.CHANGED, row_data[6]
-            yield description, timeliner.TimeLinerType.MODIFIED, row_data[7]
-            yield description, timeliner.TimeLinerType.ACCESSED, row_data[8]
+            yield description, timeliner.TimeLinerType.CHANGED, row_data[7]
+            yield description, timeliner.TimeLinerType.MODIFIED, row_data[8]
+            yield description, timeliner.TimeLinerType.ACCESSED, row_data[9]

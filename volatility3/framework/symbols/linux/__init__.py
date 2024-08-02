@@ -280,23 +280,19 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         A helper function that gets the inodes metadata from a file descriptor
         """
         dentry = filp.get_dentry()
-        if dentry != 0:
+        if dentry:
             inode_object = dentry.d_inode
-            inode_num = inode_object.i_ino
-            file_size = inode_object.i_size  # file size in bytes
-            imode = stat.filemode(inode_object.i_mode)  # file type & Permissions
-
-            # Timestamps
-            ctime = datetime.datetime.fromtimestamp(
-                inode_object.i_ctime.tv_sec
-            )  # last change time
-            mtime = datetime.datetime.fromtimestamp(
-                inode_object.i_mtime.tv_sec
-            )  # last modify time
-            atime = datetime.datetime.fromtimestamp(
-                inode_object.i_atime.tv_sec
-            )  # last access time
-            yield inode_num, file_size, imode, ctime, mtime, atime
+            if inode_object and inode_object.is_valid():
+                itype = inode_object.get_inode_type() or "?"
+                yield (
+                    inode_object.i_ino,
+                    itype,
+                    inode_object.i_size,
+                    inode_object.get_file_mode(),
+                    inode_object.get_change_time(),
+                    inode_object.get_modification_time(),
+                    inode_object.get_access_time(),
+                )
 
     @classmethod
     def mask_mods_list(

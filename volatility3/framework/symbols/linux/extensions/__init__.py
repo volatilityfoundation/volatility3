@@ -1820,6 +1820,16 @@ class inode(objects.StructType):
         """Returns True if the sticky bit is set"""
         return (self.i_mode & stat.S_ISVTX) != 0
 
+    @property
+    def is_whiteout(self) -> bool:
+        """Returns True if the inode is a whiteout"""
+        return (self.i_mode & 0o140000) == 0o140000
+
+    @property
+    def is_overlay(self) -> bool:
+        """Returns True if the inode is an overlay"""
+        return (self.i_mode & 0o40000) == 0o40000
+
     def get_inode_type(self) -> Union[str, None]:
         """Returns inode type name
 
@@ -1840,6 +1850,10 @@ class inode(objects.StructType):
             return "CHR"
         elif self.is_block:
             return "BLK"
+        elif self.is_whiteout:
+            return "WHT"
+        elif self.is_overlay:
+            return "OVL"
         else:
             return None
 
