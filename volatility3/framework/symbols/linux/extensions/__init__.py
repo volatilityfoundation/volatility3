@@ -7,10 +7,10 @@ import logging
 import stat
 from datetime import datetime
 import socket as socket_module
-from typing import Generator, Iterable, Iterator, Optional, Tuple, List
+from typing import Generator, Iterable, Iterator, Optional, Tuple, List, Union
 
 from volatility3.framework import constants, exceptions, objects, interfaces, symbols
-from volatility3.framework import renderers
+from volatility3.framework.renderers import conversion
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
 from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
@@ -1770,7 +1770,7 @@ class timespec64(objects.StructType):
     def to_datetime(self) -> datetime:
         """Returns the respective aware datetime"""
 
-        dt = renderers.conversion.unixtime_to_datetime(self.tv_sec + self.tv_nsec / 1e9)
+        dt = conversion.unixtime_to_datetime(self.tv_sec + self.tv_nsec / 1e9)
         return dt
 
 
@@ -1812,7 +1812,7 @@ class inode(objects.StructType):
         """Returns True if the sticky bit is set"""
         return (self.i_mode & stat.S_ISVTX) != 0
 
-    def get_inode_type(self) -> str:
+    def get_inode_type(self) -> Union[str, None]:
         """Returns inode type name
 
         Returns:
@@ -1833,7 +1833,7 @@ class inode(objects.StructType):
         elif self.is_block():
             return "BLK"
         else:
-            return renderers.UnparsableValue()
+            return None
 
     def get_inode_number(self) -> int:
         """Returns the inode number"""
@@ -1843,7 +1843,7 @@ class inode(objects.StructType):
         if self.has_member(f"{member}_sec") and self.has_member(f"{member}_nsec"):
             # kernels >= 6.11 it's i_*_sec -> time64_t and i_*_nsec -> u32
             # Ref Linux commit 3aa63a569c64e708df547a8913c84e64a06e7853
-            return renderers.conversion.unixtime_to_datetime(
+            return conversion.unixtime_to_datetime(
                 self.member(f"{member}_sec") + self.has_member(f"{member}_nsec") / 1e9
             )
         elif self.has_member(f"__{member}"):
