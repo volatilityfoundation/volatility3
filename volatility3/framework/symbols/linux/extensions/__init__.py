@@ -1780,34 +1780,42 @@ class inode(objects.StructType):
         # pointer, will easily cause an integer overflow here.
         return self.i_ino > 0 and self.i_count.counter >= 0
 
+    @property
     def is_dir(self) -> bool:
         """Returns True if the inode is a directory"""
         return stat.S_ISDIR(self.i_mode) != 0
 
+    @property
     def is_reg(self) -> bool:
         """Returns True if the inode is a regular file"""
         return stat.S_ISREG(self.i_mode) != 0
 
+    @property
     def is_link(self) -> bool:
         """Returns True if the inode is a symlink"""
         return stat.S_ISLNK(self.i_mode) != 0
 
+    @property
     def is_fifo(self) -> bool:
         """Returns True if the inode is a FIFO"""
         return stat.S_ISFIFO(self.i_mode) != 0
 
+    @property
     def is_sock(self) -> bool:
         """Returns True if the inode is a socket"""
         return stat.S_ISSOCK(self.i_mode) != 0
 
+    @property
     def is_block(self) -> bool:
         """Returns True if the inode is a block device"""
         return stat.S_ISBLK(self.i_mode) != 0
 
+    @property
     def is_char(self) -> bool:
         """Returns True if the inode is a char device"""
         return stat.S_ISCHR(self.i_mode) != 0
 
+    @property
     def is_sticky(self) -> bool:
         """Returns True if the sticky bit is set"""
         return (self.i_mode & stat.S_ISVTX) != 0
@@ -1818,19 +1826,19 @@ class inode(objects.StructType):
         Returns:
             The inode type name
         """
-        if self.is_dir():
+        if self.is_dir:
             return "DIR"
-        elif self.is_reg():
+        elif self.is_reg:
             return "REG"
-        elif self.is_link():
+        elif self.is_link:
             return "LNK"
-        elif self.is_fifo():
+        elif self.is_fifo:
             return "FIFO"
-        elif self.is_sock():
+        elif self.is_sock:
             return "SOCK"
-        elif self.is_char():
+        elif self.is_char:
             return "CHR"
-        elif self.is_block():
+        elif self.is_block:
             return "BLK"
         else:
             return None
