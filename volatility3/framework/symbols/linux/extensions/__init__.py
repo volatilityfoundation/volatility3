@@ -1839,7 +1839,7 @@ class inode(objects.StructType):
         """Returns the inode number"""
         return int(self.i_ino)
 
-    def ___time_member_to_datetime(self, member) -> datetime:
+    def _time_member_to_datetime(self, member) -> datetime:
         if self.has_member(f"{member}_sec") and self.has_member(f"{member}_nsec"):
             # kernels >= 6.11 it's i_*_sec -> time64_t and i_*_nsec -> u32
             # Ref Linux commit 3aa63a569c64e708df547a8913c84e64a06e7853
@@ -1865,7 +1865,7 @@ class inode(objects.StructType):
         Returns:
             A datetime with the inode's last access time
         """
-        return self.___time_member_to_datetime("i_atime")
+        return self._time_member_to_datetime("i_atime")
 
     def get_modification_time(self) -> datetime:
         """Returns the inode's last modification time
@@ -1875,7 +1875,7 @@ class inode(objects.StructType):
             A datetime with the inode's last data modification time
         """
 
-        return self.___time_member_to_datetime("i_mtime")
+        return self._time_member_to_datetime("i_mtime")
 
     def get_change_time(self) -> datetime:
         """Returns the inode's last change time
@@ -1884,7 +1884,7 @@ class inode(objects.StructType):
         Returns:
             A datetime with the inode's last change time
         """
-        return self.___time_member_to_datetime("i_ctime")
+        return self._time_member_to_datetime("i_ctime")
 
     def get_file_mode(self) -> str:
         """Returns the inode's file mode as string of the form '-rwxrwxrwx'.
