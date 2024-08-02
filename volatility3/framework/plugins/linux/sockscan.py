@@ -96,22 +96,15 @@ class Sockscan(plugins.PluginInterface):
 
         return packed_needles
 
-    def _generator(self, symbol_table_name: str):
-        """Scans for sockets. Each row represents a kernel socket.
+    def _find_memory_layer_name(self, symbol_table_name: str):
+        """Find the memory layer below the kernel. Only returns a single layer,
+        and will warn the user if multiple layers are found.
 
         Args:
-            symbol_table_name: The name of the kernel module on which to operate
+            symbol_table_name: The name of the kernel module on which to operate.
 
-        Yields:
-            addr: Physical offset
-            family: Socket family string (AF_UNIX, AF_INET, etc)
-            sock_type: Socket type string (STREAM, DGRAM, etc)
-            protocol: Protocol string (UDP, TCP, etc)
-            source addr: Source address string
-            source port: Source port string (not all of them are int)
-            destination addr: Destination address string
-            destination port: Destination port (not all of them are int)
-            state: State strings (LISTEN, CONNECTED, etc)
+        Returns:
+            memory_layer_name: The name of the layer below the kernel to be scanned.
         """
 
         # get vmlinux module from context in order to build objects and read symbols
@@ -136,20 +129,15 @@ class Sockscan(plugins.PluginInterface):
             raise exceptions.LayerException(
                 vmlinux.layer_name, f"Layer {vmlinux.layer_name} has no dependencies"
             )
+
         memory_layer_name = kernel_layer.dependencies[0]
-        memory_layer = self.context.layers[kernel_layer.dependencies[0]]
 
-        # use the init process to build a sock handler
-        # TODO: look into options so that sockstat.SockHandlers so that process_sock can
-        # be used  without a task object.
-        init_task = vmlinux.object_from_symbol(symbol_name="init_task")
-        sock_handler = sockstat.SockHandlers(vmlinux, init_task)
+        return memory_layer_name
 
-        # get progress_callback in order to use this in the scanners.
-        # TODO: perhaps add more detail to progress, showing method in progress and number of hits found
-        progress_callback = self._progress_callback
+    def _find_file_ops_needles(self, symbol_table_name: str):
+        # get vmlinux module from context in order to read symbols
+        vmlinux = self.context.modules[symbol_table_name]
 
-        # Method 1 - find sockets by file operations, then follow pointers to sockets
         file_ops_symbol_names = [
             "socket_file_ops",
             "sockfs_dentry_operations",
@@ -162,7 +150,12 @@ class Sockscan(plugins.PluginInterface):
         # the results of the scanner will be for the f_op member within the file
         f_op_offset = vmlinux.get_type("file").relative_child_offset("f_op")
 
-        # Method 2 - find sockets by socket destructor directly inside sock objects
+        return (file_ops_needles, f_op_offset)
+
+    def _find_sk_destruct_needles(self, symbol_table_name: str):
+        # get vmlinux module from context in order to read symbols
+        vmlinux = self.context.modules[symbol_table_name]
+
         socket_destructor_symbol_names = [
             "sock_def_destruct",
             "packet_sock_destruct",
@@ -178,6 +171,173 @@ class Sockscan(plugins.PluginInterface):
         # the results of the scanner will be for the sk_destruct member within the scock
         sk_destruct_offset = vmlinux.get_type("sock").relative_child_offset(
             "sk_destruct"
+        )
+        return (socket_destructor_needles, sk_destruct_offset)
+
+    def _walk_file_ops_needles(
+        self, symbol_table_name, memory_layer_name, needle_addr, f_op_offset
+    ):
+        vmlinux = self.context.modules[symbol_table_name]
+        try:
+            # create file in the memory_layer, the native layer matches the
+            # kernel so that pointers can be followed
+            sock_physical_addr = needle_addr - f_op_offset
+            pfile = self.context.object(
+                vmlinux.symbol_table_name + constants.BANG + "file",
+                offset=sock_physical_addr,
+                layer_name=memory_layer_name,
+                native_layer_name=vmlinux.layer_name,
+            )
+            dentry = pfile.get_dentry()
+            if not dentry:
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    f"Skipping file at {hex(needle_addr)} as unable to locate dentry",
+                )
+                return None
+
+            d_inode = dentry.d_inode
+            if not d_inode:
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    f"Skipping file at {hex(needle_addr)} as unable to locate inode for dentry",
+                )
+                return None
+
+            socket_alloc = linux.LinuxUtilities.container_of(
+                d_inode, "socket_alloc", "vfs_inode", vmlinux
+            )
+            socket = socket_alloc.socket
+            if not (socket and socket.sk):
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    f"Skipping file at {hex(needle_addr)} as socket created by LinuxUtilities.container_of is invalid",
+                )
+                return None
+
+            # sucessfully trversed from file to sock, this will exist in the
+            # kernel layer, and need to be translated to the memory layer.
+            psock = socket.sk.dereference()
+            return psock
+
+        except exceptions.InvalidAddressException as error:
+            vollog.log(
+                constants.LOGLEVEL_VVVV,
+                f"Unable to follow file at {hex(needle_addr)} to socket due to invalid address: {error}",
+            )
+
+    def _extract_sock_fields(self, psock, sock_handler):
+        try:
+            sock_physical_addr = psock.vol.offset
+            sock_type = psock.get_type()
+
+            family = psock.get_family()
+            # remove results with no family
+            if family is None:
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    f"Skipping socket at {hex(sock_physical_addr)} as unable to determin family.",
+                )
+                return None
+
+            # TODO: invesitgate options for more invalid address handling in proccess_sock
+            # and the later formatting of it's results.
+            sock_fields = sock_handler.process_sock(psock)
+            # if no sock_fields we're able to be extracted then skip this result.
+            if not sock_fields:
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    f"Skipping socket at {hex(sock_physical_addr)} as unable to process with SockHandlers.",
+                )
+                return None
+
+            sock, sock_stat, extended = sock_fields
+            src, src_port, dst, dst_port, state = sock_stat
+            protocol = sock.get_protocol()
+
+            # format results
+            src = NotAvailableValue() if src is None else str(src)
+            src_port = NotAvailableValue() if src_port is None else str(src_port)
+            dst = NotAvailableValue() if dst is None else str(dst)
+            dst_port = NotAvailableValue() if dst_port is None else str(dst_port)
+            state = NotAvailableValue() if state is None else str(state)
+            protocol = NotAvailableValue() if protocol is None else str(protocol)
+            # extended attributes is a dict, so this is formated to string show each
+            # key and value pair, seperated with a comma.
+            socket_filter_str = (
+                ",".join(f"{k}={v}" for k, v in extended.items())
+                if extended
+                else NotAvailableValue()
+            )
+
+            # remove empty results
+            if (src == "0.0.0.0" or isinstance(src, NotAvailableValue)) and (
+                dst == "0.0.0.0" or isinstance(src, NotAvailableValue)
+            ):
+                if state == "UNCONNECTED":
+                    return None
+                elif src_port == "0" and dst_port == "0":
+                    return None
+            return (
+                format_hints.Hex(sock_physical_addr),
+                family,
+                sock_type,
+                protocol,
+                src,
+                src_port,
+                dst,
+                dst_port,
+                state,
+                socket_filter_str,
+            )
+
+        except exceptions.InvalidAddressException as error:
+            vollog.log(
+                constants.LOGLEVEL_VVVV,
+                f"Unable create results for socket at {hex(sock_physical_addr)} due to invalid address: {error}",
+            )
+
+    def _generator(self, symbol_table_name: str):
+        """Scans for sockets. Each row represents a kernel socket.
+
+        Args:
+            symbol_table_name: The name of the kernel module on which to operate
+
+        Yields:
+            addr: Physical offset
+            family: Socket family string (AF_UNIX, AF_INET, etc)
+            sock_type: Socket type string (STREAM, DGRAM, etc)
+            protocol: Protocol string (UDP, TCP, etc)
+            source addr: Source address string
+            source port: Source port string (not all of them are int)
+            destination addr: Destination address string
+            destination port: Destination port (not all of them are int)
+            state: State strings (LISTEN, CONNECTED, etc)
+        """
+
+        # get vmlinux module from context in order to build objects and read symbols
+        vmlinux = self.context.modules[symbol_table_name]
+
+        # get the memory layer that is to be scanned.
+        memory_layer_name = self._find_memory_layer_name(symbol_table_name)
+        memory_layer = self.context.layers[memory_layer_name]
+
+        # use the init process to build a sock handler
+        # TODO: look into options so that sockstat.SockHandlers so that process_sock can
+        # be used  without a task object.
+        init_task = vmlinux.object_from_symbol(symbol_name="init_task")
+        sock_handler = sockstat.SockHandlers(vmlinux, init_task)
+
+        # get progress_callback in order to use this in the scanners.
+        # TODO: perhaps add more detail to progress, showing method in progress and number of hits found
+        progress_callback = self._progress_callback
+
+        # Method 1 - find sockets by file operations, then follow pointers to sockets
+        file_ops_needles, f_op_offset = self._find_file_ops_needles(symbol_table_name)
+
+        # Method 2 - find sockets by socket destructor directly inside sock objects
+        socket_destructor_needles, sk_destruct_offset = self._find_sk_destruct_needles(
+            symbol_table_name
         )
 
         # TODO Method 3 - find sock by sk_error_report symbols
@@ -196,8 +356,7 @@ class Sockscan(plugins.PluginInterface):
             psock = None
             sock_physical_addr = None
 
-            # if match is from socket_destructor_needles simply calculate the offset
-            # to the sock
+            # if match is from socket_destructor_needles simply calculate the offset to the sock
             if match in socket_destructor_needles:
                 sock_physical_addr = needle_addr - sk_destruct_offset
                 psock = self.context.object(
@@ -207,133 +366,18 @@ class Sockscan(plugins.PluginInterface):
                     native_layer_name=vmlinux.layer_name,
                 )
 
-            # if match is from file_ops_needles attempt to walk from file object to
-            # the sock
+            # if match is from file_ops_needles attempt to walk from file object to the sock
             if match in file_ops_needles:
-                try:
-                    # create file in the memory_layer, the native layer matches the
-                    # kernel so that pointers can be followed
-                    sock_physical_addr = needle_addr - f_op_offset
-                    pfile = self.context.object(
-                        vmlinux.symbol_table_name + constants.BANG + "file",
-                        offset=sock_physical_addr,
-                        layer_name=memory_layer_name,
-                        native_layer_name=vmlinux.layer_name,
-                    )
-                    dentry = pfile.get_dentry()
-                    if not dentry:
-                        vollog.log(
-                            constants.LOGLEVEL_VVVV,
-                            f"Skipping file at {hex(needle_addr)} as unable to locate dentry",
-                        )
-                        continue
-
-                    d_inode = dentry.d_inode
-                    if not d_inode:
-                        vollog.log(
-                            constants.LOGLEVEL_VVVV,
-                            f"Skipping file at {hex(needle_addr)} as unable to locate inode for dentry",
-                        )
-                        continue
-
-                    socket_alloc = linux.LinuxUtilities.container_of(
-                        d_inode, "socket_alloc", "vfs_inode", vmlinux
-                    )
-                    socket = socket_alloc.socket
-                    if not (socket and socket.sk):
-                        vollog.log(
-                            constants.LOGLEVEL_VVVV,
-                            f"Skipping file at {hex(needle_addr)} as socket created by LinuxUtilities.container_of is invalid",
-                        )
-                        continue
-
-                    # sucessfully trversed from file to sock, this will exist in the
-                    # kernel layer, and need to be translated to the memory layer.
-                    psock = socket.sk.dereference()
-                except exceptions.InvalidAddressException as error:
-                    vollog.log(
-                        constants.LOGLEVEL_VVVV,
-                        f"Unable to follow file at {hex(needle_addr)} to socket due to invalid address: {error}",
-                    )
+                psock = self._walk_file_ops_needles(
+                    symbol_table_name, memory_layer_name, needle_addr, f_op_offset
+                )
 
             if psock is not None and sock_physical_addr not in seen_sock_physical_addr:
                 seen_sock_physical_addr.add(sock_physical_addr)
-                try:
-                    sock_type = psock.get_type()
 
-                    family = psock.get_family()
-                    # remove results with no family
-                    if family is None:
-                        vollog.log(
-                            constants.LOGLEVEL_VVVV,
-                            f"Skipping socket at {hex(sock_physical_addr)} as unable to determin family.",
-                        )
-                        continue
-
-                    # TODO: invesitgate options for more invalid address handling in proccess_sock
-                    # and the later formatting of it's results.
-                    sock_fields = sock_handler.process_sock(psock)
-                    # if no sock_fields we're able to be extracted then skip this result.
-                    if not sock_fields:
-                        vollog.log(
-                            constants.LOGLEVEL_VVVV,
-                            f"Skipping socket at {hex(sock_physical_addr)} as unable to process with SockHandlers.",
-                        )
-                        continue
-
-                    sock, sock_stat, extended = sock_fields
-                    src, src_port, dst, dst_port, state = sock_stat
-                    protocol = sock.get_protocol()
-
-                    # format results
-                    src = NotAvailableValue() if src is None else str(src)
-                    src_port = (
-                        NotAvailableValue() if src_port is None else str(src_port)
-                    )
-                    dst = NotAvailableValue() if dst is None else str(dst)
-                    dst_port = (
-                        NotAvailableValue() if dst_port is None else str(dst_port)
-                    )
-                    state = NotAvailableValue() if state is None else str(state)
-                    protocol = (
-                        NotAvailableValue() if protocol is None else str(protocol)
-                    )
-                    # extended attributes is a dict, so this is formated to string show each
-                    # key and value pair, seperated with a comma.
-                    socket_filter_str = (
-                        ",".join(f"{k}={v}" for k, v in extended.items())
-                        if extended
-                        else NotAvailableValue()
-                    )
-
-                    # remove empty results
-                    if (src == "0.0.0.0" or isinstance(src, NotAvailableValue)) and (
-                        dst == "0.0.0.0" or isinstance(src, NotAvailableValue)
-                    ):
-                        if state == "UNCONNECTED":
-                            continue
-                        elif src_port == "0" and dst_port == "0":
-                            continue
-
-                    fields = (
-                        format_hints.Hex(sock_physical_addr),
-                        family,
-                        sock_type,
-                        protocol,
-                        src,
-                        src_port,
-                        dst,
-                        dst_port,
-                        state,
-                        socket_filter_str,
-                    )
-
+                fields = self._extract_sock_fields(psock, sock_handler)
+                if fields:
                     yield (0, fields)
-                except exceptions.InvalidAddressException as error:
-                    vollog.log(
-                        constants.LOGLEVEL_VVVV,
-                        f"Unable create results for socket at {hex(sock_physical_addr)} due to invalid address: {error}",
-                    )
 
     def run(self):
 
