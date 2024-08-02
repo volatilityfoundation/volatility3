@@ -14,6 +14,7 @@ class FileScan(interfaces.plugins.PluginInterface):
     """Scans for file objects present in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls):
@@ -67,10 +68,10 @@ class FileScan(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 continue
 
-            yield (0, (format_hints.Hex(fileobj.vol.offset), file_name, fileobj.Size))
+            yield (0, (format_hints.Hex(fileobj.vol.offset), file_name))
 
     def run(self):
         return renderers.TreeGrid(
-            [("Offset", format_hints.Hex), ("Name", str), ("Size", int)],
+            [("Offset", format_hints.Hex), ("Name", str)],
             self._generator(),
         )
