@@ -1840,10 +1840,6 @@ class inode(objects.StructType):
             return "CHR"
         elif self.is_block:
             return "BLK"
-        elif self.is_whiteout:
-            return "WHT"
-        elif self.is_overlay:
-            return "OVL"
         else:
             return None
 
