@@ -1843,10 +1843,6 @@ class inode(objects.StructType):
         else:
             return None
 
-    def get_inode_number(self) -> int:
-        """Returns the inode number"""
-        return int(self.i_ino)
-
     def _time_member_to_datetime(self, member) -> datetime:
         if self.has_member(f"{member}_sec") and self.has_member(f"{member}_nsec"):
             # kernels >= 6.11 it's i_*_sec -> time64_t and i_*_nsec -> u32
