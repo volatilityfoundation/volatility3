@@ -619,7 +619,8 @@ class Consoles(interfaces.plugins.PluginInterface):
                                     bucket_cmd,
                                 ) in command_history.get_commands():
                                     try:
-                                        console_properties.append({
+                                        console_properties.append(
+                                            {
                                                 "level": 3,
                                                 "name": f"_CONSOLE_INFORMATION.HistoryList.CommandHistory_{index}_Command_{cmd_index}",
                                                 "address": bucket_cmd.vol.offset,
