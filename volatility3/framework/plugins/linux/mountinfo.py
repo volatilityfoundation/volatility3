@@ -37,7 +37,7 @@ class MountInfo(plugins.PluginInterface):
 
     _required_framework_version = (2, 2, 0)
 
-    _version = (1, 0, 0)
+    _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -146,7 +146,7 @@ class MountInfo(plugins.PluginInterface):
     def _get_tasks_mountpoints(
         self,
         tasks: Iterable[interfaces.objects.ObjectInterface],
-        filtered_by_pids: bool,
+        filtered_by_pids: bool = False,
     ):
         seen_mountpoints = set()
         for task in tasks:
@@ -184,8 +184,8 @@ class MountInfo(plugins.PluginInterface):
         self,
         tasks: Iterable[interfaces.objects.ObjectInterface],
         mnt_ns_ids: List[int],
-        mount_format: bool,
-        filtered_by_pids: bool,
+        mount_format: bool = False,
+        filtered_by_pids: bool = False,
     ) -> Iterable[Tuple[int, Tuple]]:
         show_filter_warning = False
         for task, mnt, mnt_ns_id in self._get_tasks_mountpoints(
@@ -246,6 +246,31 @@ class MountInfo(plugins.PluginInterface):
             vollog.warning(
                 "Could not filter by mount namespace id. This field is not available in this kernel."
             )
+
+    def get_superblocks(self):
+        """Yield file system superblocks based on the task's mounted filesystems.
+
+        Yields:
+            super_block: Kernel's struct super_block object
+        """
+        # No filter so that we get all the mount namespaces from all tasks
+        pid_filter = pslist.PsList.create_pid_filter()
+        tasks = pslist.PsList.list_tasks(
+            self.context, self.config["kernel"], filter_func=pid_filter
+        )
+
+        seen_sb_ptr = set()
+        for task, mnt, _mnt_ns_id in self._get_tasks_mountpoints(tasks):
+            path_root = linux.LinuxUtilities.get_path_mnt(task, mnt)
+            if not path_root:
+                continue
+
+            sb_ptr = mnt.get_mnt_sb()
+            if not sb_ptr or sb_ptr in seen_sb_ptr:
+                continue
+            seen_sb_ptr.add(sb_ptr)
+
+            yield sb_ptr.dereference(), path_root
 
     def run(self):
         pids = self.config.get("pids")
