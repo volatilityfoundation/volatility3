@@ -175,6 +175,15 @@ class CmdScan(interfaces.plugins.PluginInterface):
                         )
                         command_history_properties.append(
                             {
+                                "level": 0,
+                                "name": "_COMMAND_HISTORY",
+                                "address": command_history.vol.offset,
+                                "data": "",
+                            }
+                        )
+                        command_history_properties.append(
+                            {
+                                "level": 1,
                                 "name": f"_COMMAND_HISTORY.Application",
                                 "address": command_history.Application.vol.offset,
                                 "data": command_history.get_application(),
@@ -182,6 +191,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                         )
                         command_history_properties.append(
                             {
+                                "level": 1,
                                 "name": f"_COMMAND_HISTORY.ProcessHandle",
                                 "address": command_history.ConsoleProcessHandle.ProcessHandle.vol.offset,
                                 "data": hex(
@@ -191,6 +201,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                         )
                         command_history_properties.append(
                             {
+                                "level": 1,
                                 "name": f"_COMMAND_HISTORY.CommandCount",
                                 "address": None,
                                 "data": command_history.CommandCount,
@@ -198,6 +209,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                         )
                         command_history_properties.append(
                             {
+                                "level": 1,
                                 "name": f"_COMMAND_HISTORY.LastDisplayed",
                                 "address": command_history.LastDisplayed.vol.offset,
                                 "data": command_history.LastDisplayed,
@@ -205,6 +217,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                         )
                         command_history_properties.append(
                             {
+                                "level": 1,
                                 "name": f"_COMMAND_HISTORY.CommandCountMax",
                                 "address": command_history.CommandCountMax.vol.offset,
                                 "data": command_history.CommandCountMax,
@@ -213,6 +226,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
 
                         command_history_properties.append(
                             {
+                                "level": 1,
                                 "name": f"_COMMAND_HISTORY.CommandBucket",
                                 "address": command_history.CommandBucket.vol.offset,
                                 "data": "",
@@ -225,6 +239,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                             try:
                                 command_history_properties.append(
                                     {
+                                        "level": 2,
                                         "name": f"_COMMAND_HISTORY.CommandBucket_Command_{cmd_index}",
                                         "address": bucket_cmd.vol.offset,
                                         "data": bucket_cmd.get_command(),
@@ -281,7 +296,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
             if command_history and command_history_properties:
                 for command_history_property in command_history_properties:
                     yield (
-                        0,
+                        command_history_property["level"],
                         (
                             proc.UniqueProcessId,
                             process_name,
