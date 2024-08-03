@@ -65,7 +65,9 @@ class CmdScan(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_filtered_vads(
-        cls, conhost_proc: interfaces.context.ContextInterface, size_filter: Optional[int]=0x40000000
+        cls,
+        conhost_proc: interfaces.context.ContextInterface,
+        size_filter: Optional[int] = 0x40000000,
     ) -> List[Tuple[int, int]]:
         """
         Returns vads of a process with smaller than size_filter
@@ -129,7 +131,9 @@ class CmdScan(interfaces.plugins.PluginInterface):
                 f"Found conhost process {conhost_proc} with pid {conhost_proc.UniqueProcessId}"
             )
 
-            conhostexe_base, conhostexe_size = consoles.Consoles.find_conhostexe(conhost_proc)
+            conhostexe_base, conhostexe_size = consoles.Consoles.find_conhostexe(
+                conhost_proc
+            )
             if not conhostexe_base:
                 vollog.info(
                     "Unable to find the location of conhost.exe. Analysis cannot proceed."
@@ -154,7 +158,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                     context,
                     scanners.BytesScanner(max_history_bytes),
                     sections=sections,
-                    ):
+                ):
                     command_history_properties = []
 
                     try:
@@ -272,18 +276,24 @@ class CmdScan(interfaces.plugins.PluginInterface):
         no_registry = self.config.get("no_registry")
 
         if no_registry is False:
-            max_history, _max_buffers = consoles.Consoles.get_console_settings_from_registry(
-                self.context,
-                self.config_path,
-                kernel.layer_name,
-                kernel.symbol_table_name,
-                max_history,
-                [],
+            max_history, _max_buffers = (
+                consoles.Consoles.get_console_settings_from_registry(
+                    self.context,
+                    self.config_path,
+                    kernel.layer_name,
+                    kernel.symbol_table_name,
+                    max_history,
+                    [],
+                )
             )
 
         vollog.debug(f"Possible CommandHistorySize values: {max_history}")
 
-        for proc, command_history, command_history_properties in self.get_command_history(
+        for (
+            proc,
+            command_history,
+            command_history_properties,
+        ) in self.get_command_history(
             self.context,
             kernel.layer_name,
             kernel.symbol_table_name,
@@ -305,7 +315,9 @@ class CmdScan(interfaces.plugins.PluginInterface):
                             (
                                 renderers.NotApplicableValue()
                                 if command_history_property["address"] is None
-                                else format_hints.Hex(command_history_property["address"])
+                                else format_hints.Hex(
+                                    command_history_property["address"]
+                                )
                             ),
                             str(command_history_property["data"]),
                         ),
