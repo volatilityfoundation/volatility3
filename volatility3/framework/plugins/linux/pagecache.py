@@ -72,7 +72,7 @@ class InodeInternal:
         device = f"{self.superblock.major}:{self.superblock.minor}"
         inode_num = int(self.inode.i_ino)
         inode_addr = self.inode.vol.offset
-        inode_type = renderers.UnparsableValue()
+        inode_type = self.inode.get_inode_type() or renderers.UnparsableValue()
         # Round up the number of pages to fit the inode's size
         inode_pages = int(math.ceil(self.inode.i_size / float(kernel_layer.page_size)))
         cached_pages = int(self.inode.i_mapping.nrpages)
