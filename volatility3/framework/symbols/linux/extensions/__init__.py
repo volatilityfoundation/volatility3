@@ -47,7 +47,7 @@ class module(generic.GenericIntelProcess):
                 ).choices
             except exceptions.SymbolError:
                 vollog.debug(
-                    f"Unable to find mod_mem_type enum. This message can be ignored for kernels < 6.4"
+                    "Unable to find mod_mem_type enum. This message can be ignored for kernels < 6.4"
                 )
                 # set to empty dict to show that the enum was not found, and so shouldn't be searched for again
                 self._mod_mem_type = {}
@@ -936,7 +936,8 @@ class mount(objects.StructType):
         MNT_RELATIME: "relatime",
     }
 
-    def get_mnt_sb(self):
+    def get_mnt_sb(self) -> int:
+        """Returns a pointer to the super_block"""
         if self.has_member("mnt"):
             return self.mnt.mnt_sb
         elif self.has_member("mnt_sb"):
@@ -1251,6 +1252,7 @@ class vfsmount(objects.StructType):
             return self._get_real_mnt().has_parent()
 
     def get_mnt_sb(self):
+        """Returns a pointer to the super_block"""
         return self.mnt_sb
 
     def get_flags_access(self) -> str:
