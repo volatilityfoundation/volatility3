@@ -4,10 +4,11 @@
 
 import collections.abc
 import logging
+import functools
 import stat
 from datetime import datetime
 import socket as socket_module
-from typing import Generator, Iterable, Iterator, Optional, Tuple, List, Union
+from typing import Generator, Iterable, Iterator, Optional, Tuple, List, Union, Dict
 
 from volatility3.framework import constants, exceptions, objects, interfaces, symbols
 from volatility3.framework.renderers import conversion
@@ -1919,3 +1920,244 @@ class inode(objects.StructType):
             The inode's file mode string
         """
         return stat.filemode(self.i_mode)
+
+    def get_pages(self) -> interfaces.objects.ObjectInterface:
+        """Gets the inode's cached pages
+
+        Yields:
+            The inode's cached pages
+        """
+        if not self.i_size:
+            return
+        elif not (self.i_mapping and self.i_mapping.nrpages > 0):
+            return
+
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        page_cache = linux.PageCache(self.i_mapping.dereference(), vmlinux)
+        yield from page_cache.get_cached_pages()
+
+    def get_contents(self):
+        """Get the inode cached pages from the page cache
+
+        Yields:
+            page_index (int): The page index in the Tree. File offset is page_index * PAGE_SIZE.
+            page_content (str): The page content
+        """
+        for page_obj in self.get_pages():
+            page_index = int(page_obj.index)
+            page_content = page_obj.get_content()
+            yield page_index, page_content
+
+
+class address_space(objects.StructType):
+    @property
+    def i_pages(self):
+        """Returns the appropriate member containing the page cache tree"""
+        if self.has_member("i_pages"):
+            # Kernel >= 4.17
+            return self.member("i_pages")
+        elif self.has_member("page_tree"):
+            # Kernel < 4.17
+            return self.member("page_tree")
+
+        raise exceptions.VolatilityException("Unsupported page cache tree")
+
+
+class page(objects.StructType):
+    @property
+    @functools.cache
+    def pageflags_enum(self) -> Dict:
+        """Returns 'pageflags' enumeration key/values
+
+        Returns:
+            A dictionary with the pageflags enumeration key/values
+        """
+        # FIXME: It would be even better to use @functools.cached_property instead,
+        # however, this requires Python +3.8
+        try:
+            pageflags_enum = self._context.symbol_space.get_enumeration(
+                self.get_symbol_table_name() + constants.BANG + "pageflags"
+            ).choices
+        except exceptions.SymbolError:
+            vollog.debug(
+                "Unable to find pageflags enum. This can happen in kernels < 2.6.26 or wrong ISF"
+            )
+            # set to empty dict to show that the enum was not found, and so shouldn't be searched for again
+            pageflags_enum = {}
+
+        return pageflags_enum
+
+    def flags_list(self) -> List[str]:
+        """Returns a list of page flags
+
+        Returns:
+            List of page flags
+        """
+        flags = []
+        for name, value in self.pageflags_enum.items():
+            if self.flags & (1 << value) != 0:
+                flags.append(name)
+
+        return flags
+
+    def to_paddr(self) -> int:
+        """Converts a page's virtual address to its physical address using the current physical memory model.
+
+        Returns:
+            int: page physical address
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
+
+        vmemmap_start = None
+        if vmlinux.has_symbol("mem_section"):
+            # SPARSEMEM_VMEMMAP physical memory model: memmap is virtually contiguous
+            if vmlinux.has_symbol("vmemmap_base"):
+                # CONFIG_DYNAMIC_MEMORY_LAYOUT - KASLR kernels >= 4.9
+                vmemmap_start = vmlinux.object_from_symbol("vmemmap_base")
+            else:
+                # !CONFIG_DYNAMIC_MEMORY_LAYOUT
+                if vmlinux_layer._maxvirtaddr < 57:
+                    # 4-Level paging -> VMEMMAP_START = __VMEMMAP_BASE_L4
+                    vmemmap_base_l4 = 0xFFFFEA0000000000
+                    vmemmap_start = vmemmap_base_l4
+                else:
+                    # 5-Level paging -> VMEMMAP_START = __VMEMMAP_BASE_L5
+                    vmemmap_base_l5 = 0xFFD4000000000000
+                    vmemmap_start = vmemmap_base_l5
+
+                    # FIXME: Remove this exception once 5-level paging is supported.
+                    raise exceptions.VolatilityException(
+                        "5-level paging is not yet supported"
+                    )
+
+        elif vmlinux.has_symbol("mem_map"):
+            # FLATMEM physical memory model, typically 32bit
+            vmemmap_start = vmlinux.object_from_symbol("mem_map")
+
+        elif vmlinux.has_symbol("node_data"):
+            raise exceptions.VolatilityException("NUMA systems are not yet supported")
+        else:
+            raise exceptions.VolatilityException("Unsupported Linux memory model")
+
+        if not vmemmap_start:
+            raise exceptions.VolatilityException(
+                "Something went wrong, we shouldn't be here"
+            )
+
+        page_type_size = vmlinux.get_type("page").size
+        pagec = vmlinux_layer.canonicalize(self.vol.offset)
+        pfn = (pagec - vmemmap_start) // page_type_size
+        page_paddr = pfn * vmlinux_layer.page_size
+
+        return page_paddr
+
+    def get_content(self) -> Union[str, None]:
+        """Returns the page content
+
+        Returns:
+            The page content
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
+        physical_layer = vmlinux.context.layers["memory_layer"]
+        page_paddr = self.to_paddr()
+        if not page_paddr:
+            return
+
+        page_data = physical_layer.read(page_paddr, vmlinux_layer.page_size)
+        return page_data
+
+
+class IDR(objects.StructType):
+    IDR_BITS = 8
+    IDR_MASK = (1 << IDR_BITS) - 1
+    INT_SIZE = 4
+    MAX_IDR_SHIFT = INT_SIZE * 8 - 1
+    MAX_IDR_BIT = 1 << MAX_IDR_SHIFT
+
+    def idr_max(self, num_layers: int) -> int:
+        """Returns the maximum ID which can be allocated given idr::layers
+
+        Args:
+            num_layers: Number of layers
+
+        Returns:
+            Maximum ID for a given number of layers
+        """
+        # Kernel < 4.17
+        bits = min([self.INT_SIZE, num_layers * self.IDR_BITS, self.MAX_IDR_SHIFT])
+
+        return (1 << bits) - 1
+
+    def idr_find(self, idr_id: int) -> int:
+        """Finds an ID within the IDR data structure.
+        Based on idr_find_slowpath(), 3.9 <= Kernel < 4.11
+        Args:
+            idr_id: The IDR element ID
+
+        Returns:
+            A pointer to the given ID element
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        if not vmlinux.get_type("idr_layer").has_member("layer"):
+            vollog.info(
+                "Unsupported IDR implementation, it should be a very very old kernel, probabably < 2.6"
+            )
+            return
+
+        if idr_id < 0:
+            return
+
+        cur_layer = self.top
+        if not cur_layer:
+            return
+
+        n = (cur_layer.layer + 1) * self.IDR_BITS
+
+        if idr_id > self.idr_max(cur_layer.layer + 1):
+            return
+
+        assert n != 0
+
+        while n > 0 and cur_layer:
+            n -= self.IDR_BITS
+            assert n == cur_layer.layer * self.IDR_BITS
+            cur_layer = cur_layer.ary[(idr_id >> n) & self.IDR_MASK]
+
+        return cur_layer.v()
+
+    def _old_kernel_get_page_addresses(self, in_use) -> int:
+        # Kernels < 4.11
+        total = next_id = 0
+        while total < in_use:
+            page_addr = self.idr_find(next_id)
+            if page_addr:
+                yield page_addr
+                total += 1
+
+            next_id += 1
+
+    def _new_kernel_get_page_addresses(self, _in_use) -> int:
+        # Kernels >= 4.11
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        tree = linux.LinuxUtilities.choose_kernel_tree(vmlinux)
+        for page_addr in tree.get_page_addresses(root=self.idr_rt):
+            yield page_addr
+
+    def get_page_addresses(self, in_use=0) -> int:
+        """Walks the IDR and yield a pointer associated with each element.
+
+        Args:
+            in_use (int, optional): _description_. Defaults to 0.
+
+        Yields:
+            A pointer associated with each element.
+        """
+        if self.has_member("idr_rt"):
+            get_page_addresses_func = self._new_kernel_get_page_addresses
+        else:
+            get_page_addresses_func = self._old_kernel_get_page_addresses
+
+        for page_addr in get_page_addresses_func(in_use):
+            yield page_addr
