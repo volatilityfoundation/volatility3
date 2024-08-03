@@ -445,6 +445,15 @@ class Consoles(interfaces.plugins.PluginInterface):
                         )
                         console_properties.append(
                             {
+                                "level": 0,
+                                "name": "_CONSOLE_INFORMATION",
+                                "address": console_info.vol.offset,
+                                "data": "",
+                            }
+                        )
+                        console_properties.append(
+                            {
+                                "level": 1,
                                 "name": "_CONSOLE_INFORMATION.ScreenX",
                                 "address": console_info.ScreenX.vol.offset,
                                 "data": console_info.ScreenX,
@@ -452,6 +461,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                         )
                         console_properties.append(
                             {
+                                "level": 1,
                                 "name": "_CONSOLE_INFORMATION.ScreenY",
                                 "address": console_info.ScreenY.vol.offset,
                                 "data": console_info.ScreenY,
@@ -459,6 +469,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                         )
                         console_properties.append(
                             {
+                                "level": 1,
                                 "name": "_CONSOLE_INFORMATION.CommandHistorySize",
                                 "address": console_info.CommandHistorySize.vol.offset,
                                 "data": console_info.CommandHistorySize,
@@ -466,6 +477,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                         )
                         console_properties.append(
                             {
+                                "level": 1,
                                 "name": "_CONSOLE_INFORMATION.HistoryBufferCount",
                                 "address": console_info.HistoryBufferCount.vol.offset,
                                 "data": console_info.HistoryBufferCount,
@@ -473,6 +485,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                         )
                         console_properties.append(
                             {
+                                "level": 1,
                                 "name": "_CONSOLE_INFORMATION.HistoryBufferMax",
                                 "address": console_info.HistoryBufferMax.vol.offset,
                                 "data": console_info.HistoryBufferMax,
@@ -480,6 +493,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                         )
                         console_properties.append(
                             {
+                                "level": 1,
                                 "name": "_CONSOLE_INFORMATION.Title",
                                 "address": console_info.Title.vol.offset,
                                 "data": console_info.get_title(),
@@ -487,6 +501,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                         )
                         console_properties.append(
                             {
+                                "level": 1,
                                 "name": "_CONSOLE_INFORMATION.OriginalTitle",
                                 "address": console_info.OriginalTitle.vol.offset,
                                 "data": console_info.get_original_title(),
@@ -498,6 +513,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                         )
                         console_properties.append(
                             {
+                                "level": 1,
                                 "name": "_CONSOLE_INFORMATION.ProcessCount",
                                 "address": console_info.ProcessCount.vol.offset,
                                 "data": console_info.ProcessCount,
@@ -505,6 +521,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                         )
                         console_properties.append(
                             {
+                                "level": 1,
                                 "name": "_CONSOLE_INFORMATION.ConsoleProcessList",
                                 "address": console_info.ConsoleProcessList.vol.offset,
                                 "data": "",
@@ -515,6 +532,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                         ):
                             console_properties.append(
                                 {
+                                    "level": 2,
                                     "name": f"_CONSOLE_INFORMATION.ConsoleProcessList.ConsoleProcess_{index}",
                                     "address": attached_proc.ConsoleProcess.dereference().vol.offset,
                                     "data": "",
@@ -522,6 +540,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                             )
                             console_properties.append(
                                 {
+                                    "level": 2,
                                     "name": f"_CONSOLE_INFORMATION.ConsoleProcessList.ConsoleProcess_{index}_ProcessId",
                                     "address": attached_proc.ConsoleProcess.ProcessId.vol.offset,
                                     "data": attached_proc.ConsoleProcess.ProcessId,
@@ -529,6 +548,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                             )
                             console_properties.append(
                                 {
+                                    "level": 2,
                                     "name": f"_CONSOLE_INFORMATION.ConsoleProcessList.ConsoleProcess_{index}_ProcessHandle",
                                     "address": attached_proc.ConsoleProcess.ProcessHandle.vol.offset,
                                     "data": hex(
@@ -542,6 +562,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                         )
                         console_properties.append(
                             {
+                                "level": 1,
                                 "name": "_CONSOLE_INFORMATION.HistoryList",
                                 "address": console_info.HistoryList.vol.offset,
                                 "data": "",
@@ -553,6 +574,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                             try:
                                 console_properties.append(
                                     {
+                                        "level": 2,
                                         "name": f"_CONSOLE_INFORMATION.HistoryList.CommandHistory_{index}",
                                         "address": command_history.vol.offset,
                                         "data": "",
@@ -560,6 +582,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                                 )
                                 console_properties.append(
                                     {
+                                        "level": 2,
                                         "name": f"_CONSOLE_INFORMATION.HistoryList.CommandHistory_{index}_Application",
                                         "address": command_history.Application.vol.offset,
                                         "data": command_history.get_application(),
@@ -567,6 +590,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                                 )
                                 console_properties.append(
                                     {
+                                        "level": 2,
                                         "name": f"_CONSOLE_INFORMATION.HistoryList.CommandHistory_{index}_ProcessHandle",
                                         "address": command_history.ConsoleProcessHandle.ProcessHandle.vol.offset,
                                         "data": hex(
@@ -576,6 +600,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                                 )
                                 console_properties.append(
                                     {
+                                        "level": 2,
                                         "name": f"_CONSOLE_INFORMATION.HistoryList.CommandHistory_{index}_CommandCount",
                                         "address": None,
                                         "data": command_history.CommandCount,
@@ -583,6 +608,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                                 )
                                 console_properties.append(
                                     {
+                                        "level": 2,
                                         "name": f"_CONSOLE_INFORMATION.HistoryList.CommandHistory_{index}_LastDisplayed",
                                         "address": command_history.LastDisplayed.vol.offset,
                                         "data": command_history.LastDisplayed,
@@ -593,8 +619,8 @@ class Consoles(interfaces.plugins.PluginInterface):
                                     bucket_cmd,
                                 ) in command_history.get_commands():
                                     try:
-                                        console_properties.append(
-                                            {
+                                        console_properties.append({
+                                                "level": 3,
                                                 "name": f"_CONSOLE_INFORMATION.HistoryList.CommandHistory_{index}_Command_{cmd_index}",
                                                 "address": bucket_cmd.vol.offset,
                                                 "data": bucket_cmd.get_command(),
@@ -610,12 +636,21 @@ class Consoles(interfaces.plugins.PluginInterface):
                                 )
 
                         vollog.debug(f"Getting ScreenBuffer entries for {console_info}")
+                        console_properties.append(
+                            {
+                                "level": 1,
+                                "name": "_CONSOLE_INFORMATION.CurrentScreenBuffer",
+                                "address": console_info.CurrentScreenBuffer.vol.offset,
+                                "data": "",
+                            }
+                        )
                         for screen_index, screen_info in enumerate(
                             console_info.get_screens()
                         ):
                             try:
                                 console_properties.append(
                                     {
+                                        "level": 2,
                                         "name": f"_CONSOLE_INFORMATION.ScreenBuffer_{screen_index}",
                                         "address": screen_info,
                                         "data": "",
@@ -623,6 +658,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                                 )
                                 console_properties.append(
                                     {
+                                        "level": 2,
                                         "name": f"_CONSOLE_INFORMATION.ScreenBuffer_{screen_index}.ScreenX",
                                         "address": None,
                                         "data": screen_info.ScreenX,
@@ -630,6 +666,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                                 )
                                 console_properties.append(
                                     {
+                                        "level": 2,
                                         "name": f"_CONSOLE_INFORMATION.ScreenBuffer_{screen_index}.ScreenY",
                                         "address": None,
                                         "data": screen_info.ScreenY,
@@ -637,6 +674,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                                 )
                                 console_properties.append(
                                     {
+                                        "level": 2,
                                         "name": f"_CONSOLE_INFORMATION.ScreenBuffer_{screen_index}.Dump",
                                         "address": None,
                                         "data": "\n".join(screen_info.get_buffer()),
@@ -748,7 +786,7 @@ class Consoles(interfaces.plugins.PluginInterface):
             if console_info and console_properties:
                 for console_property in console_properties:
                     yield (
-                        0,
+                        console_property["level"],
                         (
                             proc.UniqueProcessId,
                             process_name,
