@@ -203,6 +203,7 @@ class Consoles(interfaces.plugins.PluginInterface):
             version_dict = {}
         else:
             version_dict = {
+                (10, 0, 17763, 0): "consoles-win10-17763-x64",
                 (10, 0, 20348, 1): "consoles-win10-20348-x64",
                 (10, 0, 20348, 1970): "consoles-win10-20348-1970-x64",
                 (10, 0, 20348, 2461): "consoles-win10-20348-2461-x64",
@@ -578,6 +579,13 @@ class Consoles(interfaces.plugins.PluginInterface):
                                         "name": f"_CONSOLE_INFORMATION.HistoryList.CommandHistory_{index}_CommandCount",
                                         "address": None,
                                         "data": command_history.CommandCount,
+                                    }
+                                )
+                                console_properties.append(
+                                    {
+                                        "name": f"_CONSOLE_INFORMATION.HistoryList.CommandHistory_{index}_LastDisplayed",
+                                        "address": command_history.LastDisplayed.vol.offset,
+                                        "data": command_history.LastDisplayed,
                                     }
                                 )
                                 for (
