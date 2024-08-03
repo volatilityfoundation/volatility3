@@ -23,9 +23,9 @@ class ROW(objects.StructType):
             0x50,
             0x60,
             0x80,
-            0xa8,
-            0xc0,
-            0xc8,
+            0xA8,
+            0xC0,
+            0xC8,
             0x98,
             0xF8,
             0xF0,
@@ -226,7 +226,12 @@ class COMMAND(objects.StructType):
     """A Command Structure"""
 
     def is_valid(self):
-        if self.Length < 1 or self.Allocated < 1 or self.Length > 1024 or self.Allocated > 1024:
+        if (
+            self.Length < 1
+            or self.Allocated < 1
+            or self.Length > 1024
+            or self.Allocated > 1024
+        ):
             return False
 
         return True
@@ -256,7 +261,7 @@ class COMMAND_HISTORY(objects.StructType):
 
     @property
     def ProcessHandle(self):
-        """ Allow ProcessHandle to be referenced regardless of OS version """
+        """Allow ProcessHandle to be referenced regardless of OS version"""
         return self.ConsoleProcessHandle.ProcessHandle
 
     def is_valid(self, max_history=50):
@@ -269,7 +274,11 @@ class COMMAND_HISTORY(objects.StructType):
             return False
 
         # Process handle must be a valid pid
-        if self.ProcessHandle <= 0 or self.ProcessHandle > 0xFFFF or self.ProcessHandle % 4 != 0:
+        if (
+            self.ProcessHandle <= 0
+            or self.ProcessHandle > 0xFFFF
+            or self.ProcessHandle % 4 != 0
+        ):
             return False
 
         return True
