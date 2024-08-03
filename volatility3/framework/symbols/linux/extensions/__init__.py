@@ -820,6 +820,26 @@ class dentry(objects.StructType):
             current_dentry = current_dentry.d_parent
         return None
 
+    def get_subdirs(self) -> interfaces.objects.ObjectInterface:
+        """Walks dentry subdirs
+
+        Yields:
+            A dentry object
+        """
+        if self.has_member("d_sib") and self.has_member("d_children"):
+            # kernels >= 6.8
+            walk_member = "d_sib"
+            list_head_member = self.d_children.first
+        elif self.has_member("d_child") and self.has_member("d_subdirs"):
+            # 2.5.0 <= kernels < 6.8
+            walk_member = "d_child"
+            list_head_member = self.d_subdirs
+        else:
+            raise exceptions.VolatilityException("Unsupported dentry type")
+
+        dentry_type_name = self.get_symbol_table_name() + constants.BANG + "dentry"
+        yield from list_head_member.to_list(dentry_type_name, walk_member)
+
 
 class struct_file(objects.StructType):
     def get_dentry(self) -> interfaces.objects.ObjectInterface:
