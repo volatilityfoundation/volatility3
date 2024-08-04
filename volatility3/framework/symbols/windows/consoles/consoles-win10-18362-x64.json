@@ -1,0 +1,585 @@
+{
+    "symbols": {}, 
+    "enums": {},
+    "base_types": {
+        "unsigned long": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned char": {
+            "kind": "char",
+            "size": 1,
+            "signed": false,
+            "endian": "little"
+        },
+        "pointer": {
+            "kind": "int",
+            "size": 8,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned int": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned short": {
+            "kind": "int",
+            "size": 2,
+            "signed": false,
+            "endian": "little"
+        },
+        "short": {
+            "kind": "int",
+            "size": 2,
+            "signed": true,
+            "endian": "little"
+        },
+        "long": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        }
+    },
+    "user_types": {
+        "_CONSOLE_INFORMATION": {
+            "fields": {
+                "ScreenX": {
+                    "type": {
+                        "kind": "base",
+                        "name": "short"
+                    },
+                    "offset": 32
+                },
+                "ScreenY": {
+                    "type": {
+                        "kind": "base",
+                        "name": "short"
+                    },
+                    "offset": 34
+                },
+                "CommandHistorySize": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                    },
+                    "offset": 144
+                },
+                "HistoryBufferMax": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                    },
+                    "offset": 148
+                },
+                "OriginalTitle": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "string"
+                        }
+                    },
+                    "offset": 1744
+                },
+                "Title": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "string"
+                        }
+                    },
+                    "offset": 1680
+                },
+                "GetScreenBuffer": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_SCREEN_INFORMATION"
+                        }
+                    },
+                    "offset": 1808
+                },
+                "CurrentScreenBuffer": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_SCREEN_INFORMATION"
+                        }
+                    },
+                    "offset": 1392
+                },
+                "ConsoleProcessList": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "nt_symbols!_LIST_ENTRY"
+                        }
+                    },
+                    "offset": 1368
+                },
+                "ProcessCount": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                    },
+                    "offset": 1376
+                },
+                "HistoryList": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "nt_symbols!_LIST_ENTRY"
+                        }
+                    },
+                    "offset": -768
+                },
+                "HistoryBufferCount": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                    },
+                    "offset": -760
+                },
+                "ExeAliasList": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                    },
+                    "offset": 1436
+                }
+            },
+            "kind": "struct",
+            "size": 140
+        },
+        "_VECTOR": {
+            "fields": {
+                "Begin": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_COMMAND"
+                        }
+                    },
+                    "offset": 0
+                },
+                "End": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_COMMAND"
+                        }
+                    },
+                    "offset": 8
+                },
+                "EndCapacity": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned long"
+                        }
+                    },
+                    "offset": 16
+                }
+            },
+            "kind": "struct",
+            "size": 24
+        },
+        "_COMMAND": {
+            "fields": {
+                "Chars": {
+                    "type": {
+                        "count": 1,
+                        "kind": "array",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned char"
+                        }
+                    },
+                    "offset": 0
+                },
+                "Pointer": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "string"
+                        }
+                    },
+                    "offset": 0
+                },
+                "Length": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    },
+                    "offset": 16
+                },
+                "Allocated": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    },
+                    "offset": 24
+                }
+            },
+            "kind": "struct",
+            "size": 32
+        },
+        "_CONSOLE_PROCESS_LIST": {
+            "fields": {
+                "ListEntry": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 0
+                },
+                "ConsoleProcess": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_CONSOLE_PROCESS"
+                        }
+                    },
+                    "offset": 16
+                }
+            },
+            "kind": "struct",
+            "size": 24
+        },
+        "_CONSOLE_PROCESS_HANDLE": {
+            "fields": {
+                "ProcessHandle": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    },
+                    "offset": 48
+                }
+            },
+            "kind": "struct",
+            "size": 52
+        },
+        "_CONSOLE_PROCESS": {
+            "fields": {
+                "ProcessId": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    },
+                    "offset": 28
+                },
+                "ThreadId": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    },
+                    "offset": 32
+                },
+                "ProcessHandle": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    },
+                    "offset": 48
+                }
+            },
+            "kind": "struct",
+            "size": 24
+        },
+        "_COMMAND_HISTORY": {
+            "fields": {
+                "ListEntry": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 0
+                },
+                "CommandBucket": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "_VECTOR"
+                    },
+                    "offset": 16
+                },
+                "CommandCountMax": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                    },
+                    "offset": 40
+                },
+                "Application": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "_COMMAND"
+                    },
+                    "offset": 48
+                },
+                "ConsoleProcessHandle": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_CONSOLE_PROCESS_HANDLE"
+                        }
+                    },
+                    "offset": 80
+                },
+                "Flags": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned short"
+                    },
+                    "offset": 88
+                },
+                "LastDisplayed": {
+                    "type": {
+                        "kind": "base",
+                        "name": "short"
+                    },
+                    "offset": 92
+                }
+            },
+            "kind": "struct",
+            "size": 96
+        },
+        "_SCREEN_INFORMATION": {
+            "fields": {
+                "TextBufferInfo": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_TEXT_BUFFER_INFO"
+                        }
+                    },
+                    "offset": 56
+                },
+                "Next": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_SCREEN_INFORMATION"
+                        }
+                    },
+                    "offset": 64
+                }
+            },
+            "kind": "struct",
+            "size": 72
+        },
+        "_ROW_POINTER": {
+            "fields": {
+                "Row": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_ROW"
+                        }
+                    },
+                    "offset": 0
+                }
+            },
+            "kind": "struct",
+            "size": 8
+
+        },
+        "_ROWS_ARRAY": {
+            "fields": {
+                "Rows": {
+                    "type": {
+                        "count": 1,
+                        "kind": "array",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_ROW_POINTER"
+                        }
+                    },
+                    "offset": 0
+                }
+            },
+            "kind": "struct",
+            "size": 8
+        },
+        "_TEXT_BUFFER_INFO": {
+            "fields": {
+                "BufferDeque": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_DEQUE"
+                        }
+                    },
+                    "offset": 0
+                },
+                "BufferRows": {
+                    "type": {
+                        "kind": "pointer",
+                        "name": "void",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_ROWS_ARRAY"
+                        }
+                    },
+                    "offset": 8
+                },
+                "BufferCapacity": {
+                    "type": {
+                        "kind": "base",
+                        "name": "short"
+                    },
+                    "offset": 32
+                },
+                "BufferEnd": {
+                    "type": {
+                        "kind": "base",
+                        "name": "short"
+                    },
+                    "offset": 56
+                },
+                "BufferLastIndex": {
+                    "type": {
+                        "kind": "base",
+                        "name": "short"
+                    },
+                    "offset": 58
+                },
+                "BufferStart": {
+                    "type": {
+                        "kind": "base",
+                        "name": "short"
+                    },
+                    "offset": 88
+                }
+            },
+            "kind": "struct",
+            "size": 72
+        },
+        "_CHAR_ROW_CELL": {
+            "fields": {
+                "Text": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_UNICODE_STRING"
+                    },
+                    "offset": 0
+                },
+                "DbcsAttribute": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    },
+                    "offset": 2
+                }
+             },
+            "kind": "struct",
+            "size": 3
+        },
+        "_CHAR_ROW_CELL_ARRAY": {
+            "fields": {
+                "Chars": {
+                    "type": {
+                        "count": 1,
+                        "kind": "array",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_CHAR_ROW_CELL"
+                        }
+                    },
+                    "offset": 0
+                }
+            },
+            "kind": "struct",
+            "size": 8
+        },
+        "_ROW": {
+            "fields": {
+                "CharRow": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_CHAR_ROW_CELL_ARRAY"
+                        }
+                    },
+                    "offset": 8
+                },
+                "RowLength": {
+                    "type": {
+                        "kind": "base",
+                        "name": "short"
+                    },
+                    "offset": 64
+                },
+                "Index": {
+                    "type": {
+                        "kind": "base",
+                        "name": "short"
+                    },
+                    "offset": 72
+                },
+                "RowLength2": {
+                    "type": {
+                        "kind": "base",
+                        "name": "short"
+                    },
+                    "offset": 80
+                },
+                "TextBuffer": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_TEXT_BUFFER_INFO"
+                        }
+                    },
+                    "offset": 88
+                }            },
+            "kind": "struct",
+            "size": 96
+        },
+        "_DEQUE": {
+            "fields": {
+                "Blink": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 0
+                }
+            },
+            "kind": "struct",
+            "size": 8
+        }
+    },
+    "metadata": {
+        "producer": {
+            "version": "0.0.1", 
+            "name": "Dave Lassalle",
+            "datetime": "2024-07-31T15:05:35-06:00"
+        },
+        "format": "4.1.0"
+    }
+}
