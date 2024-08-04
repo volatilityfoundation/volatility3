@@ -174,7 +174,7 @@ class Consoles(interfaces.plugins.PluginInterface):
             )
         except:
             # unsure what to raise here. Also, it might be useful to add some kind of fallback,
-            # either to a user-provided version or to another method to determine tcpip.sys's version
+            # either to a user-provided version or to another method to determine conhost.exe's version
             raise exceptions.VolatilityException(
                 "Kernel Debug Structure missing VERSION/KUSER structure, unable to determine Windows version!"
             )
@@ -203,7 +203,10 @@ class Consoles(interfaces.plugins.PluginInterface):
             version_dict = {}
         else:
             version_dict = {
-                (10, 0, 17763, 0): "consoles-win10-17763-x64",
+                (10, 0, 17763, 1): "consoles-win10-17763-x64",
+                (10, 0, 17763, 3232): "consoles-win10-17763-3232-x64",
+                (10, 0, 18362, 0): "consoles-win10-18362-x64",
+                (10, 0, 19041, 0): "consoles-win10-19041-x64",
                 (10, 0, 20348, 1): "consoles-win10-20348-x64",
                 (10, 0, 20348, 1970): "consoles-win10-20348-1970-x64",
                 (10, 0, 20348, 2461): "consoles-win10-20348-2461-x64",
@@ -280,11 +283,11 @@ class Consoles(interfaces.plugins.PluginInterface):
             # try to grab the latest supported version of the current image NT version. If that symbol
             # version does not work, support has to be added manually.
             current_versions = [
-                (nt_maj, nt_min, vers_min, tcpip_ver)
-                for nt_maj, nt_min, vers_min, tcpip_ver in version_dict
+                (nt_maj, nt_min, vers_min, conhost_ver)
+                for nt_maj, nt_min, vers_min, conhost_ver in version_dict
                 if nt_maj == nt_major_version
                 and nt_min == nt_minor_version
-                and tcpip_ver <= conhost_mod_version
+                and conhost_ver <= conhost_mod_version
             ]
             current_versions.sort()
 
@@ -319,7 +322,7 @@ class Consoles(interfaces.plugins.PluginInterface):
         nt_symbol_table: str,
         config_path: str,
     ) -> str:
-        """Creates a symbol table for TCP Listeners and TCP/UDP Endpoints.
+        """Creates a symbol table for conhost structures.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
