@@ -1965,7 +1965,7 @@ class address_space(objects.StructType):
 
 class page(objects.StructType):
     @property
-    @functools.cache
+    @functools.lru_cache()
     def pageflags_enum(self) -> Dict:
         """Returns 'pageflags' enumeration key/values
 
