@@ -6,7 +6,7 @@ found in Linux's /proc file system."""
 import logging, datetime
 from typing import List, Callable
 
-from volatility3.framework import renderers, interfaces, constants
+from volatility3.framework import renderers, interfaces, constants, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
@@ -46,7 +46,30 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     @classmethod
-    def list_fds_and_inodes(
+    def get_inode_metadata(cls, filp: interfaces.objects.ObjectInterface):
+        try:
+            dentry = filp.get_dentry()
+            if dentry:
+                inode_object = dentry.d_inode
+                if inode_object and inode_object.is_valid():
+                    itype = (
+                        inode_object.get_inode_type() or renderers.NotAvailableValue()
+                    )
+                    return (
+                        inode_object.i_ino,
+                        itype,
+                        inode_object.i_size,
+                        inode_object.get_file_mode(),
+                        inode_object.get_change_time(),
+                        inode_object.get_modification_time(),
+                        inode_object.get_access_time(),
+                    )
+        except (exceptions.InvalidAddressException, AttributeError) as e:
+            vollog.warning(f"Can't get inode metadata: {e}")
+        return tuple(renderers.NotAvailableValue() for _ in range(7))
+
+    @classmethod
+    def list_fds(
         cls,
         context: interfaces.context.ContextInterface,
         symbol_table: str,
@@ -67,26 +90,27 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
             )
 
             for fd_fields in fd_generator:
-                fd_num, filp, full_path = fd_fields
-                inode_metadata = linux.LinuxUtilities.get_inode_metadata(context, filp)
-                try:
-                    inode_num, itype, file_size, imode, ctime, mtime, atime = next(
-                        inode_metadata
-                    )
-                except Exception as e:
-                    vollog.warning(
-                        f"Can't get inode metadata for file descriptor {fd_num}: {e}"
-                    )
-                    inode_num = itype = file_size = imode = ctime = mtime = atime = (
-                        renderers.NotAvailableValue()
-                    )
-                yield pid, task_comm, task, fd_num, filp, full_path, inode_num, itype, imode, ctime, mtime, atime, file_size
+                yield pid, task_comm, task, fd_fields
+
+    @classmethod
+    def list_fds_and_inodes(
+        cls,
+        context: interfaces.context.ContextInterface,
+        symbol_table: str,
+        filter_func: Callable[[int], bool] = lambda _: False,
+    ):
+        for pid, task_comm, task, (fd_num, filp, full_path) in cls.list_fds(
+            context, symbol_table, filter_func
+        ):
+            inode_metadata = cls.get_inode_metadata(filp)
+            yield pid, task_comm, task, fd_num, filp, full_path, inode_metadata
 
     def _generator(self, pids, symbol_table):
         filter_func = pslist.PsList.create_pid_filter(pids)
         fds_generator = self.list_fds_and_inodes(
             self.context, symbol_table, filter_func=filter_func
         )
+
         for (
             pid,
             task_comm,
@@ -94,14 +118,9 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
             fd_num,
             filp,
             full_path,
-            inode_num,
-            itype,
-            imode,
-            ctime,
-            mtime,
-            atime,
-            file_size,
+            inode_metadata,
         ) in fds_generator:
+            inode_num, itype, file_size, imode, ctime, mtime, atime = inode_metadata
             fields = (
                 pid,
                 task_comm,

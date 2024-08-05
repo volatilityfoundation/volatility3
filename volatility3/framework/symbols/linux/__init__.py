@@ -1,8 +1,8 @@
-# This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 from typing import Iterator, List, Tuple, Optional, Union
-import datetime, stat
+
 from volatility3 import framework
 from volatility3.framework import constants, exceptions, interfaces, objects
 from volatility3.framework.objects import utility
@@ -67,7 +67,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""
 
-    _version = (2, 2, 0)
+    _version = (2, 1, 0)
     _required_framework_version = (2, 0, 0)
 
     framework.require_interface_version(*_required_framework_version)
@@ -273,26 +273,6 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
                 full_path = LinuxUtilities.path_for_file(context, task, filp)
 
                 yield fd_num, filp, full_path
-
-    @classmethod
-    def get_inode_metadata(cls, context: interfaces.context.ContextInterface, filp):
-        """
-        A helper function that gets the inodes metadata from a file descriptor
-        """
-        dentry = filp.get_dentry()
-        if dentry:
-            inode_object = dentry.d_inode
-            if inode_object and inode_object.is_valid():
-                itype = inode_object.get_inode_type() or "?"
-                yield (
-                    inode_object.i_ino,
-                    itype,
-                    inode_object.i_size,
-                    inode_object.get_file_mode(),
-                    inode_object.get_change_time(),
-                    inode_object.get_modification_time(),
-                    inode_object.get_access_time(),
-                )
 
     @classmethod
     def mask_mods_list(
