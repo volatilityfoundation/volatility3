@@ -105,8 +105,11 @@
                 },
                 "NotificationRoutine": {
                     "type": {
-                        "kind": "base",
-                        "name": "unsigned int"
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
                     },
                     "offset": 24
                 }
