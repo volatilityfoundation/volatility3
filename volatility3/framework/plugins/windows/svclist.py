@@ -1,0 +1,115 @@
+# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
+#
+
+import logging
+
+from typing import List, Optional, Tuple
+
+from volatility3.framework import interfaces, exceptions, symbols
+from volatility3.framework.configuration import requirements
+from volatility3.framework.symbols.windows import versions
+from volatility3.plugins.windows import svcscan, pslist
+from volatility3.framework.layers import scanners
+
+vollog = logging.getLogger(__name__)
+
+
+class SvcList(svcscan.SvcScan):
+    """Lists services contained with the services.exe doubly linked list of services"""
+
+    _version = (1, 0, 0)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._enumeration_method = self.service_list
+
+    @classmethod
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+        # Since we're calling the plugin, make sure we have the plugin's requirements
+        return [
+            requirements.PluginRequirement(
+                name="svcscan", plugin=svcscan.SvcScan, version=(3, 0, 0)
+            ),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Windows kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+        ]
+
+    @classmethod
+    def _get_exe_range(cls, proc) -> Optional[Tuple[int, int]]:
+        """
+        Returns a tuple of starting,ending address for
+        the VAD containing services.exe
+        """
+
+        vad_root = proc.get_vad_root()
+        for vad in vad_root.traverse():
+            filename = vad.get_file_name()
+            if isinstance(filename, str) and filename.lower().endswith(
+                "\\services.exe"
+            ):
+                return [(vad.get_start(), vad.get_size())]
+
+        return None
+
+    @classmethod
+    def service_list(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        symbol_table: str,
+        service_table_name: str,
+        service_binary_dll_map,
+        filter_func,
+    ):
+        if not symbols.symbol_table_is_64bit(
+            context, symbol_table
+        ) or not versions.is_win10_15063_or_later(
+            context=context, symbol_table=symbol_table
+        ):
+            vollog.warning(
+                "This plugin only supports Windows 10 version 15063+ 64bit Windows memory samples"
+            )
+            return
+
+        for proc in pslist.PsList.list_processes(
+            context=context,
+            layer_name=layer_name,
+            symbol_table=symbol_table,
+            filter_func=filter_func,
+        ):
+            try:
+                layer_name = proc.add_process_layer()
+            except exceptions.InvalidAddressException:
+                vollog.warning(
+                    "Unable to access memory of services.exe running with PID: {}".format(
+                        proc.UniqueProcessId
+                    )
+                )
+                continue
+
+            layer = context.layers[layer_name]
+
+            exe_range = cls._get_exe_range(proc)
+            if not exe_range:
+                vollog.warning(
+                    "Could not find the application executable VAD for services.exe. Unable to proceed."
+                )
+                continue
+
+            for offset in layer.scan(
+                context=context,
+                scanner=scanners.BytesScanner(needle=b"Sc27"),
+                sections=exe_range,
+            ):
+                for record in cls.enumerate_vista_or_later_header(
+                    context,
+                    service_table_name,
+                    service_binary_dll_map,
+                    layer_name,
+                    offset,
+                ):
+                    yield record

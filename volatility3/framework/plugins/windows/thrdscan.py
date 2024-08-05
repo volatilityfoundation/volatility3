@@ -3,7 +3,7 @@
 ##
 import logging
 import datetime
-from typing import Iterable
+from typing import Callable, Iterable
 
 from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
@@ -19,7 +19,11 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
 
     # version 2.6.0 adds support for scanning for 'Ethread' structures by pool tags
     _required_framework_version = (2, 6, 0)
-    _version = (1, 0, 0)
+    _version = (1, 1, 0)
+
+    def __init__(self, *args, **kwargs):
+        self.implementation = self.scan_threads
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def get_requirements(cls):
@@ -38,8 +42,7 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
     def scan_threads(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        module_name: str,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Scans for threads using the poolscanner module and constraints.
 
@@ -52,6 +55,10 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
               A list of _ETHREAD objects found by scanning memory for the "Thre" / "Thr\\xE5" pool signatures
         """
 
+        module = context.modules[module_name]
+        layer_name = module.layer_name
+        symbol_table = module.symbol_table_name
+
         constraints = poolscanner.PoolScanner.builtin_constraints(
             symbol_table, [b"Thr\xe5", b"Thre"]
         )
@@ -62,45 +69,45 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
             _constraint, mem_object, _header = result
             yield mem_object
 
-    def _generator(self):
-        kernel = self.context.modules[self.config["kernel"]]
+    @classmethod
+    def gather_thread_info(cls, ethread):
+        try:
+            thread_offset = ethread.vol.offset
+            owner_proc_pid = ethread.Cid.UniqueProcess
+            thread_tid = ethread.Cid.UniqueThread
+            thread_start_addr = ethread.StartAddress
+            thread_create_time = (
+                ethread.get_create_time()
+            )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
+            thread_exit_time = (
+                ethread.get_exit_time()
+            )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
+        except exceptions.InvalidAddressException:
+            vollog.debug("Thread invalid address {:#x}".format(ethread.vol.offset))
+            return None
 
-        for ethread in self.scan_threads(
-            self.context, kernel.layer_name, kernel.symbol_table_name
-        ):
-            try:
-                thread_offset = ethread.vol.offset
-                owner_proc_pid = ethread.Cid.UniqueProcess
-                thread_tid = ethread.Cid.UniqueThread
-                thread_start_addr = ethread.StartAddress
-                thread_create_time = (
-                    ethread.get_create_time()
-                )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
-                thread_exit_time = (
-                    ethread.get_exit_time()
-                )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
-            except (ValueError, exceptions.InvalidAddressException):
-                vollog.debug(
-                    "Thread :{}, invalid address {} in layer {}".format(
-                        thread_tid, thread_start_addr, kernel.layer_name
-                    )
-                )
-                continue
+        return (
+            format_hints.Hex(thread_offset),
+            owner_proc_pid,
+            thread_tid,
+            format_hints.Hex(thread_start_addr),
+            thread_create_time,
+            thread_exit_time,
+        )
 
-            yield (
-                0,
-                (
-                    format_hints.Hex(thread_offset),
-                    owner_proc_pid,
-                    thread_tid,
-                    format_hints.Hex(thread_start_addr),
-                    thread_create_time,
-                    thread_exit_time,
-                ),
-            )
+    def _generator(self, filter_func: Callable):
+        kernel_name = self.config["kernel"]
+
+        for ethread in self.implementation(self.context, kernel_name):
+            info = self.gather_thread_info(ethread)
+
+            if info:
+                yield (0, info)
 
     def generate_timeline(self):
-        for row in self._generator():
+        filt_func = self.filter_func(self.config)
+
+        for row in self._generator(filt_func):
             _depth, row_data = row
             row_dict = {}
             (
@@ -127,7 +134,14 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
                     row_dict["ExitTime"],
                 )
 
+    @classmethod
+    def filter_func(cls, config: interfaces.configuration.HierarchicalDict) -> Callable:
+        """Returns a function that can filter this plugin's implementation method based on the config"""
+        return lambda x: False
+
     def run(self):
+        filt_func = self.filter_func(self.config)
+
         return renderers.TreeGrid(
             [
                 ("Offset", format_hints.Hex),
@@ -137,5 +151,5 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
                 ("CreateTime", datetime.datetime),
                 ("ExitTime", datetime.datetime),
             ],
-            self._generator(),
+            self._generator(filt_func),
         )

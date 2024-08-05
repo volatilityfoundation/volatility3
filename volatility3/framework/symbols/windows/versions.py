@@ -114,11 +114,38 @@ is_windows_xp = OsDistinguisher(
     ],
 )
 
+is_windows_xp_sp2 = OsDistinguisher(
+    version_check=lambda x: (5, 1) <= x < (5, 2),
+    fallback_checks=[
+        ("KdCopyDataBlock", None, False),
+        ("_MMFREE_POOL_ENTRY", None, False),
+        ("_HANDLE_TABLE", "HandleCount", True),
+    ],
+)
+
+is_windows_xp_sp3 = OsDistinguisher(
+    version_check=lambda x: (5, 1) <= x < (5, 2),
+    fallback_checks=[
+        ("KdCopyDataBlock", None, False),
+        ("_MMFREE_POOL_ENTRY", None, True),
+        ("_HANDLE_TABLE", "HandleCount", True),
+    ],
+)
+
 is_xp_or_2003 = OsDistinguisher(
     version_check=lambda x: (5, 1) <= x < (6, 0),
     fallback_checks=[
         ("KdCopyDataBlock", None, False),
         ("_HANDLE_TABLE", "HandleCount", True),
+    ],
+)
+
+is_2003 = OsDistinguisher(
+    version_check=lambda x: (5, 2) <= x < (5, 3),
+    fallback_checks=[
+        ("KdCopyDataBlock", None, False),
+        ("_HANDLE_TABLE", "HandleCount", True),
+        ("_MM_AVL_TABLE", None, True),
     ],
 )
 
@@ -138,6 +165,15 @@ is_win10_15063 = OsDistinguisher(
         ("_HANDLE_TABLE", "HandleCount", False),
         ("_EPROCESS", "KeepAliveCounter", False),
         ("_EPROCESS", "ControlFlowGuardEnabled", True),
+    ],
+)
+
+is_win10_15063_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0, 15063),
+    fallback_checks=[
+        ("ObHeaderCookie", None, True),
+        ("_HANDLE_TABLE", "HandleCount", False),
+        ("_EPROCESS", "KeepAliveCounter", False),
     ],
 )
 
