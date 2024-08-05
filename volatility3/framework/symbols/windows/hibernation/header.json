@@ -1,0 +1,163 @@
+{
+  "metadata": {
+    "producer": {
+      "version": "0.0.1",
+      "name": "k1nd0ne-by-hand",
+      "comment": "using structures found in the Windows Kernel public structures ",
+      "datetime": "2024-05-08T19:55:00"
+    },
+    "format": "6.1.0"
+  },
+  "base_types": {
+    "char": {
+      "endian": "little",
+      "kind": "char",
+      "signed": true,
+      "size": 1
+    },
+    "double": {
+      "endian": "little",
+      "kind": "float",
+      "signed": true,
+      "size": 8
+    },
+    "int": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 4
+    },
+    "long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 4
+    },
+    "long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 8
+    },
+    "pointer": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    },
+    "short": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 2
+    },
+    "unsigned char": {
+      "endian": "little",
+      "kind": "char",
+      "signed": false,
+      "size": 1
+    },
+    "unsigned int": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    },
+    "unsigned long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    },
+    "unsigned long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 8
+    },
+    "unsigned short": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 2
+    },
+    "void": {
+      "endian": "little",
+      "kind": "void",
+      "signed": true,
+      "size": 0
+    }
+  },
+  "symbols": {},
+  "enums": {},
+  "user_types": {
+    "PO_MEMORY_IMAGE_HEADER": {
+      "fields": {
+        "PageSize": {
+          "offset": 24,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "Signature": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "SystemTime": {
+          "offset": 32,
+          "type": {
+            "kind": "struct",
+            "name": "_KSYSTEM_TIME"
+          }
+        },
+        "FirstBootRestorePage": {
+          "offset": 104,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "NumPagesForLoader": {
+          "offset": 88,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 168
+    },
+    "_KSYSTEM_TIME": {
+      "fields": {
+        "High1Time": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        },
+        "High2Time": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        },
+        "LowPart": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 12
+    }
+  }
+}

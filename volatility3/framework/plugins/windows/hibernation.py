@@ -3,9 +3,11 @@
 #
 
 from typing import List
-import logging
+import logging, os
+from volatility3.framework import constants
 from volatility3.framework.renderers import conversion
 from volatility3.framework.configuration import requirements
+from volatility3.framework.symbols import intermed
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.interfaces import plugins
 from volatility3.plugins import layerwriter
@@ -26,45 +28,57 @@ class Info(plugins.PluginInterface):
             requirements.TranslationLayerRequirement(name="base_layer", optional=False),
         ]
 
+    @classmethod
+    def parse_hibernation_header(cls, hibernation_header):
+        if hibernation_header.PageSize == 4096:
+            system_time = hibernation_header.SystemTime
+            wintime = (system_time.High1Time << 32) | system_time.LowPart
+            system_time = conversion.wintime_to_datetime(wintime)
+
+            comment = "The hibernation file header signature is correct."
+            return (
+                ("Comment", comment),
+                ("PageSize", str(hibernation_header.PageSize)),
+                ("SystemTime", str(system_time)),
+                ("FirstBootRestorePage", str(hibernation_header.FirstBootRestorePage)),
+                ("NumPageForLoader", str(hibernation_header.NumPagesForLoader)),
+            )
+        elif hibernation_header.PageSize == 2048:
+            comment = "The hibernation file is correct but x32 extraction isn't available yet."
+        else:
+            comment = "The hibernation file seems corrupted."
+        return (
+            ("Comment", comment),
+            ("PageSize", str(hibernation_header.PageSize)),
+        )
+
     def _generator(self):
         base_layer = self.context.layers["base_layer"]
-        header = base_layer.read(0, 4)
-        yield (0, ("Signature", str(header)))
-        if header == b"HIBR":
-            # The hibernation file seems exploitable. Next step is to extract important information for the examiner
-            PageSize = int.from_bytes(base_layer.read(0x18, 4), "little")
-            yield (0, ("PageSize", str(PageSize)))
-            if PageSize == 4096:
-                yield (
-                    0,
-                    ("Comment", "The hibernation file header signature is correct."),
-                )
-                system_time = int.from_bytes(base_layer.read(0x020, 8), "little")
-                systemTime = conversion.wintime_to_datetime(system_time)
-                yield (0, ("System Time", str(systemTime)))
-                FirstBootRestorePage = int.from_bytes(
-                    base_layer.read(0x068, 8), "little"
-                )
-                yield (0, ("FirstBootRestorePage", str(hex(FirstBootRestorePage))))
-                NumPagesForLoader = int.from_bytes(base_layer.read(0x058, 8), "little")
-                yield (0, ("NumPagesForLoader", str(NumPagesForLoader)))
-            elif PageSize == 2048:
-                yield (
-                    0,
-                    (
-                        "Comment",
-                        "The hibernation file header signature is correct but x32 compatibility is not available yet.",
-                    ),
-                )
-            else:
-                yield (0, ("Comment : ", "The file is corrupted."))
-        elif header == b"RSTR":
-            # The hibernation file was extracted when Windows was in a resuming state which makes it not exploitable
+        symbol_table = intermed.IntermediateSymbolTable.create(
+            self.context,
+            self.config_path,
+            os.path.join("windows", "hibernation"),
+            filename="header",
+        )
+        hibernation_header_object = (
+            symbol_table + constants.BANG + "PO_MEMORY_IMAGE_HEADER"
+        )
+        hibernation_header = self.context.object(
+            hibernation_header_object, offset=0, layer_name=base_layer.name
+        )
+        signature = hibernation_header.Signature.cast(
+            "string", max_length=4, encoding="latin-1"
+        )
+        yield (0, ("Signature", signature))
+        if signature == "HIBR":
+            for field in self.parse_hibernation_header(hibernation_header):
+                yield (0, field)
+        elif signature == "RSTR":
             yield (
                 0,
                 (
                     "Comment : ",
-                    "The hibernation file header signature is 'RSTR', the file cannot be exploited.",
+                    "RSTR : The hibernation file was extracted when Windows was in a resuming state which makes it not exploitable.",
                 ),
             )
         else:
@@ -129,8 +143,9 @@ class Dump(plugins.PluginInterface):
                 (
                     """Your hibernation file could not be converted, this can be the case for multiple reasons:
                     - The hibernation file you are trying to dump is corrupted.
-                    - The version you provided is not expected (see --help)
+                    - The version you provided is not expected (see --help).
                     - The file you are trying to dump is not an hibernation file.
+                    - Missing requirements: Make sure all the requirements are installed (requirements.txt).
                     """,
                 ),
             )
