@@ -434,7 +434,6 @@
                 "BufferRows": {
                     "type": {
                         "kind": "pointer",
-                        "name": "void",
                         "subtype": {
                             "kind": "struct",
                             "name": "_ROWS_ARRAY"
