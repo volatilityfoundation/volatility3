@@ -178,6 +178,7 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
 
         config = super().build_configuration()
 
+        config["$type"] = "Module"
         config["offset"] = self.config["offset"]
         subconfigs = {
             "symbol_table_name": self.context.symbol_space[

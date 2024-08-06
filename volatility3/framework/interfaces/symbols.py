@@ -344,6 +344,7 @@ class SymbolTableInterface(
 
         # Symbol Tables are constructable, and therefore require a class configuration variable
         config["class"] = self.__class__.__module__ + "." + self.__class__.__name__
+        config["$type"] = "SymbolTable"
         return config
 
     @classmethod

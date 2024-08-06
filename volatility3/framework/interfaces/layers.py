@@ -391,6 +391,7 @@ class DataLayerInterface(
 
         # Translation Layers are constructable, and therefore require a class configuration variable
         config["class"] = self.__class__.__module__ + "." + self.__class__.__name__
+        config["$type"] = "TranslationLayer"
         return config
 
     # ## Metadata methods
