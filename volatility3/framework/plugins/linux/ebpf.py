@@ -1,12 +1,10 @@
 # This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-import binascii
 import logging
 from typing import List
 
 from volatility3.framework import renderers, interfaces, exceptions
-from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.configuration import requirements
@@ -53,18 +51,11 @@ class EBPF(plugins.PluginInterface):
 
     def _generator(self):
         vmlinux = self.context.modules[self.config["kernel"]]
-        vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
-        bpf_prog_types = vmlinux.get_enumeration("bpf_prog_type")
         for prog in self.get_ebpf_programs(vmlinux):
             prog_addr = prog.vol.offset
-            prog_type = bpf_prog_types.lookup(prog.type)
-            prog_tag_addr = prog.tag.vol.offset
-            prog_tag_size = prog.tag.count
-            prog_tag_bytes = vmlinux_layer.read(prog_tag_addr, prog_tag_size)
-            prog_tag = binascii.hexlify(prog_tag_bytes).decode()
-            prog_name = (
-                utility.array_to_string(prog.aux.name) or renderers.NotAvailableValue()
-            )
+            prog_type = prog.get_type() or renderers.NotAvailableValue()
+            prog_tag = prog.get_tag() or renderers.NotAvailableValue()
+            prog_name = prog.get_name() or renderers.NotAvailableValue()
             fields = (format_hints.Hex(prog_addr), prog_name, prog_tag, prog_type)
             yield (0, fields)
 

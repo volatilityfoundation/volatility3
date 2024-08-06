@@ -38,6 +38,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         # Might not exist in the current symbols
         self.optional_set_type_class("module", extensions.module)
         self.optional_set_type_class("bpf_prog", extensions.bpf_prog)
+        self.optional_set_type_class("bpf_prog_aux", extensions.bpf_prog_aux)
         self.optional_set_type_class("kernel_cap_struct", extensions.kernel_cap_struct)
         self.optional_set_type_class("kernel_cap_t", extensions.kernel_cap_t)
 
