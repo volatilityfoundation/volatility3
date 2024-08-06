@@ -50,19 +50,19 @@ class PIDHashTable(plugins.PluginInterface):
         self.vmlinux_layer = None
 
     def _is_valid_task(self, task):
-        return task and task.pid > 0 and self.vmlinux_layer.is_valid(task.parent)
+        return bool(task and task.pid > 0 and self.vmlinux_layer.is_valid(task.parent))
 
     def _get_pidtype_pid(self):
         # The pid_type enumeration is present since 2.5.37, just in case
         pid_type_enum = self.vmlinux.get_enumeration("pid_type")
         if not pid_type_enum:
             vollog.error("Cannot find pid_type enum. Unsupported kernel")
-            return
+            return None
 
         pidtype_pid = pid_type_enum.choices.get("PIDTYPE_PID")
         if pidtype_pid is None:
             vollog.error("Cannot find PIDTYPE_PID. Unsupported kernel")
-            return
+            return None
 
         # Typically PIDTYPE_PID = 0
         return pidtype_pid
@@ -154,7 +154,7 @@ class PIDHashTable(plugins.PluginInterface):
 
         pid_tasks_0 = pid.tasks[pidtype_pid].first
         if not pid_tasks_0:
-            return
+            return None
 
         task_struct_type = self.vmlinux.get_type("task_struct")
         if task_struct_type.has_member("pids"):
