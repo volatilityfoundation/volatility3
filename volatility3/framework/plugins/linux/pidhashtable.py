@@ -191,7 +191,7 @@ class PIDHashTable(plugins.PluginInterface):
             "numbers"
         )  # kernels >= 2.6.24
 
-        has_pid_numbers = self.vmlinux.has_type("upid") and self.vmlinux.get_type(
+        has_pid_chain = self.vmlinux.has_type("upid") and self.vmlinux.get_type(
             "upid"
         ).has_member(
             "pid_chain"
@@ -205,7 +205,7 @@ class PIDHashTable(plugins.PluginInterface):
         if pid_idr:
             # kernels >= 4.15
             return self._pid_namespace_idr
-        elif pid_hash and has_pid_numbers and has_pid_numbers:
+        elif pid_hash and has_pid_numbers and has_pid_numbers and has_pid_chain:
             # 2.6.24 <= kernels < 4.15
             return self._pid_hash_implementation
 
