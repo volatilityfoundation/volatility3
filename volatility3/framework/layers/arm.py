@@ -19,13 +19,18 @@ vollog = logging.getLogger(__name__)
 Webography :
  [1] Arm, "Arm Architecture Reference Manual for A-profile architecture, DDI 0487J.a (ID042523)", https://developer.arm.com/documentation/ddi0487/ja/?lang=en
  [2] Linux, Linux Kernel source code, v6.7
+ [3] Arm, "Programmer's Guide for ARMv8-A", https://cs140e.sergio.bz/docs/ARMv8-A-Programmer-Guide.pdf
 
 Glossary :
  TTB : Translation Table Base
  TCR : Translation Control Register
  EL : Exception Level (0:Application,1:Kernel,2:Hypervisor,3:Secure Monitor)
  Granule : Translation granule (smallest block of memory that can be described)
- """
+
+Definitions :
+
+ The OS-controlled translation is called stage 1 translation, and the hypervisor-controlled translation is called stage 2 translation.
+"""
 
 
 class AArch64Exception(exceptions.LayerException):
@@ -205,10 +210,10 @@ class AArch64(linear.LinearlyMappedLayer):
         """
         base_layer = self.context.layers[self._base_layer]
 
-        # [1], see D8.2.4, page 5824
+        # [1], see D8.2.4, page 5825
         ttb_selector = self._mask(virtual_offset, 55, 55)
 
-        # Check if requested address belongs to the context virtual memory space
+        # Check if requested address belongs to the virtual memory space context
         if ttb_selector != self._virtual_addr_space:
             raise exceptions.InvalidAddressException(
                 layer_name=self.name,
