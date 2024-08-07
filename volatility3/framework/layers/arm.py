@@ -59,6 +59,10 @@ class AArch64(linear.LinearlyMappedLayer):
         64: [(51, 42), (41, 29), (28, 16)],
     }
 
+    # (high_bit, low_bit)
+    # [1], see D19.2, page 6339
+    _cpu_regs_mappings = {"aa64mmfr1_el1": {"HAFDBS": (3, 0)}}
+
     def __init__(
         self,
         context: interfaces.context.ContextInterface,
