@@ -5,6 +5,7 @@
 import logging
 import functools
 import collections
+import json
 from typing import Optional, Dict, Any, List, Iterable, Tuple
 
 from volatility3 import classproperty
@@ -80,6 +81,18 @@ class AArch64(linear.LinearlyMappedLayer):
             self.config["page_size_user_space"],
             self.config["page_size_kernel_space"],
         ]
+
+        # Unserialize cpu_registers config attribute into a dict
+        self._cpu_regs = self.config.get("cpu_registers", "{}")
+        try:
+            self._cpu_regs: dict = json.loads(self._cpu_regs)
+        except json.JSONDecodeError:
+            vollog.error(
+                'Could not JSON deserialize "cpu_registers" layer requirement.'
+            )
+
+        # Determine CPU features
+        self._cpu_features = {"feat_HAFDBS": self._get_cpu_feature_HAFDBS()}
 
         # Context : TTB0 (user) or TTB1 (kernel)
         self._virtual_addr_space = int(
@@ -555,6 +568,12 @@ class AArch64(linear.LinearlyMappedLayer):
                 name="kernel_endianness",
                 optional=False,
                 description="Kernel endianness (little or big)",
+            ),
+            requirements.StringRequirement(
+                name="cpu_registers",
+                optional=True,
+                description="Serialized dict of cpu register keys bound to their corresponding value. Needed for specific (non-mandatory) uses (ex: dirty bit management).",
+                default="{}",
             ),
             requirements.BooleanRequirement(
                 name="layer_debug",
