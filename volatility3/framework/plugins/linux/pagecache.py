@@ -6,7 +6,7 @@ import math
 import logging
 import datetime
 from dataclasses import dataclass, astuple
-from typing import List
+from typing import List, Set
 
 from volatility3.framework import renderers, interfaces
 from volatility3.framework.renderers import format_hints
@@ -153,7 +153,23 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
         return symlink_path
 
     @classmethod
-    def _walk_dentry(cls, seen_dentries, root_dentry, parent):
+    def _walk_dentry(
+        cls,
+        seen_dentries: Set[int],
+        root_dentry: interfaces.objects.ObjectInterface,
+        parent_dir: str,
+    ):
+        """Walk dentries recursively
+
+        Args:
+            seen_dentries: A set to ensure each dentry is processed only once
+            root_dentry: Root dentry object
+            parent_dir: Parent directory path
+
+        Yields:
+           file_path: Filename including path
+           dentry: Dentry object
+        """
 
         for dentry in root_dentry.get_subdirs():
             dentry_addr = dentry.vol.offset
@@ -173,19 +189,16 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             # This allows us to have consistent paths
             if dentry.d_name.name:
-                name = dentry.d_name.name_as_str()
+                basename = dentry.d_name.name_as_str()
                 # Do NOT use os.path.join() below
-                new_file = parent + "/" + name
+                file_path = parent_dir + "/" + basename
             else:
                 continue
 
-            yield new_file, dentry, dentry.d_parent.vol.offset
+            yield file_path, dentry
 
             if inode.is_dir:
-                for new_file, dentry, parent_address in cls._walk_dentry(
-                    seen_dentries, dentry, new_file
-                ):
-                    yield new_file, dentry, parent_address
+                yield from cls._walk_dentry(seen_dentries, dentry, parent_dir=file_path)
 
     @classmethod
     def get_inodes(
@@ -211,12 +224,14 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
         seen_inodes = set()
         seen_dentries = set()
         for superblock, mountpoint in superblocks_iter:
-            parent = "" if mountpoint == "/" else mountpoint
+            parent_dir = "" if mountpoint == "/" else mountpoint
 
             # Superblock root dentry
-            root_dentry = superblock.s_root
-            if not root_dentry:
+            root_dentry_ptr = superblock.s_root
+            if not root_dentry_ptr:
                 continue
+
+            root_dentry = root_dentry_ptr.dereference()
 
             # Dentry sanity check
             if not root_dentry.is_root():
@@ -246,8 +261,8 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
             yield inode_in
 
             # Children
-            for file_path, file_dentry, _ in cls._walk_dentry(
-                seen_dentries, root_dentry, parent
+            for file_path, file_dentry in cls._walk_dentry(
+                seen_dentries, root_dentry, parent_dir
             ):
                 if not file_dentry:
                     continue
