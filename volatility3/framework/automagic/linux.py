@@ -419,7 +419,7 @@ class LinuxAArch64SubStacker:
                         layer.config["cpu_registers"] = json.dumps(cpu_registers)
                     except exceptions.SymbolError as e:
                         vollog.log(constants.LOGLEVEL_VVV, e, exc_info=True)
-                    vollog.debug(f"Kernel DTB was found at: 0x{dtb:0x}")
+                    vollog.debug(f"DTB was found at: {hex(dtb)}")
                     vollog.debug("AArch64 image found")
                     return layer
                 else:
