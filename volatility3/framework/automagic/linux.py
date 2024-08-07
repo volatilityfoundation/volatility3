@@ -5,7 +5,7 @@
 import logging
 import os
 import json
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, Dict
 
 from volatility3.framework import constants, interfaces, exceptions
 from volatility3.framework.automagic import symbol_cache, symbol_finder
@@ -434,7 +434,7 @@ class LinuxAArch64SubStacker:
         layer_name: str,
         table_name: str,
         kaslr_shift: int,
-    ) -> dict[str, int]:
+    ) -> Dict[str, int]:
 
         tmp_kernel_module = context.module(table_name, layer_name, kaslr_shift)
         boot_cpu_data_struct = tmp_kernel_module.object_from_symbol("boot_cpu_data")
