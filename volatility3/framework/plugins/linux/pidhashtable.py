@@ -49,7 +49,7 @@ class PIDHashTable(plugins.PluginInterface):
         self.vmlinux = None
         self.vmlinux_layer = None
 
-    def _is_valid_task(self, task):
+    def _is_valid_task(self, task) -> bool:
         return bool(task and task.pid > 0 and self.vmlinux_layer.is_valid(task.parent))
 
     def _get_pidtype_pid(self):
