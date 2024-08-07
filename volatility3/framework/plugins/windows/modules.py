@@ -9,7 +9,7 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
-from volatility3.plugins.windows import pslist, dlllist
+from volatility3.plugins.windows import pslist, pedump
 
 vollog = logging.getLogger(__name__)
 
@@ -35,9 +35,6 @@ class Modules(interfaces.plugins.PluginInterface):
             requirements.VersionRequirement(
                 name="pslist", component=pslist.PsList, version=(2, 0, 0)
             ),
-            requirements.VersionRequirement(
-                name="dlllist", component=dlllist.DllList, version=(2, 0, 0)
-            ),
             requirements.BooleanRequirement(
                 name="dump",
                 description="Extract listed modules",
@@ -55,6 +52,9 @@ class Modules(interfaces.plugins.PluginInterface):
                 optional=True,
                 default=None,
             ),
+            requirements.VersionRequirement(
+                name="pedump", component=pedump.PEDump, version=(1, 0, 0)
+            ),
         ]
 
     def dump_module(self, session_layers, pe_table_name, mod):
@@ -63,16 +63,15 @@ class Modules(interfaces.plugins.PluginInterface):
         )
         file_output = f"Cannot find a viable session layer for {mod.DllBase:#x}"
         if session_layer_name:
-            file_handle = dlllist.DllList.dump_pe(
+            file_output = pedump.PEDump.dump_ldr_entry(
                 self.context,
                 pe_table_name,
                 mod,
                 self.open,
                 layer_name=session_layer_name,
             )
-            file_output = "Error outputting file"
-            if file_handle:
-                file_output = file_handle.preferred_filename
+            if not file_output:
+                file_output = "Error outputting file"
 
         return file_output
 

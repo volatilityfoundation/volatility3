@@ -47,14 +47,6 @@ class LdrModules(interfaces.plugins.PluginInterface):
             self.context, self.config_path, "windows", "pe", class_types=pe.class_types
         )
 
-        def filter_function(x: interfaces.objects.ObjectInterface) -> bool:
-            try:
-                return not (x.get_private_memory() == 0 and x.ControlArea)
-            except AttributeError:
-                return False
-
-        filter_func = filter_function
-
         for proc in procs:
             proc_layer_name = proc.add_process_layer()
 
@@ -69,7 +61,7 @@ class LdrModules(interfaces.plugins.PluginInterface):
 
             # Build dictionary of mapped files, where the VAD start address is the key and value is the file name of the mapped file
             mapped_files = {}
-            for vad in vadinfo.VadInfo.list_vads(proc, filter_func=filter_func):
+            for vad in vadinfo.VadInfo.list_vads(proc):
                 dos_header = self.context.object(
                     pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                     offset=vad.get_start(),
