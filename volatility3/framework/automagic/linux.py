@@ -4,13 +4,15 @@
 
 import logging
 import os
-from typing import Optional, Tuple, Type, Union
+import json
+from typing import Optional, Tuple, Union
 
 from volatility3.framework import constants, interfaces, exceptions
 from volatility3.framework.automagic import symbol_cache, symbol_finder
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, scanners, arm
 from volatility3.framework.symbols import linux
+from volatility3.framework.interfaces.configuration import path_join
 
 vollog = logging.getLogger(__name__)
 
@@ -18,7 +20,6 @@ vollog = logging.getLogger(__name__)
 class LinuxStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 35
     exclusion_list = ["mac", "windows"]
-    join = interfaces.configuration.path_join
 
     @classmethod
     def stack(
@@ -83,10 +84,10 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                 )
                 context.symbol_space.append(table)
                 new_layer_name = context.layers.free_layer_name("LinuxLayer")
-                config_path = cls.join("LinuxHelper", new_layer_name)
-                context.config[cls.join(config_path, "memory_layer")] = layer_name
+                config_path = path_join("LinuxHelper", new_layer_name)
+                context.config[path_join(config_path, "memory_layer")] = layer_name
                 context.config[
-                    cls.join(config_path, LinuxSymbolFinder.banner_config_key)
+                    path_join(config_path, LinuxSymbolFinder.banner_config_key)
                 ] = str(banner, "latin-1")
 
                 linux_arch_stackers = [cls.intel_stacker, cls.aarch64_stacker]
@@ -107,7 +108,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                     except Exception as e:
                         vollog.exception(e)
 
-        vollog.debug("No suitable linux banner could be matched")
+        vollog.debug("No suitable Linux banner could be matched")
         return None
 
     @classmethod
@@ -122,7 +123,8 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         banner: str,
         progress_callback: constants.ProgressCallback = None,
     ) -> Union[intel.Intel, intel.Intel32e, None]:
-        layer_class: Type = intel.Intel
+        layer_class = intel.Intel
+
         if "init_top_pgt" in table.symbols:
             layer_class = intel.Intel32e
             dtb_symbol_name = "init_top_pgt"
@@ -164,7 +166,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         )
 
         if layer and dtb and test_banner_equality:
-            vollog.debug(f"DTB was found at: 0x{dtb:0x}")
+            vollog.debug(f"DTB was found at: {hex(dtb)}")
             vollog.debug("Intel image found")
             return layer
         else:
@@ -193,10 +195,10 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
             progress_callback=progress_callback,
         )
         dtb = table.get_symbol("swapper_pg_dir").address + kaslr_shift
-        context.config[cls.join(config_path, "page_map_offset")] = dtb
-        context.config[cls.join(config_path, "page_map_offset_kernel")] = dtb
+        context.config[path_join(config_path, "page_map_offset")] = dtb
+        context.config[path_join(config_path, "page_map_offset_kernel")] = dtb
         kernel_endianness = table.get_type("pointer").vol.data_format.byteorder
-        context.config[cls.join(config_path, "kernel_endianness")] = kernel_endianness
+        context.config[path_join(config_path, "kernel_endianness")] = kernel_endianness
 
         # CREDIT : https://github.com/crash-utility/crash/blob/28891d1127542dbb2d5ba16c575e14e741ed73ef/arm64.c#L941
         kernel_flags = 0
@@ -252,18 +254,18 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         va_bits_candidates = [va_bits] + [va_bits + i for i in range(-1, -4, -1)]
         for va_bits in va_bits_candidates:
             tcr_el1_t1sz = 64 - va_bits
-            # T1SZ is considered equal to T0SZ
-            context.config[cls.join(config_path, "tcr_el1_t1sz")] = tcr_el1_t1sz
-            context.config[cls.join(config_path, "tcr_el1_t0sz")] = tcr_el1_t1sz
+            # T1SZ is considered to be equal to T0SZ
+            context.config[path_join(config_path, "tcr_el1_t1sz")] = tcr_el1_t1sz
+            context.config[path_join(config_path, "tcr_el1_t0sz")] = tcr_el1_t1sz
 
             # If "_kernel_flags_le*" aren't in the symbols, we can still do a quick bruteforce on [4,16,64] page sizes
             # False positives cannot happen, as translation indexes will be off on a wrong page size
             for page_size_kernel_space in page_size_kernel_space_candidates:
                 # Kernel space page size is considered equal to the user space page size
-                context.config[cls.join(config_path, "page_size_kernel_space")] = (
+                context.config[path_join(config_path, "page_size_kernel_space")] = (
                     page_size_kernel_space
                 )
-                context.config[cls.join(config_path, "page_size_user_space")] = (
+                context.config[path_join(config_path, "page_size_user_space")] = (
                     page_size_kernel_space
                 )
                 # Build layer
@@ -412,6 +414,7 @@ class LinuxSymbolFinder(symbol_finder.SymbolFinder):
 
     banner_config_key = "kernel_banner"
     operating_system = "linux"
+    # TODO: Avoid hardcoded strings
     symbol_class = "volatility3.framework.symbols.linux.LinuxKernelIntermedSymbols"
     find_aslr = lambda cls, *args: LinuxStacker.find_aslr(*args)[1]
     exclusion_list = ["mac", "windows"]
