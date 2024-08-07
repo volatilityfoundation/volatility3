@@ -528,7 +528,7 @@ class AArch64(linear.LinearlyMappedLayer):
             return self._mask(
                 self._cpu_regs[register], cpu_reg_mapping[0], cpu_reg_mapping[1]
             )
-        except:
+        except KeyError:
             if not self._cpu_regs.get(register):
                 raise KeyError(
                     f"Access to CPU register {register} was requested, but the register value wasn't provided to this layer initially."
