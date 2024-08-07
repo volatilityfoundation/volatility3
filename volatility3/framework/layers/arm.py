@@ -450,18 +450,36 @@ class AArch64(linear.LinearlyMappedLayer):
         """Returns whether the page at offset is marked dirty"""
         return self._page_is_dirty(self._translate_entry(offset)[2])
 
-    @staticmethod
-    def _page_is_dirty(entry: int) -> bool:
-        """Returns whether a particular page is dirty based on its entry.
-        The bit indicates that its associated block of memory
-        has been modified and has not been saved to storage yet
-
-        Hardware management (only > Armv8.1-A) : https://developer.arm.com/documentation/102376/0200/Access-Flag/Dirty-state
-        + [1], see D8.4.6, page 5877 and [1], see D8-16, page 5857
+    def _page_is_dirty(self, entry: int) -> bool:
         """
-        # The following is based on Linux software implementation :
-        # [2], see arch/arm64/include/asm/pgtable-prot.h#L18
-        return bool(entry & (1 << 55))
+        Hardware management of the dirty state (only > Armv8.1-A).
+
+        General documentation :
+         https://developer.arm.com/documentation/102376/0200/Access-Flag/Dirty-state
+
+        Technical documentation :
+         [1], see D8.4.6, page 5877 : "Hardware management of the dirty state"
+         [1], see D8-16 and page 5861 : "Stage 1 attribute fields in Block and Page descriptors"
+
+        > For the purpose of FEAT_HAFDBS, a Block descriptor or Page descriptor can be described as having one of the following states:
+            • Non-writeable.
+            • Writeable-clean.
+            • Writeable-dirty.
+
+        [1], see D8-41, page 5868 :
+            AP[2]  | Access permission
+            -------|------------------
+            0      | Read/write
+            1      | Read-only
+        """
+        if self._cpu_features.get("feat_HAFDBS", None):
+            # Dirty Bit Modifier and Access Permissions bits
+            # DBM == 1 and AP == 0 -> HW dirty state
+            return bool((entry & (1 << 51)) and not (entry & (1 << 7)))
+        else:
+            raise NotImplementedError(
+                "Hardware updates to Access flag and Dirty state in translation tables are not available in the target kernel. Please try using a software based implementation of dirty bit management."
+            )
 
     @property
     @functools.lru_cache()
