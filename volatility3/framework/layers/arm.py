@@ -502,6 +502,41 @@ class AArch64(linear.LinearlyMappedLayer):
     def maximum_address(cls) -> int:
         return (1 << cls._maxvirtaddr) - 1
 
+    def _read_cpu_register_field(self, register: str, field: str) -> int:
+        # Prefer speeding up read operations, as keys are most likely to be valid
+        # Handle errors in a dedicated except block, if needed
+        try:
+            cpu_reg_mapping = self._cpu_regs_mappings[register][field]
+            return self._mask(
+                self._cpu_regs[register], cpu_reg_mapping[0], cpu_reg_mapping[1]
+            )
+        except:
+            if not self._cpu_regs.get(register):
+                raise KeyError(
+                    f"Access to CPU register {register} was requested, but the register value wasn't provided to this layer initially."
+                )
+
+            if not self._cpu_regs_mappings.get(register) or not self._cpu_regs_mappings[
+                register
+            ].get(field):
+                raise KeyError(
+                    f"Access of field {field} from CPU register {register} was requested, but no pre-defined mapping was found."
+                )
+
+        return None
+
+    # CPU features
+    def _get_cpu_feature_HAFDBS(self):
+        """
+        Hardware updates to Access flag and Dirty state in translation tables.
+         [1], see D19.2.65, page 6784
+        """
+        try:
+            reg_HAFDBS = self._read_cpu_register_field("aa64mmfr1_el1", "HAFDBS")
+            return reg_HAFDBS >= 0b10
+        except KeyError:
+            return None
+
     def canonicalize(self, addr: int) -> int:
         """Canonicalizes an address by performing an appropiate sign extension on the higher addresses"""
         if self._bits_per_register <= self._ttb_bitsize:
