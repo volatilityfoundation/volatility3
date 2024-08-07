@@ -659,3 +659,26 @@ class AArch64(linear.LinearlyMappedLayer):
                 description="Kernel unique identifier, including compiler name and version, kernel version, compile time.",
             ),
         ]
+
+
+class LinuxAArch64Mixin(AArch64):
+    def _page_is_dirty(self, entry: int) -> bool:
+        """Returns whether a particular page is dirty based on its (page table) entry.
+        The bit indicates that its associated block of memory
+        has been modified and has not been saved to storage yet.
+
+        The following is based on Linux software AArch64 dirty bit management.
+         [2], see arch/arm64/include/asm/pgtable-prot.h#L18
+         [3], see page 12-25
+         https://lkml.org/lkml/2023/7/7/77 -> Linux implementation detail
+        """
+        sw_dirty = bool(entry & (1 << 55))
+        try:
+            hw_dirty = super()._page_is_dirty(entry)
+            return sw_dirty or hw_dirty
+        except NotImplementedError:
+            return sw_dirty
+
+
+class LinuxAArch64(LinuxAArch64Mixin, AArch64):
+    pass
