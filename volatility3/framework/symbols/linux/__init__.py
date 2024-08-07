@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import math
+import contextlib
 from abc import ABC, abstractmethod
 from typing import Iterator, List, Tuple, Optional, Union
 
@@ -676,15 +677,13 @@ class RadixTree(Tree):
         return self.RADIX_TREE_INTERNAL_NODE
 
     def get_tree_height(self, treep) -> int:
-        try:
+        with contextlib.suppress(exceptions.SymbolError):
             if self.vmlinux.get_type("radix_tree_root").has_member("height"):
                 # kernels < 4.7.10
                 radix_tree_root = self.vmlinux.object(
                     "radix_tree_root", offset=treep, absolute=True
                 )
                 return radix_tree_root.height
-        except exceptions.SymbolError:
-            pass
 
         # kernels >= 4.7.10
         return 0
