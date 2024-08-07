@@ -133,6 +133,14 @@ class AArch64(linear.LinearlyMappedLayer):
             self._bits_per_register,
             self._ttb_bitsize,
         )
+
+        # [1], see D8.3, page 5852
+        if self._is_52bits:
+            if self._ttb_granule in [4, 16]:
+                self._ta_51_x_bits = (9, 8)
+            elif self._ttb_granule == 64:
+                self._ta_51_x_bits = (15, 12)
+
         if self._layer_debug:
             self._print_layer_debug_informations()
 
@@ -220,13 +228,6 @@ class AArch64(linear.LinearlyMappedLayer):
                 invalid_address=virtual_offset,
             )
 
-        # [1], see D8.3, page 5852
-        if self._is_52bits:
-            if self._ttb_granule in [4, 16]:
-                ta_51_x_bits = (9, 8)
-            elif self._ttb_granule == 64:
-                ta_51_x_bits = (15, 12)
-
         table_address = self._page_map_offset
         max_level = len(self._ttb_lookup_indexes) - 1
         for level, (high_bit, low_bit) in enumerate(self._ttb_lookup_indexes):
@@ -242,8 +243,8 @@ class AArch64(linear.LinearlyMappedLayer):
             if self._is_52bits:
                 ta_51_x = self._mask(
                     descriptor,
-                    ta_51_x_bits[0],
-                    ta_51_x_bits[1],
+                    self._ta_51_x_bits[0],
+                    self._ta_51_x_bits[1],
                 )
                 table_address = ta_51_x << (52 - ta_51_x.bit_length())
 
