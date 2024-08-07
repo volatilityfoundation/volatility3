@@ -4,10 +4,13 @@
 
 import collections.abc
 import logging
+import stat
+from datetime import datetime
 import socket as socket_module
-from typing import Generator, Iterable, Iterator, Optional, Tuple, List
+from typing import Generator, Iterable, Iterator, Optional, Tuple, List, Union
 
 from volatility3.framework import constants, exceptions, objects, interfaces, symbols
+from volatility3.framework.renderers import conversion
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
 from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
@@ -1761,3 +1764,136 @@ class kernel_cap_t(kernel_cap_struct):
             )
 
         return cap_value & self.get_kernel_cap_full()
+
+
+class timespec64(objects.StructType):
+    def to_datetime(self) -> datetime:
+        """Returns the respective aware datetime"""
+
+        dt = conversion.unixtime_to_datetime(self.tv_sec + self.tv_nsec / 1e9)
+        return dt
+
+
+class inode(objects.StructType):
+    def is_valid(self) -> bool:
+        # i_count is a 'signed' counter (atomic_t). Smear, or essentially a wrong inode
+        # pointer, will easily cause an integer overflow here.
+        return self.i_ino > 0 and self.i_count.counter >= 0
+
+    @property
+    def is_dir(self) -> bool:
+        """Returns True if the inode is a directory"""
+        return stat.S_ISDIR(self.i_mode) != 0
+
+    @property
+    def is_reg(self) -> bool:
+        """Returns True if the inode is a regular file"""
+        return stat.S_ISREG(self.i_mode) != 0
+
+    @property
+    def is_link(self) -> bool:
+        """Returns True if the inode is a symlink"""
+        return stat.S_ISLNK(self.i_mode) != 0
+
+    @property
+    def is_fifo(self) -> bool:
+        """Returns True if the inode is a FIFO"""
+        return stat.S_ISFIFO(self.i_mode) != 0
+
+    @property
+    def is_sock(self) -> bool:
+        """Returns True if the inode is a socket"""
+        return stat.S_ISSOCK(self.i_mode) != 0
+
+    @property
+    def is_block(self) -> bool:
+        """Returns True if the inode is a block device"""
+        return stat.S_ISBLK(self.i_mode) != 0
+
+    @property
+    def is_char(self) -> bool:
+        """Returns True if the inode is a char device"""
+        return stat.S_ISCHR(self.i_mode) != 0
+
+    @property
+    def is_sticky(self) -> bool:
+        """Returns True if the sticky bit is set"""
+        return (self.i_mode & stat.S_ISVTX) != 0
+
+    def get_inode_type(self) -> Union[str, None]:
+        """Returns inode type name
+
+        Returns:
+            The inode type name
+        """
+        if self.is_dir:
+            return "DIR"
+        elif self.is_reg:
+            return "REG"
+        elif self.is_link:
+            return "LNK"
+        elif self.is_fifo:
+            return "FIFO"
+        elif self.is_sock:
+            return "SOCK"
+        elif self.is_char:
+            return "CHR"
+        elif self.is_block:
+            return "BLK"
+        else:
+            return None
+
+    def _time_member_to_datetime(self, member) -> datetime:
+        if self.has_member(f"{member}_sec") and self.has_member(f"{member}_nsec"):
+            # kernels >= 6.11 it's i_*_sec -> time64_t and i_*_nsec -> u32
+            # Ref Linux commit 3aa63a569c64e708df547a8913c84e64a06e7853
+            return conversion.unixtime_to_datetime(
+                self.member(f"{member}_sec") + self.has_member(f"{member}_nsec") / 1e9
+            )
+        elif self.has_member(f"__{member}"):
+            # 6.6 <= kernels < 6.11 it's a timespec64
+            # Ref Linux commit 13bc24457850583a2e7203ded05b7209ab4bc5ef / 12cd44023651666bd44baa36a5c999698890debb
+            return self.member(f"__{member}").to_datetime()
+        elif self.has_member(member):
+            # In kernels < 6.6 it's a timespec64 or timespec
+            return self.member(member).to_datetime()
+        else:
+            raise exceptions.VolatilityException(
+                "Unsupported kernel inode type implementation"
+            )
+
+    def get_access_time(self) -> datetime:
+        """Returns the inode's last access time
+        This is updated when inode contents are read
+
+        Returns:
+            A datetime with the inode's last access time
+        """
+        return self._time_member_to_datetime("i_atime")
+
+    def get_modification_time(self) -> datetime:
+        """Returns the inode's last modification time
+        This is updated when the inode contents change
+
+        Returns:
+            A datetime with the inode's last data modification time
+        """
+
+        return self._time_member_to_datetime("i_mtime")
+
+    def get_change_time(self) -> datetime:
+        """Returns the inode's last change time
+        This is updated when the inode metadata changes
+
+        Returns:
+            A datetime with the inode's last change time
+        """
+        return self._time_member_to_datetime("i_ctime")
+
+    def get_file_mode(self) -> str:
+        """Returns the inode's file mode as string of the form '-rwxrwxrwx'.
+
+        Returns:
+            The inode's file mode string
+        """
+        return stat.filemode(self.i_mode)
