@@ -90,10 +90,11 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                     path_join(config_path, LinuxSymbolFinder.banner_config_key)
                 ] = str(banner, "latin-1")
 
-                linux_arch_stackers = [cls.intel_stacker, cls.aarch64_stacker]
+                linux_arch_stackers = [LinuxIntelSubStacker, LinuxAArch64SubStacker]
                 for linux_arch_stacker in linux_arch_stackers:
                     try:
-                        layer = linux_arch_stacker(
+                        sub_stacker = linux_arch_stacker(cls)
+                        layer = sub_stacker.stack(
                             context=context,
                             layer_name=layer_name,
                             table=table,
@@ -112,8 +113,116 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         return None
 
     @classmethod
-    def intel_stacker(
+    def verify_translation_by_banner(
         cls,
+        context: interfaces.context.ContextInterface,
+        layer,
+        layer_name: str,
+        linux_banner_address: int,
+        target_banner: bytes,
+    ) -> bool:
+        """Determine if a stacked layer is correct or a false positive, by calling the underlying
+        _translate method against the linux_banner symbol virtual address. Then, compare it with
+        the detected banner to verify the correct translation.
+        """
+
+        try:
+            banner_phys_address = layer._translate(linux_banner_address)[0]
+            banner_value = context.layers[layer_name].read(
+                banner_phys_address, len(target_banner)
+            )
+        except exceptions.InvalidAddressException:
+            vollog.log(
+                constants.LOGLEVEL_VVVV,
+                'Cannot translate "linux_banner" symbol virtual address.',
+            )
+            return False
+
+        if not banner_value == target_banner:
+            vollog.log(
+                constants.LOGLEVEL_VV,
+                f"Mismatch between scanned and virtually translated linux banner : {target_banner} != {banner_value}.",
+            )
+            return False
+
+        return True
+
+    @classmethod
+    def find_aslr(
+        cls,
+        context: interfaces.context.ContextInterface,
+        symbol_table: str,
+        layer_name: str,
+        progress_callback: constants.ProgressCallback = None,
+    ) -> Tuple[int, int]:
+        """Determines the offset of the actual DTB in physical space and its
+        symbol offset."""
+
+        module = context.module(symbol_table, layer_name, 0)
+        swapper_signature = rb"swapper(\/0|\x00\x00)\x00\x00\x00\x00\x00\x00"
+        address_mask = context.symbol_space[symbol_table].config.get(
+            "symbol_mask", None
+        )
+        init_task_symbol = symbol_table + constants.BANG + "init_task"
+        init_task_json_address = context.symbol_space.get_symbol(
+            init_task_symbol
+        ).address
+        task_symbol = module.get_type("task_struct")
+        comm_child_offset = task_symbol.relative_child_offset("comm")
+
+        for offset in context.layers[layer_name].scan(
+            scanner=scanners.RegExScanner(swapper_signature),
+            context=context,
+            progress_callback=progress_callback,
+        ):
+            init_task_address = offset - comm_child_offset
+            init_task = module.object(
+                object_type="task_struct", offset=init_task_address, absolute=True
+            )
+            if init_task.pid != 0:
+                continue
+            elif (
+                init_task.has_member("state")
+                and init_task.state.cast("unsigned int") != 0
+            ):
+                continue
+
+            # ASLR calculation
+            aslr_shift = (
+                int.from_bytes(
+                    init_task.files.cast("bytes", length=init_task.files.vol.size),
+                    byteorder=init_task.files.vol.data_format.byteorder,
+                )
+                - module.get_symbol("init_files").address
+            )
+            if address_mask:
+                aslr_shift = aslr_shift & address_mask
+
+            # KASLR calculation (physical symbol address - virtual symbol address)
+            kaslr_shift = init_task_address - init_task_json_address
+
+            # Check ASLR and KASLR candidates
+            if aslr_shift & 0xFFF != 0 or kaslr_shift & 0xFFF != 0:
+                continue
+            vollog.debug(
+                f"Linux addresses shift values determined: KASLR (physical) = {hex(kaslr_shift)}, ASLR (virtual) = {hex(aslr_shift)}"
+            )
+            return kaslr_shift, aslr_shift
+
+        # We don't throw an exception, because we may legitimately not have an ASLR shift, but we report it
+        vollog.debug("Scanners could not determine any ASLR shifts, using 0 for both")
+        return 0, 0
+
+
+class LinuxIntelSubStacker:
+    __START_KERNEL_map_x64 = 0xFFFFFFFF80000000
+    __START_KERNEL_map_x86 = 0xC0000000
+
+    def __init__(self, parent_stacker: LinuxStacker) -> None:
+        self.parent_stacker = parent_stacker
+
+    def stack(
+        self,
         context: interfaces.context.ContextInterface,
         layer_name: str,
         table: linux.LinuxKernelIntermedSymbols,
@@ -134,21 +243,17 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         else:
             dtb_symbol_name = "swapper_pg_dir"
 
-        kaslr_shift, aslr_shift = cls.find_aslr(
+        kaslr_shift, aslr_shift = self.parent_stacker.find_aslr(
             context,
             table_name,
             layer_name,
-            layer_class,
             progress_callback=progress_callback,
         )
 
-        dtb = cls.virtual_to_physical_address(
-            table.get_symbol(dtb_symbol_name).address + kaslr_shift
-        )
+        dtb = table.get_symbol(dtb_symbol_name).address + kaslr_shift
 
         # Build the new layer
-        context.config[cls.join(config_path, "page_map_offset")] = dtb
-
+        context.config[path_join(config_path, "page_map_offset")] = dtb
         layer = layer_class(
             context,
             config_path=config_path,
@@ -156,8 +261,10 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
             metadata={"os": "Linux"},
         )
         layer.config["kernel_virtual_offset"] = aslr_shift
+
+        # Verify layer by translating the "linux_banner" symbol virtual address
         linux_banner_address = table.get_symbol("linux_banner").address + aslr_shift
-        test_banner_equality = cls.verify_translation_by_banner(
+        test_banner_equality = self.parent_stacker.verify_translation_by_banner(
             context=context,
             layer=layer,
             layer_name=layer_name,
@@ -175,8 +282,25 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         return None
 
     @classmethod
-    def aarch64_stacker(
-        cls,
+    def virtual_to_physical_address(cls, addr: int) -> int:
+        """Converts a virtual Intel Linux address to a physical one (does not account
+        of ASLR)"""
+        # Detect x64/x86 address space
+        if addr > cls.__START_KERNEL_map_x64:
+            return addr - cls.__START_KERNEL_map_x64
+        return addr - cls.__START_KERNEL_map_x86
+
+
+class LinuxAArch64SubStacker:
+    # https://developer.arm.com/documentation/ddi0601/latest/AArch64-Registers/
+    # Lowercase CPU register, bound to its attribute name in the "cpuinfo_arm64" kernel struct
+    _required_cpu_registers = {"aa64mmfr1_el1": "reg_id_aa64mmfr1"}
+
+    def __init__(self, parent_stacker: LinuxStacker) -> None:
+        self.parent_stacker = parent_stacker
+
+    def stack(
+        self,
         context: interfaces.context.ContextInterface,
         layer_name: str,
         table: linux.LinuxKernelIntermedSymbols,
@@ -185,13 +309,12 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         new_layer_name: str,
         banner: bytes,
         progress_callback: constants.ProgressCallback = None,
-    ) -> Optional[arm.AArch64]:
-        layer_class = arm.AArch64
-        kaslr_shift, aslr_shift = cls.find_aslr(
+    ) -> Optional[arm.LinuxAArch64]:
+        layer_class = arm.LinuxAArch64
+        kaslr_shift, aslr_shift = self.parent_stacker.find_aslr(
             context,
             table_name,
             layer_name,
-            layer_class,
             progress_callback=progress_callback,
         )
         dtb = table.get_symbol("swapper_pg_dir").address + kaslr_shift
@@ -277,7 +400,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                 )
                 layer.config["kernel_virtual_offset"] = aslr_shift
 
-                test_banner_equality = cls.verify_translation_by_banner(
+                test_banner_equality = self.parent_stacker.verify_translation_by_banner(
                     context=context,
                     layer=layer,
                     layer_name=layer_name,
@@ -286,6 +409,16 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                 )
 
                 if layer and dtb and test_banner_equality:
+                    try:
+                        cpu_registers = self.construct_cpu_registers_dict(
+                            context=context,
+                            layer_name=layer_name,
+                            table_name=table_name,
+                            kaslr_shift=kaslr_shift,
+                        )
+                        layer.config["cpu_registers"] = json.dumps(cpu_registers)
+                    except exceptions.SymbolError as e:
+                        vollog.log(constants.LOGLEVEL_VVV, e, exc_info=True)
                     vollog.debug(f"Kernel DTB was found at: 0x{dtb:0x}")
                     vollog.debug("AArch64 image found")
                     return layer
@@ -295,118 +428,28 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         return None
 
     @classmethod
-    def verify_translation_by_banner(
+    def construct_cpu_registers_dict(
         cls,
         context: interfaces.context.ContextInterface,
-        layer,
         layer_name: str,
-        linux_banner_address: int,
-        target_banner: bytes,
-    ) -> bool:
-        """Determine if a stacked layer is correct or a false positive, by calling the underlying
-        _translate method against the linux_banner symbol virtual address. Then, compare it with
-        the detected banner to verify the correct translation.
-        """
+        table_name: str,
+        kaslr_shift: int,
+    ) -> dict[str, int]:
 
-        try:
-            banner_phys_address = layer._translate(linux_banner_address)[0]
-            banner_value = context.layers[layer_name].read(
-                banner_phys_address, len(target_banner)
-            )
-        except exceptions.InvalidAddressException as e:
-            vollog.log(
-                constants.LOGLEVEL_VVVV,
-                'Cannot translate "linux_banner" symbol virtual address.',
-            )
-            return False
-
-        if not banner_value == target_banner:
-            vollog.log(
-                constants.LOGLEVEL_VV,
-                f"Mismatch between scanned and virtually translated linux banner : {target_banner} != {banner_value}.",
-            )
-            return False
-
-        return True
-
-    @classmethod
-    def find_aslr(
-        cls,
-        context: interfaces.context.ContextInterface,
-        symbol_table: str,
-        layer_name: str,
-        layer_class,
-        progress_callback: constants.ProgressCallback = None,
-    ) -> Tuple[int, int]:
-        """Determines the offset of the actual DTB in physical space and its
-        symbol offset."""
-        init_task_symbol = symbol_table + constants.BANG + "init_task"
-        init_task_json_address = context.symbol_space.get_symbol(
-            init_task_symbol
-        ).address
-        swapper_signature = rb"swapper(\/0|\x00\x00)\x00\x00\x00\x00\x00\x00"
-        module = context.module(symbol_table, layer_name, 0)
-        address_mask = context.symbol_space[symbol_table].config.get(
-            "symbol_mask", None
-        )
-
-        task_symbol = module.get_type("task_struct")
-        comm_child_offset = task_symbol.relative_child_offset("comm")
-
-        for offset in context.layers[layer_name].scan(
-            scanner=scanners.RegExScanner(swapper_signature),
-            context=context,
-            progress_callback=progress_callback,
-        ):
-            init_task_address = offset - comm_child_offset
-            init_task = module.object(
-                object_type="task_struct", offset=init_task_address, absolute=True
-            )
-            if init_task.pid != 0:
-                continue
-            elif (
-                init_task.has_member("state")
-                and init_task.state.cast("unsigned int") != 0
-            ):
-                continue
-
-            # This we get for free
-            aslr_shift = (
-                int.from_bytes(
-                    init_task.files.cast("bytes", length=init_task.files.vol.size),
-                    byteorder=init_task.files.vol.data_format.byteorder,
+        tmp_kernel_module = context.module(table_name, layer_name, kaslr_shift)
+        boot_cpu_data_struct = tmp_kernel_module.object_from_symbol("boot_cpu_data")
+        cpu_registers = {}
+        for cpu_reg, cpu_reg_attribute_name in cls._required_cpu_registers.items():
+            try:
+                cpu_reg_value = getattr(boot_cpu_data_struct, cpu_reg_attribute_name)
+                cpu_registers[cpu_reg] = cpu_reg_value
+            except AttributeError:
+                vollog.log(
+                    constants.LOGLEVEL_VVV,
+                    f"boot_cpu_data struct does not include the {cpu_reg_attribute_name} field.",
                 )
-                - module.get_symbol("init_files").address
-            )
-            if layer_class == arm.AArch64:
-                kaslr_shift = init_task_address - init_task_json_address
-            else:
-                kaslr_shift = init_task_address - cls.virtual_to_physical_address(
-                    init_task_json_address
-                )
-            if address_mask:
-                aslr_shift = aslr_shift & address_mask
 
-            if aslr_shift & 0xFFF != 0 or kaslr_shift & 0xFFF != 0:
-                continue
-            vollog.debug(
-                "Linux ASLR shift values determined: physical {:0x} virtual {:0x}".format(
-                    kaslr_shift, aslr_shift
-                )
-            )
-            return kaslr_shift, aslr_shift
-
-        # We don't throw an exception, because we may legitimately not have an ASLR shift, but we report it
-        vollog.debug("Scanners could not determine any ASLR shifts, using 0 for both")
-        return 0, 0
-
-    @classmethod
-    def virtual_to_physical_address(cls, addr: int) -> int:
-        """Converts a virtual linux address to a physical one (does not account
-        of ASLR)"""
-        if addr > 0xFFFFFFFF80000000:
-            return addr - 0xFFFFFFFF80000000
-        return addr - 0xC0000000
+        return cpu_registers
 
 
 class LinuxSymbolFinder(symbol_finder.SymbolFinder):
