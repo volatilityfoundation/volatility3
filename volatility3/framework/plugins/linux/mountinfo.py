@@ -254,10 +254,7 @@ class MountInfo(plugins.PluginInterface):
             super_block: Kernel's struct super_block object
         """
         # No filter so that we get all the mount namespaces from all tasks
-        pid_filter = pslist.PsList.create_pid_filter()
-        tasks = pslist.PsList.list_tasks(
-            self.context, self.config["kernel"], filter_func=pid_filter
-        )
+        tasks = pslist.PsList.list_tasks(self.context, self.config["kernel"])
 
         seen_sb_ptr = set()
         for task, mnt, _mnt_ns_id in self._get_tasks_mountpoints(tasks):
