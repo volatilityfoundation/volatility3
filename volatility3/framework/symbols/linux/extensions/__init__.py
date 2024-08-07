@@ -2027,7 +2027,7 @@ class page(objects.StructType):
 
         return pageflags_enum
 
-    def flags_list(self) -> List[str]:
+    def get_flags_list(self) -> List[str]:
         """Returns a list of page flags
 
         Returns:
