@@ -73,8 +73,9 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                     )
                     continue
 
+                data = layer.read(start, size, True)
                 if not yarascan.YaraScan._yara_x:
-                    for match in rules.match(data=layer.read(start, size, True)):
+                    for match in rules.match(data=data):
                         if yarascan.YaraScan.yara_returns_instances():
                             for match_string in match.strings:
                                 for instance in match_string.instances:
@@ -95,9 +96,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                                     value,
                                 )
                 else:
-                    data = layer.read(start, size, True)
-                    results = rules.scan(data)
-                    for match in results.matching_rules:
+                    for match in rules.scan(data).matching_rules:
                         for match_string in match.patterns:
                             for instance in match_string.matches:
                                 yield 0, (

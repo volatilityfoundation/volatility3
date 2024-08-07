@@ -36,7 +36,7 @@ except ImportError:
         raise
 
 
-class BaseYaraScanner(interfaces.layers.ScannerInterface):
+class YaraScanner(interfaces.layers.ScannerInterface):
     _version = (2, 1, 0)
 
     # yara.Rules isn't exposed, so we can't type this properly
@@ -45,32 +45,44 @@ class BaseYaraScanner(interfaces.layers.ScannerInterface):
         if rules is None:
             raise ValueError("No rules provided to YaraScanner")
         self._rules = rules
-
-
-class YaraPythonScanner(BaseYaraScanner):
-    def __init__(self, rules) -> None:
-        super().__init__(rules)
-        self.st_object = not tuple(int(x) for x in yara.__version__.split(".")) < (4, 3)
+        self.st_object = (
+            None
+            if USE_YARA_X
+            else not tuple(int(x) for x in yara.__version__.split(".")) < (4, 3)
+        )
 
     def __call__(
         self, data: bytes, data_offset: int
     ) -> Iterable[Tuple[int, str, str, bytes]]:
-        for match in self._rules.match(data=data):
-            if YaraScan.yara_returns_instances():
-                for match_string in match.strings:
-                    for instance in match_string.instances:
+        if USE_YARA_X:
+            for match in self._rules.scan(data).matching_rules:
+                for match_string in match.patterns:
+                    for instance in match_string.matches:
                         yield (
                             instance.offset + data_offset,
-                            match.rule,
+                            f"{match.namespace}.{match.identifier}",
                             match_string.identifier,
-                            instance.matched_data,
+                            data[instance.offset : instance.offset + instance.length],
                         )
-            else:
-                for offset, name, value in match.strings:
-                    yield (offset + data_offset, match.rule, name, value)
+        else:
+            for match in self._rules.match(data=data):
+                if YaraScan.yara_returns_instances():
+                    for match_string in match.strings:
+                        for instance in match_string.instances:
+                            yield (
+                                instance.offset + data_offset,
+                                match.rule,
+                                match_string.identifier,
+                                instance.matched_data,
+                            )
+                else:
+                    for offset, name, value in match.strings:
+                        yield (offset + data_offset, match.rule, name, value)
 
     @staticmethod
     def get_rule(rule):
+        if USE_YARA_X:
+            return yara_x.compile(f"rule r1 {{strings: $a = {rule} condition: $a}}")
         return yara.compile(
             sources={"n": f"rule r1 {{strings: $a = {rule} condition: $a}}"}
         )
@@ -78,45 +90,16 @@ class YaraPythonScanner(BaseYaraScanner):
     @staticmethod
     def from_compiled_file(filepath):
         with resources.ResourceAccessor().open(filepath, "rb") as fp:
+            if USE_YARA_X:
+                return yara_x.Rules.deserialize_from(file=fp)
             return yara.load(file=fp)
 
     @staticmethod
     def from_file(filepath):
         with resources.ResourceAccessor().open(filepath, "rb") as fp:
+            if USE_YARA_X:
+                return yara_x.compile(fp.read().decode())
             return yara.compile(file=fp)
-
-
-class YaraXScanner(BaseYaraScanner):
-    def __call__(
-        self, data: bytes, data_offset: int
-    ) -> Iterable[Tuple[int, str, str, bytes]]:
-        results = self._rules.scan(data)
-        for match in results.matching_rules:
-            for match_string in match.patterns:
-                for instance in match_string.matches:
-                    yield (
-                        instance.offset + data_offset,
-                        f"{match.namespace}.{match.identifier}",
-                        match_string.identifier,
-                        data[instance.offset : instance.offset + instance.length],
-                    )
-
-    @staticmethod
-    def get_rule(rule):
-        return yara_x.compile(f"rule r1 {{strings: $a = {rule} condition: $a}}")
-
-    @staticmethod
-    def from_compiled_file(filepath):
-        with resources.ResourceAccessor().open(filepath, "rb") as fp:
-            return yara_x.Rules.deserialize_from(file=fp)
-
-    @staticmethod
-    def from_file(filepath):
-        with resources.ResourceAccessor().open(filepath, "rb") as fp:
-            return yara_x.compile(fp.read().decode())
-
-
-YaraScanner = YaraXScanner if USE_YARA_X else YaraPythonScanner
 
 
 class YaraScan(plugins.PluginInterface):
