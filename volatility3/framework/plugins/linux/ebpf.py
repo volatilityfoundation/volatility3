@@ -43,8 +43,7 @@ class EBPF(plugins.PluginInterface):
                 "Cannot find the eBPF prog idr. Unsupported kernel"
             )
 
-        prog_idr_addr = vmlinux.get_symbol("prog_idr").address
-        prog_idr = vmlinux.object("idr", offset=prog_idr_addr)
+        prog_idr = vmlinux.object_from_symbol("prog_idr")
         for page_addr in prog_idr.get_page_addresses():
             bpf_prog = vmlinux.object("bpf_prog", offset=page_addr, absolute=True)
             yield bpf_prog
