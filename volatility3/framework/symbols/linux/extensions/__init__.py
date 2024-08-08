@@ -2102,7 +2102,7 @@ class page(objects.StructType):
         physical_layer = vmlinux.context.layers["memory_layer"]
         page_paddr = self.to_paddr()
         if not page_paddr:
-            return
+            return None
 
         page_data = physical_layer.read(page_paddr, vmlinux_layer.page_size)
         return page_data
