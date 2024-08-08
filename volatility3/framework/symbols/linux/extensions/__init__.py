@@ -2134,7 +2134,7 @@ class IDR(objects.StructType):
         """Finds an ID within the IDR data structure.
         Based on idr_find_slowpath(), 3.9 <= Kernel < 4.11
         Args:
-            idr_id: The IDR element ID
+            idr_id: The IDR lookup ID
 
         Returns:
             A pointer to the given ID element
@@ -2144,28 +2144,28 @@ class IDR(objects.StructType):
             vollog.info(
                 "Unsupported IDR implementation, it should be a very very old kernel, probabably < 2.6"
             )
-            return
+            return None
 
         if idr_id < 0:
-            return
+            return None
 
-        cur_layer = self.top
-        if not cur_layer:
-            return
+        idr_layer = self.top
+        if not idr_layer:
+            return None
 
-        n = (cur_layer.layer + 1) * self.IDR_BITS
+        n = (idr_layer.layer + 1) * self.IDR_BITS
 
-        if idr_id > self.idr_max(cur_layer.layer + 1):
-            return
+        if idr_id > self.idr_max(idr_layer.layer + 1):
+            return None
 
         assert n != 0
 
-        while n > 0 and cur_layer:
+        while n > 0 and idr_layer:
             n -= self.IDR_BITS
-            assert n == cur_layer.layer * self.IDR_BITS
-            cur_layer = cur_layer.ary[(idr_id >> n) & self.IDR_MASK]
+            assert n == idr_layer.layer * self.IDR_BITS
+            idr_layer = idr_layer.ary[(idr_id >> n) & self.IDR_MASK]
 
-        return cur_layer.v()
+        return idr_layer
 
     def _old_kernel_get_page_addresses(self, in_use) -> int:
         # Kernels < 4.11
