@@ -2168,11 +2168,12 @@ class IDR(objects.StructType):
 
     def _old_kernel_get_entries(self) -> int:
         # Kernels < 4.11
+        cur = self.cur
         total = next_id = 0
-        while total < in_use:
-            page_addr = self.idr_find(next_id)
-            if page_addr:
-                yield page_addr
+        while next_id < cur:
+            entry = self.idr_find(next_id)
+            if entry:
+                yield entry
                 total += 1
 
             next_id += 1
