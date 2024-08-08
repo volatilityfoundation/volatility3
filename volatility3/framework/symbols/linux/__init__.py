@@ -572,7 +572,7 @@ class Tree(ABC):
                 for child_node in self._iter_node(nodep, height - 1):
                     yield child_node
 
-    def get_page_addresses(self, root: interfaces.objects.ObjectInterface) -> int:
+    def get_entries(self, root: interfaces.objects.ObjectInterface) -> int:
         """Walks the tree data structure
 
         Args:
@@ -762,7 +762,7 @@ class PageCache(object):
             Page objects
         """
 
-        for page_addr in self._tree.get_page_addresses(self._page_cache.i_pages):
+        for page_addr in self._tree.get_entries(self._page_cache.i_pages):
             if not page_addr:
                 continue
 

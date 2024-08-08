@@ -175,7 +175,7 @@ class PIDHashTable(plugins.PluginInterface):
         ns_addr = self.vmlinux.get_symbol("init_pid_ns").address
         ns = self.vmlinux.object("pid_namespace", offset=ns_addr)
 
-        for page_addr in ns.idr.get_page_addresses():
+        for page_addr in ns.idr.get_entries():
             task = self._task_for_radix_pid_node(page_addr)
             if self._is_valid_task(task):
                 yield task

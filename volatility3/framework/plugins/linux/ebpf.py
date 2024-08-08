@@ -44,7 +44,7 @@ class EBPF(plugins.PluginInterface):
             )
 
         prog_idr = vmlinux.object_from_symbol("prog_idr")
-        for page_addr in prog_idr.get_page_addresses():
+        for page_addr in prog_idr.get_entries():
             bpf_prog = vmlinux.object("bpf_prog", offset=page_addr, absolute=True)
             yield bpf_prog
 

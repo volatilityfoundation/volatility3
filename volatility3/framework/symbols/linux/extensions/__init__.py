@@ -2167,7 +2167,7 @@ class IDR(objects.StructType):
 
         return idr_layer
 
-    def _old_kernel_get_page_addresses(self, in_use) -> int:
+    def _old_kernel_get_entries(self) -> int:
         # Kernels < 4.11
         total = next_id = 0
         while total < in_use:
@@ -2178,14 +2178,14 @@ class IDR(objects.StructType):
 
             next_id += 1
 
-    def _new_kernel_get_page_addresses(self, _in_use) -> int:
+    def _new_kernel_get_entries(self) -> int:
         # Kernels >= 4.11
         vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         tree = linux.LinuxUtilities.choose_kernel_tree(vmlinux)
-        for page_addr in tree.get_page_addresses(root=self.idr_rt):
+        for page_addr in tree.get_entries(root=self.idr_rt):
             yield page_addr
 
-    def get_page_addresses(self, in_use=0) -> int:
+    def get_entries(self) -> int:
         """Walks the IDR and yield a pointer associated with each element.
 
         Args:
@@ -2195,9 +2195,11 @@ class IDR(objects.StructType):
             A pointer associated with each element.
         """
         if self.has_member("idr_rt"):
-            get_page_addresses_func = self._new_kernel_get_page_addresses
+            # Kernels >= 4.11
+            get_entries_func = self._new_kernel_get_entries
         else:
-            get_page_addresses_func = self._old_kernel_get_page_addresses
+            # Kernels < 4.11
+            get_entries_func = self._old_kernel_get_entries
 
-        for page_addr in get_page_addresses_func(in_use):
+        for page_addr in get_entries_func():
             yield page_addr
