@@ -2063,10 +2063,9 @@ class page(objects.StructType):
                     vmemmap_start = vmemmap_base_l4
                 else:
                     # 5-Level paging -> VMEMMAP_START = __VMEMMAP_BASE_L5
-                    vmemmap_base_l5 = 0xFFD4000000000000
-                    vmemmap_start = vmemmap_base_l5
-
-                    # FIXME: Remove this exception once 5-level paging is supported.
+                    # FIXME: Once 5-level paging is supported, uncomment the following lines and remove the exception
+                    # vmemmap_base_l5 = 0xFFD4000000000000
+                    # vmemmap_start = vmemmap_base_l5
                     raise exceptions.VolatilityException(
                         "5-level paging is not yet supported"
                     )
