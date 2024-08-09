@@ -66,7 +66,7 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
                     )
         except (exceptions.InvalidAddressException, AttributeError) as e:
             vollog.warning(f"Can't get inode metadata: {e}")
-        return tuple(renderers.NotAvailableValue() for _ in range(7))
+        return None
 
     @classmethod
     def list_fds(
@@ -103,6 +103,10 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
             context, symbol_table, filter_func
         ):
             inode_metadata = cls.get_inode_metadata(filp)
+            if inode_metadata is None:
+                inode_metadata = tuple(
+                    interfaces.renderers.BaseAbsentValue() for _ in range(7)
+                )
             yield pid, task_comm, task, fd_num, filp, full_path, inode_metadata
 
     def _generator(self, pids, symbol_table):
