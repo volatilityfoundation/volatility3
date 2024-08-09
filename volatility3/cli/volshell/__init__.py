@@ -21,6 +21,14 @@ from volatility3.framework import (
     plugins,
 )
 
+try:
+    import argcomplete
+
+    HAS_ARGCOMPLETE = True
+except ImportError:
+    HAS_ARGCOMPLETE = False
+
+
 # Make sure we log everything
 
 rootlog = logging.getLogger()
@@ -197,10 +205,11 @@ class VolShell(cli.CommandLine):
             vollog.addHandler(file_logger)
             vollog.info("Logging started")
 
+        self.order_extra_verbose_levels()
         if partial_args.verbosity < 3:
-            console.setLevel(30 - (partial_args.verbosity * 10))
+            console.setLevel(logging.WARNING - (partial_args.verbosity * 10))
         else:
-            console.setLevel(10 - (partial_args.verbosity - 2))
+            console.setLevel(logging.DEBUG - (partial_args.verbosity - 2))
 
         for level, msg in delayed_logs:
             vollog.log(level, msg)
@@ -275,6 +284,10 @@ class VolShell(cli.CommandLine):
         # Hand the plugin requirements over to the CLI (us) and let it construct the config tree
 
         # Run the argparser
+        if HAS_ARGCOMPLETE:
+            # The autocompletion line must be after the partial_arg handling, so that it doesn't trip it
+            # before all the plugins have been added
+            argcomplete.autocomplete(parser)
         args = parser.parse_args()
 
         vollog.log(

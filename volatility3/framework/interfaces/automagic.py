@@ -50,7 +50,7 @@ class AutomagicInterface(
         context: interfaces.context.ContextInterface,
         config_path: str,
         *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(context, config_path)
         for requirement in self.get_requirements():

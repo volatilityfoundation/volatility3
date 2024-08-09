@@ -137,6 +137,29 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         return filter_func
 
     @classmethod
+    def create_active_process_filter(
+        cls,
+    ) -> Callable[[interfaces.objects.ObjectInterface], bool]:
+        """A factory for producing a filter function that only returns
+           active, userland processes. This prevents plugins from operating on terminated
+           processes that are still in the process list due to smear or handle leaks as well
+           as kernel processes (System, Registry, etc.). Use of this filter for plugins searching
+           for system state anomalies significantly reduces false positive in smeared and terminated
+           processes.
+        Returns:
+            Filter function for passing to the `list_processes` method
+        """
+
+        return lambda x: not (
+            x.is_valid()
+            and x.ActiveThreads > 0
+            and x.UniqueProcessId != 4
+            and x.InheritedFromUniqueProcessId != 4
+            and x.ExitTime.QuadPart == 0
+            and x.get_handle_count() != renderers.UnreadableValue()
+        )
+
+    @classmethod
     def create_name_filter(
         cls, name_list: List[str] = None, exclude: bool = False
     ) -> Callable[[interfaces.objects.ObjectInterface], bool]:

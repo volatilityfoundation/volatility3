@@ -78,7 +78,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
                 )
             else:
                 raise exceptions.SymbolError(
-                    None, module.name, "Required structures not found"
+                    "SystemVaRegions", module.name, "Required structures not found"
                 )
         elif module.has_symbol("MiSystemVaType"):
             system_range_start = module.object(
@@ -99,7 +99,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
             )
         else:
             raise exceptions.SymbolError(
-                None, module.name, "Required structures not found"
+                "MiVisibleState", module.name, "Required structures not found"
             )
 
         return result

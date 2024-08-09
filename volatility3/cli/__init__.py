@@ -22,6 +22,13 @@ import traceback
 from typing import Any, Dict, List, Tuple, Type, Union
 from urllib import parse, request
 
+try:
+    import argcomplete
+
+    HAS_ARGCOMPLETE = True
+except ImportError:
+    HAS_ARGCOMPLETE = False
+
 from volatility3.cli import text_filter
 import volatility3.plugins
 import volatility3.symbols
@@ -264,12 +271,14 @@ class CommandLine:
             file_logger.setFormatter(file_formatter)
             rootlog.addHandler(file_logger)
             vollog.info("Logging started")
+
+        self.order_extra_verbose_levels()
         if partial_args.verbosity < 3:
             if partial_args.verbosity < 1:
                 sys.tracebacklimit = None
-            console.setLevel(30 - (partial_args.verbosity * 10))
+            console.setLevel(logging.WARNING - (partial_args.verbosity * 10))
         else:
-            console.setLevel(10 - (partial_args.verbosity - 2))
+            console.setLevel(logging.DEBUG - (partial_args.verbosity - 2))
 
         for level, msg in delayed_logs:
             vollog.log(level, msg)
@@ -349,6 +358,10 @@ class CommandLine:
         # Hand the plugin requirements over to the CLI (us) and let it construct the config tree
 
         # Run the argparser
+        if HAS_ARGCOMPLETE:
+            # The autocompletion line must be after the partial_arg handling, so that it doesn't trip it
+            # before all the plugins have been added
+            argcomplete.autocomplete(parser)
         args = parser.parse_args()
         if args.plugin is None:
             parser.error("Please select a plugin to run")
@@ -695,6 +708,17 @@ class CommandLine:
                     )
                     context.config[extended_path] = value
 
+    def order_extra_verbose_levels(self):
+        for level, level_value in enumerate(
+            [
+                constants.LOGLEVEL_V,
+                constants.LOGLEVEL_VV,
+                constants.LOGLEVEL_VVV,
+                constants.LOGLEVEL_VVVV,
+            ]
+        ):
+            logging.addLevelName(level_value, f"DETAIL {level+1}")
+
     def file_handler_class_factory(self, direct=True):
         output_dir = self.output_dir
 
@@ -703,19 +727,17 @@ class CommandLine:
                 """Gets the final filename"""
                 if output_dir is None:
                     raise TypeError("Output directory is not a string")
+
                 os.makedirs(output_dir, exist_ok=True)
 
-                pref_name_array = self.preferred_filename.split(".")
-                filename, extension = (
-                    os.path.join(output_dir, ".".join(pref_name_array[:-1])),
-                    pref_name_array[-1],
-                )
-                output_filename = f"{filename}.{extension}"
+                output_filename = os.path.join(output_dir, self.preferred_filename)
+                filename, extension = os.path.splitext(output_filename)
 
                 counter = 1
                 while os.path.exists(output_filename):
-                    output_filename = f"{filename}-{counter}.{extension}"
+                    output_filename = f"{filename}-{counter}{extension}"
                     counter += 1
+
                 return output_filename
 
         class CLIMemFileHandler(io.BytesIO, CLIFileHandler):
@@ -778,8 +800,16 @@ class CommandLine:
                 if self._file.closed:
                     return None
 
-                self._file.close()
                 output_filename = self._get_final_filename()
+
+                # Update the filename, which may have changed if a file with
+                # the same name already existed. This needs to be done before
+                # closing the file, otherwise FileHandlerInterface will raise
+                # an exception. Also, the preferred_filename setter only allows
+                #  a specific set of characters, where '/' is not in that list
+                self.preferred_filename = os.path.basename(output_filename)
+
+                self._file.close()
                 os.rename(self._name, output_filename)
 
         if direct:

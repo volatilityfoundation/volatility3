@@ -1,0 +1,32 @@
+[project]
+name = "volatility3"
+description = "Memory forensics framework"
+keywords = ["volatility", "memory", "forensics", "framework", "windows", "linux", "volshell"]
+readme = "README.md"
+authors = [
+    { name = "Volatility Foundation", email = "volatility@volatilityfoundation.org" },
+]
+requires-python = ">=3.7.3"
+license = { text = "VSL" }
+dynamic = ["dependencies", "optional-dependencies", "version"]
+
+[project.urls]
+Homepage = "https://github.com/volatilityfoundation/volatility3/"
+"Bug Tracker" = "https://github.com/volatilityfoundation/volatility3/issues"
+Documentation = "https://volatility3.readthedocs.io/"
+"Source Code" = "https://github.com/volatilityfoundation/volatility3"
+
+[project.scripts]
+vol = "volatility3.cli:main"
+volshell = "volatility3.cli.volshell:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "volatility3.framework.constants._version.PACKAGE_VERSION" }
+dependencies = { file = "requirements-minimal.txt" }
+
+[tool.setuptools.packages.find]
+include = ["volatility3*"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
