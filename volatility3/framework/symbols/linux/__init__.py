@@ -419,9 +419,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         Returns:
             A kernel object (vmlinux)
         """
-        symbol_table_arr = volobj.vol.type_name.split("!", 1)
-        symbol_table = symbol_table_arr[0] if len(symbol_table_arr) == 2 else None
-
+        symbol_table = volobj.get_symbol_table_name()
         module_names = context.modules.get_modules_by_symbol_tables(symbol_table)
         module_names = list(module_names)
 
