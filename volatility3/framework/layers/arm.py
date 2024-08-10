@@ -6,12 +6,15 @@ import logging
 import functools
 import collections
 import json
+import inspect
 from typing import Optional, Dict, Any, List, Iterable, Tuple
+from enum import Enum
 
 from volatility3 import classproperty
 from volatility3.framework import interfaces, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import linear
+from volatility3.framework.interfaces.configuration import path_join
 
 vollog = logging.getLogger(__name__)
 
@@ -64,10 +67,6 @@ class AArch64(linear.LinearlyMappedLayer):
         64: [(51, 42), (41, 29), (28, 16)],
     }
 
-    # (high_bit, low_bit)
-    # [1], see D19.2, page 6339
-    _cpu_regs_mappings = {"aa64mmfr1_el1": {"HAFDBS": (3, 0)}}
-
     def __init__(
         self,
         context: interfaces.context.ContextInterface,
@@ -96,12 +95,15 @@ class AArch64(linear.LinearlyMappedLayer):
         try:
             self._cpu_regs: dict = json.loads(self._cpu_regs)
         except json.JSONDecodeError:
-            vollog.error(
-                'Could not JSON deserialize "cpu_registers" layer requirement.'
+            raise json.JSONDecodeError(
+                'Could not JSON deserialize provided "cpu_registers" layer requirement.'
             )
+        self._cpu_regs_mapped = self._map_reg_values(self._cpu_regs)
 
         # Determine CPU features
-        self._cpu_features = {"feat_HAFDBS": self._get_cpu_feature_HAFDBS()}
+        self._cpu_features = {
+            AArch64Features.FEAT_HAFDBS.name: self._get_feature_HAFDBS()
+        }
 
         # Context : TTB0 (user) or TTB1 (kernel)
         self._virtual_addr_space = int(
@@ -116,9 +118,7 @@ class AArch64(linear.LinearlyMappedLayer):
         smallest block of memory that can be described.
         Possibles values are 4, 16 or 64 (kB).
         """
-        self._is_52bits = (
-            True if self._ttbs_tnsz[self._virtual_addr_space] < 16 else False
-        )
+        self._is_52bits = True if self._ttb_bitsize < 16 else False
         self._ttb_lookup_indexes = self._determine_ttb_lookup_indexes(
             self._ttb_granule, self._ttb_bitsize
         )
@@ -153,9 +153,7 @@ class AArch64(linear.LinearlyMappedLayer):
             f"Virtual addresses space range : {tuple([hex(x) for x in self._get_virtual_addr_range()])}"
         )
         vollog.debug(f"Page size : {self._ttb_granule}")
-        vollog.debug(
-            f"T{self._virtual_addr_space}SZ : {self._ttbs_tnsz[self._virtual_addr_space]}"
-        )
+        vollog.debug(f"T{self._virtual_addr_space}SZ : {self._ttb_bitsize}")
         vollog.debug(f"Page map offset : {hex(self._page_map_offset)}")
         vollog.debug(f"Translation mappings : {self._ttb_lookup_indexes}")
 
@@ -472,7 +470,7 @@ class AArch64(linear.LinearlyMappedLayer):
             0      | Read/write
             1      | Read-only
         """
-        if self._cpu_features.get("feat_HAFDBS", None):
+        if self._cpu_features.get(AArch64Features.FEAT_HAFDBS.name):
             # Dirty Bit Modifier and Access Permissions bits
             # DBM == 1 and AP == 0 -> HW dirty state
             return bool((entry & (1 << 51)) and not (entry & (1 << 7)))
@@ -499,9 +497,9 @@ class AArch64(linear.LinearlyMappedLayer):
 
     @property
     @functools.lru_cache()
-    def page_mask(cls) -> int:
+    def page_mask(self) -> int:
         """Page mask for this layer."""
-        return ~(cls.page_size - 1)
+        return ~(self.page_size - 1)
 
     @classproperty
     @functools.lru_cache()
@@ -520,40 +518,48 @@ class AArch64(linear.LinearlyMappedLayer):
     def maximum_address(cls) -> int:
         return (1 << cls._maxvirtaddr) - 1
 
-    def _read_cpu_register_field(self, register: str, field: str) -> int:
-        # Prefer speeding up read operations, as keys are most likely to be valid
-        # Handle errors in a dedicated except block, if needed
+    def _read_register_field(self, register_field: Enum) -> int:
+        reg_field_path = str(register_field)
         try:
-            cpu_reg_mapping = self._cpu_regs_mappings[register][field]
-            return self._mask(
-                self._cpu_regs[register], cpu_reg_mapping[0], cpu_reg_mapping[1]
-            )
+            return self._cpu_regs_mapped[reg_field_path]
         except KeyError:
-            if not self._cpu_regs.get(register):
-                raise KeyError(
-                    f"Access to CPU register {register} was requested, but the register value wasn't provided to this layer initially."
-                )
+            raise KeyError(
+                f"{reg_field_path} register field wasn't provided to this layer initially."
+            )
 
-            if not self._cpu_regs_mappings.get(register) or not self._cpu_regs_mappings[
-                register
-            ].get(field):
-                raise KeyError(
-                    f"Access of field {field} from CPU register {register} was requested, but no pre-defined mapping was found."
-                )
-
-        return None
-
-    # CPU features
-    def _get_cpu_feature_HAFDBS(self):
+    def _get_feature_HAFDBS(self) -> bool:
         """
         Hardware updates to Access flag and Dirty state in translation tables.
          [1], see D19.2.65, page 6784
         """
         try:
-            reg_HAFDBS = self._read_cpu_register_field("aa64mmfr1_el1", "HAFDBS")
-            return reg_HAFDBS >= 0b10
+            field_HAFDBS = self._read_register_field(
+                AArch64RegMap.ID_AA64MMFR1_EL1.HAFDBS
+            )
+            return field_HAFDBS >= 0b10
         except KeyError:
             return None
+
+    @classmethod
+    def _map_reg_values(cls, registers_values: dict) -> dict:
+        """Generates a dict of dot joined AArch64 CPU registers and fields.
+        Iterates over every mapped register in AArch64RegMap,
+        check if a register value was provided to this layer,
+        mask every field accordingly and store the result.
+
+        Example return value : {'ID_AA64MMFR1_EL1.HAFDBS': 2}
+        """
+
+        masked_trees = {}
+        for mm_cls_name, mm_cls in inspect.getmembers(AArch64RegMap, inspect.isclass):
+            if issubclass(mm_cls, Enum) and mm_cls_name in registers_values.keys():
+                reg_value = registers_values[mm_cls_name]
+                for field in mm_cls:
+                    dot_joined = path_join(mm_cls_name, field.name)
+                    high_bit, low_bit = field.value
+                    masked_value = cls._mask(reg_value, high_bit, low_bit)
+                    masked_trees[dot_joined] = masked_value
+        return masked_trees
 
     def canonicalize(self, addr: int) -> int:
         """Canonicalizes an address by performing an appropiate sign extension on the higher addresses"""
@@ -682,3 +688,37 @@ class LinuxAArch64Mixin(AArch64):
 
 class LinuxAArch64(LinuxAArch64Mixin, AArch64):
     pass
+
+
+"""Avoid cluttering the layer code with static mappings."""
+
+
+class AArch64RegMap:
+    """
+    List of static Enum's, binding fields (high bit, low bit) of AArch64 CPU registers.
+    Prevents the use of hardcoded string values by unifying everything here.
+    Contains only essential mappings, needed by the framework.
+    """
+
+    class TCR_EL1(Enum):
+        """TCR_EL1, Translation Control Register (EL1).
+        The control register for stage 1 of the EL1&0 translation regime.
+         [1], see D19.2.139, page 7071
+        """
+
+        TG1 = (31, 30)
+        T1SZ = (21, 16)
+        TG0 = (15, 14)
+        T0SZ = (5, 0)
+
+    class ID_AA64MMFR1_EL1(Enum):
+        """ID_AA64MMFR1_EL1, AArch64 Memory Model Feature Register 1.
+        [1], see D19.2.65, page 6781"""
+
+        HAFDBS = (3, 0)
+
+
+class AArch64Features(Enum):
+    """AArch64 CPU features."""
+
+    FEAT_HAFDBS = 1
