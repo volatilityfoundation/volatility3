@@ -18,9 +18,9 @@ class Threads(thrdscan.ThrdScan):
     _required_framework_version = (2, 4, 0)
     _version = (1, 0, 0)
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.implementation = self.list_process_threads
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
