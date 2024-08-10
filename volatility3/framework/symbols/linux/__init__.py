@@ -431,17 +431,51 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
 
         return kernel
 
+
+class IDStorage(ABC):
+    """Abstraction to support both XArray and RadixTree"""
+
+    # Dynamic values, these will be initialized later
+    CHUNK_SHIFT = None
+    CHUNK_SIZE = None
+    CHUNK_MASK = None
+
+    def __init__(
+        self,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+    ):
+        self.vmlinux = context.modules[kernel_module_name]
+        self.vmlinux_layer = self.vmlinux.context.layers[self.vmlinux.layer_name]
+
+        self.pointer_size = self.vmlinux.get_type("pointer").size
+        # Dynamically work out the (XA_CHUNK|RADIX_TREE_MAP)_SHIFT values based on
+        # the node.slots[] array size
+        node_type = self.vmlinux.get_type(self.node_type_name)
+        slots_array_size = node_type.child_template("slots").count
+
+        # Calculate the LSB index - 1
+        self.CHUNK_SHIFT = slots_array_size.bit_length() - 1
+        self.CHUNK_SIZE = 1 << self.CHUNK_SHIFT
+        self.CHUNK_MASK = self.CHUNK_SIZE - 1
+
     @classmethod
-    def choose_kernel_tree(cls, vmlinux: interfaces.context.ModuleInterface) -> "Tree":
-        """Returns the appropriate tree data structure instance for the current kernel implementation.
+    def choose_id_storage(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+    ) -> "IDStorage":
+        """Returns the appropriate ID storage data structure instance for the current kernel implementation.
         This is used by the IDR and the PageCache to choose between the XArray and RadixTree.
 
         Args:
-            vmlinux: The kernel module object
+            context: The context to retrieve required elements (layers, symbol tables) from
+            kernel_module_name: The name of the kernel module on which to operate
 
         Returns:
-            The appropriate Tree instance for the current kernel
+            The appropriate ID storage instance for the current kernel
         """
+        vmlinux = context.modules[kernel_module_name]
         address_space_type = vmlinux.get_type("address_space")
         address_space_has_i_pages = address_space_type.has_member("i_pages")
         i_pages_type_name = (
@@ -455,33 +489,9 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         ) and vmlinux.get_type("radix_tree_root").has_member("xa_head")
 
         if i_pages_is_xarray or i_pages_is_radix_tree_root:
-            return XArray(vmlinux)
+            return XArray(context, kernel_module_name)
         else:
-            return RadixTree(vmlinux)
-
-
-class Tree(ABC):
-    """Abstraction to support both XArray and RadixTree"""
-
-    # Dynamic values, these will be initialized later
-    CHUNK_SHIFT = None
-    CHUNK_SIZE = None
-    CHUNK_MASK = None
-
-    def __init__(self, vmlinux: interfaces.context.ModuleInterface):
-        self.vmlinux = vmlinux
-        self.vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
-
-        self.pointer_size = self.vmlinux.get_type("pointer").size
-        # Dynamically work out the (XA_CHUNK|RADIX_TREE_MAP)_SHIFT values based on
-        # the node.slots[] array size
-        node_type = self.vmlinux.get_type(self.node_type_name)
-        slots_array_size = node_type.child_template("slots").count
-
-        # Calculate the LSB index - 1
-        self.CHUNK_SHIFT = slots_array_size.bit_length() - 1
-        self.CHUNK_SIZE = 1 << self.CHUNK_SHIFT
-        self.CHUNK_MASK = self.CHUNK_SIZE - 1
+            return RadixTree(context, kernel_module_name)
 
     @property
     @abstractmethod
@@ -601,7 +611,7 @@ class Tree(ABC):
                 yield child_node
 
 
-class XArray(Tree):
+class XArray(IDStorage):
     XARRAY_TAG_MASK = 3
     XARRAY_TAG_INTERNAL = 2
 
@@ -637,7 +647,7 @@ class XArray(Tree):
         return not self.is_node_tagged(nodep)
 
 
-class RadixTree(Tree):
+class RadixTree(IDStorage):
     RADIX_TREE_INTERNAL_NODE = 1
     RADIX_TREE_EXCEPTIONAL_ENTRY = 2
     RADIX_TREE_ENTRY_MASK = 3
@@ -741,17 +751,20 @@ class PageCache(object):
 
     def __init__(
         self,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
         page_cache: interfaces.objects.ObjectInterface,
-        vmlinux: interfaces.context.ModuleInterface,
     ):
         """
         Args:
+            context: interfaces.context.ContextInterface,
+            kernel_module_name: The name of the kernel module on which to operate
             page_cache: Page cache address space
-            vmlinux: Kernel module object
         """
-        self.vmlinux = vmlinux
+        self.vmlinux = context.modules[kernel_module_name]
+
         self._page_cache = page_cache
-        self._tree = LinuxUtilities.choose_kernel_tree(self.vmlinux)
+        self._idstorage = IDStorage.choose_id_storage(context, kernel_module_name)
 
     def get_cached_pages(self) -> interfaces.objects.ObjectInterface:
         """Returns all page cache contents
@@ -760,7 +773,7 @@ class PageCache(object):
             Page objects
         """
 
-        for page_addr in self._tree.get_entries(self._page_cache.i_pages):
+        for page_addr in self._idstorage.get_entries(self._page_cache.i_pages):
             if not page_addr:
                 continue
 

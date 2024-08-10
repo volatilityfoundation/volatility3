@@ -1972,8 +1972,11 @@ class inode(objects.StructType):
         elif not (self.i_mapping and self.i_mapping.nrpages > 0):
             return
 
-        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
-        page_cache = linux.PageCache(self.i_mapping.dereference(), vmlinux)
+        page_cache = linux.PageCache(
+            context=self._context,
+            kernel_module_name="kernel",
+            page_cache=self.i_mapping.dereference(),
+        )
         yield from page_cache.get_cached_pages()
 
     def get_contents(self):
@@ -2180,9 +2183,10 @@ class IDR(objects.StructType):
 
     def _new_kernel_get_entries(self) -> int:
         # Kernels >= 4.11
-        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
-        tree = linux.LinuxUtilities.choose_kernel_tree(vmlinux)
-        for page_addr in tree.get_entries(root=self.idr_rt):
+        id_storage = linux.IDStorage.choose_id_storage(
+            self._context, kernel_module_name="kernel"
+        )
+        for page_addr in id_storage.get_entries(root=self.idr_rt):
             yield page_addr
 
     def get_entries(self) -> int:
