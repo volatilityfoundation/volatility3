@@ -94,9 +94,11 @@ class AArch64(linear.LinearlyMappedLayer):
         self._cpu_regs = self.config.get("cpu_registers", "{}")
         try:
             self._cpu_regs: dict = json.loads(self._cpu_regs)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             raise json.JSONDecodeError(
-                'Could not JSON deserialize provided "cpu_registers" layer requirement.'
+                'Could not JSON deserialize provided "cpu_registers" layer requirement.',
+                e.doc,
+                e.pos,
             )
         self._cpu_regs_mapped = self._map_reg_values(self._cpu_regs)
 
@@ -450,7 +452,7 @@ class AArch64(linear.LinearlyMappedLayer):
 
     def _page_is_dirty(self, entry: int) -> bool:
         """
-        Hardware management of the dirty state (only > Armv8.1-A).
+        Hardware management of the dirty state (only >= Armv8.1-A).
 
         General documentation :
          https://developer.arm.com/documentation/102376/0200/Access-Flag/Dirty-state
