@@ -293,8 +293,10 @@ class LinuxIntelSubStacker:
 
 class LinuxAArch64SubStacker:
     # https://developer.arm.com/documentation/ddi0601/latest/AArch64-Registers/
-    # Lowercase CPU register, bound to its attribute name in the "cpuinfo_arm64" kernel struct
-    _required_cpu_registers = {"aa64mmfr1_el1": "reg_id_aa64mmfr1"}
+    # CPU register, bound to its attribute name in the "cpuinfo_arm64" kernel struct
+    _optional_cpu_registers = {
+        arm.AArch64RegMap.ID_AA64MMFR1_EL1.__name__: "reg_id_aa64mmfr1"
+    }
 
     def __init__(self, parent_stacker: LinuxStacker) -> None:
         self.parent_stacker = parent_stacker
@@ -439,7 +441,7 @@ class LinuxAArch64SubStacker:
         tmp_kernel_module = context.module(table_name, layer_name, kaslr_shift)
         boot_cpu_data_struct = tmp_kernel_module.object_from_symbol("boot_cpu_data")
         cpu_registers = {}
-        for cpu_reg, cpu_reg_attribute_name in cls._required_cpu_registers.items():
+        for cpu_reg, cpu_reg_attribute_name in cls._optional_cpu_registers.items():
             try:
                 cpu_reg_value = getattr(boot_cpu_data_struct, cpu_reg_attribute_name)
                 cpu_registers[cpu_reg] = cpu_reg_value
