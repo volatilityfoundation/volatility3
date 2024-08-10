@@ -159,7 +159,7 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
         root_dentry: interfaces.objects.ObjectInterface,
         parent_dir: str,
     ):
-        """Walk dentries recursively
+        """Walks dentries recursively
 
         Args:
             seen_dentries: A set to ensure each dentry is processed only once
