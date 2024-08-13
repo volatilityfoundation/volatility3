@@ -34,7 +34,7 @@ class PIDHashTable(plugins.PluginInterface):
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="linuxutils", component=linux.LinuxUtilities, version=(2, 2, 0)
+                name="linuxutils", component=linux.LinuxUtilities, version=(2, 1, 0)
             ),
             requirements.BooleanRequirement(
                 name="decorate_comm",
