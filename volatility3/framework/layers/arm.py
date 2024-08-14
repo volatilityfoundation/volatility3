@@ -141,6 +141,9 @@ class AArch64(linear.LinearlyMappedLayer):
             elif self._ttb_granule == 64:
                 self._ta_51_x_bits = (15, 12)
 
+        self._page_size = self._ttb_granule * 1024
+        self._page_size_in_bits = self._page_size.bit_length() - 1
+
         if self._layer_debug:
             self._print_layer_debug_informations()
 
@@ -467,7 +470,7 @@ class AArch64(linear.LinearlyMappedLayer):
         """Page shift for this layer, which is the page size bit length.
         - Typical values : 12, 14, 16
         """
-        return self.page_size.bit_length() - 1
+        return self._page_size_in_bits
 
     @property
     @functools.lru_cache()
@@ -475,7 +478,7 @@ class AArch64(linear.LinearlyMappedLayer):
         """Page size of this layer, in bytes.
         - Typical values : 4096, 16384, 65536
         """
-        return self._ttb_granule * 1024
+        return self._page_size
 
     @property
     @functools.lru_cache()
@@ -490,15 +493,15 @@ class AArch64(linear.LinearlyMappedLayer):
         AArch64TranslationLayer."""
         return cls._bits_per_register
 
-    @classproperty
+    @property
     @functools.lru_cache()
-    def minimum_address(cls) -> int:
-        return 0
+    def minimum_address(self) -> int:
+        return self._virtual_addr_range[0]
 
-    @classproperty
+    @property
     @functools.lru_cache()
-    def maximum_address(cls) -> int:
-        return (1 << cls._maxvirtaddr) - 1
+    def maximum_address(self) -> int:
+        return self._virtual_addr_range[1]
 
     def _read_register_field(self, register_field: Enum) -> int:
         reg_field_path = str(register_field)
