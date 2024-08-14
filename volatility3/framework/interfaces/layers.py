@@ -15,10 +15,13 @@ import multiprocessing.managers
 import threading
 import traceback
 import types
+import lzma
+import json
 from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 from volatility3.framework import constants, exceptions, interfaces
+from volatility3.framework.interfaces.configuration import path_join
 
 vollog = logging.getLogger(__name__)
 
@@ -468,6 +471,51 @@ class TranslationLayerInterface(DataLayerInterface, metaclass=ABCMeta):
 
     # ## Read/Write functions for mapped pages
 
+    def _access_virtmap_cache(self, section: Tuple[int, int]) -> Optional[list]:
+        """Checks and loads the virtmap cache.
+
+        The virtmap cache corresponds to a previous _scan_iterator
+        output, typically loaded from a file.
+        Args:
+            sections: sections (start, size) to retrieve from the cache
+        Returns:
+            A list containing mappings for a specific section of this layer"""
+
+        # Check if layer is fully constructed first
+        if self.config.get("class") and self.context.config.get(
+            path_join("virtmap_cache", "filepath")
+        ):
+            filepath = self.context.config[path_join("virtmap_cache", "filepath")]
+            layers_classes = self.context.config[
+                path_join("virtmap_cache", "layers_classes")
+            ]
+
+            # Exact match only, even if a requested section would *fit*
+            # inside one available in the cache.
+            if (
+                self.config["class"] in layers_classes
+                and str(section)
+                in self.context.config[
+                    path_join(
+                        "virtmap_cache", "sections_per_layer", self.config["class"]
+                    )
+                ]
+            ):
+                # Avoid decompressing and deserializing the file
+                # more than once. Saves time, but costs more RAM.
+                if not hasattr(self, "_virtmap_cache_dict"):
+                    with open(filepath, "rb") as f:
+                        raw_json = lzma.decompress(f.read())
+                        # Can be sped up via the orjson library
+                        self._virtmap_cache_dict = json.loads(raw_json)
+
+                vollog.log(
+                    constants.LOGLEVEL_VVV,
+                    f"Applying virtmap cache to section {section} of layer {self.config['class']}",
+                )
+                return self._virtmap_cache_dict[self.config["class"]][str(section)]
+        return None
+
     @functools.lru_cache(maxsize=512)
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of
@@ -551,6 +599,12 @@ class TranslationLayerInterface(DataLayerInterface, metaclass=ABCMeta):
         assumed to have no holes
         """
         for section_start, section_length in sections:
+            # Check the virtmap cache and use it if available
+            cache = self._access_virtmap_cache((section_start, section_length))
+            if cache:
+                for map in cache:
+                    yield map
+                continue
             output: List[Tuple[str, int, int]] = []
 
             # Hold the offsets of each chunk (including how much has been filled)
