@@ -366,7 +366,22 @@ class AArch64(linear.LinearlyMappedLayer):
                 -> 4096 - 0x0 = 4096
                 -> 0xffff800000f93000 + 4096 = 0xffff800000f94000
             etc. while "length" > 0
-            """
+        """
+
+        if length == 0:
+            try:
+                mapped_offset, _, layer_name = self._translate(offset)
+                if not self._context.layers[layer_name].is_valid(mapped_offset):
+                    raise exceptions.InvalidAddressException(
+                        layer_name=layer_name, invalid_address=mapped_offset
+                    )
+            except exceptions.InvalidAddressException:
+                if not ignore_errors:
+                    raise
+                return None
+            yield offset, length, mapped_offset, length, layer_name
+            return None
+        while length > 0:
             try:
                 chunk_offset, page_size, layer_name = self._translate(offset)
                 chunk_size = min(page_size - (chunk_offset % page_size), length)
