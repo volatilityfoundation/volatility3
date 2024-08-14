@@ -127,9 +127,7 @@ class AArch64(linear.LinearlyMappedLayer):
         self._ttb_descriptor_bits = self._determine_ttb_descriptor_bits(
             self._ttb_granule, self._ttb_lookup_indexes, self._is_52bits
         )
-        self._virtual_addr_range = self._get_virtual_addr_range()[
-            self._virtual_addr_space
-        ]
+        self._virtual_addr_range = self._get_virtual_addr_range()
         self._canonical_prefix = self._mask(
             (1 << self._bits_per_register) - 1,
             self._bits_per_register,
@@ -346,26 +344,8 @@ class AArch64(linear.LinearlyMappedLayer):
         self, offset: int, length: int, ignore_errors: bool = False
     ) -> Iterable[Tuple[int, int, int, int, str]]:
         """Returns a sorted iterable of (offset, sublength, mapped_offset, mapped_length, layer)
-        mappings.
+        mappings.This allows translation layers to provide maps of contiguous regions in one layer.
 
-        This allows translation layers to provide maps of contiguous
-        regions in one layer
-        """
-        if length == 0:
-            try:
-                mapped_offset, _, layer_name = self._translate(offset)
-                if not self._context.layers[layer_name].is_valid(mapped_offset):
-                    raise exceptions.InvalidAddressException(
-                        layer_name=layer_name, invalid_address=mapped_offset
-                    )
-            except exceptions.InvalidAddressException:
-                if not ignore_errors:
-                    raise
-                return None
-            yield offset, length, mapped_offset, length, layer_name
-            return None
-        while length > 0:
-            """
             A bit of lexical definition : "page" means "virtual page" (i.e. a chunk of virtual address space) and "page frame" means "physical page" (i.e. a chunk of physical memory).
 
             What this is actually doing :
@@ -402,11 +382,11 @@ class AArch64(linear.LinearlyMappedLayer):
                 """
                 if not ignore_errors:
                     raise
-                # We can jump more if we know where the page fault failed
+                # We can jump more if we know where the page fault occured
                 if isinstance(excp, exceptions.PagedInvalidAddressException):
                     mask = (1 << excp.invalid_bits) - 1
                 else:
-                    mask = (1 << (self._ttb_granule.bit_length() - 1)) - 1
+                    mask = (1 << self.page_shift) - 1
                 length_diff = mask + 1 - (offset & mask)
                 length -= length_diff
                 offset += length_diff
