@@ -1299,14 +1299,42 @@ class mnt_namespace(objects.StructType):
         else:
             raise AttributeError("Unable to find mnt_namespace inode")
 
-    def get_mount_points(self):
+    def get_mount_points(
+        self,
+    ) -> Iterator[interfaces.objects.ObjectInterface]:
+        """Yields the mount points for this mount namespace.
+
+        Yields:
+            mount struct instances
+        """
         table_name = self.vol.type_name.split(constants.BANG)[0]
-        mnt_type = table_name + constants.BANG + "mount"
-        if not self._context.symbol_space.has_type(mnt_type):
-            # Old kernels ~ 2.6
-            mnt_type = table_name + constants.BANG + "vfsmount"
-        for mount in self.list.to_list(mnt_type, "mnt_list"):
-            yield mount
+
+        if self.has_member("list"):
+            # kernels < 6.8
+            mnt_type = table_name + constants.BANG + "mount"
+            if not self._context.symbol_space.has_type(mnt_type):
+                # In kernels < 3.3, the 'mount' struct didn't exist, and the 'mnt_list'
+                # member was part of the 'vfsmount' struct.
+                mnt_type = table_name + constants.BANG + "vfsmount"
+
+            yield from self.list.to_list(mnt_type, "mnt_list")
+        elif (
+            self.has_member("mounts")
+            and self.mounts.vol.type_name == table_name + constants.BANG + "rb_root"
+        ):
+            # kernels >= 6.8
+            vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(
+                self._context, self
+            )
+            for node in linux.RBTree(self.mounts).get_nodes():
+                mnt = linux.LinuxUtilities.container_of(
+                    node, "mount", "mnt_list", vmlinux
+                )
+                yield mnt
+        else:
+            raise exceptions.VolatilityException(
+                "Unsupported kernel mount namespace implementation"
+            )
 
 
 class net(objects.StructType):

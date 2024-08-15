@@ -425,3 +425,36 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         kernel = context.modules[kernel_module_name]
 
         return kernel
+
+
+class RBTree(object):
+    """Simple Red-Black tree abstraction"""
+
+    def __init__(self, root):
+        self.root = root
+
+    def _walk_nodes(self, root_node) -> Iterator[int]:
+        """Traverses the Red-Black tree from the root node and yields a pointer to each
+        node in this tree.
+
+        Args:
+            root_node: A Red-Black tree node from which to start descending
+
+        Yields:
+            A pointer to every node descending from the specified root node
+        """
+        if not root_node:
+            return
+
+        yield root_node
+        yield from self._walk_nodes(root_node.rb_left)
+        yield from self._walk_nodes(root_node.rb_right)
+
+    def get_nodes(self) -> Iterator[int]:
+        """Yields a pointer to each node in the Red-Black tree
+
+        Yields:
+            A pointer to every node in the Red-Black tree
+        """
+
+        yield from self._walk_nodes(root_node=self.root.rb_node)
