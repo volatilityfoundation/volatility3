@@ -320,8 +320,8 @@ class LinuxAArch64SubStacker:
             progress_callback=progress_callback,
         )
         dtb = table.get_symbol("swapper_pg_dir").address + kaslr_shift
+        ttbr1_el1 = arm.set_reg_bits(dtb, arm.AArch64RegMap.TTBR1_EL1.BADDR)
         context.config[path_join(config_path, "page_map_offset")] = dtb
-        context.config[path_join(config_path, "page_map_offset_kernel")] = dtb
         kernel_endianness = table.get_type("pointer").vol.data_format.byteorder
         context.config[path_join(config_path, "kernel_endianness")] = kernel_endianness
 
@@ -378,20 +378,37 @@ class LinuxAArch64SubStacker:
         """
         va_bits_candidates = [va_bits] + [va_bits + i for i in range(-1, -4, -1)]
         for va_bits in va_bits_candidates:
-            tcr_el1_t1sz = 64 - va_bits
-            # T1SZ is considered to be equal to T0SZ
-            context.config[path_join(config_path, "tcr_el1_t1sz")] = tcr_el1_t1sz
-            context.config[path_join(config_path, "tcr_el1_t0sz")] = tcr_el1_t1sz
+            cpu_registers = {}
+            tcr_el1 = 0
+            # T1SZ is considered to equal to T0SZ
+            tcr_el1 = arm.set_reg_bits(
+                64 - va_bits, arm.AArch64RegMap.TCR_EL1.T1SZ, tcr_el1
+            )
+            tcr_el1 = arm.set_reg_bits(
+                64 - va_bits, arm.AArch64RegMap.TCR_EL1.T0SZ, tcr_el1
+            )
 
             # If "_kernel_flags_le*" aren't in the symbols, we can still do a quick bruteforce on [4,16,64] page sizes
             # False positives cannot happen, as translation indexes will be off on a wrong page size
             for page_size_kernel_space in page_size_kernel_space_candidates:
                 # Kernel space page size is considered equal to the user space page size
-                context.config[path_join(config_path, "page_size_kernel_space")] = (
-                    page_size_kernel_space
+                tcr_el1_tg1 = arm.AArch64RegFieldValues._get_ttbr1_el1_granule_size(
+                    page_size_kernel_space, True
                 )
-                context.config[path_join(config_path, "page_size_user_space")] = (
-                    page_size_kernel_space
+                tcr_el1_tg0 = arm.AArch64RegFieldValues._get_ttbr0_el1_granule_size(
+                    page_size_kernel_space, True
+                )
+                tcr_el1 = arm.set_reg_bits(
+                    tcr_el1_tg1, arm.AArch64RegMap.TCR_EL1.TG1, tcr_el1
+                )
+                tcr_el1 = arm.set_reg_bits(
+                    tcr_el1_tg0, arm.AArch64RegMap.TCR_EL1.TG0, tcr_el1
+                )
+
+                cpu_registers[arm.AArch64RegMap.TCR_EL1.__name__] = tcr_el1
+                cpu_registers[arm.AArch64RegMap.TTBR1_EL1.__name__] = ttbr1_el1
+                context.config[path_join(config_path, "cpu_registers")] = json.dumps(
+                    cpu_registers
                 )
                 # Build layer
                 layer = layer_class(
@@ -412,12 +429,13 @@ class LinuxAArch64SubStacker:
 
                 if layer and dtb and test_banner_equality:
                     try:
-                        cpu_registers = self.construct_cpu_registers_dict(
+                        optional_cpu_registers = self.extract_cpu_registers(
                             context=context,
                             layer_name=layer_name,
                             table_name=table_name,
                             kaslr_shift=kaslr_shift,
                         )
+                        cpu_registers.update(optional_cpu_registers)
                         layer.config["cpu_registers"] = json.dumps(cpu_registers)
                     except exceptions.SymbolError as e:
                         vollog.log(constants.LOGLEVEL_VVV, e, exc_info=True)
@@ -430,7 +448,7 @@ class LinuxAArch64SubStacker:
         return None
 
     @classmethod
-    def construct_cpu_registers_dict(
+    def extract_cpu_registers(
         cls,
         context: interfaces.context.ContextInterface,
         layer_name: str,
