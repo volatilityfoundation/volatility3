@@ -718,9 +718,94 @@ class AArch64RegMap:
         [1], see D19.2.65, page 6781"""
 
         HAFDBS = (3, 0)
+        "Hardware updates to Access flag and Dirty state in translation tables."
 
 
-class AArch64Features(Enum):
-    """AArch64 CPU features."""
+class AArch64RegFieldValues:
+    @classmethod
+    def _table_lookup(
+        cls, value: int, lookup_table: dict, reverse_lookup: bool = False
+    ):
+        if reverse_lookup:
+            lookup_table = {v: k for k, v in lookup_table.items()}
+        if lookup_table.get(value, None) != None:
+            return lookup_table[value]
+        else:
+            raise KeyError(
+                f"Value {value} could not be mapped inside lookup_table : {lookup_table}"
+            )
 
-    FEAT_HAFDBS = 1
+    @classmethod
+    def _get_feature_HAFDBS(cls, value: int) -> bool:
+        """
+        Hardware updates to Access flag and Dirty state in translation tables.
+         [1], see D19.2.65, page 6784
+        """
+        return value >= 0b10
+
+    @classmethod
+    def _get_ttbr0_el1_granule_size(cls, value: int, reverse_lookup: bool = False):
+        """
+        Granule size for the TTBR0_EL1.
+        """
+        lookup_table = {
+            0b00: 4,  # 4kB
+            0b01: 64,  # 64kB
+            0b10: 16,  # 16kB
+        }
+        return cls._table_lookup(value, lookup_table, reverse_lookup)
+
+    @classmethod
+    def _get_ttbr1_el1_granule_size(
+        cls, value: int, reverse_lookup: bool = False
+    ) -> Optional[int]:
+        """
+        Granule size for the TTBR1_EL1.
+        """
+        lookup_table = {
+            0b01: 16,  # 16kB
+            0b10: 4,  # 4kB
+            0b11: 64,  # 64kB
+        }
+        return cls._table_lookup(value, lookup_table, reverse_lookup)
+
+
+def set_reg_bits(value: int, reg_field: Enum, reg_value: int = 0) -> int:
+    """Sets the bits from high_bit to low_bit (inclusive) in current_value to the given value.
+
+    Args:
+        value: The value to set in the specified bit range.
+        reg_field: The register field to update, inside the register.
+        reg_value: The register value to modify (default is 0).
+
+    Returns:
+        The modified integer with the specified bits set.
+
+    Raises:
+        ValueError: If the value is too large to fit in the specified bit range.
+    """
+    high_bit = reg_field.value[1]
+    low_bit = reg_field.value[0]
+
+    # Calculate the number of bits to set
+    num_bits = low_bit - high_bit + 1
+
+    # Calculate the maximum value that can fit in the specified number of bits
+    max_value = (1 << num_bits) - 1
+
+    # Check if the value can fit in the specified bit range
+    if value > max_value:
+        raise ValueError(
+            f"Value {value} is too large to fit in {num_bits} bits (max value is {max_value})."
+        )
+
+    # Create a mask for the bit range
+    mask = (1 << num_bits) - 1
+
+    # Clear the bits in the range in the current value
+    reg_value &= ~(mask << high_bit)
+
+    # Set the bits with the new value
+    reg_value |= (value & mask) << high_bit
+
+    return reg_value
