@@ -685,9 +685,33 @@ class AArch64RegMap:
         """
 
         TG1 = (31, 30)
+        "Granule size for the TTBR1_EL1."
         T1SZ = (21, 16)
+        "The size offset of the memory region addressed by TTBR1_EL1. The region size is 2**(64-T1SZ) bytes."
         TG0 = (15, 14)
+        "Granule size for the TTBR0_EL1."
         T0SZ = (5, 0)
+        "The size offset of the memory region addressed by TTBR0_EL1. The region size is 2**(64-T0SZ) bytes."
+
+    class TTBR0_EL1(Enum):
+        """TTBR0_EL1, Translation Table Base Register 0 (EL1)
+        Holds the base address of the translation table for the initial lookup for stage 1 of the translation of an address from the lower VA range in the EL1&0 translation regime, and other information for this translation regime.         [1], see D19.2.155, page 7152
+         [1], see D19.2.152, page 7139
+        """
+
+        ASID = (63, 48)
+        BADDR = (47, 1)
+        CnP = (0, 0)
+
+    class TTBR1_EL1(Enum):
+        """TTBR1_EL1, Translation Table Base Register 1 (EL1)
+        Holds the base address of the translation table for the initial lookup for stage 1 of the translation of an address from the higher VA range in the EL1&0 stage 1 translation regime, and other information for this translation regime.
+         [1], see D19.2.155, page 7152
+        """
+
+        ASID = (63, 48)
+        BADDR = (47, 1)
+        CnP = (0, 0)
 
     class ID_AA64MMFR1_EL1(Enum):
         """ID_AA64MMFR1_EL1, AArch64 Memory Model Feature Register 1.
