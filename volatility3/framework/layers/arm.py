@@ -77,18 +77,6 @@ class AArch64(linear.LinearlyMappedLayer):
         super().__init__(
             context=context, config_path=config_path, name=name, metadata=metadata
         )
-        self._kernel_endianness = self.config["kernel_endianness"]
-        self._layer_debug = self.config.get("layer_debug", False)
-        self._translation_debug = self.config.get("translation_debug", False)
-        self._base_layer = self.config["memory_layer"]
-        # self._swap_layers = []  # TODO
-        self._page_map_offset = self.config["page_map_offset"]
-        self._page_map_offset_kernel = self.config["page_map_offset_kernel"]
-        self._ttbs_tnsz = [self.config["tcr_el1_t0sz"], self.config["tcr_el1_t1sz"]]
-        self._ttbs_granules = [
-            self.config["page_size_user_space"],
-            self.config["page_size_kernel_space"],
-        ]
 
         # Unserialize cpu_registers config attribute into a dict
         self._cpu_regs = self.config.get("cpu_registers", "{}")
@@ -102,14 +90,31 @@ class AArch64(linear.LinearlyMappedLayer):
             )
         self._cpu_regs_mapped = self._map_reg_values(self._cpu_regs)
 
-        # Determine CPU features
-        self._cpu_features = {
-            AArch64Features.FEAT_HAFDBS.name: self._get_feature_HAFDBS()
-        }
+        self._kernel_endianness = self.config["kernel_endianness"]
+        self._layer_debug = self.config.get("layer_debug", False)
+        self._translation_debug = self.config.get("translation_debug", False)
+        self._base_layer = self.config["memory_layer"]
+        # self._swap_layers = []  # TODO
+        self._page_map_offset = self.config["page_map_offset"]
+        self._page_map_offset_kernel = self._read_register_field(
+            AArch64RegMap.TTBR1_EL1.BADDR
+        )
+        self._ttbs_tnsz = [
+            self._read_register_field(AArch64RegMap.TCR_EL1.T0SZ),
+            self._read_register_field(AArch64RegMap.TCR_EL1.T1SZ),
+        ]
+        self._ttbs_granules = [
+            AArch64RegFieldValues._get_ttbr0_el1_granule_size(
+                self._read_register_field(AArch64RegMap.TCR_EL1.TG0)
+            ),
+            AArch64RegFieldValues._get_ttbr1_el1_granule_size(
+                self._read_register_field(AArch64RegMap.TCR_EL1.TG1)
+            ),
+        ]
 
         # Context : TTB0 (user) or TTB1 (kernel)
         self._virtual_addr_space = int(
-            self._page_map_offset == self.config["page_map_offset_kernel"]
+            self._page_map_offset == self._page_map_offset_kernel
         )
 
         # [1], see D8.1.9, page 5818
@@ -143,6 +148,13 @@ class AArch64(linear.LinearlyMappedLayer):
 
         self._page_size = self._ttb_granule * 1024
         self._page_size_in_bits = self._page_size.bit_length() - 1
+
+        # CPU features
+        hafdbs = self._read_register_field(AArch64RegMap.ID_AA64MMFR1_EL1.HAFDBS, True)
+        if hafdbs:
+            self._feat_hafdbs = AArch64RegFieldValues._get_feature_HAFDBS(hafdbs)
+        else:
+            self._feat_hafdbs = None
 
         if self._layer_debug:
             self._print_layer_debug_informations()
@@ -470,7 +482,7 @@ class AArch64(linear.LinearlyMappedLayer):
             0      | Read/write
             1      | Read-only
         """
-        if self._cpu_features.get(AArch64Features.FEAT_HAFDBS.name):
+        if self._feat_hafdbs:
             # Dirty Bit Modifier and Access Permissions bits
             # DBM == 1 and AP == 0 -> HW dirty state
             return bool((entry & (1 << 51)) and not (entry & (1 << 7)))
@@ -518,27 +530,18 @@ class AArch64(linear.LinearlyMappedLayer):
     def maximum_address(self) -> int:
         return self._virtual_addr_range[1]
 
-    def _read_register_field(self, register_field: Enum) -> int:
+    def _read_register_field(
+        self, register_field: Enum, ignore_errors: bool = False
+    ) -> int:
         reg_field_path = str(register_field)
         try:
             return self._cpu_regs_mapped[reg_field_path]
         except KeyError:
+            if ignore_errors:
+                return None
             raise KeyError(
                 f"{reg_field_path} register field wasn't provided to this layer initially."
             )
-
-    def _get_feature_HAFDBS(self) -> bool:
-        """
-        Hardware updates to Access flag and Dirty state in translation tables.
-         [1], see D19.2.65, page 6784
-        """
-        try:
-            field_HAFDBS = self._read_register_field(
-                AArch64RegMap.ID_AA64MMFR1_EL1.HAFDBS
-            )
-            return field_HAFDBS >= 0b10
-        except KeyError:
-            return None
 
     @classmethod
     def _map_reg_values(cls, registers_values: dict) -> dict:
@@ -607,31 +610,6 @@ class AArch64(linear.LinearlyMappedLayer):
                 optional=False,
                 description='DTB of the target context (either "kernel space" or "user space process").',
             ),
-            requirements.IntRequirement(
-                name="page_map_offset_kernel",
-                optional=False,
-                description="DTB of the kernel space, it is primarily used to determine the target context of the layer (page_map_offset == page_map_offset_kernel). Conveniently calculated by LinuxStacker.",
-            ),
-            requirements.IntRequirement(
-                name="tcr_el1_t0sz",
-                optional=False,
-                description="The size offset of the memory region addressed by TTBR0_EL1. Conveniently calculated by LinuxStacker.",
-            ),
-            requirements.IntRequirement(
-                name="tcr_el1_t1sz",
-                optional=False,
-                description="The size offset of the memory region addressed by TTBR1_EL1. Conveniently calculated by LinuxStacker.",
-            ),
-            requirements.IntRequirement(
-                name="page_size_user_space",
-                optional=False,
-                description="Page size used by the user address space. Conveniently calculated by LinuxStacker.",
-            ),
-            requirements.IntRequirement(
-                name="page_size_kernel_space",
-                optional=False,
-                description="Page size used by the kernel address space. Conveniently calculated by LinuxStacker.",
-            ),
             requirements.ChoiceRequirement(
                 choices=["little", "big"],
                 name="kernel_endianness",
@@ -640,7 +618,7 @@ class AArch64(linear.LinearlyMappedLayer):
             ),
             requirements.StringRequirement(
                 name="cpu_registers",
-                optional=True,
+                optional=False,
                 description="Serialized dict of cpu register keys bound to their corresponding value. Needed for specific (non-mandatory) uses (ex: dirty bit management).",
                 default="{}",
             ),
