@@ -84,7 +84,7 @@ class AArch64(linear.LinearlyMappedLayer):
         )
 
         # Unserialize cpu_registers config attribute into a dict
-        self._cpu_regs = self.config.get("cpu_registers", "{}")
+        self._cpu_regs = self.config["cpu_registers"]
         try:
             self._cpu_regs: dict = json.loads(self._cpu_regs)
         except json.JSONDecodeError as e:
