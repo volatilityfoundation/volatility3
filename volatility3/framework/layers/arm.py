@@ -33,6 +33,11 @@ Glossary :
 Definitions :
 
  The OS-controlled translation is called stage 1 translation, and the hypervisor-controlled translation is called stage 2 translation.
+
+Notes :
+ If hardware management of the dirty state is enabled, the DBM bit is set to 1. ([1], D8.4.6)
+ If hardware management of the Access Flag bit is not enabled, software must implement it. ([1], D8.4.5)
+ Access Permissions bits can be updated by hardware in some situations, but is mostly managed by software. ([1], D8.4.3)
 """
 
 
@@ -502,7 +507,7 @@ class AArch64(linear.LinearlyMappedLayer):
     @property
     @functools.lru_cache()
     def page_size(self) -> int:
-        """Page size of this layer, in bytes.
+        """Page size for this layer, in bytes.
         - Typical values : 4096, 16384, 65536
         """
         return self._page_size
@@ -772,6 +777,7 @@ class AArch64RegFieldValues:
 
 def set_reg_bits(value: int, reg_field: Enum, reg_value: int = 0) -> int:
     """Sets the bits from high_bit to low_bit (inclusive) in current_value to the given value.
+    Allows to manipulate the bits at arbitrary positions inside a register.
 
     Args:
         value: The value to set in the specified bit range.
