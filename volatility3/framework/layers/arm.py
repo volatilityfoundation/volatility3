@@ -673,6 +673,49 @@ class LinuxAArch64(LinuxAArch64Mixin, AArch64):
     pass
 
 
+class WindowsAArch64Mixin(AArch64):
+    def _page_is_dirty(self, entry: int) -> bool:
+        """Returns whether a particular page is dirty based on its (page table) entry.
+        The bit indicates that its associated block of memory
+        has been modified and has not been saved to storage yet.
+
+        The following is based on the Windows kernel function MiMarkPteDirty().
+        Windows software DBM bit is located at offset 56, and does not account
+        of hardware bit 51.
+        """
+        return bool((entry & (1 << 56)) and not (entry & (1 << 7)))
+
+
+class WindowsAArch64(LinuxAArch64Mixin, AArch64):
+    """Windows AArch64 page size is constant, and statically defined in
+    CmSiGetPageSize() kernel function.
+
+    Takes advantage of the @classproperty, as @property is dynamic
+    and breaks static accesses in windows automagic.
+    """
+
+    @classproperty
+    @functools.lru_cache()
+    def page_shift(self) -> int:
+        """Page shift for this layer, which is the page size bit length."""
+        return 12
+
+    @classproperty
+    @functools.lru_cache()
+    def page_size(self) -> int:
+        """Page size for this layer, in bytes.
+        Prefer returning the value directly, instead of adding an additional
+        "_page_size" constant that could cause confusion with the parent class.
+        """
+        return 0x1000
+
+    @classproperty
+    @functools.lru_cache()
+    def page_mask(self) -> int:
+        """Page mask for this layer."""
+        return self.page_size - 1
+
+
 """Avoid cluttering the layer code with static mappings."""
 
 
