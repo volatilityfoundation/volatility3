@@ -516,7 +516,7 @@ class AArch64(linear.LinearlyMappedLayer):
     @functools.lru_cache()
     def page_mask(self) -> int:
         """Page mask for this layer."""
-        return ~(self.page_size - 1)
+        return self.page_size - 1
 
     @classproperty
     @functools.lru_cache()
