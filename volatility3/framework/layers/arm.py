@@ -686,7 +686,7 @@ class WindowsAArch64Mixin(AArch64):
         return bool((entry & (1 << 56)) and not (entry & (1 << 7)))
 
 
-class WindowsAArch64(LinuxAArch64Mixin, AArch64):
+class WindowsAArch64(WindowsAArch64Mixin, AArch64):
     """Windows AArch64 page size is constant, and statically defined in
     CmSiGetPageSize() kernel function.
 
