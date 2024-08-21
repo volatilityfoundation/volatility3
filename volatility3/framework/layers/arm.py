@@ -281,6 +281,13 @@ class AArch64(linear.LinearlyMappedLayer):
                     )
                     << self._ttb_descriptor_bits[1]
                 )
+                if self._get_valid_table(table_address) == None:
+                    raise exceptions.PagedInvalidAddressException(
+                        layer_name=self.name,
+                        invalid_address=virtual_offset,
+                        invalid_bits=low_bit,
+                        entry=descriptor,
+                    )
             # Block descriptor
             elif level < max_level and descriptor_type == 0b01:
                 table_address |= (
@@ -318,6 +325,18 @@ class AArch64(linear.LinearlyMappedLayer):
             )
 
         return table_address, low_bit, descriptor
+
+    @functools.lru_cache(1025)
+    def _get_valid_table(self, base_address: int) -> Optional[bytes]:
+        """Extracts the translation table, validates it and returns it if it's valid."""
+        table = self._context.layers.read(
+            self._base_layer, base_address, self.page_size
+        )
+        # If the table is entirely duplicates, then mark the whole table as bad
+        if table == table[: self._entry_size] * self._entry_number:
+            return None
+
+        return table
 
     def mapping(
         self, offset: int, length: int, ignore_errors: bool = False
