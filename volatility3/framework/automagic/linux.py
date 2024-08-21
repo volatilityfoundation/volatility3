@@ -5,6 +5,7 @@
 import logging
 import os
 import json
+import struct
 from typing import Optional, Tuple, Union, Dict
 
 from volatility3.framework import constants, interfaces, exceptions
@@ -322,8 +323,15 @@ class LinuxAArch64SubStacker:
         dtb = table.get_symbol("swapper_pg_dir").address + kaslr_shift
         ttbr1_el1 = arm.set_reg_bits(dtb, arm.AArch64RegMap.TTBR1_EL1.BADDR)
         context.config[path_join(config_path, "page_map_offset")] = dtb
-        kernel_endianness = table.get_type("pointer").vol.data_format.byteorder
-        context.config[path_join(config_path, "kernel_endianness")] = kernel_endianness
+        entry_format = (
+            "<"
+            if table.get_type("pointer").vol.data_format.byteorder == "little"
+            else "big"
+        )
+        entry_format += (
+            "Q" if table.get_type("pointer").vol.data_format.length == 8 else "I"
+        )
+        context.config[path_join(config_path, "entry_format")] = entry_format
 
         # CREDIT : https://github.com/crash-utility/crash/blob/28891d1127542dbb2d5ba16c575e14e741ed73ef/arm64.c#L941
         kernel_flags = 0
@@ -350,9 +358,9 @@ class LinuxAArch64SubStacker:
                 table.get_symbol("vabits_actual").address + kaslr_shift
             )
             # Linux source : v6.7/source/arch/arm64/Kconfig#L1263, VA_BITS
-            va_bits = int.from_bytes(
+            (va_bits,) = struct.unpack(
+                entry_format,
                 context.layers[layer_name].read(vabits_actual_phys_addr, 8),
-                kernel_endianness,
             )
         if not va_bits:
             """
