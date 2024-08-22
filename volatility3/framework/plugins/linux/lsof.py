@@ -18,10 +18,10 @@ vollog = logging.getLogger(__name__)
 
 
 class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
-    """Lists all memory maps for all processes."""
+    """Lists open files for each processes."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+    _version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
