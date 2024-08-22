@@ -281,7 +281,7 @@ class AArch64(linear.LinearlyMappedLayer):
                     )
                     << self._ttb_descriptor_bits[1]
                 )
-                if self._get_valid_table(table_address) == None:
+                if self._get_valid_table(table_address) is None:
                     raise exceptions.PagedInvalidAddressException(
                         layer_name=self.name,
                         invalid_address=virtual_offset,
