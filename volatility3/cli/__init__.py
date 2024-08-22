@@ -417,31 +417,33 @@ class CommandLine:
             if os.path.exists(virtmap_metadata_filename):
                 with open(virtmap_metadata_filename, "r") as f:
                     map_metadata = json.loads(f.read())
-                layers_classes = map_metadata["layers_classes"]
+                layers_identifiers = map_metadata["layers_identifiers"]
                 sections_per_layer = map_metadata["sections_per_layer"]
             else:
                 vollog.debug("Saving virtmap cache file metadata to Volatility3 cache")
                 raw_json = lzma.decompress(virtmap_cache_content)
                 json_val: dict = json.loads(raw_json)
-                layers_classes = list(json_val.keys())
+                layers_identifiers = list(json_val.keys())
 
                 sections_per_layer = {}
-                for layer_class, sections in json_val.items():
-                    sections_per_layer[layer_class] = list(sections.keys())
+                for layer_identifier, sections in json_val.items():
+                    sections_per_layer[layer_identifier] = list(sections.keys())
 
                 # Save metadata in the Vol3 cache, to avoid the costly
                 # decompression and deserialization process on each run.
                 with open(virtmap_metadata_filename, "w+") as f:
                     json.dump(
                         {
-                            "layers_classes": list(json_val.keys()),
+                            "layers_identifiers": list(json_val.keys()),
                             "sections_per_layer": sections_per_layer,
                         },
                         f,
                     )
 
             ctx.config[path_join("virtmap_cache", "filepath")] = args.virtmap_cache_path
-            ctx.config[path_join("virtmap_cache", "layers_classes")] = layers_classes
+            ctx.config[path_join("virtmap_cache", "layers_identifiers")] = (
+                layers_identifiers
+            )
             ctx.config.splice(
                 path_join("virtmap_cache", "sections_per_layer"),
                 interfaces.configuration.HierarchicalDict(sections_per_layer),
