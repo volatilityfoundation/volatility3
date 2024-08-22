@@ -482,23 +482,21 @@ class TranslationLayerInterface(DataLayerInterface, metaclass=ABCMeta):
             A list containing mappings for a specific section of this layer"""
 
         # Check if layer is fully constructed first
-        if self.config.get("class") and self.context.config.get(
+        if self.context.config.get(
             path_join("virtmap_cache", "filepath")
-        ):
+        ) and self.config.get("class"):
             filepath = self.context.config[path_join("virtmap_cache", "filepath")]
-            layers_classes = self.context.config[
-                path_join("virtmap_cache", "layers_classes")
+            layer_identifier = path_join(self.config["class"], self.name)
+            layers_identifiers = self.context.config[
+                path_join("virtmap_cache", "layers_identifiers")
             ]
-
-            # Exact match only, even if a requested section would *fit*
+            # Exact section match only, even if a requested section would *fit*
             # inside one available in the cache.
             if (
-                self.config["class"] in layers_classes
+                layer_identifier in layers_identifiers
                 and str(section)
                 in self.context.config[
-                    path_join(
-                        "virtmap_cache", "sections_per_layer", self.config["class"]
-                    )
+                    path_join("virtmap_cache", "sections_per_layer", layer_identifier)
                 ]
             ):
                 # Avoid decompressing and deserializing the file
@@ -511,9 +509,9 @@ class TranslationLayerInterface(DataLayerInterface, metaclass=ABCMeta):
 
                 vollog.log(
                     constants.LOGLEVEL_VVV,
-                    f"Applying virtmap cache to section {section} of layer {self.config['class']}",
+                    f'Applying virtmap cache to section "{section}" of layer "{layer_identifier}"',
                 )
-                return self._virtmap_cache_dict[self.config["class"]][str(section)]
+                return self._virtmap_cache_dict[layer_identifier][str(section)]
         return None
 
     @functools.lru_cache(maxsize=512)
