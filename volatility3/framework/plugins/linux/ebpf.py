@@ -29,15 +29,21 @@ class EBPF(plugins.PluginInterface):
             ),
         ]
 
-    def get_ebpf_programs(self, vmlinux) -> interfaces.objects.ObjectInterface:
+    def get_ebpf_programs(
+        self,
+        context: interfaces.context.ContextInterface,
+        vmlinux_module_name: str,
+    ) -> interfaces.objects.ObjectInterface:
         """Enumerate eBPF programs walking its IDR.
 
         Args:
-            vmlinux: The kernel symbols object
-
+            context: The context to retrieve required elements (layers, symbol tables) from
+            vmlinux_module_name: The name of the kernel module on which to operate
         Yields:
             eBPF program objects
         """
+        vmlinux = context.modules[vmlinux_module_name]
+
         if not vmlinux.has_symbol("prog_idr"):
             raise exceptions.VolatilityException(
                 "Cannot find the eBPF prog idr. Unsupported kernel"
@@ -49,8 +55,7 @@ class EBPF(plugins.PluginInterface):
             yield bpf_prog
 
     def _generator(self):
-        vmlinux = self.context.modules[self.config["kernel"]]
-        for prog in self.get_ebpf_programs(vmlinux):
+        for prog in self.get_ebpf_programs(self.context, self.config["kernel"]):
             prog_addr = prog.vol.offset
             prog_type = prog.get_type() or renderers.NotAvailableValue()
             prog_tag = prog.get_tag() or renderers.NotAvailableValue()
