@@ -6,7 +6,7 @@ import math
 import logging
 import datetime
 from dataclasses import dataclass, astuple
-from typing import List, Set
+from typing import List, Set, Type
 
 from volatility3.framework import renderers, interfaces
 from volatility3.framework.renderers import format_hints
@@ -408,6 +408,7 @@ class InodePages(plugins.PluginInterface):
     def write_inode_content_to_file(
         inode: interfaces.objects.ObjectInterface,
         filename: str,
+        open_method: Type[interfaces.plugins.FileHandlerInterface],
         vmlinux_layer: interfaces.layers.TranslationLayerInterface,
     ) -> None:
         """Extracts the inode's contents from the page cache and saves them to a file
@@ -415,6 +416,7 @@ class InodePages(plugins.PluginInterface):
         Args:
             inode: The inode to dump
             filename: Filename for writing the inode content
+            open_method: class for constructing output files
             vmlinux_layer: The kernel layer to obtain the page size
         """
         if not inode.is_reg:
@@ -426,7 +428,7 @@ class InodePages(plugins.PluginInterface):
         # Additionally, using the page index will guarantee that each page is written at the
         # appropriate file position.
         try:
-            with open(filename, "wb") as f:
+            with open_method(filename) as f:
                 inode_size = inode.i_size
                 f.truncate(inode_size)
 
@@ -502,7 +504,7 @@ class InodePages(plugins.PluginInterface):
         if self.config["dump"]:
             filename = self.config["dump"]
             vollog.info("[*] Writing inode at 0x%x to '%s'", inode.vol.offset, filename)
-            self.write_inode_content_to_file(inode, filename, vmlinux_layer)
+            self.write_inode_content_to_file(inode, filename, self.open, vmlinux_layer)
 
     def run(self):
         headers = [
