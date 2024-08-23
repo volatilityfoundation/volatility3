@@ -44,17 +44,16 @@ class PIDHashTable(plugins.PluginInterface):
             ),
         ]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.vmlinux = None
-        self.vmlinux_layer = None
-
     def _is_valid_task(self, task) -> bool:
-        return bool(task and task.pid > 0 and self.vmlinux_layer.is_valid(task.parent))
+        vmlinux = self.context.modules[self.config["kernel"]]
+        vmlinux_layer = self.context.layers[vmlinux.layer_name]
+        return bool(task and task.pid > 0 and vmlinux_layer.is_valid(task.parent))
 
     def _get_pidtype_pid(self):
+        vmlinux = self.context.modules[self.config["kernel"]]
+
         # The pid_type enumeration is present since 2.5.37, just in case
-        pid_type_enum = self.vmlinux.get_enumeration("pid_type")
+        pid_type_enum = vmlinux.get_enumeration("pid_type")
         if not pid_type_enum:
             vollog.error("Cannot find pid_type enum. Unsupported kernel")
             return None
@@ -68,38 +67,46 @@ class PIDHashTable(plugins.PluginInterface):
         return pidtype_pid
 
     def _get_pidhash_array(self):
-        pidhash_shift = self.vmlinux.object_from_symbol("pidhash_shift")
+        vmlinux = self.context.modules[self.config["kernel"]]
+
+        pidhash_shift = vmlinux.object_from_symbol("pidhash_shift")
         pidhash_size = 1 << pidhash_shift
 
-        array_type_name = self.vmlinux.symbol_table_name + constants.BANG + "array"
+        array_type_name = vmlinux.symbol_table_name + constants.BANG + "array"
 
-        pidhash_ptr = self.vmlinux.object_from_symbol("pid_hash")
+        pidhash_ptr = vmlinux.object_from_symbol("pid_hash")
         # pidhash is an array of hlist_heads
         pidhash = self._context.object(
             array_type_name,
             offset=pidhash_ptr,
-            subtype=self.vmlinux.get_type("hlist_head"),
+            subtype=vmlinux.get_type("hlist_head"),
             count=pidhash_size,
-            layer_name=self.vmlinux.layer_name,
+            layer_name=vmlinux.layer_name,
         )
 
         return pidhash
 
     def _walk_upid(self, seen_upids, upid):
-        while upid and self.vmlinux_layer.is_valid(upid.vol.offset):
+        vmlinux = self.context.modules[self.config["kernel"]]
+        vmlinux_layer = self.context.layers[vmlinux.layer_name]
+
+        while upid and vmlinux_layer.is_valid(upid.vol.offset):
             if upid.vol.offset in seen_upids:
                 break
             seen_upids.add(upid.vol.offset)
 
             pid_chain = upid.pid_chain
-            if not (pid_chain and self.vmlinux_layer.is_valid(pid_chain.vol.offset)):
+            if not (pid_chain and vmlinux_layer.is_valid(pid_chain.vol.offset)):
                 break
 
             upid = linux.LinuxUtilities.container_of(
-                pid_chain.next, "upid", "pid_chain", self.vmlinux
+                pid_chain.next, "upid", "pid_chain", vmlinux
             )
 
     def _get_upids(self):
+        vmlinux = self.context.modules[self.config["kernel"]]
+        vmlinux_layer = self.context.layers[vmlinux.layer_name]
+
         # 2.6.24 <= kernels < 4.15
         pidhash = self._get_pidhash_array()
 
@@ -108,10 +115,10 @@ class PIDHashTable(plugins.PluginInterface):
             # each entry in the hlist is a upid which is wrapped in a pid
             ent = hlist.first
 
-            while ent and self.vmlinux_layer.is_valid(ent.vol.offset):
+            while ent and vmlinux_layer.is_valid(ent.vol.offset):
                 # upid->pid_chain exists 2.6.24 <= kernel < 4.15
                 upid = linux.LinuxUtilities.container_of(
-                    ent.vol.offset, "upid", "pid_chain", self.vmlinux
+                    ent.vol.offset, "upid", "pid_chain", vmlinux
                 )
 
                 if upid.vol.offset in seen_upids:
@@ -124,16 +131,14 @@ class PIDHashTable(plugins.PluginInterface):
         return seen_upids
 
     def _pid_hash_implementation(self):
+        vmlinux = self.context.modules[self.config["kernel"]]
+
         # 2.6.24 <= kernels < 4.15
-        task_pids_off = self.vmlinux.get_type("task_struct").relative_child_offset(
-            "pids"
-        )
+        task_pids_off = vmlinux.get_type("task_struct").relative_child_offset("pids")
         pidtype_pid = self._get_pidtype_pid()
 
         for upid in self._get_upids():
-            pid = linux.LinuxUtilities.container_of(
-                upid, "pid", "numbers", self.vmlinux
-            )
+            pid = linux.LinuxUtilities.container_of(upid, "pid", "numbers", vmlinux)
             if not pid:
                 continue
 
@@ -141,22 +146,24 @@ class PIDHashTable(plugins.PluginInterface):
             if not pid_tasks_0:
                 continue
 
-            task = self.vmlinux.object(
+            task = vmlinux.object(
                 "task_struct", offset=pid_tasks_0 - task_pids_off, absolute=True
             )
             if self._is_valid_task(task):
                 yield task
 
     def _task_for_radix_pid_node(self, nodep):
+        vmlinux = self.context.modules[self.config["kernel"]]
+
         # kernels >= 4.15
-        pid = self.vmlinux.object("pid", offset=nodep, absolute=True)
+        pid = vmlinux.object("pid", offset=nodep, absolute=True)
         pidtype_pid = self._get_pidtype_pid()
 
         pid_tasks_0 = pid.tasks[pidtype_pid].first
         if not pid_tasks_0:
             return None
 
-        task_struct_type = self.vmlinux.get_type("task_struct")
+        task_struct_type = vmlinux.get_type("task_struct")
         if task_struct_type.has_member("pids"):
             member = "pids"
         elif task_struct_type.has_member("pid_links"):
@@ -165,15 +172,17 @@ class PIDHashTable(plugins.PluginInterface):
             return None
 
         task_pids_off = task_struct_type.relative_child_offset(member)
-        task = self.vmlinux.object(
+        task = vmlinux.object(
             "task_struct", offset=pid_tasks_0 - task_pids_off, absolute=True
         )
         return task
 
     def _pid_namespace_idr(self):
+        vmlinux = self.context.modules[self.config["kernel"]]
+
         # kernels >= 4.15
-        ns_addr = self.vmlinux.get_symbol("init_pid_ns").address
-        ns = self.vmlinux.object("pid_namespace", offset=ns_addr)
+        ns_addr = vmlinux.get_symbol("init_pid_ns").address
+        ns = vmlinux.object("pid_namespace", offset=ns_addr)
 
         for page_addr in ns.idr.get_entries():
             task = self._task_for_radix_pid_node(page_addr)
@@ -181,24 +190,26 @@ class PIDHashTable(plugins.PluginInterface):
                 yield task
 
     def _determine_pid_func(self):
-        pid_hash = self.vmlinux.has_symbol("pid_hash") and self.vmlinux.has_symbol(
+        vmlinux = self.context.modules[self.config["kernel"]]
+
+        pid_hash = vmlinux.has_symbol("pid_hash") and vmlinux.has_symbol(
             "pidhash_shift"
         )  # 2.5.55 <= kernels < 4.15
 
-        has_pid_numbers = self.vmlinux.has_type("pid") and self.vmlinux.get_type(
+        has_pid_numbers = vmlinux.has_type("pid") and vmlinux.get_type(
             "pid"
         ).has_member(
             "numbers"
         )  # kernels >= 2.6.24
 
-        has_pid_chain = self.vmlinux.has_type("upid") and self.vmlinux.get_type(
+        has_pid_chain = vmlinux.has_type("upid") and vmlinux.get_type(
             "upid"
         ).has_member(
             "pid_chain"
         )  # 2.6.24 <= kernels < 4.15
 
         # kernels >= 4.15
-        pid_idr = self.vmlinux.has_type("pid_namespace") and self.vmlinux.get_type(
+        pid_idr = vmlinux.has_type("pid_namespace") and vmlinux.get_type(
             "pid_namespace"
         ).has_member("idr")
 
@@ -217,8 +228,6 @@ class PIDHashTable(plugins.PluginInterface):
         Yields:
             task_struct objects
         """
-        self.vmlinux = self.context.modules[self.config["kernel"]]
-        self.vmlinux_layer = self.context.layers[self.vmlinux.layer_name]
         pid_func = self._determine_pid_func()
         if not pid_func:
             vollog.error("Cannot determine which PID hash table this kernel is using")
