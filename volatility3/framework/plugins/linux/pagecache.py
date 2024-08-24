@@ -6,7 +6,7 @@ import math
 import logging
 import datetime
 from dataclasses import dataclass, astuple
-from typing import List, Set, Type
+from typing import List, Set, Type, Iterable
 
 from volatility3.framework import renderers, interfaces
 from volatility3.framework.renderers import format_hints
@@ -205,7 +205,7 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
         cls,
         context: interfaces.context.ContextInterface,
         config_path: str,
-    ):
+    ) -> Iterable[InodeInternal]:
         """Retrieves the inodes from the superblocks
 
         Args:
