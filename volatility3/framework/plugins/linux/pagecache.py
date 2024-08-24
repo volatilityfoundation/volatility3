@@ -115,7 +115,7 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.PluginRequirement(
-                name="mountinfo", plugin=mountinfo.MountInfo, version=(1, 1, 0)
+                name="mountinfo", plugin=mountinfo.MountInfo, version=(1, 2, 0)
             ),
             requirements.ListRequirement(
                 name="type",
@@ -204,22 +204,22 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
     def get_inodes(
         cls,
         context: interfaces.context.ContextInterface,
-        config_path: str,
+        vmlinux_module_name: str,
     ) -> Iterable[InodeInternal]:
         """Retrieves the inodes from the superblocks
 
         Args:
             context: The context that the plugin will operate within
-            config_path: The path to configuration data within the context configuration data
+            vmlinux_module_name: The name of the kernel module on which to operate
 
         Yields:
             An InodeInternal object
         """
 
-        superblocks_iter = mountinfo.MountInfo(
+        superblocks_iter = mountinfo.MountInfo.get_superblocks(
             context=context,
-            config_path=config_path,
-        ).get_superblocks()
+            vmlinux_module_name=vmlinux_module_name,
+        )
 
         seen_inodes = set()
         seen_dentries = set()
@@ -289,11 +289,13 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 yield inode_in
 
     def _generator(self):
-        vmlinux = self.context.modules[self.config["kernel"]]
+        vmlinux_module_name = self.config["kernel"]
+        vmlinux = self.context.modules[vmlinux_module_name]
         vmlinux_layer = self.context.layers[vmlinux.layer_name]
 
         inodes_iter = self.get_inodes(
-            context=self.context, config_path=self.config_path
+            context=self.context,
+            vmlinux_module_name=vmlinux_module_name,
         )
 
         types_filter = self.config["type"]
@@ -316,12 +318,15 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
         These need not be generated in any particular order, sorting
         will be done later
         """
-        vmlinux = self.context.modules[self.config["kernel"]]
+        vmlinux_module_name = self.config["kernel"]
+        vmlinux = self.context.modules[vmlinux_module_name]
         vmlinux_layer = self.context.layers[vmlinux.layer_name]
 
         inodes_iter = self.get_inodes(
-            context=self.context, config_path=self.config_path
+            context=self.context,
+            vmlinux_module_name=vmlinux_module_name,
         )
+
         for inode_in in inodes_iter:
             inode_out = inode_in.to_user(vmlinux_layer)
             description = f"Cached Inode for {inode_out.path}"
@@ -450,7 +455,8 @@ class InodePages(plugins.PluginInterface):
             vollog.error("Unable to write to file (%s): %s", filename, e)
 
     def _generator(self):
-        vmlinux = self.context.modules[self.config["kernel"]]
+        vmlinux_module_name = self.config["kernel"]
+        vmlinux = self.context.modules[vmlinux_module_name]
         vmlinux_layer = self.context.layers[vmlinux.layer_name]
 
         if self.config["inode"] and self.config["find"]:
@@ -459,7 +465,8 @@ class InodePages(plugins.PluginInterface):
 
         if self.config["find"]:
             inodes_iter = Files.get_inodes(
-                context=self.context, config_path=self.config_path
+                context=self.context,
+                vmlinux_module_name=vmlinux_module_name,
             )
             for inode_in in inodes_iter:
                 if inode_in.path == self.config["find"]:

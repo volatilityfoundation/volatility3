@@ -37,7 +37,7 @@ class MountInfo(plugins.PluginInterface):
 
     _required_framework_version = (2, 2, 0)
 
-    _version = (1, 1, 0)
+    _version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -143,8 +143,8 @@ class MountInfo(plugins.PluginInterface):
             sb_opts,
         )
 
+    @staticmethod
     def _get_tasks_mountpoints(
-        self,
         tasks: Iterable[interfaces.objects.ObjectInterface],
         filtered_by_pids: bool = False,
     ):
@@ -247,17 +247,26 @@ class MountInfo(plugins.PluginInterface):
                 "Could not filter by mount namespace id. This field is not available in this kernel."
             )
 
-    def get_superblocks(self):
+    @classmethod
+    def get_superblocks(
+        cls,
+        context: interfaces.context.ContextInterface,
+        vmlinux_module_name: str,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Yield file system superblocks based on the task's mounted filesystems.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            vmlinux_module_name: The name of the kernel module on which to operate
 
         Yields:
             super_block: Kernel's struct super_block object
         """
         # No filter so that we get all the mount namespaces from all tasks
-        tasks = pslist.PsList.list_tasks(self.context, self.config["kernel"])
+        tasks = pslist.PsList.list_tasks(context, vmlinux_module_name)
 
         seen_sb_ptr = set()
-        for task, mnt, _mnt_ns_id in self._get_tasks_mountpoints(tasks):
+        for task, mnt, _mnt_ns_id in cls._get_tasks_mountpoints(tasks):
             path_root = linux.LinuxUtilities.get_path_mnt(task, mnt)
             if not path_root:
                 continue
