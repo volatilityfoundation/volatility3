@@ -131,7 +131,10 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     @staticmethod
-    def _follow_symlink(inode, symlink_path) -> str:
+    def _follow_symlink(
+        inode: interfaces.objects.ObjectInterface,
+        symlink_path: str,
+    ) -> str:
         """Follows (fast) symlinks (kernels >= 4.2.x).
         Fast symlinks are filesystem agnostic.
 
