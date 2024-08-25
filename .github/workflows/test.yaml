@@ -46,7 +46,7 @@ jobs:
 
     - name: Clean up post-test
       run: |
-        rm -rf *.lime
+        rm -rf *.bin
         rm -rf *.img
         cd volatility3/symbols
         rm -rf linux
