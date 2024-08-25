@@ -445,6 +445,16 @@ class Pointer(Integer):
         layer_name = layer_name or self.vol.native_layer_name
         return self._context.layers[layer_name].is_valid(self, self.vol.subtype.size)
 
+    def __bool__(self):
+        """Enables checking if a pointer is valid in its memory layer when its evaluated
+        in a boolean context, for instance:
+            if not ptr:
+                continue
+        Without this method, the code above will only abort if 'ptr = 0', leaving the
+        code vulnerable to smear memory.
+        """
+        return self.is_readable()
+
     def __getattr__(self, attr: str) -> Any:
         """Convenience function to access unknown attributes by getting them
         from the subtype object."""
