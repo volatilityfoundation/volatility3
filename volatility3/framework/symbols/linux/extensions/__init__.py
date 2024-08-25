@@ -1609,19 +1609,6 @@ class xdp_sock(objects.StructType):
 
 
 class bpf_prog(objects.StructType):
-    def _get_vmlinux(self):
-        linuxutils_required_version = (2, 1, 1)
-        linuxutils_current_version = linux.LinuxUtilities._version
-        if not requirements.VersionRequirement.matches_required(
-            linuxutils_required_version, linuxutils_current_version
-        ):
-            raise exceptions.PluginRequirementException(
-                f"linux.LinuxUtilities version not suitable: required {linuxutils_required_version} found {linuxutils_current_version}"
-            )
-
-        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
-        return vmlinux
-
     def get_type(self) -> Union[str, None]:
         """Returns a string with the eBPF program type"""
 
@@ -1645,7 +1632,7 @@ class bpf_prog(objects.StructType):
         if not self.has_member("tag"):
             return None
 
-        vmlinux = self._get_vmlinux()
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
 
         prog_tag_addr = self.tag.vol.offset
@@ -2057,26 +2044,13 @@ class page(objects.StructType):
 
         return flags
 
-    def _get_vmlinux(self):
-        linuxutils_required_version = (2, 1, 1)
-        linuxutils_current_version = linux.LinuxUtilities._version
-        if not requirements.VersionRequirement.matches_required(
-            linuxutils_required_version, linuxutils_current_version
-        ):
-            raise exceptions.PluginRequirementException(
-                f"linux.LinuxUtilities version not suitable: required {linuxutils_required_version} found {linuxutils_current_version}"
-            )
-
-        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
-        return vmlinux
-
     def to_paddr(self) -> int:
         """Converts a page's virtual address to its physical address using the current physical memory model.
 
         Returns:
             int: page physical address
         """
-        vmlinux = self._get_vmlinux()
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
 
         vmemmap_start = None
@@ -2127,7 +2101,7 @@ class page(objects.StructType):
         Returns:
             The page content
         """
-        vmlinux = self._get_vmlinux()
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
         physical_layer = vmlinux.context.layers["memory_layer"]
         page_paddr = self.to_paddr()
@@ -2144,19 +2118,6 @@ class IDR(objects.StructType):
     INT_SIZE = 4
     MAX_IDR_SHIFT = INT_SIZE * 8 - 1
     MAX_IDR_BIT = 1 << MAX_IDR_SHIFT
-
-    def _get_vmlinux(self):
-        linuxutils_required_version = (2, 1, 1)
-        linuxutils_current_version = linux.LinuxUtilities._version
-        if not requirements.VersionRequirement.matches_required(
-            linuxutils_required_version, linuxutils_current_version
-        ):
-            raise exceptions.PluginRequirementException(
-                f"linux.LinuxUtilities version not suitable: required {linuxutils_required_version} found {linuxutils_current_version}"
-            )
-
-        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
-        return vmlinux
 
     def idr_max(self, num_layers: int) -> int:
         """Returns the maximum ID which can be allocated given idr::layers
@@ -2181,7 +2142,7 @@ class IDR(objects.StructType):
         Returns:
             A pointer to the given ID element
         """
-        vmlinux = self._get_vmlinux()
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         if not vmlinux.get_type("idr_layer").has_member("layer"):
             vollog.info(
                 "Unsupported IDR implementation, it should be a very very old kernel, probabably < 2.6"
