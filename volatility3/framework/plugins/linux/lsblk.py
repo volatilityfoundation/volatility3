@@ -1,14 +1,20 @@
+# This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
+#
 from typing import List
 import logging
 
 from volatility3.framework import interfaces, renderers, constants, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
+from volatility3.framework.symbols import linux
+from volatility3.framework.renderers import format_hints
+from volatility3.framework.constants.linux import GOLDEN_RATIO_PRIME_BEFORE_4_7, GOLDEN_RATIO_PRIME_AFTER_4_7
 
 vollog = logging.getLogger(__name__)
 
 
-class lsblk(interfaces.plugins.PluginInterface):
+class Lsblk(interfaces.plugins.PluginInterface):
     """Lists the block devices present in a particular linux memory image."""
 
     _required_framework_version = (2, 0, 0)
@@ -22,6 +28,9 @@ class lsblk(interfaces.plugins.PluginInterface):
                 name="kernel",
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="linuxutils", component=linux.LinuxUtilities, version=(2, 0, 0)
             ),
         ]
 
@@ -41,39 +50,19 @@ class lsblk(interfaces.plugins.PluginInterface):
 
         block_class = vmlinux.object_from_symbol("block_class")
 
-        subsys_off = vmlinux.get_type("subsys_private").relative_child_offset("subsys")
-        kobj_off = vmlinux.get_type("kset").relative_child_offset("kobj")
-
-        if not vmlinux.has_type("hd_struct"):
-            block_device_offset = vmlinux.get_type(
-                "block_device"
-            ).relative_child_offset("bd_device")
-        else:
-            hd_struct_offset = vmlinux.get_type("hd_struct").relative_child_offset(
-                "__dev"
-            )
-            gendisk_offset = vmlinux.get_type("gendisk").relative_child_offset("part0")
-
-        for kobj in class_kset.list.to_list(
+        for kobject in class_kset.list.to_list(
             vmlinux.symbol_table_name + constants.BANG + "kobject", "entry"
         ):
-            subsys_private = vmlinux.object(
-                object_type="subsys_private",
-                offset=kobj.vol.offset - kobj_off - subsys_off,
-                absolute=True,
-            )
+            kset = linux.LinuxUtilities.container_of(kobject.vol.offset, "kset", "kobj", vmlinux)
+            subsys_private = linux.LinuxUtilities.container_of(kset.vol.offset, "subsys_private", "subsys", vmlinux)
             if subsys_private.member("class") == block_class.vol.offset:
                 break
 
         klist_devices = subsys_private.klist_devices
-        for device in self._device_iterator(vmlinux, klist_devices):
+        for device in self._device_iterator(self.context, klist_devices):
             # Before v5.11, partitions are represented by hd_struct instead of block_device
             if not vmlinux.has_type("hd_struct"):
-                block_device = vmlinux.object(
-                    object_type="block_device",
-                    offset=device.vol.offset - block_device_offset,
-                    absolute=True,
-                )
+                block_device = linux.LinuxUtilities.container_of(device.vol.offset, "block_device", "bd_device", vmlinux)
                 gendisk = block_device.bd_disk
 
                 # lsblk by default skips over ram devices
@@ -83,16 +72,8 @@ class lsblk(interfaces.plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     continue
             else:
-                hd_struct = vmlinux.object(
-                    object_type="hd_struct",
-                    offset=device.vol.offset - hd_struct_offset,
-                    absolute=True,
-                )
-                gendisk = vmlinux.object(
-                    object_type="gendisk",
-                    offset=hd_struct.vol.offset - gendisk_offset,
-                    absolute=True,
-                )
+                hd_struct = linux.LinuxUtilities.container_of(device.vol.offset, "hd_struct", "__dev", vmlinux)
+                gendisk = linux.LinuxUtilities.container_of(hd_struct.vol.offset, "gendisk", "part0", vmlinux)
                 try:
                     if utility.array_to_string(gendisk.disk_name).startswith("ram"):
                         continue
@@ -112,13 +93,13 @@ class lsblk(interfaces.plugins.PluginInterface):
                 continue
 
             GENHD_FL_REMOVABLE = 1 << 0
-            removable = gendisk.flags & GENHD_FL_REMOVABLE
+            removable = bool(gendisk.flags & GENHD_FL_REMOVABLE)
 
             read_only = self._get_read_only(vmlinux, gendisk)
 
             name = self._get_name(vmlinux, block_device, gendisk)
 
-            device_type = self._get_type(vmlinux, block_device, gendisk)
+            device_type = self._get_type(self.context, block_device, gendisk)
 
             mountpoint = self._get_mountpoint(vmlinux, block_device)
 
@@ -128,7 +109,7 @@ class lsblk(interfaces.plugins.PluginInterface):
                 self._minor(device.devt),
                 removable,
                 read_only,
-                self._format_bytes(size),
+                format_hints.ByteSizeFormatted(size),
                 device_type,
                 mountpoint,
             )
@@ -146,15 +127,11 @@ class lsblk(interfaces.plugins.PluginInterface):
         if not vmlinux.has_type("hd_struct"):
             GD_READ_ONLY = 1
             read_only = (
-                1
-                if (
-                    gendisk.part0.bd_read_only
-                    or (gendisk.state & (1 << GD_READ_ONLY)) != 0
-                )
-                else 0
+                gendisk.part0.bd_read_only
+                or (gendisk.state & (1 << GD_READ_ONLY)) != 0
             )
         else:
-            read_only = gendisk.part0.policy
+            read_only = bool(gendisk.part0.policy)
         return read_only
 
     def _get_block_device(self, vmlinux, devt):
@@ -174,9 +151,9 @@ class lsblk(interfaces.plugins.PluginInterface):
 
         # in linux 4.7, the GOLDEN_RATIO_PRIME constant changes. This struct gains a member from 4.6 to 4.7
         if vmlinux.get_type("file_operations").has_member("iterate_shared"):
-            GOLDEN_RATIO_PRIME = 0x61C8864680B583EB
+            GOLDEN_RATIO_PRIME = GOLDEN_RATIO_PRIME_AFTER_4_7
         else:
-            GOLDEN_RATIO_PRIME = 0x9E37FFFFFFFC0001
+            GOLDEN_RATIO_PRIME = GOLDEN_RATIO_PRIME_BEFORE_4_7
 
         L1_CACHE_BYTES = 1 << 6
 
@@ -196,13 +173,8 @@ class lsblk(interfaces.plugins.PluginInterface):
         hlist_node = hlist_head.first
         if not hlist_node:
             return 0
-        i_hash_off = vmlinux.get_type("inode").relative_child_offset("i_hash")
         while hlist_node:
-            inode = vmlinux.object(
-                object_type="inode",
-                offset=hlist_node - i_hash_off,
-                absolute=True,
-            )
+            inode = linux.LinuxUtilities.container_of(hlist_node, "inode", "i_hash", vmlinux)
             # These checks are from the find_inode function https://elixir.bootlin.com/linux/v5.4/source/fs/inode.c#L805
             # Trying to find the inode with the correct device number and calculated inode number from the inode cache
             if inode.i_sb == blockdev_superblock and inode.i_rdev == devt:
@@ -211,38 +183,24 @@ class lsblk(interfaces.plugins.PluginInterface):
 
         return inode.i_bdev
 
-    def _device_iterator(self, vmlinux, klist_devices):
-
+    def _device_iterator(self, context, klist_devices):
+        vmlinux = context.modules[self.config["kernel"]]
         # Linux v5.1 moves device->knode_class to device_private->knode_class
         knode_class_in_private_device = vmlinux.get_type("device_private").has_member(
             "knode_class"
         )
 
         if knode_class_in_private_device:
-            knode_class_off = vmlinux.get_type("device_private").relative_child_offset(
-                "knode_class"
-            )
             for klist_node in klist_devices.k_list.to_list(
                 vmlinux.symbol_table_name + constants.BANG + "klist_node", "n_node"
             ):
-                device_private = vmlinux.object(
-                    object_type="device_private",
-                    offset=klist_node.vol.offset - knode_class_off,
-                    absolute=True,
-                )
+                device_private = linux.LinuxUtilities.container_of(klist_node.vol.offset, "device_private", "knode_class", vmlinux)
                 yield device_private.device.dereference()
         else:
-            knode_class_off = vmlinux.get_type("device").relative_child_offset(
-                "knode_class"
-            )
             for klist_node in klist_devices.k_list.to_list(
                 vmlinux.symbol_table_name + constants.BANG + "klist_node", "n_node"
             ):
-                device = vmlinux.object(
-                    object_type="device",
-                    offset=klist_node.vol.offset - knode_class_off,
-                    absolute=True,
-                )
+                device = linux.LinuxUtilities.container_of(klist_node.vol.offset, "device", "knode_class", vmlinux)
                 yield device
 
     def _get_name(self, vmlinux, block_device, gendisk):
@@ -277,25 +235,8 @@ class lsblk(interfaces.plugins.PluginInterface):
 
         return utility.array_to_string(gendisk.disk_name)
 
-    def _format_bytes(self, size):
-        """
-        Convert a byte value into a human-readable format.
-
-        :param size: Size in bytes
-        :return: Human-readable string
-        """
-
-        if size < 1024:
-            return f"{size}B"
-        elif size < 1024**2:
-            return f"{size / 1024:.1f}K"
-        elif size < 1024**3:
-            return f"{size / 1024 ** 2:.1f}M"
-        elif size < 1024**4:
-            return f"{size / 1024 ** 3:.1f}G"
-        return f"{size / 1024 ** 4:.1f}T"
-
-    def _get_type(self, vmlinux, block_device, gendisk):
+    def _get_type(self, context, block_device, gendisk):
+        vmlinux = context.modules[self.config["kernel"]]
         disk_name = utility.array_to_string(gendisk.disk_name)
 
         if vmlinux.get_type("block_device").has_member("bd_partno"):
@@ -434,14 +375,14 @@ class lsblk(interfaces.plugins.PluginInterface):
     def run(self):
 
         columns = [
-            ("NAME", str),
-            ("MAJOR", int),
-            ("MINOR", int),
-            ("RM", int),
-            ("RO", int),
-            ("SIZE", str),
-            ("TYPE", str),
-            ("MOUNTPOINT", str),
+            ("Name", str),
+            ("Major", int),
+            ("Minor", int),
+            ("Rm", bool),
+            ("Ro", bool),
+            ("Size", format_hints.ByteSizeFormatted),
+            ("Type", str),
+            ("Mountpoint", str),
         ]
 
         return renderers.TreeGrid(columns, self._generator())

@@ -72,6 +72,21 @@ def multitypedata_as_text(value: format_hints.MultiTypeData) -> str:
         return string_representation.split("\x00")[0]
     return hex_bytes_as_text(value)
 
+def byte_size_format_to_text(value: format_hints.ByteSizeFormatted) -> str:
+    """
+        Convert a byte value into a human-readable size format.
+    """
+  
+    if value < 1024:
+        return f"{value}B"
+    elif value < 1024**2:
+        return f"{value / 1024:.1f}K"
+    elif value < 1024**3:
+        return f"{value / 1024 ** 2:.1f}M"
+    elif value < 1024**4:
+        return f"{value / 1024 ** 3:.1f}G"
+    return f"{value / 1024 ** 4:.1f}T"
+
 
 def optional(func: Callable) -> Callable:
     @wraps(func)
@@ -144,6 +159,7 @@ class QuickTextRenderer(CLIRenderer):
         format_hints.Hex: optional(lambda x: f"0x{x:x}"),
         format_hints.HexBytes: optional(hex_bytes_as_text),
         format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
+        format_hints.ByteSizeFormatted: quoted_optional(byte_size_format_to_text),
         interfaces.renderers.Disassembly: optional(display_disassembly),
         bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
         datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
@@ -221,6 +237,7 @@ class CSVRenderer(CLIRenderer):
         format_hints.Hex: optional(lambda x: f"0x{x:x}"),
         format_hints.HexBytes: optional(hex_bytes_as_text),
         format_hints.MultiTypeData: optional(multitypedata_as_text),
+        format_hints.ByteSizeFormatted: quoted_optional(byte_size_format_to_text),
         interfaces.renderers.Disassembly: optional(display_disassembly),
         bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
         datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
@@ -397,6 +414,7 @@ class JsonRenderer(CLIRenderer):
         format_hints.HexBytes: quoted_optional(hex_bytes_as_text),
         interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
         format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
+        format_hints.ByteSizeFormatted: quoted_optional(byte_size_format_to_text),
         bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
         datetime.datetime: lambda x: (
             x.isoformat()

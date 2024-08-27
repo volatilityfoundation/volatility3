@@ -25,6 +25,10 @@ class HexBytes(bytes):
     """A class to indicate that the bytes should be display in an extended
     format showing hexadecimal and ascii printable display."""
 
+class ByteSizeFormatted(int):
+     """A class to indicate that the bytes should be displayed in a format
+        that has size units"""
+
 
 class MultiTypeData(bytes):
     """The contents are supposed to be a string, but may contain binary data."""
