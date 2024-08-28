@@ -30,7 +30,7 @@ class SSDT(plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.PluginRequirement(
-                name="modules", plugin=modules.Modules, version=(1, 0, 0)
+                name="modules", plugin=modules.Modules, version=(2, 0, 0)
             ),
         ]
 
