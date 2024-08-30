@@ -6,6 +6,7 @@ import logging
 import os
 import json
 import struct
+import functools
 from typing import Optional, Tuple, Union, Dict
 
 from volatility3.framework import constants, interfaces, exceptions
@@ -149,6 +150,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         return True
 
     @classmethod
+    @functools.lru_cache()
     def find_aslr(
         cls,
         context: interfaces.context.ContextInterface,
