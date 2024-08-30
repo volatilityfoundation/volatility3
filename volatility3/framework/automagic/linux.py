@@ -107,6 +107,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                             progress_callback=progress_callback,
                         )
                         if layer:
+                            vollog.debug(f"Detected {layer.__class__.__name__} layer")
                             return layer
                     except Exception as e:
                         vollog.exception(e)
@@ -122,6 +123,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
         layer_name: str,
         linux_banner_address: int,
         target_banner: bytes,
+        logger: logging.Logger = vollog,
     ) -> bool:
         """Determine if a stacked layer is correct or a false positive, by calling the underlying
         _translate method against the linux_banner symbol virtual address. Then, compare it with
@@ -134,14 +136,14 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                 banner_phys_address, len(target_banner)
             )
         except exceptions.InvalidAddressException:
-            vollog.log(
+            logger.log(
                 constants.LOGLEVEL_VVVV,
-                'Cannot translate "linux_banner" symbol virtual address.',
+                'Unable to translate "linux_banner" symbol virtual address.',
             )
             return False
 
         if not banner_value == target_banner:
-            vollog.log(
+            logger.log(
                 constants.LOGLEVEL_VV,
                 f"Mismatch between scanned and virtually translated linux banner : {target_banner} != {banner_value}.",
             )
@@ -218,6 +220,7 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
 
 
 class LinuxIntelSubStacker:
+    _logger = logging.getLogger(f"{__module__}.{__qualname__}")
     __START_KERNEL_map_x64 = 0xFFFFFFFF80000000
     __START_KERNEL_map_x86 = 0xC0000000
 
@@ -273,11 +276,11 @@ class LinuxIntelSubStacker:
             layer_name=layer_name,
             linux_banner_address=linux_banner_address,
             target_banner=banner,
+            logger=self._logger,
         )
 
         if layer and dtb and test_banner_equality:
-            vollog.debug(f"DTB was found at: {hex(dtb)}")
-            vollog.debug("Intel image found")
+            self._logger.debug(f"DTB was found at: {hex(dtb)}")
             return layer
         else:
             layer.destroy()
@@ -295,6 +298,7 @@ class LinuxIntelSubStacker:
 
 
 class LinuxAArch64SubStacker:
+    _logger = logging.getLogger(f"{__module__}.{__qualname__}")
     # https://developer.arm.com/documentation/ddi0601/latest/AArch64-Registers/
     # CPU register, bound to its attribute name in the "cpuinfo_arm64" kernel struct
     _optional_cpu_registers = {
@@ -435,6 +439,7 @@ class LinuxAArch64SubStacker:
                     layer_name=layer_name,
                     linux_banner_address=linux_banner_address,
                     target_banner=banner,
+                    logger=self._logger,
                 )
 
                 if layer and dtb and test_banner_equality:
@@ -448,9 +453,8 @@ class LinuxAArch64SubStacker:
                         cpu_registers.update(optional_cpu_registers)
                         layer.config["cpu_registers"] = json.dumps(cpu_registers)
                     except exceptions.SymbolError as e:
-                        vollog.log(constants.LOGLEVEL_VVV, e, exc_info=True)
-                    vollog.debug(f"DTB was found at: {hex(dtb)}")
-                    vollog.debug("AArch64 image found")
+                        self._logger.log(constants.LOGLEVEL_VVV, e, exc_info=True)
+                    self._logger.debug(f"DTB was found at: {hex(dtb)}")
                     return layer
                 else:
                     layer.destroy()
@@ -474,7 +478,7 @@ class LinuxAArch64SubStacker:
                 cpu_reg_value = getattr(boot_cpu_data_struct, cpu_reg_attribute_name)
                 cpu_registers[cpu_reg] = cpu_reg_value
             except AttributeError:
-                vollog.log(
+                cls._logger.log(
                     constants.LOGLEVEL_VVV,
                     f"boot_cpu_data struct does not include the {cpu_reg_attribute_name} field.",
                 )
