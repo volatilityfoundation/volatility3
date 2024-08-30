@@ -19,7 +19,7 @@ vollog = logging.getLogger(__name__)
 
 
 class VirtMapScanner(interfaces.plugins.PluginInterface):
-    """Scans by default the entire kernel virtual memory space, and dumps its content to the disk. Allows to speed-up mapping operations afterwards, by specifying the output file as an argument to --virtmap-cache-path."""
+    """Scans the entire kernel virtual memory space by default and dumps its content to the disk. Allows to speed-up mapping operations afterwards, by specifying the output file as an argument to --virtmap-cache-path."""
 
     _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
@@ -46,12 +46,24 @@ class VirtMapScanner(interfaces.plugins.PluginInterface):
     @classmethod
     def virtmap_cache_file_producer(
         cls,
-        results: dict,
+        scans_results: dict,
         open_method: Type[interfaces.plugins.FileHandlerInterface],
         filename: str = "virtmapcache.json.xz",
-    ):
+    ) -> str:
+        """Dumps scanning results into a JSON string,
+        compresses it and writes it to disk.
+
+        Args:
+            scans_results: the layers scans results
+            open_method: class to provide context manager for opening the file
+            filename: the filename to use when dumping the file to disk
+
+        Returns:
+            A dictionary mapping each section to the section scan result
+        """
+
         file_handle = open_method(filename)
-        json_data = json.dumps(results).encode()
+        json_data = json.dumps(scans_results).encode()
         xz_data = lzma.compress(json_data)
         file_handle.write(xz_data)
         file_handle.close()
@@ -64,7 +76,16 @@ class VirtMapScanner(interfaces.plugins.PluginInterface):
         layer: interfaces.layers.DataLayerInterface,
         sections: Iterable[Tuple[int, int]],
         progress_callback: constants.ProgressCallback = None,
-    ):
+    ) -> dict:
+        """Scans the provided layer sections
+
+        Args:
+            layer: the layer to scan
+            sections: the sections to scan on the layer
+
+        Returns:
+            A dictionary mapping each section to the section scan result
+        """
         layer_results = {}
         scanner = BytesScanner("")
         for section in sections:
@@ -101,7 +122,15 @@ class VirtMapScanner(interfaces.plugins.PluginInterface):
             interfaces.layers.DataLayerInterface, Iterable[Tuple[int, int]]
         ],
         progress_callback: constants.ProgressCallback = None,
-    ):
+    ) -> dict:
+        """Scans a list of layers and sections
+
+        Args:
+            layers_sections: a dictionary containing layers and a list of sections to scan on each layer
+
+        Returns:
+            A dictionary mapping each layer identifier to the corresponding scan result
+        """
         layers_results = {}
 
         for layer, sections in layers_sections.items():
