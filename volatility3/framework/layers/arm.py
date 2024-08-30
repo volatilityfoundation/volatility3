@@ -769,8 +769,11 @@ class AArch64RegMap:
         """
 
         ASID = (63, 48)
+        "An ASID for the translation table base address."
         BADDR = (47, 1)
+        "Translation table base address."
         CnP = (0, 0)
+        "Common not Private."
 
     class TTBR1_EL1(Enum):
         """TTBR1_EL1, Translation Table Base Register 1 (EL1)
@@ -779,8 +782,11 @@ class AArch64RegMap:
         """
 
         ASID = (63, 48)
+        "An ASID for the translation table base address."
         BADDR = (47, 1)
+        "Translation table base address."
         CnP = (0, 0)
+        "Common not Private."
 
     class ID_AA64MMFR1_EL1(Enum):
         """ID_AA64MMFR1_EL1, AArch64 Memory Model Feature Register 1.
@@ -840,7 +846,7 @@ class AArch64RegFieldValues:
 
 
 def set_reg_bits(value: int, reg_field: Enum, reg_value: int = 0) -> int:
-    """Sets the bits from high_bit to low_bit (inclusive) in current_value to the given value.
+    """Sets the bits from high_bit to low_bit (inclusive) in "reg_value" to the given value.
     Allows to manipulate the bits at arbitrary positions inside a register.
 
     Args:
