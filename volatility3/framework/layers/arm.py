@@ -645,7 +645,7 @@ class AArch64(linear.LinearlyMappedLayer):
             requirements.StringRequirement(
                 name="cpu_registers",
                 optional=False,
-                description="Serialized dict of cpu register keys bound to their corresponding value. Needed for specific (non-mandatory) uses (ex: dirty bit management).",
+                description="Serialized dict of cpu register keys bound to their corresponding value.",
                 default="{}",
             ),
             requirements.BooleanRequirement(
