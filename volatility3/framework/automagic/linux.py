@@ -326,9 +326,9 @@ class LinuxAArch64SubStacker:
             layer_name,
             progress_callback=progress_callback,
         )
-        dtb = table.get_symbol("swapper_pg_dir").address + kaslr_shift
-        ttbr1_el1 = arm.set_reg_bits(dtb, arm.AArch64RegMap.TTBR1_EL1.BADDR)
-        context.config[path_join(config_path, "page_map_offset")] = dtb
+        ttb1 = table.get_symbol("swapper_pg_dir").address + kaslr_shift
+        ttbr1_el1 = arm.set_reg_bits(ttb1, arm.AArch64RegMap.TTBR1_EL1.BADDR)
+        context.config[path_join(config_path, "page_map_offset")] = ttb1
         entry_format = (
             "<"
             if table.get_type("pointer").vol.data_format.byteorder == "little"
@@ -442,7 +442,7 @@ class LinuxAArch64SubStacker:
                     logger=self._logger,
                 )
 
-                if layer and dtb and test_banner_equality:
+                if layer and ttb1 and test_banner_equality:
                     try:
                         optional_cpu_registers = self.extract_cpu_registers(
                             context=context,
@@ -454,7 +454,7 @@ class LinuxAArch64SubStacker:
                         layer.config["cpu_registers"] = json.dumps(cpu_registers)
                     except exceptions.SymbolError as e:
                         self._logger.log(constants.LOGLEVEL_VVV, e, exc_info=True)
-                    self._logger.debug(f"DTB was found at: {hex(dtb)}")
+                    self._logger.debug(f"TTB1 was found at: {hex(ttb1)}")
                     return layer
                 else:
                     layer.destroy()
