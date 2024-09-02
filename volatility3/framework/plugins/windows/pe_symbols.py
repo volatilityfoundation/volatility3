@@ -3,7 +3,7 @@
 
 import io
 import logging
-from typing import Dict, Tuple, Optional, List
+from typing import Dict, Tuple, Optional, List, Callable
 
 import pefile
 
@@ -18,14 +18,16 @@ from volatility3.plugins.windows import pslist, vadinfo, modules
 
 vollog = logging.getLogger(__name__)
 
-# used for special handling of the kernel PDB file. See later notes
-os_module_name = "ntoskrnl.exe"
-
 
 class PESymbols(interfaces.plugins.PluginInterface):
     """Prints symbols in PE files in process and kernel memory"""
 
     _required_framework_version = (2, 7, 0)
+
+    _version = (1, 0, 0)
+
+    # used for special handling of the kernel PDB file. See later notes
+    os_module_name = "ntoskrnl.exe"
 
     @classmethod
     def get_requirements(cls):
@@ -192,7 +194,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         # the PDB name of the kernel file is not consistent for an exe, for example,
         # a `ntoskrnl.exe` can have an internal PDB name of any of the ones in the following list
         # The code attempts to find all possible PDBs to ensure the best chance of recovery
-        if mod_name == os_module_name:
+        if mod_name == PESymbols.os_module_name:
             pdb_names = ["ntkrnlmp.pdb", "ntkrnlpa.pdb", "ntkrpamp.pdb", "ntoskrnl.pdb"]
 
         # for non-kernel files, replace the exe, sys, or dll extension with pdb
@@ -259,8 +261,8 @@ class PESymbols(interfaces.plugins.PluginInterface):
         config_path: str,
         layer_name: str,
         symbol_table: str,
-        module_collector,
         wanted_symbols: Dict[str, List[str]],
+        module_collector: Callable[[interfaces.context.ContextInterface, str, str, Dict[str, List[str]]], Dict[str, Tuple[str, int]]]
     ) -> Dict[str, Tuple[str, int]]:
         """
         Loops through each method of symbol analysis until each wanted symbol is found
@@ -308,7 +310,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         )
 
         # special handling for the kernel
-        gather_kernel = os_module_name in wanted_modules
+        gather_kernel = PESymbols.os_module_name in wanted_modules
 
         for index, mod in enumerate(
             modules.Modules.list_modules(context, layer_name, symbol_table)
@@ -320,7 +322,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
             # to analyze, it must either be the kernel or a wanted module
             if gather_kernel and index == 0:
-                mod_name = os_module_name
+                mod_name = PESymbols.os_module_name
             elif not mod_name.endswith(wanted_modules):
                 continue
 
@@ -402,8 +404,8 @@ class PESymbols(interfaces.plugins.PluginInterface):
             config_path,
             layer_name,
             symbol_table,
-            PESymbols.get_wanted_process_modules,
             wanted_symbols,
+            PESymbols.get_wanted_process_modules,
         )
 
     @staticmethod
@@ -412,7 +414,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         config_path,
         layer_name,
         symbol_table,
-        wanted_symbols,
+        wanted_symbols: Dict[str, List[str]],
     ) -> Dict[str, Tuple[str, int]]:
         """
         Wrapper around `find_function_offsets` to gather kernel symbols
@@ -423,8 +425,8 @@ class PESymbols(interfaces.plugins.PluginInterface):
             config_path,
             layer_name,
             symbol_table,
-            PESymbols.get_wanted_kernel_modules,
             wanted_symbols,
+            PESymbols.get_wanted_kernel_modules,
         )
 
     def _generator(self):
@@ -432,6 +434,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
         wanted_symbols = {self.config["module"].lower(): [self.config["symbol"]]}
 
+        # FIXME change this to user partials after studying them
         if self.config["source"] == "kernel":
             generator = self.resolve_wanted_kernel_symbols
         else:
