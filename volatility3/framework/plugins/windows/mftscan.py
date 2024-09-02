@@ -105,7 +105,9 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 # There is no field that has a count of Attributes
                 # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
                 while attr.Attr_Header.AttrType.is_valid_choice:
-                    for record in attr_callback(record_map, mft_record, attr, symbol_table):
+                    for record in attr_callback(
+                        record_map, mft_record, attr, symbol_table
+                    ):
                         yield record
 
                     # If there's no advancement the loop will never end, so break it now
@@ -357,7 +359,9 @@ class ADS(interfaces.plugins.PluginInterface):
         attr: interfaces.objects.ObjectInterface,
         symbol_table,
     ):
-        return MFTScan.parse_data_records(record_map, mft_record, attr, symbol_table, False)
+        return MFTScan.parse_data_records(
+            record_map, mft_record, attr, symbol_table, False
+        )
 
     def _generator(self):
         for (
@@ -421,7 +425,9 @@ class ResidentData(interfaces.plugins.PluginInterface):
         attr: interfaces.objects.ObjectInterface,
         symbol_table,
     ):
-        return MFTScan.parse_data_records(record_map, mft_record, attr, symbol_table, True)
+        return MFTScan.parse_data_records(
+            record_map, mft_record, attr, symbol_table, True
+        )
 
     def _generator(self):
         for (
