@@ -48,8 +48,7 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            module_name: Name of the module to use for scanning
 
         Returns:
               A list of _ETHREAD objects found by scanning memory for the "Thre" / "Thr\\xE5" pool signatures

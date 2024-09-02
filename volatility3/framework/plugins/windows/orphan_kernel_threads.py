@@ -1,4 +1,4 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
@@ -48,8 +48,9 @@ class Threads(thrdscan.ThrdScan):
         """Yields thread objects of kernel threads that do not map to a module
 
         Args:
-            kernel
-
+            cls
+            context: the context to operate upon
+            module_name: name of the module to use for scanning
         Returns:
             A generator of thread objects of orphaned threads
         """
@@ -61,6 +62,7 @@ class Threads(thrdscan.ThrdScan):
             context, layer_name, symbol_table
         )
 
+        # FIXME - use a proper constant once established
         # used to filter out smeared pointers
         if symbols.symbol_table_is_64bit(context, symbol_table):
             kernel_start = 0xFFFFF80000000000
