@@ -262,7 +262,10 @@ class PESymbols(interfaces.plugins.PluginInterface):
         layer_name: str,
         symbol_table: str,
         wanted_symbols: Dict[str, List[str]],
-        module_collector: Callable[[interfaces.context.ContextInterface, str, str, Dict[str, List[str]]], Dict[str, Tuple[str, int]]]
+        module_collector: Callable[
+            [interfaces.context.ContextInterface, str, str, Dict[str, List[str]]],
+            Dict[str, Tuple[str, int]],
+        ],
     ) -> Dict[str, Tuple[str, int]]:
         """
         Loops through each method of symbol analysis until each wanted symbol is found
