@@ -105,7 +105,9 @@ class Timeliner(interfaces.plugins.PluginInterface):
         data = item[1]
 
         def sortable(timestamp):
-            max_date = datetime.datetime(day=1, month=12, year=datetime.MAXYEAR)
+            max_date = datetime.datetime(
+                day=1, month=12, year=datetime.MAXYEAR, tzinfo=datetime.timezone.utc
+            )
             if isinstance(timestamp, interfaces.renderers.BaseAbsentValue):
                 return max_date
             return timestamp
