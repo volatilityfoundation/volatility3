@@ -31,10 +31,10 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
             requirements.PluginRequirement(
-                name="yarascan", plugin=yarascan.YaraScan, version=(1, 2, 0)
+                name="yarascan", plugin=yarascan.YaraScan, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="yarascanner", component=yarascan.YaraScanner, version=(2, 0, 0)
+                name="yarascanner", component=yarascan.YaraScanner, version=(2, 1, 0)
             ),
             requirements.ModuleRequirement(
                 name="kernel",

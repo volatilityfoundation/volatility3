@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Volatility Foundation", email = "volatility@volatilityfoundation.org" },
 ]
-requires-python = ">=3.7.3"
+requires-python = ">=3.8.0"
 license = { text = "VSL" }
 dynamic = ["dependencies", "optional-dependencies", "version"]
 
