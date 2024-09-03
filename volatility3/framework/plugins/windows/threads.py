@@ -19,8 +19,8 @@ class Threads(thrdscan.ThrdScan):
     _version = (1, 0, 0)
 
     def __init__(self, *args, **kwargs):
-        self.implementation = self.list_process_threads
         super().__init__(*args, **kwargs)
+        self.implementation = self.list_process_threads
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -50,7 +50,6 @@ class Threads(thrdscan.ThrdScan):
 
         Args:
             proc: _EPROCESS object from which to list the VADs
-            filter_func: Function to take a virtual address descriptor value and return True if it should be filtered out
 
         Returns:
             A list of threads based on the process and filtered based on the filter function
@@ -65,20 +64,17 @@ class Threads(thrdscan.ThrdScan):
             yield thread
 
     @classmethod
-    def filter_func(cls, config: interfaces.configuration.HierarchicalDict) -> Callable:
-        return pslist.PsList.create_pid_filter(config.get("pid", None))
-
-    @classmethod
     def list_process_threads(
         cls,
         context: interfaces.context.ContextInterface,
         module_name: str,
-        filter_func: Callable,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Runs through all processes and lists threads for each process"""
         module = context.modules[module_name]
         layer_name = module.layer_name
         symbol_table_name = module.symbol_table_name
+
+        filter_func = pslist.PsList.create_pid_filter(context.config.get("pid", None))
 
         for proc in pslist.PsList.list_processes(
             context=context,
