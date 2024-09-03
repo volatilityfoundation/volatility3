@@ -2,6 +2,8 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
+from typing import Optional
+
 from volatility3.framework import objects, constants, exceptions
 
 
@@ -26,11 +28,11 @@ class MFTFileName(objects.StructType):
 class MFTAttribute(objects.StructType):
     """This represents an MFT ATTRIBUTE"""
 
-    def get_resident_filename(self) -> str:
+    def get_resident_filename(self) -> Optional[str]:
         # 4MB chosen as cutoff instead of 4KB to allow for recovery from format /L created file systems
         # Length as 512 as its 256*2, which is the maximum size for an entire file path, so this is even generous
         if (
-            self.Attr_Header.ContentOffset > 4194304
+            self.Attr_Header.ContentOffset > 0x400000
             or self.Attr_Header.NameLength > 512
         ):
             return None
@@ -49,12 +51,12 @@ class MFTAttribute(objects.StructType):
         except exceptions.InvalidAddressException:
             return None
 
-    def get_resident_filecontent(self) -> bytes:
+    def get_resident_filecontent(self) -> Optional[bytes]:
         # smear observed in mass testing of samples
         # 4MB chosen as cutoff instead of 4KB to allow for recovery from format /L created file systems
         if (
-            self.Attr_Header.ContentOffset > 4194304
-            or self.Attr_Header.ContentLength > 4194304
+            self.Attr_Header.ContentOffset > 0x400000
+            or self.Attr_Header.ContentLength > 0x400000
         ):
             return None
 
