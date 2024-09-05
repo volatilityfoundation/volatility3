@@ -83,19 +83,19 @@ class AArch64(linear.LinearlyMappedLayer):
         super().__init__(
             context=context, config_path=config_path, name=name, metadata=metadata
         )
+        self._cpu_regs = {}
+        for register in [
+            AArch64RegMap.TCR_EL1.__name__,
+            AArch64RegMap.TTBR1_EL1.__name__,
+            AArch64RegMap.ID_AA64MMFR1_EL1.__name__,
+        ]:
+            # Sanity check for optional registers.
+            # Missing required CPU registers will have
+            # previously raised a layer requirement exception.
+            if self.config.get(register):
+                self._cpu_regs[register] = self.config[register]
 
-        # Unserialize cpu_registers config attribute into a dict
-        self._cpu_regs = self.config["cpu_registers"]
-        try:
-            self._cpu_regs: dict = json.loads(self._cpu_regs)
-        except json.JSONDecodeError as e:
-            raise json.JSONDecodeError(
-                'Could not JSON deserialize provided "cpu_registers" layer requirement.',
-                e.doc,
-                e.pos,
-            )
         self._cpu_regs_mapped = self._map_reg_values(self._cpu_regs)
-
         self._entry_format = self.config["entry_format"]
         self._layer_debug = self.config.get("layer_debug", False)
         self._translation_debug = self.config.get("translation_debug", False)
@@ -118,7 +118,7 @@ class AArch64(linear.LinearlyMappedLayer):
             ),
         ]
 
-        # Context : TTB0 (user) or TTB1 (kernel)
+        # Context : TTB0 (user space) or TTB1 (kernel space)
         self._virtual_addr_space = int(
             self._page_map_offset == self._page_map_offset_kernel
         )
@@ -126,25 +126,16 @@ class AArch64(linear.LinearlyMappedLayer):
         # [1], see D8.1.9, page 5818
         self._ttb_bitsize = 64 - self._ttbs_tnsz[self._virtual_addr_space]
         self._ttb_granule = self._ttbs_granules[self._virtual_addr_space]
+        self._page_size = self._ttb_granule * 1024
+        self._page_size_in_bits = self._page_size.bit_length() - 1
         """
         Translation Table Granule is in fact the page size, as it is the
         smallest block of memory that can be described.
         Possibles values are 4, 16 or 64 (kB).
         """
-        self._is_52bits = True if self._ttb_bitsize < 16 else False
-        self._ttb_lookup_indexes = self._determine_ttb_lookup_indexes(
-            self._ttb_granule, self._ttb_bitsize
-        )
-        self._ttb_descriptor_bits = self._determine_ttb_descriptor_bits(
-            self._ttb_granule, self._ttb_lookup_indexes, self._is_52bits
-        )
-        self._virtual_addr_range = self._get_virtual_addr_range()
-        self._canonical_prefix = self._mask(
-            (1 << self._bits_per_register) - 1,
-            self._bits_per_register,
-            self._ttb_bitsize,
-        )
 
+        # 52 bits VA detection
+        self._is_52bits = True if self._ttb_bitsize < 16 else False
         # [1], see D8.3, page 5852
         if self._is_52bits:
             if self._ttb_granule in [4, 16]:
@@ -152,8 +143,21 @@ class AArch64(linear.LinearlyMappedLayer):
             elif self._ttb_granule == 64:
                 self._ta_51_x_bits = (15, 12)
 
-        self._page_size = self._ttb_granule * 1024
-        self._page_size_in_bits = self._page_size.bit_length() - 1
+        # Translation indexes calculations
+        self._ttb_lookup_indexes = self._determine_ttb_lookup_indexes(
+            self._ttb_granule, self._ttb_bitsize
+        )
+        self._ttb_descriptor_bits = self._determine_ttb_descriptor_bits(
+            self._ttb_granule, self._ttb_lookup_indexes, self._is_52bits
+        )
+
+        self._virtual_addr_range = self._get_virtual_addr_range()
+        self._canonical_prefix = self._mask(
+            (1 << self._bits_per_register) - 1,
+            self._bits_per_register,
+            self._ttb_bitsize,
+        )
+
         self._entry_size = struct.calcsize(self._entry_format)
         self._entry_number = self._page_size // self._entry_size
 
@@ -577,7 +581,10 @@ class AArch64(linear.LinearlyMappedLayer):
         check if a register value was provided to this layer,
         mask every field accordingly and store the result.
 
-        Example return value : {'ID_AA64MMFR1_EL1.HAFDBS': 2}
+        Example return value :
+         {'TCR_EL1.TG1': 3, 'TCR_EL1.T1SZ': 12, 'TCR_EL1.TG0': 1,
+          'TCR_EL1.T0SZ': 12, 'TTBR1_EL1.ASID': 0, 'TTBR1_EL1.BADDR': 1092419584,
+          'TTBR1_EL1.CnP': 0}
         """
 
         masked_trees = {}
@@ -642,12 +649,6 @@ class AArch64(linear.LinearlyMappedLayer):
                 optional=False,
                 description='Format and byte order of table descriptors, represented in the "struct" format.',
             ),
-            requirements.StringRequirement(
-                name="cpu_registers",
-                optional=False,
-                description="Serialized dict of cpu register keys bound to their corresponding value.",
-                default="{}",
-            ),
             requirements.BooleanRequirement(
                 name="layer_debug",
                 optional=True,
@@ -667,6 +668,22 @@ class AArch64(linear.LinearlyMappedLayer):
                 name="kernel_banner",
                 optional=True,
                 description="Kernel unique identifier, including compiler name and version, kernel version, compile time.",
+            ),
+            requirements.IntRequirement(
+                name=AArch64RegMap.TCR_EL1.__name__,
+                optional=False,
+                description="TCR_EL1 register",
+            ),
+            requirements.IntRequirement(
+                name=AArch64RegMap.TTBR1_EL1.__name__,
+                optional=False,
+                description="TTBR1_EL1 register",
+            ),
+            requirements.IntRequirement(
+                name=AArch64RegMap.ID_AA64MMFR1_EL1.__name__,
+                optional=True,
+                description="ID_AA64MMFR1_EL1 register",
+                default=None,
             ),
         ]
 
