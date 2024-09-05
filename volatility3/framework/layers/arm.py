@@ -5,7 +5,6 @@
 import logging
 import functools
 import collections
-import json
 import inspect
 import struct
 from typing import Optional, Dict, Any, List, Iterable, Tuple
