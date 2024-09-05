@@ -7,7 +7,7 @@ import os
 import json
 import struct
 import functools
-from typing import Optional, Tuple, Union, Dict
+from typing import Optional, Tuple, Union, Dict, List
 
 from volatility3.framework import constants, interfaces, exceptions
 from volatility3.framework.automagic import symbol_cache, symbol_finder
@@ -327,7 +327,9 @@ class LinuxAArch64SubStacker:
             progress_callback=progress_callback,
         )
         ttb1 = table.get_symbol("swapper_pg_dir").address + kaslr_shift
-        ttbr1_el1 = arm.set_reg_bits(ttb1, arm.AArch64RegMap.TTBR1_EL1.BADDR)
+        context.config[path_join(config_path, arm.AArch64RegMap.TTBR1_EL1.__name__)] = (
+            arm.set_reg_bits(ttb1, arm.AArch64RegMap.TTBR1_EL1.BADDR)
+        )
         context.config[path_join(config_path, "page_map_offset")] = ttb1
         entry_format = (
             "<"
@@ -392,9 +394,8 @@ class LinuxAArch64SubStacker:
         """
         va_bits_candidates = [va_bits] + [va_bits + i for i in range(-1, -4, -1)]
         for va_bits in va_bits_candidates:
-            cpu_registers = {}
+            # T1SZ is considered equal to T0SZ
             tcr_el1 = 0
-            # T1SZ is considered to equal to T0SZ
             tcr_el1 = arm.set_reg_bits(
                 64 - va_bits, arm.AArch64RegMap.TCR_EL1.T1SZ, tcr_el1
             )
@@ -418,12 +419,10 @@ class LinuxAArch64SubStacker:
                 tcr_el1 = arm.set_reg_bits(
                     tcr_el1_tg0, arm.AArch64RegMap.TCR_EL1.TG0, tcr_el1
                 )
+                context.config[
+                    path_join(config_path, arm.AArch64RegMap.TCR_EL1.__name__)
+                ] = tcr_el1
 
-                cpu_registers[arm.AArch64RegMap.TCR_EL1.__name__] = tcr_el1
-                cpu_registers[arm.AArch64RegMap.TTBR1_EL1.__name__] = ttbr1_el1
-                context.config[path_join(config_path, "cpu_registers")] = json.dumps(
-                    cpu_registers
-                )
                 # Build layer
                 layer = layer_class(
                     context,
@@ -444,14 +443,18 @@ class LinuxAArch64SubStacker:
 
                 if layer and ttb1 and test_banner_equality:
                     try:
-                        optional_cpu_registers = self.extract_cpu_registers(
+                        optional_cpu_registers = self.get_registers_from_cpuinfo_arm64(
                             context=context,
                             layer_name=layer_name,
                             table_name=table_name,
+                            registers=self._optional_cpu_registers,
                             kaslr_shift=kaslr_shift,
                         )
-                        cpu_registers.update(optional_cpu_registers)
-                        layer.config["cpu_registers"] = json.dumps(cpu_registers)
+                        layer_req = [req.name for req in layer.get_requirements()]
+                        for reg, reg_val in optional_cpu_registers.items():
+                            # Verify register's presence in the requirements
+                            if reg in layer_req:
+                                layer.config[reg] = reg_val
                     except exceptions.SymbolError as e:
                         self._logger.log(constants.LOGLEVEL_VVV, e, exc_info=True)
                     self._logger.debug(f"TTB1 was found at: {hex(ttb1)}")
@@ -462,28 +465,29 @@ class LinuxAArch64SubStacker:
         return None
 
     @classmethod
-    def extract_cpu_registers(
+    def get_registers_from_cpuinfo_arm64(
         cls,
         context: interfaces.context.ContextInterface,
         layer_name: str,
         table_name: str,
+        registers: Dict[str, str],
         kaslr_shift: int,
     ) -> Dict[str, int]:
 
         tmp_kernel_module = context.module(table_name, layer_name, kaslr_shift)
         boot_cpu_data_struct = tmp_kernel_module.object_from_symbol("boot_cpu_data")
-        cpu_registers = {}
-        for cpu_reg, cpu_reg_attribute_name in cls._optional_cpu_registers.items():
+        results = {}
+        for reg, reg_attribute_name in registers.items():
             try:
-                cpu_reg_value = getattr(boot_cpu_data_struct, cpu_reg_attribute_name)
-                cpu_registers[cpu_reg] = cpu_reg_value
+                cpu_reg_value = getattr(boot_cpu_data_struct, reg_attribute_name)
+                results[reg] = cpu_reg_value
             except AttributeError:
                 cls._logger.log(
                     constants.LOGLEVEL_VVV,
-                    f"boot_cpu_data struct does not include the {cpu_reg_attribute_name} field.",
+                    f"boot_cpu_data struct does not include the {reg_attribute_name} field.",
                 )
 
-        return cpu_registers
+        return results
 
 
 class LinuxSymbolFinder(symbol_finder.SymbolFinder):
