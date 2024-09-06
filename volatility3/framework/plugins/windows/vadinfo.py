@@ -3,13 +3,13 @@
 #
 
 import logging
-from typing import Callable, List, Generator, Iterable, Type, Optional
+from typing import Callable, List, Generator, Iterable, Type, Optional, Tuple
 
-from volatility3.framework import renderers, interfaces, exceptions
+from volatility3.framework import renderers, interfaces, exceptions, symbols
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
-from volatility3.plugins.windows import pslist
+from volatility3.plugins.windows import pslist, pe_symbols
 
 vollog = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
     _version = (2, 0, 0)
     MAXSIZE_DEFAULT = 1024 * 1024 * 1024  # 1 Gb
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):  # type: ignore
         super().__init__(*args, **kwargs)
         self._protect_values = None
 
@@ -106,6 +106,58 @@ class VadInfo(interfaces.plugins.PluginInterface):
             object_type="array", offset=addr, subtype=ntkrnlmp.get_type("int"), count=32
         )
         return values  # type: ignore
+
+    @staticmethod
+    def get_proc_vads_with_file_paths(
+        proc: interfaces.objects.ObjectInterface,
+    ) -> pe_symbols.PESymbols.ranges_type:
+        """
+        Returns a list of the process' vads that map a file
+        """
+        vads = []
+
+        for vad in proc.get_vad_root().traverse():
+            filepath = vad.get_file_name()
+            if not isinstance(filepath, str) or filepath.count("\\") == 0:
+                continue
+
+            vads.append((vad.get_start(), vad.get_size(), filepath))
+
+        return vads
+
+    @classmethod
+    def get_all_vads_with_file_paths(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        symbol_table_name: str,
+    ) -> Generator[
+        Tuple[
+            interfaces.objects.ObjectInterface, str, pe_symbols.PESymbols.ranges_type
+        ],
+        None,
+        None,
+    ]:
+        """
+        Yields each set of vads for a process that have a file mapped, along with the process itself and its layer
+        """
+        is_32bit_arch = not symbols.symbol_table_is_64bit(context, symbol_table_name)
+
+        procs = pslist.PsList.list_processes(
+            context=context,
+            layer_name=layer_name,
+            symbol_table=symbol_table_name,
+        )
+
+        for proc in procs:
+            try:
+                proc_layer_name = proc.add_process_layer()
+            except exceptions.InvalidAddressException:
+                continue
+
+            vads = cls.get_proc_vads_with_file_paths(proc)
+
+            yield proc, proc_layer_name, vads
 
     @classmethod
     def list_vads(
@@ -196,11 +248,33 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
         return file_handle
 
-    def _generator(self, procs):
+    def _generator(
+        self, procs: List[interfaces.objects.ObjectInterface]
+    ) -> Generator[
+        Tuple[
+            int,
+            Tuple[
+                int,
+                str,
+                format_hints.Hex,
+                format_hints.Hex,
+                format_hints.Hex,
+                str,
+                str,
+                int,
+                int,
+                format_hints.Hex,
+                str,
+                str,
+            ],
+        ],
+        None,
+        None,
+    ]:
         kernel = self.context.modules[self.config["kernel"]]
         kernel_layer = self.context.layers[kernel.layer_name]
 
-        def passthrough(_: interfaces.objects.ObjectInterface) -> bool:
+        def passthrough(x: interfaces.objects.ObjectInterface) -> bool:
             return False
 
         filter_func = passthrough
@@ -250,7 +324,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
                     ),
                 )
 
-    def run(self):
+    def run(self) -> renderers.TreeGrid:
         kernel = self.context.modules[self.config["kernel"]]
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
