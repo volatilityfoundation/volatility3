@@ -670,9 +670,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         layer_name: str,
         symbol_table_name: str,
     ) -> Generator[
-        Tuple[
-            interfaces.objects.ObjectInterface, str, ranges_type
-        ],
+        Tuple[interfaces.objects.ObjectInterface, str, ranges_type],
         None,
         None,
     ]:
