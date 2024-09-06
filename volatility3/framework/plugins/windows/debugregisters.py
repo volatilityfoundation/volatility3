@@ -9,7 +9,6 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 import volatility3.plugins.windows.pslist as pslist
 import volatility3.plugins.windows.threads as threads
-import volatility3.plugins.windows.vadinfo as vadinfo
 import volatility3.plugins.windows.pe_symbols as pe_symbols
 
 vollog = logging.getLogger(__name__)
@@ -30,9 +29,6 @@ class DebugRegisters(interfaces.plugins.PluginInterface):
             ),
             requirements.VersionRequirement(
                 name="pslist", component=pslist.PsList, version=(2, 0, 0)
-            ),
-            requirements.VersionRequirement(
-                name="vadinfo", component=vadinfo.VadInfo, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="pe_symbols", component=pe_symbols.PESymbols, version=(1, 0, 0)
@@ -80,7 +76,7 @@ class DebugRegisters(interfaces.plugins.PluginInterface):
         if owner_proc.vol.offset in vads_cache:
             vads = vads_cache[owner_proc.vol.offset]
         else:
-            vads = vadinfo.VadInfo.get_proc_vads_with_file_paths(owner_proc)
+            vads = pe_symbols.PESymbols.get_proc_vads_with_file_paths(owner_proc)
             vads_cache[owner_proc.vol.offset] = vads
 
         # smear or terminated process
