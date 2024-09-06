@@ -107,56 +107,6 @@ class VadInfo(interfaces.plugins.PluginInterface):
         )
         return values  # type: ignore
 
-    @staticmethod
-    def get_proc_vads_with_file_paths(
-        proc: interfaces.objects.ObjectInterface,
-    ) -> pe_symbols.PESymbols.ranges_type:
-        """
-        Returns a list of the process' vads that map a file
-        """
-        vads = []
-
-        for vad in proc.get_vad_root().traverse():
-            filepath = vad.get_file_name()
-            if not isinstance(filepath, str) or filepath.count("\\") == 0:
-                continue
-
-            vads.append((vad.get_start(), vad.get_size(), filepath))
-
-        return vads
-
-    @classmethod
-    def get_all_vads_with_file_paths(
-        cls,
-        context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table_name: str,
-    ) -> Generator[
-        Tuple[
-            interfaces.objects.ObjectInterface, str, pe_symbols.PESymbols.ranges_type
-        ],
-        None,
-        None,
-    ]:
-        """
-        Yields each set of vads for a process that have a file mapped, along with the process itself and its layer
-        """
-        procs = pslist.PsList.list_processes(
-            context=context,
-            layer_name=layer_name,
-            symbol_table=symbol_table_name,
-        )
-
-        for proc in procs:
-            try:
-                proc_layer_name = proc.add_process_layer()
-            except exceptions.InvalidAddressException:
-                continue
-
-            vads = cls.get_proc_vads_with_file_paths(proc)
-
-            yield proc, proc_layer_name, vads
-
     @classmethod
     def list_vads(
         cls,

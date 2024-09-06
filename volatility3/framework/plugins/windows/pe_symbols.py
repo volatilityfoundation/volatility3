@@ -16,7 +16,7 @@ from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import pdbutil
 from volatility3.framework.symbols.windows.extensions import pe
-from volatility3.plugins.windows import pslist, vadinfo, modules
+from volatility3.plugins.windows import pslist, modules
 
 vollog = logging.getLogger(__name__)
 
@@ -169,9 +169,6 @@ class PESymbols(interfaces.plugins.PluginInterface):
             ),
             requirements.VersionRequirement(
                 name="pslist", component=pslist.PsList, version=(2, 0, 0)
-            ),
-            requirements.VersionRequirement(
-                name="vadinfo", component=vadinfo.VadInfo, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="modules", component=modules.Modules, version=(2, 0, 0)
@@ -649,6 +646,56 @@ class PESymbols(interfaces.plugins.PluginInterface):
         return found_modules
 
     @staticmethod
+    def get_proc_vads_with_file_paths(
+        proc: interfaces.objects.ObjectInterface,
+    ) -> ranges_type:
+        """
+        Returns a list of the process' vads that map a file
+        """
+        vads = []
+
+        for vad in proc.get_vad_root().traverse():
+            filepath = vad.get_file_name()
+            if not isinstance(filepath, str) or filepath.count("\\") == 0:
+                continue
+
+            vads.append((vad.get_start(), vad.get_size(), filepath))
+
+        return vads
+
+    @classmethod
+    def get_all_vads_with_file_paths(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        symbol_table_name: str,
+    ) -> Generator[
+        Tuple[
+            interfaces.objects.ObjectInterface, str, ranges_type
+        ],
+        None,
+        None,
+    ]:
+        """
+        Yields each set of vads for a process that have a file mapped, along with the process itself and its layer
+        """
+        procs = pslist.PsList.list_processes(
+            context=context,
+            layer_name=layer_name,
+            symbol_table=symbol_table_name,
+        )
+
+        for proc in procs:
+            try:
+                proc_layer_name = proc.add_process_layer()
+            except exceptions.InvalidAddressException:
+                continue
+
+            vads = PESymbols.get_proc_vads_with_file_paths(proc)
+
+            yield proc, proc_layer_name, vads
+
+    @staticmethod
     def get_process_modules(
         context: interfaces.context.ContextInterface,
         layer_name: str,
@@ -666,7 +713,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         else:
             filter_modules_check = None
 
-        for _, proc_layer_name, vads in vadinfo.VadInfo.get_all_vads_with_file_paths(
+        for _, proc_layer_name, vads in PESymbols.get_all_vads_with_file_paths(
             context, layer_name, symbol_table
         ):
             for vad_start, vad_size, filepath in vads:
