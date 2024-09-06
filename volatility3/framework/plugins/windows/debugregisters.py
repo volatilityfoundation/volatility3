@@ -37,7 +37,7 @@ class DebugRegisters(interfaces.plugins.PluginInterface):
             requirements.VersionRequirement(
                 name="pe_symbols", component=pe_symbols.PESymbols, version=(1, 0, 0)
             ),
-         ]
+        ]
 
     def _get_debug_info(
         self, ethread: interfaces.objects.ObjectInterface
