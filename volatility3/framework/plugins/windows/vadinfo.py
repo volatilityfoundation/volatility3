@@ -246,8 +246,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
         return file_handle
 
-    def _generator(
-        self, procs: List[interfaces.objects.ObjectInterface]) -> Generator[
+    def _generator(self, procs: List[interfaces.objects.ObjectInterface]) -> Generator[
         Tuple[
             int,
             Tuple[
