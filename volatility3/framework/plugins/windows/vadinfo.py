@@ -141,8 +141,6 @@ class VadInfo(interfaces.plugins.PluginInterface):
         """
         Yields each set of vads for a process that have a file mapped, along with the process itself and its layer
         """
-        is_32bit_arch = not symbols.symbol_table_is_64bit(context, symbol_table_name)
-
         procs = pslist.PsList.list_processes(
             context=context,
             layer_name=layer_name,
