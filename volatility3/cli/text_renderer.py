@@ -180,8 +180,7 @@ class QuickTextRenderer(CLIRenderer):
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
             line = []
-            for column_index in range(len(grid.columns)):
-                column = grid.columns[column_index]
+            for column_index, column in enumerate(grid.columns):
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
@@ -261,8 +260,7 @@ class CSVRenderer(CLIRenderer):
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             row = {"TreeDepth": str(max(0, node.path_depth - 1))}
             line = []
-            for column_index in range(len(grid.columns)):
-                column = grid.columns[column_index]
+            for column_index, column in enumerate(grid.columns):
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
@@ -326,8 +324,7 @@ class PrettyTextRenderer(CLIRenderer):
 
             line = {}
             rendered_line = []
-            for column_index in range(len(grid.columns)):
-                column = grid.columns[column_index]
+            for column_index, column in enumerate(grid.columns):
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
@@ -357,8 +354,7 @@ class PrettyTextRenderer(CLIRenderer):
         format_string_list = [
             "{0:<" + str(max_column_widths.get(tree_indent_column, 0)) + "s}"
         ]
-        for column_index in range(len(grid.columns)):
-            column = grid.columns[column_index]
+        for column_index, column in enumerate(grid.columns):
             format_string_list.append(
                 "{"
                 + str(column_index + 1)
@@ -448,8 +444,7 @@ class JsonRenderer(CLIRenderer):
             acc_map, final_tree = accumulator
             node_dict: Dict[str, Any] = {"__children": []}
             line = []
-            for column_index in range(len(grid.columns)):
-                column = grid.columns[column_index]
+            for column_index, column in enumerate(grid.columns):
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
