@@ -527,12 +527,14 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
     def __init__(
         self,
         name: str,
-        description: str = None,
+        description: Optional[str] = None,
         default: bool = False,
         optional: bool = False,
         component: Type[interfaces.configuration.VersionableInterface] = None,
         version: Optional[Tuple[int, ...]] = None,
     ) -> None:
+        if description is None:
+            description = f"Version {".".join([str(x) for x in version])} dependency on {component.__module__}.{component.__name__} unmet"
         super().__init__(
             name=name, description=description, default=default, optional=optional
         )
@@ -550,9 +552,29 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
         config_path = interfaces.configuration.path_join(config_path, self.name)
         if not self.matches_required(self._version, self._component.version):
             return {config_path: self}
+
+        # Check for child requirements
+        if issubclass(self._component, interfaces.configuration.ConfigurableInterface):
+            result = {}
+            for requirement in self._component.get_requirements():
+                if not requirement.optional and isinstance(
+                    requirement, VersionRequirement
+                ):
+                    result.update(
+                        requirement.unsatisfied(
+                            context,
+                            config_path,
+                        )
+                    )
+
+            if result:
+                result.update({config_path: self})
+                return result
+
         context.config[interfaces.configuration.path_join(config_path, self.name)] = (
             True
         )
+
         return {}
 
     @classmethod
@@ -584,24 +606,6 @@ class PluginRequirement(VersionRequirement):
             component=plugin,
             version=version,
         )
-
-    def unsatisfied(
-        self, context: interfaces.context.ContextInterface, config_path: str
-    ) -> Dict[str, interfaces.configuration.RequirementInterface]:
-        result = super().unsatisfied(context, config_path)
-        if not result:
-            component: Type[interfaces.plugins.PluginInterface] = self._component
-            for requirement in component.get_requirements():
-                if isinstance(requirement, PluginRequirement):
-                    result.update(
-                        requirement.unsatisfied(
-                            context,
-                            interfaces.configuration.path_join(config_path, self.name),
-                        )
-                    )
-        if result:
-            result[config_path] = self
-        return result
 
 
 class ModuleRequirement(
