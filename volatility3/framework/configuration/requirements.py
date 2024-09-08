@@ -558,16 +558,20 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
         if not self.matches_required(self._version, self._component.version):
             return {config_path: self}
 
+        recurse = True
         if accumulator is None:
             accumulator = set([self._component])
         else:
             if self._component in accumulator:
-                return {config_path: self}
+                recurse = False
             else:
                 accumulator.add(self._component)
 
         # Check for child requirements
-        if issubclass(self._component, interfaces.configuration.ConfigurableInterface):
+        if (
+            issubclass(self._component, interfaces.configuration.ConfigurableInterface)
+            and recurse
+        ):
             result = {}
             for requirement in self._component.get_requirements():
                 if not requirement.optional and isinstance(
