@@ -546,12 +546,25 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
         self._version = version
 
     def unsatisfied(
-        self, context: interfaces.context.ContextInterface, config_path: str
+        self,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        accumulator: Optional[
+            List[interfaces.configuration.VersionableInterface]
+        ] = None,
     ) -> Dict[str, interfaces.configuration.RequirementInterface]:
         # Mypy doesn't appreciate our classproperty implementation, self._plugin.version has no type
         config_path = interfaces.configuration.path_join(config_path, self.name)
         if not self.matches_required(self._version, self._component.version):
             return {config_path: self}
+
+        if accumulator is None:
+            accumulator = set([self._component])
+        else:
+            if self._component in accumulator:
+                return {config_path: self}
+            else:
+                accumulator.add(self._component)
 
         # Check for child requirements
         if issubclass(self._component, interfaces.configuration.ConfigurableInterface):
@@ -562,8 +575,7 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
                 ):
                     result.update(
                         requirement.unsatisfied(
-                            context,
-                            config_path,
+                            context, config_path, accumulator.copy()
                         )
                     )
 
