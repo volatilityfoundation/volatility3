@@ -312,11 +312,13 @@ class SqliteCache(CacheManagerInterface):
 
         # Missing entries
         if missing_locations:
-            self._database.cursor().execute(
-                f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})",
-                [x for x in missing_locations],
-            )
-            self._database.commit()
+            for missing_location in missing_locations:
+                if not os.path.exists(missing_location):
+                    self._database.cursor().execute(
+                        f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})",
+                        [x for x in missing_locations],
+                    )
+                    self._database.commit()
 
         cache_update = set()
         files_to_timestamp = on_disk_locations.intersection(cached_locations)
