@@ -4,10 +4,9 @@
 
 import logging
 import os
-import json
 import struct
 import functools
-from typing import Optional, Tuple, Union, Dict, List
+from typing import Optional, Tuple, Union, Dict
 
 from volatility3.framework import constants, interfaces, exceptions
 from volatility3.framework.automagic import symbol_cache, symbol_finder
