@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import List, Generator
+from typing import Callable, Iterable, List, Generator
 
 from volatility3.framework import interfaces, constants
 from volatility3.framework.configuration import requirements
@@ -17,6 +17,10 @@ class Threads(thrdscan.ThrdScan):
 
     _required_framework_version = (2, 4, 0)
     _version = (1, 0, 0)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.implementation = self.list_process_threads
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -34,7 +38,7 @@ class Threads(thrdscan.ThrdScan):
                 optional=True,
             ),
             requirements.PluginRequirement(
-                name="thrdscan", plugin=thrdscan.ThrdScan, version=(1, 0, 0)
+                name="thrdscan", plugin=thrdscan.ThrdScan, version=(1, 1, 0)
             ),
         ]
 
@@ -46,7 +50,6 @@ class Threads(thrdscan.ThrdScan):
 
         Args:
             proc: _EPROCESS object from which to list the VADs
-            filter_func: Function to take a virtual address descriptor value and return True if it should be filtered out
 
         Returns:
             A list of threads based on the process and filtered based on the filter function
@@ -60,18 +63,24 @@ class Threads(thrdscan.ThrdScan):
             seen.add(thread.vol.offset)
             yield thread
 
-    def _generator(self):
-        kernel = self.context.modules[self.config["kernel"]]
+    @classmethod
+    def list_process_threads(
+        cls,
+        context: interfaces.context.ContextInterface,
+        module_name: str,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Runs through all processes and lists threads for each process"""
+        module = context.modules[module_name]
+        layer_name = module.layer_name
+        symbol_table_name = module.symbol_table_name
 
-        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
+        filter_func = pslist.PsList.create_pid_filter(context.config.get("pid", None))
 
         for proc in pslist.PsList.list_processes(
-            context=self.context,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            context=context,
+            layer_name=layer_name,
+            symbol_table=symbol_table_name,
             filter_func=filter_func,
         ):
-            for thread in self.list_threads(kernel, proc):
-                info = self.gather_thread_info(thread)
-                if info:
-                    yield (0, info)
+            for thread in cls.list_threads(module, proc):
+                yield thread

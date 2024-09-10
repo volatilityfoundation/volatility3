@@ -3,7 +3,7 @@
 ##
 import logging
 import datetime
-from typing import Iterable
+from typing import Callable, Iterable
 
 from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
@@ -19,7 +19,11 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
 
     # version 2.6.0 adds support for scanning for 'Ethread' structures by pool tags
     _required_framework_version = (2, 6, 0)
-    _version = (1, 0, 0)
+    _version = (1, 1, 0)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.implementation = self.scan_threads
 
     @classmethod
     def get_requirements(cls):
@@ -38,19 +42,21 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
     def scan_threads(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        module_name: str,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Scans for threads using the poolscanner module and constraints.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            module_name: Name of the module to use for scanning
 
         Returns:
               A list of _ETHREAD objects found by scanning memory for the "Thre" / "Thr\\xE5" pool signatures
         """
+
+        module = context.modules[module_name]
+        layer_name = module.layer_name
+        symbol_table = module.symbol_table_name
 
         constraints = poolscanner.PoolScanner.builtin_constraints(
             symbol_table, [b"Thr\xe5", b"Thre"]
@@ -76,7 +82,7 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
                 ethread.get_exit_time()
             )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
         except exceptions.InvalidAddressException:
-            vollog.debug("Thread invalid address {:#x}".format(thread.vol.offset))
+            vollog.debug("Thread invalid address {:#x}".format(ethread.vol.offset))
             return None
 
         return (
@@ -88,18 +94,19 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
             thread_exit_time,
         )
 
-    def _generator(self):
-        kernel = self.context.modules[self.config["kernel"]]
+    def _generator(self, filter_func: Callable):
+        kernel_name = self.config["kernel"]
 
-        for ethread in self.scan_threads(
-            self.context, kernel.layer_name, kernel.symbol_table_name
-        ):
+        for ethread in self.implementation(self.context, kernel_name):
             info = self.gather_thread_info(ethread)
+
             if info:
                 yield (0, info)
 
     def generate_timeline(self):
-        for row in self._generator():
+        filt_func = self.filter_func(self.config)
+
+        for row in self._generator(filt_func):
             _depth, row_data = row
             row_dict = {}
             (
@@ -126,7 +133,14 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
                     row_dict["ExitTime"],
                 )
 
+    @classmethod
+    def filter_func(cls, config: interfaces.configuration.HierarchicalDict) -> Callable:
+        """Returns a function that can filter this plugin's implementation method based on the config"""
+        return lambda x: False
+
     def run(self):
+        filt_func = self.filter_func(self.config)
+
         return renderers.TreeGrid(
             [
                 ("Offset", format_hints.Hex),
@@ -136,5 +150,5 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
                 ("CreateTime", datetime.datetime),
                 ("ExitTime", datetime.datetime),
             ],
-            self._generator(),
+            self._generator(filt_func),
         )

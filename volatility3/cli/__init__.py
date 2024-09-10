@@ -22,6 +22,13 @@ import traceback
 from typing import Any, Dict, List, Tuple, Type, Union
 from urllib import parse, request
 
+try:
+    import argcomplete
+
+    HAS_ARGCOMPLETE = True
+except ImportError:
+    HAS_ARGCOMPLETE = False
+
 from volatility3.cli import text_filter
 import volatility3.plugins
 import volatility3.symbols
@@ -351,6 +358,10 @@ class CommandLine:
         # Hand the plugin requirements over to the CLI (us) and let it construct the config tree
 
         # Run the argparser
+        if HAS_ARGCOMPLETE:
+            # The autocompletion line must be after the partial_arg handling, so that it doesn't trip it
+            # before all the plugins have been added
+            argcomplete.autocomplete(parser)
         args = parser.parse_args()
         if args.plugin is None:
             parser.error("Please select a plugin to run")

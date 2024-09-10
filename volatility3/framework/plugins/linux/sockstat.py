@@ -151,17 +151,15 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         bpfprog = sock_filter.prog
 
-        BPF_PROG_TYPE_UNSPEC = 0  # cBPF filter
-        try:
-            bpfprog_type = bpfprog.get_type()
-            if bpfprog_type == BPF_PROG_TYPE_UNSPEC:
-                return  # cBPF filter
-        except AttributeError:
+        bpfprog_type = bpfprog.get_type()
+        if not bpfprog_type:
             # kernel < 3.18.140, it's a cBPF filter
             return None
 
-        BPF_PROG_TYPE_SOCKET_FILTER = 1  # eBPF filter
-        if bpfprog_type != BPF_PROG_TYPE_SOCKET_FILTER:
+        if bpfprog_type == "BPF_PROG_TYPE_UNSPEC":
+            return None  # cBPF filter
+
+        if bpfprog_type != "BPF_PROG_TYPE_SOCKET_FILTER":
             socket_filter["bpf_filter_type"] = f"UNK({bpfprog_type})"
             vollog.warning(f"Unexpected BPF type {bpfprog_type} for a socket")
             return None

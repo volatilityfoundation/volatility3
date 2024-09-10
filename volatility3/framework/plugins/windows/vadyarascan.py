@@ -33,7 +33,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
             requirements.PluginRequirement(
-                name="yarascan", plugin=yarascan.YaraScan, version=(1, 3, 0)
+                name="yarascan", plugin=yarascan.YaraScan, version=(2, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -56,7 +56,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
-        sanity_check = 0x1000 * 0x1000 * 0x1000
+        sanity_check = 1024 * 1024 * 1024  # 1 GB
 
         for task in pslist.PsList.list_processes(
             context=self.context,
@@ -66,34 +66,49 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
         ):
             layer_name = task.add_process_layer()
             layer = self.context.layers[layer_name]
-            for start, end in self.get_vad_maps(task):
-                size = end - start
+            for start, size in self.get_vad_maps(task):
                 if size > sanity_check:
                     vollog.warn(
                         f"VAD at 0x{start:x} over sanity-check size, not scanning"
                     )
                     continue
 
-                for match in rules.match(data=layer.read(start, end - start, True)):
-                    if yarascan.YaraScan.yara_returns_instances():
-                        for match_string in match.strings:
-                            for instance in match_string.instances:
+                data = layer.read(start, size, True)
+                if not yarascan.YaraScan._yara_x:
+                    for match in rules.match(data=data):
+                        if yarascan.YaraScan.yara_returns_instances():
+                            for match_string in match.strings:
+                                for instance in match_string.instances:
+                                    yield 0, (
+                                        format_hints.Hex(instance.offset + start),
+                                        task.UniqueProcessId,
+                                        match.rule,
+                                        match_string.identifier,
+                                        instance.matched_data,
+                                    )
+                        else:
+                            for offset, name, value in match.strings:
+                                yield 0, (
+                                    format_hints.Hex(offset + start),
+                                    task.UniqueProcessId,
+                                    match.rule,
+                                    name,
+                                    value,
+                                )
+                else:
+                    for match in rules.scan(data).matching_rules:
+                        for match_string in match.patterns:
+                            for instance in match_string.matches:
                                 yield 0, (
                                     format_hints.Hex(instance.offset + start),
                                     task.UniqueProcessId,
-                                    match.rule,
+                                    f"{match.namespace}.{match.identifier}",
                                     match_string.identifier,
-                                    instance.matched_data,
+                                    data[
+                                        instance.offset : instance.offset
+                                        + instance.length
+                                    ],
                                 )
-                    else:
-                        for offset, name, value in match.strings:
-                            yield 0, (
-                                format_hints.Hex(offset + start),
-                                task.UniqueProcessId,
-                                match.rule,
-                                name,
-                                value,
-                            )
 
     @staticmethod
     def get_vad_maps(
@@ -106,7 +121,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
             task: The EPROCESS object of which to traverse the vad tree
 
         Returns:
-            An iterable of tuples containing start and end addresses for each descriptor
+            An iterable of tuples containing start and size for each descriptor
         """
         vad_root = task.get_vad_root()
         for vad in vad_root.traverse():

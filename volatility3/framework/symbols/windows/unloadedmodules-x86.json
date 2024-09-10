@@ -1,0 +1,109 @@
+{
+    "symbols": {},
+    "enums": {},
+    "base_types": {
+        "unsigned long": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned long long": {
+            "kind": "int",
+            "size": 8,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned char": {
+            "kind": "char",
+            "size": 1,
+            "signed": false,
+            "endian": "little"
+        },
+        "pointer": {
+            "kind": "int",
+            "size": 8,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned int": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned short": {
+            "kind": "int",
+            "size": 2,
+            "signed": false,
+            "endian": "little"
+        },
+        "long": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        }
+    },
+    "user_types": {
+        "_UNLOADED_DRIVER": {
+            "fields": {
+                "Name": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_UNICODE_STRING"
+                    },
+                    "offset": 0
+                },
+                "StartAddress": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long"
+                    },
+                    "offset": 8
+                },
+                "EndAddress": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long"
+                    },
+                    "offset": 12
+                },
+                "CurrentTime": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                    },
+                    "offset": 16
+                }
+            },
+            "kind": "struct",
+            "size": 24
+        },
+        "_UNLOADED_DRIVERS": {
+            "fields": {
+                "UnloadedDrivers": {
+                    "offset": 0,
+                    "type": {
+                        "count": 1,
+                        "kind": "array",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_UNLOADED_DRIVER"
+                        }
+                    }
+                }
+            },
+            "kind": "struct",
+            "size": 4
+        }
+    },
+    "metadata": {
+        "producer": {
+            "version": "0.0.1",
+            "name": "Dave Lassalle by hand",
+            "datetime": "2024-06-19T17:57:16.394003"
+        },
+        "format": "4.0.0"
+    }
+}

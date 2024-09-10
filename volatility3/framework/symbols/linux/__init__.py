@@ -1,6 +1,9 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import math
+import contextlib
+from abc import ABC, abstractmethod
 from typing import Iterator, List, Tuple, Optional, Union
 
 from volatility3 import framework
@@ -29,11 +32,21 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("files_struct", extensions.files_struct)
         self.set_type_class("kobject", extensions.kobject)
         self.set_type_class("cred", extensions.cred)
+        self.set_type_class("inode", extensions.inode)
+        self.set_type_class("idr", extensions.IDR)
+        self.set_type_class("address_space", extensions.address_space)
+        self.set_type_class("page", extensions.page)
         # Might not exist in the current symbols
         self.optional_set_type_class("module", extensions.module)
         self.optional_set_type_class("bpf_prog", extensions.bpf_prog)
+        self.optional_set_type_class("bpf_prog_aux", extensions.bpf_prog_aux)
         self.optional_set_type_class("kernel_cap_struct", extensions.kernel_cap_struct)
         self.optional_set_type_class("kernel_cap_t", extensions.kernel_cap_t)
+
+        # kernels >= 4.18
+        self.optional_set_type_class("timespec64", extensions.timespec64)
+        # kernels < 4.18. Reuses timespec64 obj extension, since both has the same members
+        self.optional_set_type_class("timespec", extensions.timespec64)
 
         # Mount
         self.set_type_class("vfsmount", extensions.vfsmount)
@@ -61,7 +74,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""
 
-    _version = (2, 1, 0)
+    _version = (2, 1, 1)
     _required_framework_version = (2, 0, 0)
 
     framework.require_interface_version(*_required_framework_version)
@@ -406,9 +419,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         Returns:
             A kernel object (vmlinux)
         """
-        symbol_table_arr = volobj.vol.type_name.split("!", 1)
-        symbol_table = symbol_table_arr[0] if len(symbol_table_arr) == 2 else None
-
+        symbol_table = volobj.get_symbol_table_name()
         module_names = context.modules.get_modules_by_symbol_tables(symbol_table)
         module_names = list(module_names)
 
@@ -419,3 +430,353 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         kernel = context.modules[kernel_module_name]
 
         return kernel
+
+
+class IDStorage(ABC):
+    """Abstraction to support both XArray and RadixTree"""
+
+    # Dynamic values, these will be initialized later
+    CHUNK_SHIFT = None
+    CHUNK_SIZE = None
+    CHUNK_MASK = None
+
+    def __init__(
+        self,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+    ):
+        self.vmlinux = context.modules[kernel_module_name]
+        self.vmlinux_layer = self.vmlinux.context.layers[self.vmlinux.layer_name]
+
+        self.pointer_size = self.vmlinux.get_type("pointer").size
+        # Dynamically work out the (XA_CHUNK|RADIX_TREE_MAP)_SHIFT values based on
+        # the node.slots[] array size
+        node_type = self.vmlinux.get_type(self.node_type_name)
+        slots_array_size = node_type.child_template("slots").count
+
+        # Calculate the LSB index - 1
+        self.CHUNK_SHIFT = slots_array_size.bit_length() - 1
+        self.CHUNK_SIZE = 1 << self.CHUNK_SHIFT
+        self.CHUNK_MASK = self.CHUNK_SIZE - 1
+
+    @classmethod
+    def choose_id_storage(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+    ) -> "IDStorage":
+        """Returns the appropriate ID storage data structure instance for the current kernel implementation.
+        This is used by the IDR and the PageCache to choose between the XArray and RadixTree.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            kernel_module_name: The name of the kernel module on which to operate
+
+        Returns:
+            The appropriate ID storage instance for the current kernel
+        """
+        vmlinux = context.modules[kernel_module_name]
+        address_space_type = vmlinux.get_type("address_space")
+        address_space_has_i_pages = address_space_type.has_member("i_pages")
+        i_pages_type_name = (
+            address_space_type.child_template("i_pages").vol.type_name
+            if address_space_has_i_pages
+            else ""
+        )
+        i_pages_is_xarray = i_pages_type_name.endswith(constants.BANG + "xarray")
+        i_pages_is_radix_tree_root = i_pages_type_name.endswith(
+            constants.BANG + "radix_tree_root"
+        ) and vmlinux.get_type("radix_tree_root").has_member("xa_head")
+
+        if i_pages_is_xarray or i_pages_is_radix_tree_root:
+            return XArray(context, kernel_module_name)
+        else:
+            return RadixTree(context, kernel_module_name)
+
+    @property
+    @abstractmethod
+    def node_type_name(self) -> str:
+        """Returns the Tree implementation node type name
+
+        Returns:
+            A string with the node type name
+        """
+        raise NotImplementedError()
+
+    @property
+    def tag_internal_value(self) -> int:
+        """Returns the internal node flag for the tree"""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def node_is_internal(self, nodep) -> bool:
+        """Checks if the node is internal"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_node_tagged(self, nodep) -> bool:
+        """Checks if the node pointer is tagged"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def untag_node(self, nodep) -> int:
+        """Untags a node pointer"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_tree_height(self, treep) -> int:
+        """Returns the tree height"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_node_height(self, nodep) -> int:
+        """Returns the node height"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_head_node(self, tree) -> int:
+        """Returns a pointer to the tree's head"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_valid_node(self, nodep) -> bool:
+        """Validates a node pointer"""
+        raise NotImplementedError
+
+    def nodep_to_node(self, nodep) -> interfaces.objects.ObjectInterface:
+        """Instanciates a tree node from its pointer
+
+        Args:
+            nodep: Pointer to the XArray/RadixTree node
+
+        Returns:
+            A XArray/RadixTree node instance
+        """
+        node = self.vmlinux.object(self.node_type_name, offset=nodep, absolute=True)
+        return node
+
+    def _slot_to_nodep(self, slot) -> int:
+        if self.node_is_internal(slot):
+            nodep = slot & ~self.tag_internal_value
+        else:
+            nodep = slot
+
+        return nodep
+
+    def _iter_node(self, nodep, height) -> int:
+        node = self.nodep_to_node(nodep)
+        node_slots = node.slots
+        for off in range(self.CHUNK_SIZE):
+            slot = node_slots[off]
+            if slot == 0:
+                continue
+
+            nodep = self._slot_to_nodep(slot)
+
+            if height == 1:
+                if self.is_valid_node(nodep):
+                    yield nodep
+            else:
+                for child_node in self._iter_node(nodep, height - 1):
+                    yield child_node
+
+    def get_entries(self, root: interfaces.objects.ObjectInterface) -> int:
+        """Walks the tree data structure
+
+        Args:
+            root: The tree root object
+
+        Yields:
+            A tree node pointer
+        """
+        height = self.get_tree_height(root.vol.offset)
+
+        nodep = self.get_head_node(root)
+        if not nodep:
+            return
+
+        # Keep the internal flag before untagging it
+        is_internal = self.node_is_internal(nodep)
+        if self.is_node_tagged(nodep):
+            nodep = self.untag_node(nodep)
+
+        if is_internal:
+            height = self.get_node_height(nodep)
+
+        if height == 0:
+            if self.is_valid_node(nodep):
+                yield nodep
+        else:
+            for child_node in self._iter_node(nodep, height):
+                yield child_node
+
+
+class XArray(IDStorage):
+    XARRAY_TAG_MASK = 3
+    XARRAY_TAG_INTERNAL = 2
+
+    def get_tree_height(self, treep) -> int:
+        return 0
+
+    @property
+    def node_type_name(self) -> str:
+        return "xa_node"
+
+    @property
+    def tag_internal_value(self) -> int:
+        return self.XARRAY_TAG_INTERNAL
+
+    def get_node_height(self, nodep) -> int:
+        node = self.nodep_to_node(nodep)
+        return (node.shift / self.CHUNK_SHIFT) + 1
+
+    def get_head_node(self, tree) -> int:
+        return tree.xa_head
+
+    def node_is_internal(self, nodep) -> bool:
+        return (nodep & self.XARRAY_TAG_MASK) == self.XARRAY_TAG_INTERNAL
+
+    def is_node_tagged(self, nodep) -> bool:
+        return (nodep & self.XARRAY_TAG_MASK) != 0
+
+    def untag_node(self, nodep) -> int:
+        return nodep & (~self.XARRAY_TAG_MASK)
+
+    def is_valid_node(self, nodep) -> bool:
+        # It should have the tag mask clear
+        return not self.is_node_tagged(nodep)
+
+
+class RadixTree(IDStorage):
+    RADIX_TREE_INTERNAL_NODE = 1
+    RADIX_TREE_EXCEPTIONAL_ENTRY = 2
+    RADIX_TREE_ENTRY_MASK = 3
+
+    # Dynamic values. These will be initialized later
+    RADIX_TREE_INDEX_BITS = None
+    RADIX_TREE_MAX_PATH = None
+    RADIX_TREE_HEIGHT_SHIFT = None
+    RADIX_TREE_HEIGHT_MASK = None
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        char_bits = 8
+        self.RADIX_TREE_INDEX_BITS = char_bits * self.pointer_size
+        self.RADIX_TREE_MAX_PATH = int(
+            math.ceil(self.RADIX_TREE_INDEX_BITS / float(self.CHUNK_SHIFT))
+        )
+        self.RADIX_TREE_HEIGHT_SHIFT = self.RADIX_TREE_MAX_PATH + 1
+        self.RADIX_TREE_HEIGHT_MASK = (1 << self.RADIX_TREE_HEIGHT_SHIFT) - 1
+
+        if not self.vmlinux.has_type("radix_tree_root"):
+            # In kernels 4.20, RADIX_TREE_INTERNAL_NODE flag took RADIX_TREE_EXCEPTIONAL_ENTRY's
+            # value. RADIX_TREE_EXCEPTIONAL_ENTRY was removed but that's managed in is_valid_node()
+            # Note that the Radix Tree is still in use for IDR, even after kernels 4.20 when XArray
+            # mostly replace it
+            self.RADIX_TREE_INTERNAL_NODE = 2
+
+    @property
+    def node_type_name(self) -> str:
+        return "radix_tree_node"
+
+    @property
+    def tag_internal_value(self) -> int:
+        return self.RADIX_TREE_INTERNAL_NODE
+
+    def get_tree_height(self, treep) -> int:
+        with contextlib.suppress(exceptions.SymbolError):
+            if self.vmlinux.get_type("radix_tree_root").has_member("height"):
+                # kernels < 4.7.10
+                radix_tree_root = self.vmlinux.object(
+                    "radix_tree_root", offset=treep, absolute=True
+                )
+                return radix_tree_root.height
+
+        # kernels >= 4.7.10
+        return 0
+
+    def _radix_tree_maxindex(self, node, height) -> int:
+        """Return the maximum key which can be store into a radix tree with this height."""
+
+        if not self.vmlinux.has_symbol("height_to_maxindex"):
+            # Kernels >= 4.7
+            return (self.CHUNK_SIZE << node.shift) - 1
+        else:
+            # Kernels < 4.7
+            height_to_maxindex_array = self.vmlinux.object_from_symbol(
+                "height_to_maxindex"
+            )
+            maxindex = height_to_maxindex_array[height]
+            return maxindex
+
+    def get_node_height(self, nodep) -> int:
+        node = self.nodep_to_node(nodep)
+        if hasattr(node, "shift"):
+            # 4.7 <= Kernels < 4.20
+            return (node.shift / self.CHUNK_SHIFT) + 1
+        elif hasattr(node, "path"):
+            # 3.15 <= Kernels < 4.7
+            return node.path & self.RADIX_TREE_HEIGHT_MASK
+        elif hasattr(node, "height"):
+            # Kernels < 3.15
+            return node.height
+        else:
+            raise exceptions.VolatilityException("Cannot find radix-tree node height")
+
+    def get_head_node(self, tree) -> int:
+        return tree.rnode
+
+    def node_is_internal(self, nodep) -> bool:
+        return (nodep & self.RADIX_TREE_INTERNAL_NODE) != 0
+
+    def is_node_tagged(self, nodep) -> bool:
+        return self.node_is_internal(nodep)
+
+    def untag_node(self, nodep) -> int:
+        return nodep & (~self.RADIX_TREE_ENTRY_MASK)
+
+    def is_valid_node(self, nodep) -> bool:
+        # In kernels 4.20, exceptional nodes were removed and internal entries took their bitmask
+        if self.vmlinux.has_type("radix_tree_root"):
+            return (
+                nodep & self.RADIX_TREE_ENTRY_MASK
+            ) != self.RADIX_TREE_EXCEPTIONAL_ENTRY
+
+        return True
+
+
+class PageCache(object):
+    """Linux Page Cache abstraction"""
+
+    def __init__(
+        self,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        page_cache: interfaces.objects.ObjectInterface,
+    ):
+        """
+        Args:
+            context: interfaces.context.ContextInterface,
+            kernel_module_name: The name of the kernel module on which to operate
+            page_cache: Page cache address space
+        """
+        self.vmlinux = context.modules[kernel_module_name]
+
+        self._page_cache = page_cache
+        self._idstorage = IDStorage.choose_id_storage(context, kernel_module_name)
+
+    def get_cached_pages(self) -> interfaces.objects.ObjectInterface:
+        """Returns all page cache contents
+
+        Yields:
+            Page objects
+        """
+
+        for page_addr in self._idstorage.get_entries(self._page_cache.i_pages):
+            if not page_addr:
+                continue
+
+            page = self.vmlinux.object("page", offset=page_addr, absolute=True)
+            if page:
+                yield page
