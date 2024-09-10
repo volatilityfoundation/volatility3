@@ -61,7 +61,7 @@ class PESymbolFinder:
     cached_int_dict = Dict[str, Optional[int]]
 
     cached_value = Union[int, str, None]
-    cached_value_dict = Dict[str, Dict[str, List[str]] | Dict[str, List[int]]]
+    cached_value_dict = Dict[str, Union[Dict[str, List[str]], Dict[str, List[int]]]]
 
     def __init__(
         self,
