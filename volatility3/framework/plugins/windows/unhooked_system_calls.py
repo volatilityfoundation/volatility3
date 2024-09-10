@@ -1,3 +1,6 @@
+# This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
+
 import logging
 
 from typing import Dict, Tuple, List, Generator
@@ -18,7 +21,7 @@ class unhooked_system_calls(interfaces.plugins.PluginInterface):
 
     system_calls = {
         "ntdll.dll": {
-            pe_symbols.PESymbols.wanted_names: [
+            pe_symbols.wanted_names_identifier: [
                 "NtCreateThread",
                 "NtProtectVirtualMemory",
                 "NtReadVirtualMemory",
@@ -90,7 +93,7 @@ class unhooked_system_calls(interfaces.plugins.PluginInterface):
     def _gather_code_bytes(
         self,
         kernel: interfaces.context.ModuleInterface,
-        found_symbols: pe_symbols.PESymbols.found_symbols_type,
+        found_symbols: pe_symbols.found_symbols_type,
     ) -> _code_bytes_type:
         """
         Enumerates the desired DLLs and function implementations in each process

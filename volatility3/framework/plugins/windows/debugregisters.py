@@ -1,3 +1,6 @@
+# This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
+
 import logging
 
 from typing import Tuple, Optional, Generator, List, Dict
@@ -35,11 +38,16 @@ class DebugRegisters(interfaces.plugins.PluginInterface):
             ),
         ]
 
+    @staticmethod
     def _get_debug_info(
-        self, ethread: interfaces.objects.ObjectInterface
+        ethread: interfaces.objects.ObjectInterface,
     ) -> Optional[Tuple[interfaces.objects.ObjectInterface, int, int, int, int, int]]:
         """
         Gathers information related to the debug registers for the given thread
+        Args:
+            ethread: the thread (_ETHREAD) to examine
+        Returns:
+            Tuple[interfaces.objects.ObjectInterface, int, int, int, int, int]: The owner process of the thread and the values for dr7, dr0, dr1, dr2, dr3
         """
         try:
             dr7 = ethread.Tcb.TrapFrame.Dr7
@@ -67,23 +75,6 @@ class DebugRegisters(interfaces.plugins.PluginInterface):
             return None
 
         return owner_proc, dr7, dr0, dr1, dr2, dr3
-
-    def _get_vads(
-        self,
-        vads_cache: Dict[int, List[Tuple[int, int, str]]],
-        owner_proc: interfaces.objects.ObjectInterface,
-    ) -> Optional[List[Tuple[int, int, str]]]:
-        if owner_proc.vol.offset in vads_cache:
-            vads = vads_cache[owner_proc.vol.offset]
-        else:
-            vads = pe_symbols.PESymbols.get_proc_vads_with_file_paths(owner_proc)
-            vads_cache[owner_proc.vol.offset] = vads
-
-        # smear or terminated process
-        if len(vads) == 0:
-            return None
-
-        return vads
 
     def _generator(
         self,
@@ -115,7 +106,7 @@ class DebugRegisters(interfaces.plugins.PluginInterface):
     ]:
         kernel = self.context.modules[self.config["kernel"]]
 
-        vads_cache: Dict[int, List[Tuple[int, int, str]]] = {}
+        vads_cache: Dict[int, pe_symbols.ranges_type] = {}
 
         proc_modules = None
 
@@ -133,7 +124,9 @@ class DebugRegisters(interfaces.plugins.PluginInterface):
 
                 owner_proc, dr7, dr0, dr1, dr2, dr3 = debug_info
 
-                vads = self._get_vads(vads_cache, owner_proc)
+                vads = pe_symbols.PESymbols.get_vads_for_process_cache(
+                    vads_cache, owner_proc
+                )
                 if not vads:
                     continue
 
