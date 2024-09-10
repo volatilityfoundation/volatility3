@@ -134,10 +134,10 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
             banner_value = context.layers[layer_name].read(
                 banner_phys_address, len(target_banner)
             )
-        except exceptions.InvalidAddressException:
+        except exceptions.InvalidAddressException as e:
             logger.log(
                 constants.LOGLEVEL_VVVV,
-                'Unable to translate "linux_banner" symbol virtual address.',
+                f'Unable to translate "linux_banner" symbol virtual address : {e}',
             )
             return False
 
@@ -268,12 +268,11 @@ class LinuxIntelSubStacker:
         layer.config["kernel_virtual_offset"] = aslr_shift
 
         # Verify layer by translating the "linux_banner" symbol virtual address
-        linux_banner_address = table.get_symbol("linux_banner").address + aslr_shift
         test_banner_equality = self.parent_stacker.verify_translation_by_banner(
             context=context,
             layer=layer,
             layer_name=layer_name,
-            linux_banner_address=linux_banner_address,
+            linux_banner_address=table.get_symbol("linux_banner").address + aslr_shift,
             target_banner=banner,
             logger=self._logger,
         )
@@ -357,7 +356,6 @@ class LinuxAArch64SubStacker:
             else [4, 16, 64]
         )
 
-        linux_banner_address = table.get_symbol("linux_banner").address + aslr_shift
         # Linux source : v6.7/source/arch/arm64/include/asm/memory.h#L186 - v5.7/source/arch/arm64/include/asm/memory.h#L160
         va_bits = 0
         if "vabits_actual" in table.symbols:
@@ -373,10 +371,12 @@ class LinuxAArch64SubStacker:
             """
             Count leftmost bits equal to 1, deduce number of used bits for virtual addressing.
             Example :
-                linux_banner_address = 0xffffffd733aae820 = 0b1111111111111111111111111101011100110011101010101110100000100000
-                va_bits = (linux_banner_address ^ (2**64 - 1)).bit_length() + 1 = 39
+                linux_banner_address = 0xffff800081822f08 = 0b1111111111111111100000000000000010000001100000100010111100001000
+                va_bits = (linux_banner_address ^ (2**64 - 1)).bit_length() + 1 = 48
             """
-            va_bits = (linux_banner_address ^ (2**64 - 1)).bit_length() + 1
+            va_bits = (
+                table.get_symbol("linux_banner").address ^ (2**64 - 1)
+            ).bit_length() + 1
 
         """
         Determining the number of useful bits in virtual addresses (VA_BITS)
@@ -384,7 +384,7 @@ class LinuxAArch64SubStacker:
         Calculation by masking works great, but not in every case, due to the AArch64 memory layout,
         sometimes pushing kernel addresses "too far" from the TTB1 start.
         See https://www.kernel.org/doc/html/v5.5/arm64/memory.html.
-        Errors are by 1 or 2 bits, so we can try va_bits - {1,2,3}.
+        Errors are by 1 or 2 bits, so we can safely try va_bits - {1,2,3}.
         Example, assuming the good va_bits value is 39 :
             # Case where calculation was correct : 1 iteration
             va_bits_candidates = [**39**, 38, 37, 36]
@@ -403,7 +403,7 @@ class LinuxAArch64SubStacker:
             )
 
             # If "_kernel_flags_le*" aren't in the symbols, we can still do a quick bruteforce on [4,16,64] page sizes
-            # False positives cannot happen, as translation indexes will be off on a wrong page size
+            # False positives cannot happen, as translation indexes will be off on wrong page and va sizes
             for page_size_kernel_space in page_size_kernel_space_candidates:
                 # Kernel space page size is considered equal to the user space page size
                 tcr_el1_tg1 = arm.AArch64RegFieldValues._get_ttbr1_el1_granule_size(
@@ -435,7 +435,8 @@ class LinuxAArch64SubStacker:
                     context=context,
                     layer=layer,
                     layer_name=layer_name,
-                    linux_banner_address=linux_banner_address,
+                    linux_banner_address=table.get_symbol("linux_banner").address
+                    + aslr_shift,
                     target_banner=banner,
                     logger=self._logger,
                 )
