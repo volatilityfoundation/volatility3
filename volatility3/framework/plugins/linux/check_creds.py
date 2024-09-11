@@ -16,6 +16,8 @@ class Check_creds(interfaces.plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
+    _version = (1, 0, 1)
+
     @classmethod
     def get_requirements(cls):
         return [
@@ -46,7 +48,11 @@ class Check_creds(interfaces.plugins.PluginInterface):
         tasks = pslist.PsList.list_tasks(self.context, vmlinux.name)
 
         for task in tasks:
-            cred_addr = task.cred.dereference().vol.offset
+            task_cred_ptr = task.cred
+            if not (task_cred_ptr and task_cred_ptr.is_readable()):
+                continue
+
+            cred_addr = task_cred_ptr.dereference().vol.offset
 
             if cred_addr not in creds:
                 creds[cred_addr] = []
