@@ -37,7 +37,7 @@ class MountInfo(plugins.PluginInterface):
 
     _required_framework_version = (2, 2, 0)
 
-    _version = (1, 2, 0)
+    _version = (1, 2, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -272,11 +272,16 @@ class MountInfo(plugins.PluginInterface):
                 continue
 
             sb_ptr = mnt.get_mnt_sb()
-            if not sb_ptr or sb_ptr in seen_sb_ptr:
+            if not (sb_ptr and sb_ptr.is_readable()):
+                continue
+
+            if sb_ptr in seen_sb_ptr:
                 continue
             seen_sb_ptr.add(sb_ptr)
 
-            yield sb_ptr.dereference(), path_root
+            superblock = sb_ptr.dereference()
+
+            yield superblock, path_root
 
     def run(self):
         pids = self.config.get("pids")

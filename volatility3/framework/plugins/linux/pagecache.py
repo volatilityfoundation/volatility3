@@ -104,7 +104,7 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -186,8 +186,12 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             seen_dentries.add(dentry_addr)
 
-            inode = dentry.d_inode
-            if not (inode and inode.is_valid()):
+            inode_ptr = dentry.d_inode
+            if not (inode_ptr and inode_ptr.is_readable()):
+                continue
+
+            inode = inode_ptr.dereference()
+            if not inode.is_valid():
                 continue
 
             # This allows us to have consistent paths
@@ -242,8 +246,9 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             # More dentry/inode sanity checks
             root_inode_ptr = root_dentry.d_inode
-            if not root_inode_ptr:
+            if not (root_inode_ptr and root_inode_ptr.is_readable()):
                 continue
+
             root_inode = root_inode_ptr.dereference()
             if not root_inode.is_valid():
                 continue
@@ -269,10 +274,12 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
             ):
                 if not file_dentry:
                     continue
+
                 # Dentry/inode sanity checks
                 file_inode_ptr = file_dentry.d_inode
-                if not file_inode_ptr:
+                if not (file_inode_ptr and file_inode_ptr.is_readable()):
                     continue
+
                 file_inode = file_inode_ptr.dereference()
                 if not file_inode.is_valid():
                     continue
@@ -382,7 +389,7 @@ class InodePages(plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -482,15 +489,15 @@ class InodePages(plugins.PluginInterface):
             vollog.error("You must use either --inode or --find")
             return
 
+        if not inode.is_valid():
+            vollog.error("Invalid inode at 0x%x", inode.vol.offset)
+            return
+
         if not inode.is_reg:
             vollog.error("The inode is not a regular file")
             return
 
         inode_size = inode.i_size
-        if not inode.is_valid():
-            vollog.error("Invalid inode at 0x%x", self.config["inode"])
-            return
-
         for page_obj in inode.get_pages():
             page_vaddr = page_obj.vol.offset
             page_paddr = page_obj.to_paddr()
