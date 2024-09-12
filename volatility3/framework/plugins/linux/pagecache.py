@@ -78,8 +78,8 @@ class InodeInternal:
         cached_pages = int(self.inode.i_mapping.nrpages)
         file_mode = self.inode.get_file_mode()
         access_time_dt = self.inode.get_access_time()
-        modification_time_str = self.inode.get_modification_time()
-        change_time_str = self.inode.get_change_time()
+        modification_time_dt = self.inode.get_modification_time()
+        change_time_dt = self.inode.get_change_time()
 
         inode_user = InodeUser(
             superblock_addr=superblock_addr,
@@ -92,8 +92,8 @@ class InodeInternal:
             cached_pages=cached_pages,
             file_mode=file_mode,
             access_time=access_time_dt,
-            modification_time=modification_time_str,
-            change_time=change_time_str,
+            modification_time=modification_time_dt,
+            change_time=change_time_dt,
             path=self.path,
         )
         return inode_user
