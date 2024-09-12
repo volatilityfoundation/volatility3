@@ -304,7 +304,9 @@ class DirectSystemCalls(interfaces.plugins.PluginInterface):
         return vads
 
     @staticmethod
-    def _get_range_path(ranges: List[Tuple[int, int, str]], address: int) -> Optional[str]:
+    def _get_range_path(
+        ranges: List[Tuple[int, int, str]], address: int
+    ) -> Optional[str]:
         """
         Returns the path for the range holding `address`, if found
 
@@ -407,7 +409,9 @@ class DirectSystemCalls(interfaces.plugins.PluginInterface):
 
             yield address, path
 
-    def _generator(self) -> Generator[Tuple[int, Tuple[str, int, Optional[str], int, str]], None, None]:
+    def _generator(
+        self,
+    ) -> Generator[Tuple[int, Tuple[str, int, Optional[str], int, str]], None, None]:
         kernel = self.context.modules[self.config["kernel"]]
 
         for proc, proc_name, proc_layer_name, architecture in self._get_tasks_to_scan(
