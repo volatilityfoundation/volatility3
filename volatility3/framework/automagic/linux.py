@@ -254,8 +254,12 @@ class LinuxIntelSubStacker:
             layer_name,
             progress_callback=progress_callback,
         )
-
-        dtb = table.get_symbol(dtb_symbol_name).address + kaslr_shift
+        dtb = table.get_symbol(dtb_symbol_name).address
+        dtb = (
+            dtb + kaslr_shift
+            if kaslr_shift != 0
+            else self.virtual_to_physical_address(dtb)
+        )
 
         # Build the new layer
         context.config[path_join(config_path, "page_map_offset")] = dtb
