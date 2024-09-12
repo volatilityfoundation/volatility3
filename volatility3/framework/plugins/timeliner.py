@@ -248,6 +248,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
         # Identify plugins that we can run which output datetimes
         for plugin_class in self.usable_plugins:
             if not issubclass(plugin_class, TimeLinerInterface):
+                # get_usable_plugins() should filter this, but adding a safeguard just in case
                 continue
 
             if filter_list and not any(
