@@ -33,7 +33,7 @@ class Passphrase(interfaces.plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="modules", component=modules.Modules, version=(1, 1, 0)
+                name="modules", component=modules.Modules, version=(2, 0, 0)
             ),
             requirements.IntRequirement(
                 name="min-length",
