@@ -199,9 +199,10 @@ class Timeliner(interfaces.plugins.PluginInterface):
                                     ),
                                 )
                             )
-            except Exception:
+            except Exception as e:
                 vollog.log(
-                    logging.INFO, f"Exception occurred running plugin: {plugin_name}"
+                    logging.INFO,
+                    f"Exception occurred running plugin: {plugin_name}: {e}",
                 )
                 vollog.log(logging.DEBUG, traceback.format_exc())
 
