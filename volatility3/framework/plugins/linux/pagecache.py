@@ -342,7 +342,7 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
             description = f"Cached Inode for {inode_out.path}"
             yield description, timeliner.TimeLinerType.ACCESSED, inode_out.access_time
             yield description, timeliner.TimeLinerType.MODIFIED, inode_out.modification_time
-            yield description, timeliner.TimeLinerType.CHANGE, inode_out.change_time
+            yield description, timeliner.TimeLinerType.CHANGED, inode_out.change_time
 
     @staticmethod
     def format_fields_with_headers(headers, generator):
