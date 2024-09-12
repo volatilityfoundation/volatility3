@@ -2,13 +2,10 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import logging
-
 from volatility3.framework import interfaces, renderers
+from volatility3.framework.renderers import format_hints
 from volatility3.framework.configuration import requirements
 from volatility3.plugins.linux import pslist
-
-vollog = logging.getLogger(__name__)
 
 
 class Check_creds(interfaces.plugins.PluginInterface):
@@ -16,7 +13,7 @@ class Check_creds(interfaces.plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 1)
+    _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -54,18 +51,22 @@ class Check_creds(interfaces.plugins.PluginInterface):
 
             cred_addr = task_cred_ptr.dereference().vol.offset
 
-            if cred_addr not in creds:
-                creds[cred_addr] = []
-
+            creds.setdefault(cred_addr, [])
             creds[cred_addr].append(task.pid)
 
-        for _, pids in creds.items():
+        for cred_addr, pids in creds.items():
             if len(pids) > 1:
-                pid_str = ""
-                for pid in pids:
-                    pid_str = pid_str + f"{pid:d}, "
-                pid_str = pid_str[:-2]
-                yield (0, [str(pid_str)])
+                pid_str = ", ".join([str(pid) for pid in pids])
+
+                fields = [
+                    format_hints.Hex(cred_addr),
+                    pid_str,
+                ]
+                yield (0, fields)
 
     def run(self):
-        return renderers.TreeGrid([("PIDs", str)], self._generator())
+        headers = [
+            ("CredVAddr", format_hints.Hex),
+            ("PIDs", str),
+        ]
+        return renderers.TreeGrid(headers, self._generator())
