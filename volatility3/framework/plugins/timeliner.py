@@ -45,6 +45,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
     orders the results by time."""
 
     _required_framework_version = (2, 0, 0)
+    _version = (1, 1, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -245,6 +246,17 @@ class Timeliner(interfaces.plugins.PluginInterface):
         filter_list = self.config["plugin-filter"]
         # Identify plugins that we can run which output datetimes
         for plugin_class in self.usable_plugins:
+            if not issubclass(plugin_class, TimeLinerInterface):
+                continue
+
+            if filter_list and not any(
+                [
+                    filter in plugin_class.__module__ + "." + plugin_class.__name__
+                    for filter in filter_list
+                ]
+            ):
+                continue
+
             try:
                 automagics = automagic.choose_automagic(self.automagics, plugin_class)
 
@@ -276,15 +288,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
                                 config_value,
                             )
 
-                if isinstance(plugin, TimeLinerInterface):
-                    if not len(filter_list) or any(
-                        [
-                            filter
-                            in plugin.__module__ + "." + plugin.__class__.__name__
-                            for filter in filter_list
-                        ]
-                    ):
-                        plugins_to_run.append(plugin)
+                plugins_to_run.append(plugin)
+
             except exceptions.UnsatisfiedException as excp:
                 # Remove the failed plugin from the list and continue
                 vollog.debug(
