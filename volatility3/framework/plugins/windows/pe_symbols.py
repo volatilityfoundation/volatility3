@@ -1,11 +1,12 @@
 # This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 
+import copy
 import io
 import logging
 import ntpath
 
-from typing import Dict, Tuple, Optional, List, Generator, Union
+from typing import Dict, Tuple, Optional, List, Generator, Union, Callable
 
 import pefile
 
@@ -29,11 +30,13 @@ wanted_addresses_identifier = "addresses"
 # how wanted modules/symbols are specified, such as:
 # {"ntdll.dll" : {wanted_addresses : [42, 43, 43]}}
 # {"ntdll.dll" : {wanted_names : ["NtCreateThread"]}}
-filter_modules_type = Dict[str, Union[Dict[str, List[str]], Dict[str, List[int]]]]
+filter_module_info = Union[Dict[str, List[str]], Dict[str, List[int]]]
+filter_modules_type = Dict[str, filter_module_info]
 
 # holds resolved symbols
 # {"ntdll.dll": [("Bob", 123), ("Alice", 456)]}
-found_symbols_type = Dict[str, List[Tuple[str, int]]]
+found_symbols_module = List[Tuple[str, int]]
+found_symbols_type = Dict[str, found_symbols_module]
 
 # used to hold informatin about a range (VAD or kernel module)
 # (start address, size, file path)
@@ -61,7 +64,8 @@ class PESymbolFinder:
     cached_int_dict = Dict[str, Optional[int]]
 
     cached_value = Union[int, str, None]
-    cached_value_dict = Dict[str, Union[Dict[str, List[str]], Dict[str, List[int]]]]
+    cached_module_lists = Union[Dict[str, List[str]], Dict[str, List[int]]]
+    cached_value_dict = Dict[str, cached_module_lists]
 
     def __init__(
         self,
@@ -402,11 +406,11 @@ class PESymbols(interfaces.plugins.PluginInterface):
             context, layer_name, symbol_table_name, symbols
         )
 
-        found_symbols = PESymbols.find_symbols(
+        found_symbols, missing_symbols = PESymbols.find_symbols(
             context, config_path, symbols, collected_modules
         )
 
-        for mod_name, unresolved_symbols in symbols.items():
+        for mod_name, unresolved_symbols in missing_symbols.items():
             for symbol in unresolved_symbols:
                 vollog.debug(f"Unable to resolve symbol {symbol} in module {mod_name}")
 
@@ -449,7 +453,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
             filename: {wanted_addresses_identifier: [address]}
         }
 
-        found_symbols = PESymbols.find_symbols(
+        found_symbols, _missing_msybols = PESymbols.find_symbols(
             context, config_path, filter_module, collected_modules
         )
 
@@ -624,61 +628,46 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
     @staticmethod
     def _get_symbol_value(
-        wanted_modules: PESymbolFinder.cached_value_dict,
-        mod_name: str,
+        wanted_symbols: filter_module_info,
         symbol_resolver: PESymbolFinder,
-    ) -> Generator[Tuple[str, int], None, None]:
+    ) -> Generator[Tuple[str, int, str, int], None, None]:
         """
         Enumerates the symbols specified as wanted by the calling plugin
 
-        removes entries from wanted_modules as they found to avoid PDB or export analysis after resolving all symbols
-
         Args:
-            wanted_modules: the dictionary of modules and symbols to resolve. Modified to remove symbols as they are resolved.
-            mod_name: the name of module to resolve symbols in
+            wanted_symbols: the set of symbols for a particular module
+            symbol_resolver: method in a layer to resolve the symbols
 
         Returns:
-            Tuple[str, int]: the name and address of resolved symbols
+            Tuple[str, int, str, int]: the index and value of the found symbol in the wanted list, and the name and address of resolved symbol
         """
-        wanted_symbols = wanted_modules[mod_name]
-
         if (
             wanted_names_identifier not in wanted_symbols
             and wanted_addresses_identifier not in wanted_symbols
         ):
             vollog.warning(
-                f"Invalid `wanted_symbols` sent to `find_symbols` for module {mod_name}. addresses and names keys both misssing."
+                f"Invalid `wanted_symbols` sent to `find_symbols`. addresses and names keys both misssing."
             )
             return
 
-        symbol_keys = [
-            (wanted_names_identifier, "get_address_for_name"),
-            (wanted_addresses_identifier, "get_name_for_address"),
+        symbol_keys: List[Tuple[str, Callable]] = [
+            (wanted_names_identifier, symbol_resolver.get_address_for_name),
+            (wanted_addresses_identifier, symbol_resolver.get_name_for_address),
         ]
 
         for symbol_key, symbol_getter in symbol_keys:
             # address or name
             if symbol_key in wanted_symbols:
                 # walk each wanted address or name
-                for wanted_value in wanted_symbols[symbol_key]:
-                    symbol_value = symbol_resolver.__getattribute__(symbol_getter)(
-                        wanted_value
-                    )
+                for value_index, wanted_value in enumerate(wanted_symbols[symbol_key]):
+                    symbol_value = symbol_getter(wanted_value)
+
                     if symbol_value:
-                        # yield out symbol name, symbol address
+                        # yield out deleteion key, deletion index, symbol name, symbol address
                         if symbol_key == wanted_names_identifier:
-                            yield wanted_value, symbol_value  # type: ignore
+                            yield symbol_key, value_index, wanted_value, symbol_value  # type: ignore
                         else:
-                            yield symbol_value, wanted_value  # type: ignore
-
-                        index = wanted_modules[mod_name][symbol_key].index(wanted_value)  # type: ignore
-
-                        del wanted_modules[mod_name][symbol_key][index]
-
-                # if all names or addresses from a module are found, delete the key
-                if not wanted_modules[mod_name][symbol_key]:
-                    del wanted_modules[mod_name][symbol_key]
-                    break
+                            yield symbol_key, value_index, symbol_value, wanted_value  # type: ignore
 
     @staticmethod
     def _resolve_symbols_through_methods(
@@ -687,7 +676,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         module_instances: collected_modules_info,
         wanted_modules: PESymbolFinder.cached_value_dict,
         mod_name: str,
-    ) -> Generator[Tuple[str, int], None, None]:
+    ) -> Tuple[found_symbols_module, PESymbolFinder.cached_module_lists]:
         """
         Attempts to resolve every wanted symbol in `mod_name`
         Every layer is enumerated for maximum chance of recovery
@@ -697,27 +686,45 @@ class PESymbols(interfaces.plugins.PluginInterface):
             wanted_modules: The symbols to resolve tied to their module names
             mod_name: name of the module to resolve symbols in
         Returns:
-            Generator[Tuple[str, int]]: resolved symbol names and addresses
+            Tuple[found_symbols_module, PESymbolFinder.cached_module_lists]: The set of found symbols and the ones that could not be resolved
         """
         symbol_resolving_methods = [
             PESymbols._find_symbols_through_pdb,
             PESymbols._find_symbols_through_exports,
         ]
 
+        found: found_symbols_module = []
+
+        # the symbols wanted from this module by the caller
+        wanted = wanted_modules[mod_name]
+
+        # make a copy to remove from inside this function for returning to the caller
+        remaining = copy.deepcopy(wanted)
+
         for method in symbol_resolving_methods:
+            # every layer where this module was found through the given method
             for symbol_resolver in method(
                 context, config_path, module_instances, mod_name
             ):
                 vollog.debug(f"Have resolver for method {method}")
-                yield from PESymbols._get_symbol_value(
-                    wanted_modules, mod_name, symbol_resolver
-                )
+                for (
+                    symbol_key,
+                    value_index,
+                    symbol_name,
+                    symbol_address,
+                ) in PESymbols._get_symbol_value(remaining, symbol_resolver):
+                    found.append((symbol_name, symbol_address))
+                    del remaining[symbol_key][value_index]
 
-                if not wanted_modules[mod_name]:
+                # everything was resolved, stop this resolver
+                if not remaining:
                     break
 
-            if not wanted_modules[mod_name]:
+            # stop all resolving
+            if not remaining:
                 break
+
+        return found, remaining
 
     @staticmethod
     def find_symbols(
@@ -725,7 +732,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         config_path: str,
         wanted_modules: PESymbolFinder.cached_value_dict,
         collected_modules: collected_modules_type,
-    ) -> found_symbols_type:
+    ) -> Tuple[found_symbols_type, PESymbolFinder.cached_value_dict]:
         """
         Loops through each method of symbol analysis until each wanted symbol is found
         Returns the resolved symbols as a dictionary that includes the name and runtime address
@@ -734,9 +741,10 @@ class PESymbols(interfaces.plugins.PluginInterface):
             wanted_modules: the dictionary of modules and symbols to resolve. Modified to remove symbols as they are resolved.
             collected_modules: return value from `get_kernel_modules` or `get_process_modules`
         Returns:
-            found_symbols_type: The set of symbols resolved to their name and/or address
+            Tuple[found_symbols_type, PESymbolFinder.cached_value_dict]: The set of found symbols but the ones that could not be resolved
         """
         found_symbols: found_symbols_type = {}
+        missing_symbols: PESymbolFinder.cached_value_dict = {}
 
         for mod_name in wanted_modules:
             if mod_name not in collected_modules:
@@ -745,24 +753,20 @@ class PESymbols(interfaces.plugins.PluginInterface):
             module_instances = collected_modules[mod_name]
 
             # try to resolve the symbols for `mod_name` through each method (PDB and export table currently)
-            for symbol_name, address in PESymbols._resolve_symbols_through_methods(
+            (
+                found_in_module,
+                missing_in_module,
+            ) = PESymbols._resolve_symbols_through_methods(
                 context, config_path, module_instances, wanted_modules, mod_name
-            ):
-                if mod_name not in found_symbols:
-                    found_symbols[mod_name] = []
+            )
 
-                found_symbols[mod_name].append((symbol_name, address))
+            if found_in_module:
+                found_symbols[mod_name] = found_in_module
 
-                # stop processing the layers (processes) if we found all the symbols for this module
-                if not wanted_modules[mod_name]:
-                    break
+            if missing_in_module:
+                missing_symbols[mod_name] = missing_in_module
 
-            # stop processing this module if/when all symbols are found
-            if not wanted_modules[mod_name]:
-                del wanted_modules[mod_name]
-                break
-
-        return found_symbols
+        return found_symbols, missing_symbols
 
     @staticmethod
     def get_kernel_modules(
@@ -986,7 +990,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
             self.context, kernel.layer_name, kernel.symbol_table_name, filter_module
         )
 
-        found_symbols = PESymbols.find_symbols(
+        found_symbols, _missing_symbols = PESymbols.find_symbols(
             self.context, self.config_path, filter_module, collected_modules
         )
 
