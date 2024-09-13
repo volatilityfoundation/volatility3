@@ -4,7 +4,7 @@
 import logging
 from datetime import datetime
 from dataclasses import dataclass, astuple, field
-from typing import List, Callable
+from typing import List, Callable, Tuple
 
 from volatility3.framework import renderers, interfaces, constants
 from volatility3.framework.configuration import requirements
@@ -48,7 +48,7 @@ class FDInternal:
     """
 
     task: interfaces.objects.ObjectInterface
-    fd_fields: tuple[int, int, str]
+    fd_fields: Tuple[int, int, str]
 
     def to_user(self) -> FDUser:
         """Augment the FD information to be presented to the user
