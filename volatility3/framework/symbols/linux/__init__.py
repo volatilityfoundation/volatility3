@@ -217,29 +217,32 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
                     ns_common_type = kernel_module.get_type("ns_common")
                     stashed_template = ns_common_type.child_template("stashed")
                     stashed_type_full_name = stashed_template.vol.type_name
-                    stashed_type_name = stashed_type_full_name.split(constants.BANG)[-1]
+                    stashed_type_name = stashed_type_full_name.split(constants.BANG)[1]
                     if stashed_type_name == "atomic64_t":
                         # 3.19 <= Kernels < 6.9
-                        ns_ops = dentry.d_fsdata.dereference().cast(
-                            "proc_ns_operations"
-                        )
+                        fsdata_ptr = dentry.d_fsdata
+                        if not (fsdata_ptr and fsdata_ptr.is_readable()):
+                            raise IndexError
+
+                        ns_ops = fsdata_ptr.dereference().cast("proc_ns_operations")
                     else:
                         # Kernels >= 6.9
-                        ns_common = inode.i_private.dereference().cast("ns_common")
+                        private_ptr = inode.i_private
+                        if not (private_ptr and private_ptr.is_readable()):
+                            raise IndexError
+
+                        ns_common = private_ptr.dereference().cast("ns_common")
                         ns_ops = ns_common.ops
 
                     pre_name = utility.pointer_to_string(ns_ops.name, 255)
                 except IndexError:
-                    ret = "<unsupported ns_common type>"
+                    pre_name = "<unsupported ns_dname implementation>"
             else:
                 pre_name = f"<unsupported d_op symbol> {sym}"
-
-            ret = f"{pre_name}:[{inode.i_ino:d}]"
-
         else:
-            ret = f"<unknown d_dname pointer> {sym_addr:x}"
+            pre_name = f"<unknown d_dname pointer> {sym_addr:x}"
 
-        return ret
+        return f"{pre_name}:[{inode.i_ino:d}]"
 
     @classmethod
     def path_for_file(cls, context, task, filp) -> str:
