@@ -847,7 +847,7 @@ class dentry(objects.StructType):
         """Returns the inode associated with this dentry"""
 
         inode_ptr = self.d_inode
-        if not (inode_ptr and inode_ptr.is_valid()):
+        if not (inode_ptr and inode_ptr.is_readable() and inode_ptr.is_valid()):
             return None
 
         return inode_ptr.dereference()
@@ -880,14 +880,14 @@ class struct_file(objects.StructType):
             # Try first the cached value, kernels +3.9
             inode_ptr = self.f_inode
 
-        if not (inode_ptr and inode_ptr.is_valid()):
+        if not (inode_ptr and inode_ptr.is_readable() and inode_ptr.is_valid()):
             dentry_ptr = self.get_dentry()
             if not (dentry_ptr and dentry_ptr.is_readable()):
                 return None
 
             inode_ptr = dentry_ptr.d_inode
 
-        if not (inode_ptr and inode_ptr.is_valid()):
+        if not (inode_ptr and inode_ptr.is_readable() and inode_ptr.is_valid()):
             return None
 
         return inode_ptr.dereference()
