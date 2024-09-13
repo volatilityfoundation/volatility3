@@ -22,9 +22,10 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
-    def __init__(self, vmlinux, task):
+    def __init__(self, vmlinux, task, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._vmlinux = vmlinux
         self._task = task
 
@@ -438,7 +439,7 @@ class Sockstat(plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -452,7 +453,7 @@ class Sockstat(plugins.PluginInterface):
                 name="SockHandlers", component=SockHandlers, version=(1, 0, 0)
             ),
             requirements.PluginRequirement(
-                name="lsof", plugin=lsof.Lsof, version=(1, 1, 0)
+                name="lsof", plugin=lsof.Lsof, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="linuxutils", component=linux.LinuxUtilities, version=(2, 0, 0)
@@ -507,8 +508,9 @@ class Sockstat(plugins.PluginInterface):
         dfop_addr = vmlinux.object_from_symbol("sockfs_dentry_operations").vol.offset
 
         fd_generator = lsof.Lsof.list_fds(context, vmlinux.name, filter_func)
-        for _pid, _task_comm, task, fd_fields in fd_generator:
-            fd_num, filp, _full_path = fd_fields
+        for fd_internal in fd_generator:
+            fd_num, filp, _full_path = fd_internal.fd_fields
+            task = fd_internal.task
 
             if filp.f_op not in (sfop_addr, dfop_addr):
                 continue
@@ -617,6 +619,7 @@ class Sockstat(plugins.PluginInterface):
 
             fields = (
                 netns_id,
+                task.tgid,
                 task.pid,
                 fd_num,
                 format_hints.Hex(sock.vol.offset),
@@ -636,7 +639,8 @@ class Sockstat(plugins.PluginInterface):
 
         tree_grid_args = [
             ("NetNS", int),
-            ("Pid", int),
+            ("PID", int),
+            ("TID", int),
             ("FD", int),
             ("Sock Offset", format_hints.Hex),
             ("Family", str),
