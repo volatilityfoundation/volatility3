@@ -437,7 +437,6 @@ class PESymbols(interfaces.plugins.PluginInterface):
         Returns:
             Tuple[str|renderers.NotApplicableValue|renderers.NotAvailableValue, str|renderers.NotApplicableValue|renderers.NotAvailableValue]
         """
-
         if not address:
             return renderers.NotApplicableValue(), renderers.NotApplicableValue()
 
@@ -458,7 +457,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         )
 
         if not found_symbols or filename not in found_symbols:
-            return renderers.NotAvailableValue(), renderers.NotAvailableValue()
+            return filepath, renderers.NotAvailableValue()
 
         return filepath, found_symbols[filename][0][0]
 
@@ -718,11 +717,14 @@ class PESymbols(interfaces.plugins.PluginInterface):
                     found.append((symbol_name, symbol_address))
                     del remaining[symbol_key][value_index]
 
-                # everything was resolved, stop this resolver
-                # remove this key from the remaining symbols to resolve
-                if not remaining[symbol_key]:
-                    del remaining[symbol_key]
-                    done_processing = True
+                    # everything was resolved, stop this resolver
+                    # remove this key from the remaining symbols to resolve
+                    if not remaining[symbol_key]:
+                        del remaining[symbol_key]
+                        done_processing = True
+                        break
+
+                if done_processing:
                     break
 
             # stop all resolving
@@ -885,6 +887,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
         for vad in vad_root.traverse():
             filepath = vad.get_file_name()
+
             if not isinstance(filepath, str) or filepath.count("\\") == 0:
                 continue
 
