@@ -49,6 +49,7 @@ class DirectSystemCalls(interfaces.plugins.PluginInterface):
     _required_framework_version = (2, 4, 0)
     _version = (1, 0, 0)
 
+    # DLLs that are expected to host system call invocations
     valid_syscall_handlers = ("ntdll.dll", "win32u.dll")
 
     def __init__(self, *args, **kwargs):
@@ -266,7 +267,7 @@ class DirectSystemCalls(interfaces.plugins.PluginInterface):
                         continue
 
                     # we only care about calls to system call DLLs
-                    path = cls._get_range_path(vads, target_address)
+                    path = cls.get_range_path(vads, target_address)
                     if not isinstance(path, str) or not path.lower().endswith(
                         cls.valid_syscall_handlers
                     ):
@@ -278,7 +279,7 @@ class DirectSystemCalls(interfaces.plugins.PluginInterface):
         return None
 
     @staticmethod
-    def _get_vad_maps(
+    def get_vad_maps(
         task: interfaces.objects.ObjectInterface,
     ) -> List[Tuple[int, int, str]]:
         """Creates a map of start/end addresses within a virtual address
@@ -304,14 +305,14 @@ class DirectSystemCalls(interfaces.plugins.PluginInterface):
         return vads
 
     @staticmethod
-    def _get_range_path(
+    def get_range_path(
         ranges: List[Tuple[int, int, str]], address: int
     ) -> Optional[str]:
         """
         Returns the path for the range holding `address`, if found
 
         Args:
-            ranges: VADs collected from `_get_vad_maps`
+            ranges: VADs collected from `get_vad_maps`
             address: the address to find
         Returns:
             The path holding the address, if any
@@ -399,7 +400,7 @@ class DirectSystemCalls(interfaces.plugins.PluginInterface):
         ):
             address = hit[0]
 
-            path = cls._get_range_path(vads, address)
+            path = cls.get_range_path(vads, address)
 
             # ignore hits in the system call DLLs
             if isinstance(path, str) and path.lower().endswith(
@@ -419,7 +420,7 @@ class DirectSystemCalls(interfaces.plugins.PluginInterface):
         ):
             proc_layer = self.context.layers[proc_layer_name]
 
-            vads = self._get_vad_maps(proc)
+            vads = self.get_vad_maps(proc)
 
             # for each valid process, look for malicious syscall invocations
             for address, vad_path in self._get_rule_hits(
