@@ -380,7 +380,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         Returns:
             str: the bsae file name of the full path
         """
-        return ntpath.basename(filepath)
+        return ntpath.basename(filepath).lower()
 
     @staticmethod
     def addresses_for_process_symbols(
@@ -717,11 +717,12 @@ class PESymbols(interfaces.plugins.PluginInterface):
                     del remaining[symbol_key][value_index]
 
                 # everything was resolved, stop this resolver
-                if not remaining:
+                if not remaining[symbol_key]:
                     break
 
             # stop all resolving
-            if not remaining:
+            if not remaining[symbol_key]:
+                del remaining[symbol_key]
                 break
 
         return found, remaining
