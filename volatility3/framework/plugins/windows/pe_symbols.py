@@ -701,6 +701,8 @@ class PESymbols(interfaces.plugins.PluginInterface):
         # make a copy to remove from inside this function for returning to the caller
         remaining = copy.deepcopy(wanted)
 
+        done_processing = False
+
         for method in symbol_resolving_methods:
             # every layer where this module was found through the given method
             for symbol_resolver in method(
@@ -717,12 +719,14 @@ class PESymbols(interfaces.plugins.PluginInterface):
                     del remaining[symbol_key][value_index]
 
                 # everything was resolved, stop this resolver
+                # remove this key from the remaining symbols to resolve
                 if not remaining[symbol_key]:
+                    del remaining[symbol_key]
+                    done_processing = True
                     break
 
             # stop all resolving
-            if not remaining[symbol_key]:
-                del remaining[symbol_key]
+            if done_processing:
                 break
 
         return found, remaining
