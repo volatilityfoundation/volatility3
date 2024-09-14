@@ -324,7 +324,7 @@ class DirectSystemCalls(interfaces.plugins.PluginInterface):
         return None
 
     @classmethod
-    def _get_tasks_to_scan(
+    def get_tasks_to_scan(
         cls,
         context: interfaces.context.ContextInterface,
         layer_name: str,
@@ -415,7 +415,7 @@ class DirectSystemCalls(interfaces.plugins.PluginInterface):
     ) -> Generator[Tuple[int, Tuple[str, int, Optional[str], int, str]], None, None]:
         kernel = self.context.modules[self.config["kernel"]]
 
-        for proc, proc_name, proc_layer_name, architecture in self._get_tasks_to_scan(
+        for proc, proc_name, proc_layer_name, architecture in self.get_tasks_to_scan(
             self.context, kernel.layer_name, kernel.symbol_table_name
         ):
             proc_layer = self.context.layers[proc_layer_name]
