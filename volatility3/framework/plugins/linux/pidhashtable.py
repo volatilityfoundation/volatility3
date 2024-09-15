@@ -20,7 +20,7 @@ class PIDHashTable(plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -45,9 +45,7 @@ class PIDHashTable(plugins.PluginInterface):
         ]
 
     def _is_valid_task(self, task) -> bool:
-        vmlinux = self.context.modules[self.config["kernel"]]
-        vmlinux_layer = self.context.layers[vmlinux.layer_name]
-        return bool(task and task.pid > 0 and vmlinux_layer.is_valid(task.parent))
+        return bool(task and task.pid > 0 and task.parent)
 
     def _get_pidtype_pid(self):
         vmlinux = self.context.modules[self.config["kernel"]]
@@ -88,15 +86,14 @@ class PIDHashTable(plugins.PluginInterface):
 
     def _walk_upid(self, seen_upids, upid):
         vmlinux = self.context.modules[self.config["kernel"]]
-        vmlinux_layer = self.context.layers[vmlinux.layer_name]
 
-        while upid and vmlinux_layer.is_valid(upid.vol.offset):
+        while upid:
             if upid.vol.offset in seen_upids:
                 break
             seen_upids.add(upid.vol.offset)
 
             pid_chain = upid.pid_chain
-            if not (pid_chain and vmlinux_layer.is_valid(pid_chain.vol.offset)):
+            if not pid_chain:
                 break
 
             upid = linux.LinuxUtilities.container_of(
@@ -105,7 +102,6 @@ class PIDHashTable(plugins.PluginInterface):
 
     def _get_upids(self):
         vmlinux = self.context.modules[self.config["kernel"]]
-        vmlinux_layer = self.context.layers[vmlinux.layer_name]
 
         # 2.6.24 <= kernels < 4.15
         pidhash = self._get_pidhash_array()
@@ -115,7 +111,7 @@ class PIDHashTable(plugins.PluginInterface):
             # each entry in the hlist is a upid which is wrapped in a pid
             ent = hlist.first
 
-            while ent and vmlinux_layer.is_valid(ent.vol.offset):
+            while ent:
                 # upid->pid_chain exists 2.6.24 <= kernel < 4.15
                 upid = linux.LinuxUtilities.container_of(
                     ent.vol.offset, "upid", "pid_chain", vmlinux
