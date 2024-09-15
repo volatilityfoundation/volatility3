@@ -148,12 +148,7 @@ class DebugRegisters(interfaces.plugins.PluginInterface):
                 file3, sym3 = path_and_symbol(vads, dr3)
 
                 # if none map to an actual file VAD then bail
-                if not (
-                    isinstance(file0, str)
-                    or isinstance(file1, str)
-                    or isinstance(file2, str)
-                    or isinstance(file3, str)
-                ):
+                if not (file0 or file1 or file2 or file3):
                     continue
 
                 process_name = owner_proc.ImageFileName.cast(
@@ -173,17 +168,17 @@ class DebugRegisters(interfaces.plugins.PluginInterface):
                         thread.Tcb.State,
                         dr7,
                         format_hints.Hex(dr0),
-                        file0,
-                        sym0,
+                        file0 or renderers.NotApplicableValue(),
+                        sym0 or renderers.NotApplicableValue(),
                         format_hints.Hex(dr1),
-                        file1,
-                        sym1,
+                        file1 or renderers.NotApplicableValue(),
+                        sym1 or renderers.NotApplicableValue(),
                         format_hints.Hex(dr2),
-                        file2,
-                        sym2,
+                        file2 or renderers.NotApplicableValue(),
+                        sym2 or renderers.NotApplicableValue(),
                         format_hints.Hex(dr3),
-                        file3,
-                        sym3,
+                        file3 or renderers.NotApplicableValue(),
+                        sym3 or renderers.NotApplicableValue(),
                     ),
                 )
 

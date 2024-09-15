@@ -71,6 +71,13 @@ class unhooked_system_calls(interfaces.plugins.PluginInterface):
         }
     }
 
+    # This data structure is used to track unique implementations of functions across processes
+    # The outer dictionary holds the module name (e.g., ntdll.dll)
+    # The next dictionary holds the function names (NtTerminateProcess, NtSetValueKey, etc.) inside a module
+    # The innermost dictionary holds the unique implementation (bytes) of a function across processes
+    # Each implementation is tracked along with the process(es) that host it
+    # For systems without malware, all functions should have the same implementation
+    # When API hooking/module unhooking is done, the victim (infected) processes will have unique implementations
     _code_bytes_type = Dict[str, Dict[str, Dict[bytes, List[Tuple[int, str]]]]]
 
     @classmethod
@@ -127,6 +134,7 @@ class unhooked_system_calls(interfaces.plugins.PluginInterface):
                     except exceptions.InvalidAddressException:
                         continue
 
+                    # see the definition of _code_bytes_type for details of this data structure
                     if dll_name not in code_bytes:
                         code_bytes[dll_name] = {}
 

@@ -423,7 +423,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         collected_modules: collected_modules_type,
         ranges: ranges_type,
         address: int,
-    ) -> Tuple[str, str]:
+    ) -> Tuple[Optional[str], Optional[str]]:
         """
         Method for plugins to determine the file path and symbol name for a given address
 
@@ -438,12 +438,12 @@ class PESymbols(interfaces.plugins.PluginInterface):
             Tuple[str|renderers.NotApplicableValue|renderers.NotAvailableValue, str|renderers.NotApplicableValue|renderers.NotAvailableValue]
         """
         if not address:
-            return renderers.NotApplicableValue(), renderers.NotApplicableValue()
+            return None, None
 
         filepath = PESymbols.filepath_for_address(ranges, address)
 
         if not filepath:
-            return renderers.NotAvailableValue(), renderers.NotAvailableValue()
+            return None, None
 
         filename = PESymbols.filename_for_path(filepath).lower()
 
@@ -452,12 +452,12 @@ class PESymbols(interfaces.plugins.PluginInterface):
             filename: {wanted_addresses_identifier: [address]}
         }
 
-        found_symbols, _missing_msybols = PESymbols.find_symbols(
+        found_symbols, _missing_symbols = PESymbols.find_symbols(
             context, config_path, filter_module, collected_modules
         )
 
         if not found_symbols or filename not in found_symbols:
-            return filepath, renderers.NotAvailableValue()
+            return filepath, None
 
         return filepath, found_symbols[filename][0][0]
 
