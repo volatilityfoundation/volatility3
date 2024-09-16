@@ -1,6 +1,10 @@
 # This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 
+# Full details on the techniques used in these plugins to detect EDR-evading malware
+# can be found in our 20 page whitepaper submitted to DEFCON along with the presentation
+# https://www.volexity.com/wp-content/uploads/2024/08/Defcon24_EDR_Evasion_Detection_White-Paper_Andrew-Case.pdf
+
 import logging
 
 from typing import Dict, Tuple, List, Generator
@@ -162,20 +166,30 @@ class unhooked_system_calls(interfaces.plugins.PluginInterface):
         # code_bytes[dll_name][func_name][func_bytes]
         code_bytes = self._gather_code_bytes(kernel, found_symbols)
 
+        # walk the functions that were evaluated
         for functions in code_bytes.values():
+            # cbb is the distinct groups of bytes (instructions)
+            # for this function across processes
             for func_name, cbb in functions.items():
+                # the dict key here is the raw instructions, which is not helpful to look at
+                # the values are the list of tuples for the (proc_id, proc_name) pairs for this set of bytes (instructions)
                 cb = list(cbb.values())
 
-                # same implementation in all
+                # if all processes map to the same implementation, then no malware is present
                 if len(cb) == 1:
                     yield 0, (func_name, "", len(cb[0]))
                 else:
-                    # find the processes that are hooked for reporting
+                    # if there are differing implementations then it means
+                    # that malware has overwritten system call(s) in infected processes
+                    # max_idx and small_idx find which implementation of a system call has the least processes
+                    # as all observed malware and open source projects only infected a few targets, leaving the
+                    # rest with the original EDR hooks in place
                     max_idx = 0 if len(cb[0]) > len(cb[1]) else 1
                     small_idx = (~max_idx) & 1
 
                     ps = []
 
+                    # gather processes on small_idx since these are the malware infected ones
                     for pid, pname in cb[small_idx]:
                         ps.append("{:d}:{}".format(pid, pname))
 

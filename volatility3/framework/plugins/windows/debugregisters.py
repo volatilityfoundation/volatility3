@@ -1,6 +1,10 @@
 # This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 
+# Full details on the techniques used in these plugins to detect EDR-evading malware
+# can be found in our 20 page whitepaper submitted to DEFCON along with the presentation
+# https://www.volexity.com/wp-content/uploads/2024/08/Defcon24_EDR_Evasion_Detection_White-Paper_Andrew-Case.pdf
+
 import logging
 
 from typing import Tuple, Optional, Generator, List, Dict
