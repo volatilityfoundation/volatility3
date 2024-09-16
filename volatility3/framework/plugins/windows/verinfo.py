@@ -48,9 +48,6 @@ class VerInfo(interfaces.plugins.PluginInterface):
             requirements.PluginRequirement(
                 name="modules", plugin=modules.Modules, version=(2, 0, 0)
             ),
-            requirements.VersionRequirement(
-                name="dlllist", component=dlllist.DllList, version=(2, 0, 0)
-            ),
             requirements.BooleanRequirement(
                 name="extensive",
                 description="Search physical layer for version information",
