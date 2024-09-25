@@ -541,7 +541,7 @@ class AArch64(linear.LinearlyMappedLayer):
     @functools.lru_cache()
     def page_mask(self) -> int:
         """Page mask for this layer."""
-        return self.page_size - 1
+        return ~(self.page_size - 1)
 
     @classproperty
     @functools.lru_cache()
@@ -748,7 +748,7 @@ class WindowsAArch64(WindowsAArch64Mixin, AArch64):
     @functools.lru_cache()
     def page_mask(cls) -> int:
         """Page mask for this layer."""
-        return cls.page_size - 1
+        return ~(cls.page_size - 1)
 
 
 """Avoid cluttering the layer code with static mappings."""
