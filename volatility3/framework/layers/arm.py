@@ -724,33 +724,31 @@ class WindowsAArch64Mixin(AArch64):
 
 
 class WindowsAArch64(WindowsAArch64Mixin, AArch64):
-    """Windows AArch64 page size is constant, and statically defined in
-    CmSiGetPageSize() kernel function.
-
-    Takes advantage of the @classproperty, as @property is dynamic
-    and breaks static accesses in windows automagic.
+    """As Windows (AArch64) page size is constant,
+    we take advantage of the @classproperty decorator,
+    because @property is dynamic and breaks static accesses
+    in windows automagic.
     """
 
+    _windows_fixed_page_size = 0x1000
+
     @classproperty
     @functools.lru_cache()
-    def page_shift(self) -> int:
+    def page_shift(cls) -> int:
         """Page shift for this layer, which is the page size bit length."""
-        return 12
+        return cls.page_size.bit_length() - 1
 
     @classproperty
     @functools.lru_cache()
-    def page_size(self) -> int:
-        """Page size for this layer, in bytes.
-        Prefer returning the value directly, instead of adding an additional
-        "_page_size" constant that could cause confusion with the parent class.
-        """
-        return 0x1000
+    def page_size(cls) -> int:
+        """Page size for this layer, in bytes."""
+        return cls._windows_fixed_page_size
 
     @classproperty
     @functools.lru_cache()
-    def page_mask(self) -> int:
+    def page_mask(cls) -> int:
         """Page mask for this layer."""
-        return self.page_size - 1
+        return cls.page_size - 1
 
 
 """Avoid cluttering the layer code with static mappings."""
