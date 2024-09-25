@@ -22,7 +22,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
 
     def __init__(self, vmlinux, task):
         self._vmlinux = vmlinux
@@ -507,7 +507,7 @@ class Sockstat(plugins.PluginInterface):
         dfop_addr = vmlinux.object_from_symbol("sockfs_dentry_operations").vol.offset
 
         fd_generator = lsof.Lsof.list_fds(context, vmlinux.name, filter_func)
-        for _pid, _task_comm, task, fd_fields in fd_generator:
+        for _pid, task_comm, task, fd_fields in fd_generator:
             fd_num, filp, _full_path = fd_fields
 
             if filp.f_op not in (sfop_addr, dfop_addr):
@@ -548,7 +548,7 @@ class Sockstat(plugins.PluginInterface):
             except AttributeError:
                 netns_id = NotAvailableValue()
 
-            yield task, netns_id, fd_num, family, sock_type, protocol, sock_fields
+            yield task_comm, task, netns_id, fd_num, family, sock_type, protocol, sock_fields
 
     def _format_fields(self, sock_stat, protocol):
         """Prepare the socket fields to be rendered
@@ -595,6 +595,7 @@ class Sockstat(plugins.PluginInterface):
         )
 
         for (
+            task_comm,
             task,
             netns_id,
             fd_num,
@@ -617,6 +618,7 @@ class Sockstat(plugins.PluginInterface):
 
             fields = (
                 netns_id,
+                task_comm,
                 task.pid,
                 fd_num,
                 format_hints.Hex(sock.vol.offset),
@@ -636,6 +638,7 @@ class Sockstat(plugins.PluginInterface):
 
         tree_grid_args = [
             ("NetNS", int),
+            ("Process Name", str),
             ("Pid", int),
             ("FD", int),
             ("Sock Offset", format_hints.Hex),
