@@ -18,7 +18,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
     """Scans all the Virtual Address Descriptor memory maps using yara."""
 
     _required_framework_version = (2, 4, 0)
-    _version = (1, 1, 0)
+    _version = (1, 1, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -68,7 +68,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
             layer = self.context.layers[layer_name]
             for start, size in self.get_vad_maps(task):
                 if size > sanity_check:
-                    vollog.warn(
+                    vollog.debug(
                         f"VAD at 0x{start:x} over sanity-check size, not scanning"
                     )
                     continue
