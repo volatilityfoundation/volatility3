@@ -179,7 +179,14 @@ class QuickTextRenderer(CLIRenderer):
         outfd.write("\n{}\n".format("\t".join(line)))
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
-            if self.filter and self.filter.filter(node.values):
+            line = []
+            for column_index, column in enumerate(grid.columns):
+                renderer = self._type_renderers.get(
+                    column.type, self._type_renderers["default"]
+                )
+                line.append(renderer(node.values[column_index]))
+
+            if self.filter and self.filter.filter(line):
                 return accumulator
 
             accumulator.write("\n")
@@ -188,13 +195,6 @@ class QuickTextRenderer(CLIRenderer):
                 "*" * max(0, node.path_depth - 1)
                 + ("" if (node.path_depth <= 1) else " ")
             )
-            line = []
-            for column_index in range(len(grid.columns)):
-                column = grid.columns[column_index]
-                renderer = self._type_renderers.get(
-                    column.type, self._type_renderers["default"]
-                )
-                line.append(renderer(node.values[column_index]))
             accumulator.write("{}".format("\t".join(line)))
             accumulator.flush()
             return accumulator
@@ -259,12 +259,17 @@ class CSVRenderer(CLIRenderer):
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             row = {"TreeDepth": str(max(0, node.path_depth - 1))}
-            for column_index in range(len(grid.columns)):
-                column = grid.columns[column_index]
+            line = []
+            for column_index, column in enumerate(grid.columns):
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
                 row[f"{column.name}"] = renderer(node.values[column_index])
+                line.append(row[f"{column.name}"])
+
+            if self.filter and self.filter.filter(line):
+                return accumulator
+
             accumulator.writerow(row)
             return accumulator
 
@@ -317,12 +322,9 @@ class PrettyTextRenderer(CLIRenderer):
                 max_column_widths.get(tree_indent_column, 0), node.path_depth
             )
 
-            if self.filter and self.filter.filter(node.values):
-                return accumulator
-
             line = {}
-            for column_index in range(len(grid.columns)):
-                column = grid.columns[column_index]
+            rendered_line = []
+            for column_index, column in enumerate(grid.columns):
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
@@ -334,6 +336,11 @@ class PrettyTextRenderer(CLIRenderer):
                     max_column_widths.get(column.name, len(column.name)), field_width
                 )
                 line[column] = data.split("\n")
+                rendered_line.append(data)
+
+            if self.filter and self.filter.filter(rendered_line):
+                return accumulator
+
             accumulator.append((node.path_depth, line))
             return accumulator
 
@@ -347,8 +354,7 @@ class PrettyTextRenderer(CLIRenderer):
         format_string_list = [
             "{0:<" + str(max_column_widths.get(tree_indent_column, 0)) + "s}"
         ]
-        for column_index in range(len(grid.columns)):
-            column = grid.columns[column_index]
+        for column_index, column in enumerate(grid.columns):
             format_string_list.append(
                 "{"
                 + str(column_index + 1)
@@ -437,8 +443,8 @@ class JsonRenderer(CLIRenderer):
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             acc_map, final_tree = accumulator
             node_dict: Dict[str, Any] = {"__children": []}
-            for column_index in range(len(grid.columns)):
-                column = grid.columns[column_index]
+            line = []
+            for column_index, column in enumerate(grid.columns):
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
@@ -446,6 +452,11 @@ class JsonRenderer(CLIRenderer):
                 if isinstance(data, interfaces.renderers.BaseAbsentValue):
                     data = None
                 node_dict[column.name] = data
+                line.append(data)
+
+            if self.filter and self.filter.filter(line):
+                return accumulator
+
             if node.parent:
                 acc_map[node.parent.path]["__children"].append(node_dict)
             else:

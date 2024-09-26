@@ -494,8 +494,7 @@ class SimpleTypeRequirement(RequirementInterface):
         """Validates the instance requirement based upon its
         `instance_type`."""
         config_path = path_join(config_path, self.name)
-
-        value = self.config_value(context, config_path, None)
+        value = self.config_value(context, config_path, self.default)
         if not isinstance(value, self.instance_type):
             vollog.log(
                 constants.LOGLEVEL_V,
@@ -536,7 +535,7 @@ class ClassRequirement(RequirementInterface):
         """Checks to see if a class can be recovered."""
         config_path = path_join(config_path, self.name)
 
-        value = self.config_value(context, config_path, None)
+        value = self.config_value(context, config_path, self.default)
         self._cls = None
         if value is not None and isinstance(value, str):
             if "." in value:
