@@ -53,28 +53,28 @@
                         "kind": "base",
                         "name": "short"
                     },
-                    "offset": 32
+                    "offset": 2400
                 },
                 "ScreenY": {
                     "type": {
                         "kind": "base",
                         "name": "short"
                     },
-                    "offset": 34
+                    "offset": 2402
                 },
                 "CommandHistorySize": {
                     "type": {
                         "kind": "base",
                         "name": "unsigned short"
                     },
-                    "offset": 144
+                    "offset": 2512
                 },
                 "HistoryBufferMax": {
                     "type": {
                         "kind": "base",
                         "name": "unsigned short"
                     },
-                    "offset": 148
+                    "offset": 2516
                 },
                 "OriginalTitle": {
                     "type": {
@@ -84,7 +84,7 @@
                             "name": "string"
                         }
                     },
-                    "offset": 1752
+                    "offset": 2944
                 },
                 "Title": {
                     "type": {
@@ -94,7 +94,7 @@
                             "name": "string"
                         }
                     },
-                    "offset": 1688
+                    "offset": 2912
                 },
                 "GetScreenBuffer": {
                     "type": {
@@ -104,7 +104,7 @@
                             "name": "_SCREEN_INFORMATION"
                         }
                     },
-                    "offset": 1816
+                    "offset": 3008
                 },
                 "CurrentScreenBuffer": {
                     "type": {
@@ -114,7 +114,7 @@
                             "name": "_SCREEN_INFORMATION"
                         }
                     },
-                    "offset": 1392
+                    "offset": 2632
                 },
                 "ConsoleProcessList": {
                     "type": {
@@ -124,14 +124,14 @@
                             "name": "nt_symbols!_LIST_ENTRY"
                         }
                     },
-                    "offset": 1368
+                    "offset": 2608
                 },
                 "ProcessCount": {
                     "type": {
                         "kind": "base",
                         "name": "unsigned short"
                     },
-                    "offset": 1376
+                    "offset": 2616
                 },
                 "HistoryList": {
                     "type": {
@@ -141,21 +141,24 @@
                             "name": "nt_symbols!_LIST_ENTRY"
                         }
                     },
-                    "offset": -352
+                    "offset": 10640
                 },
                 "HistoryBufferCount": {
                     "type": {
                         "kind": "base",
                         "name": "unsigned short"
                     },
-                    "offset": -344
+                    "offset": 10648
                 },
                 "ExeAliasList": {
                     "type": {
-                        "kind": "struct",
-                        "name": "nt_symbols!_LIST_ENTRY"
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "nt_symbols!_LIST_ENTRY"
+                        }
                     },
-                    "offset": 1436
+                    "offset": 10552
                 }
             },
             "kind": "struct",
@@ -400,7 +403,6 @@
             },
             "kind": "struct",
             "size": 8
-
         },
         "_ROWS_ARRAY": {
             "fields": {
@@ -410,7 +412,7 @@
                         "kind": "array",
                         "subtype": {
                             "kind": "struct",
-                            "name": "_ROW_POINTER"
+                            "name": "_ROW"
                         }
                     },
                     "offset": 0
@@ -421,15 +423,19 @@
         },
         "_TEXT_BUFFER_INFO": {
             "fields": {
-                "BufferDeque": {
+                "ScreenX": {
                     "type": {
-                        "kind": "pointer",
-                        "subtype": {
-                            "kind": "struct",
-                            "name": "_DEQUE"
-                        }
+                        "kind": "base",
+                        "name": "short"
                     },
-                    "offset": 0
+                    "offset": 4
+                },
+                "ScreenY": {
+                    "type": {
+                        "kind": "base",
+                        "name": "short"
+                    },
+                    "offset": 6
                 },
                 "BufferRows": {
                     "type": {
@@ -446,28 +452,44 @@
                         "kind": "base",
                         "name": "short"
                     },
+                    "offset": 6
+                },
+                "ThisBuffer": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_TEXT_BUFFER_INFO"
+                        }
+                    },
                     "offset": 32
                 },
-                "BufferEnd": {
+                "FirstRow": {
                     "type": {
-                        "kind": "base",
-                        "name": "short"
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_ROW"
+                        }
                     },
-                    "offset": 56
+                    "offset": 8
                 },
-                "BufferLastIndex": {
+                "LastRow": {
                     "type": {
-                        "kind": "base",
-                        "name": "short"
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_ROW"
+                        }
                     },
-                    "offset": 58
+                    "offset": 16
                 },
                 "BufferStart": {
                     "type": {
                         "kind": "base",
                         "name": "short"
                     },
-                    "offset": 88
+                    "offset": 72
                 }
             },
             "kind": "struct",
@@ -489,7 +511,7 @@
                     },
                     "offset": 2
                 }
-             },
+            },
             "kind": "struct",
             "size": 3
         },
@@ -512,6 +534,16 @@
         },
         "_ROW": {
             "fields": {
+                "Blink": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_ROW"
+                        }
+                    },
+                    "offset": -80
+                },
                 "CharRow": {
                     "type": {
                         "kind": "pointer",
@@ -520,28 +552,35 @@
                             "name": "_CHAR_ROW_CELL_ARRAY"
                         }
                     },
-                    "offset": 8
+                    "offset": 0
                 },
                 "RowLength": {
                     "type": {
                         "kind": "base",
                         "name": "short"
                     },
-                    "offset": 64
+                    "offset": 8
                 },
                 "Index": {
                     "type": {
                         "kind": "base",
                         "name": "short"
                     },
-                    "offset": 72
+                    "offset": -20
                 },
                 "RowLength2": {
                     "type": {
                         "kind": "base",
                         "name": "short"
                     },
-                    "offset": 80
+                    "offset": 8
+                },
+                "Allocated": {
+                    "type": {
+                        "kind": "base",
+                        "name": "short"
+                    },
+                    "offset": 16
                 },
                 "TextBuffer": {
                     "type": {
@@ -551,11 +590,11 @@
                             "name": "_TEXT_BUFFER_INFO"
                         }
                     },
-                    "offset": 88
+                    "offset": -16
                 }
             },
             "kind": "struct",
-            "size": 96
+            "size": 472
         },
         "_DEQUE": {
             "fields": {
@@ -582,33 +621,26 @@
                     },
                     "offset": 0
                 },
-                "ExeLength": {
-                    "type": {
-                        "kind": "base",
-                        "name": "short"
-                    },
-                    "offset": 8
-                },
                 "ExeName": {
                     "type": {
-                        "kind": "pointer",
-                        "subtype": {
-                            "kind": "base",
-                            "name": "string"
-                        }
+                        "kind": "struct",
+                        "name": "_ALIAS_STRING"
                     },
-                    "offset": 24
+                    "offset": 16
                 },
                 "AliasList": {
                     "type": {
-                        "kind": "struct",
-                        "name": "nt_symbols!_LIST_ENTRY"
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "nt_symbols!_LIST_ENTRY"
+                        }
                     },
-                    "offset": 32
+                    "offset": 56
                 }
             },
             "kind": "struct",
-            "size": 48
+            "size": 64
         },
         "_ALIAS": {
             "fields": {
@@ -632,6 +664,47 @@
                         "name": "_ALIAS_STRING"
                     },
                     "offset": 48
+                }
+            },
+            "kind": "struct",
+            "size": 32
+        },
+        "_ALIAS_STRING": {
+            "fields": {
+                "Chars": {
+                    "type": {
+                        "count": 1,
+                        "kind": "array",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned char"
+                        }
+                    },
+                    "offset": 0
+                },
+                "Pointer": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "string"
+                        }
+                    },
+                    "offset": 0
+                },
+                "Length": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    },
+                    "offset": 16
+                },
+                "Allocated": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    },
+                    "offset": 24
                 }
             },
             "kind": "struct",

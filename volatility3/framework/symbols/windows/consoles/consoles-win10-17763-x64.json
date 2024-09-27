@@ -152,8 +152,8 @@
                 },
                 "ExeAliasList": {
                     "type": {
-                        "kind": "base",
-                        "name": "unsigned short"
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
                     },
                     "offset": 1392
                 }
@@ -562,7 +562,8 @@
                         }
                     },
                     "offset": 88
-                }            },
+                }
+            },
             "kind": "struct",
             "size": 96
         },
@@ -581,6 +582,70 @@
             },
             "kind": "struct",
             "size": 8
+        },
+        "_EXE_ALIAS_LIST": {
+            "fields": {
+                "ListEntry": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 0
+                },
+                "ExeLength": {
+                    "type": {
+                        "kind": "base",
+                        "name": "short"
+                    },
+                    "offset": 16
+                },
+                "ExeName": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "string"
+                        }
+                    },
+                    "offset": 24
+                },
+                "AliasList": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 32
+                }
+            },
+            "kind": "struct",
+            "size": 48
+        },
+        "_ALIAS": {
+            "fields": {
+                "ListEntry": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 0
+                },
+                "Source": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "_ALIAS_STRING"
+                    },
+                    "offset": 16
+                },
+                "Target": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "_ALIAS_STRING"
+                    },
+                    "offset": 48
+                }
+            },
+            "kind": "struct",
+            "size": 32
         }
     },
     "metadata": {

@@ -11,12 +11,13 @@ from typing import Tuple, Generator, Set, Dict, Any, Type
 
 from volatility3.framework import interfaces, symbols, exceptions
 from volatility3.framework import renderers
+from volatility3.framework.interfaces import configuration
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import scanners
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
-from volatility3.framework.symbols.windows import pdbutil, versions
+from volatility3.framework.symbols.windows import pdbutil
 from volatility3.framework.symbols.windows.extensions import pe, consoles
 from volatility3.plugins.windows import pslist, vadinfo, info, verinfo
 from volatility3.plugins.windows.registry import hivelist
@@ -48,6 +49,9 @@ class Consoles(interfaces.plugins.PluginInterface):
             ),
             requirements.VersionRequirement(
                 name="pslist", component=pslist.PsList, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="verinfo", component=verinfo.VerInfo, version=(1, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="pdbutil", component=pdbutil.PDBUtility, version=(1, 0, 0)
@@ -92,18 +96,19 @@ class Consoles(interfaces.plugins.PluginInterface):
         """
 
         for proc in proc_list:
-            try:
-                proc_id = proc.UniqueProcessId
-                proc_layer_name = proc.add_process_layer()
+            if utility.array_to_string(proc.ImageFileName).lower() == "conhost.exe":
+                try:
+                    proc_id = proc.UniqueProcessId
+                    proc_layer_name = proc.add_process_layer()
 
-                yield proc, proc_layer_name
+                    yield proc, proc_layer_name
 
-            except exceptions.InvalidAddressException as excp:
-                vollog.debug(
-                    "Process {}: invalid address {} in layer {}".format(
-                        proc_id, excp.invalid_address, excp.layer_name
+                except exceptions.InvalidAddressException as excp:
+                    vollog.debug(
+                        "Process {}: invalid address {} in layer {}".format(
+                            proc_id, excp.invalid_address, excp.layer_name
+                        )
                     )
-                )
 
     @classmethod
     def find_conhostexe(
@@ -122,7 +127,6 @@ class Consoles(interfaces.plugins.PluginInterface):
         """
         for vad in conhost_proc.get_vad_root().traverse():
             filename = vad.get_file_name()
-
             if isinstance(filename, str) and filename.lower().endswith("conhost.exe"):
                 base = vad.get_start()
                 return base, vad.get_size()
@@ -135,6 +139,9 @@ class Consoles(interfaces.plugins.PluginInterface):
         context: interfaces.context.ContextInterface,
         layer_name: str,
         nt_symbol_table: str,
+        config_path: str,
+        conhost_layer_name: str,
+        conhost_base: int,
     ) -> Tuple[str, Type]:
         """Tries to determine which symbol filename to use for the image's console information. This is similar to the
         netstat plugin.
@@ -143,16 +150,15 @@ class Consoles(interfaces.plugins.PluginInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             nt_symbol_table: The name of the table containing the kernel symbols
+            config_path: The config path where to find symbol files
+            conhost_layer_name: The name of the conhot process memory layer
+            conhost_base: the base address of conhost.exe
 
         Returns:
             The filename of the symbol table to use and the associated class types.
         """
 
         is_64bit = symbols.symbol_table_is_64bit(context, nt_symbol_table)
-
-        is_18363_or_later = versions.is_win10_18363_or_later(
-            context=context, symbol_table=nt_symbol_table
-        )
 
         if is_64bit:
             arch = "x64"
@@ -211,22 +217,14 @@ class Consoles(interfaces.plugins.PluginInterface):
                 (10, 0, 20348, 1970): "consoles-win10-20348-1970-x64",
                 (10, 0, 20348, 2461): "consoles-win10-20348-2461-x64",
                 (10, 0, 20348, 2520): "consoles-win10-20348-2461-x64",
+                (10, 0, 22000, 0): "consoles-win10-22000-x64",
+                (10, 0, 22621, 1): "consoles-win10-22621-x64",
+                (10, 0, 22621, 3672): "consoles-win10-22621-3672-x64",
+                (10, 0, 25398, 0): "consoles-win10-22000-x64",
             }
 
         # we do not need to check for conhost's specific FileVersion in every case
         conhost_mod_version = 0  # keep it 0 as a default
-
-        # special use cases
-
-        # Win10_18363 is not recognized by windows.info as 18363
-        # because all kernel file headers and debug structures report 18363 as
-        # "10.0.18362.1198" with the last part being incremented. However, we can use
-        # os_distinguisher to differentiate between 18362 and 18363
-        if vers_minor_version == 18362 and is_18363_or_later:
-            vollog.debug(
-                "Detected 18363 data structures: working with 18363 symbol table."
-            )
-            vers_minor_version = 18363
 
         # we need to define additional version numbers (which are then found via conhost.exe's FileVersion header) in case there is
         # ambiguity _within_ an OS version. If such a version number (last number of the tuple) is defined for the current OS
@@ -240,24 +238,40 @@ class Consoles(interfaces.plugins.PluginInterface):
             vollog.debug(
                 "Requiring further version inspection due to OS version by checking conhost.exe's FileVersion header"
             )
-            # the following is IntelLayer specific and might need to be adapted to other architectures.
-            physical_layer_name = context.layers[layer_name].config.get(
-                "memory_layer", None
-            )
-            if physical_layer_name:
-                ver = verinfo.VerInfo.find_version_info(
-                    context, physical_layer_name, "CONHOST.EXE"
-                )
 
-                if ver:
-                    conhost_mod_version = ver[3]
-                    vollog.debug(
-                        "Determined conhost.exe's FileVersion: {}".format(
-                            conhost_mod_version
-                        )
+            pe_table_name = intermed.IntermediateSymbolTable.create(
+                context,
+                configuration.path_join(config_path, "conhost"),
+                "windows",
+                "pe",
+                class_types=pe.class_types
+            )
+
+            try:
+                (major, minor, product, build) = verinfo.VerInfo.get_version_information(
+                    context, pe_table_name, conhost_layer_name, conhost_base
+                )
+                conhost_mod_version = build
+                vollog.debug(f"Found conhost.exe version {major}.{minor}.{product}.{build} in {conhost_layer_name} at base {conhost_base:#x}")
+            except (exceptions.InvalidAddressException, TypeError, AttributeError):
+                # the following is IntelLayer specific and might need to be adapted to other architectures.
+                physical_layer_name = context.layers[layer_name].config.get(
+                    "memory_layer", None
+                )
+                if physical_layer_name:
+                    ver = verinfo.VerInfo.find_version_info(
+                        context, physical_layer_name, "CONHOST.EXE"
                     )
-                else:
-                    vollog.debug("Could not determine conhost.exe's FileVersion.")
+
+                    if ver:
+                        conhost_mod_version = ver[3]
+                        vollog.debug(
+                            "Determined conhost.exe's FileVersion: {}".format(
+                                conhost_mod_version
+                            )
+                        )
+                    else:
+                        vollog.debug("Could not determine conhost.exe's FileVersion.")
             else:
                 vollog.debug(
                     "Unable to retrieve physical memory layer, skipping FileVersion check."
@@ -287,6 +301,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                 for nt_maj, nt_min, vers_min, conhost_ver in version_dict
                 if nt_maj == nt_major_version
                 and nt_min == nt_minor_version
+                and vers_min <= vers_minor_version
                 and conhost_ver <= conhost_mod_version
             ]
             current_versions.sort()
@@ -321,6 +336,8 @@ class Consoles(interfaces.plugins.PluginInterface):
         layer_name: str,
         nt_symbol_table: str,
         config_path: str,
+        conhost_layer_name: str,
+        conhost_base: int,
     ) -> str:
         """Creates a symbol table for conhost structures.
 
@@ -339,13 +356,16 @@ class Consoles(interfaces.plugins.PluginInterface):
             context,
             layer_name,
             nt_symbol_table,
+            config_path,
+            conhost_layer_name,
+            conhost_base,
         )
 
         vollog.debug(f"Using symbol file '{symbol_filename}' and types {class_types}")
 
         return intermed.IntermediateSymbolTable.create(
             context,
-            config_path,
+            configuration.path_join(config_path, "conhost"),
             os.path.join("windows", "consoles"),
             symbol_filename,
             class_types=class_types,
@@ -383,9 +403,7 @@ class Consoles(interfaces.plugins.PluginInterface):
             that console information structure.
         """
 
-        conhost_symbol_table = cls.create_conhost_symbol_table(
-            context, kernel_layer_name, kernel_table_name, config_path
-        )
+        conhost_symbol_table = None
 
         for conhost_proc, proc_layer_name in cls.find_conhost_proc(procs):
             if not conhost_proc:
@@ -406,6 +424,16 @@ class Consoles(interfaces.plugins.PluginInterface):
             vollog.debug(f"Found conhost.exe base at {conhostexe_base:#x}")
 
             proc_layer = context.layers[proc_layer_name]
+
+            if conhost_symbol_table is None:
+                conhost_symbol_table = cls.create_conhost_symbol_table(
+                    context,
+                    kernel_layer_name,
+                    kernel_table_name,
+                    config_path,
+                    proc_layer_name,
+                    conhostexe_base
+                )
 
             conhost_module = context.module(
                 conhost_symbol_table, proc_layer_name, offset=conhostexe_base
@@ -561,6 +589,60 @@ class Consoles(interfaces.plugins.PluginInterface):
                             )
 
                         vollog.debug(
+                            f"Getting ExeAliasList entries for {console_info.ExeAliasList}"
+                        )
+                        console_properties.append(
+                            {
+                                "level": 1,
+                                "name": "_CONSOLE_INFORMATION.ExeAliasList",
+                                "address": console_info.ExeAliasList.vol.offset,
+                                "data": "",
+                            }
+                        )
+                        if console_info.ExeAliasList:
+                            for index, exe_alias_list in enumerate(
+                                console_info.get_exe_aliases()
+                            ):
+                                try:
+                                    console_properties.append(
+                                        {
+                                            "level": 2,
+                                            "name": f"_CONSOLE_INFORMATION.ExeAliasList.AliasList_{index}",
+                                            "address": exe_alias_list.vol.offset,
+                                            "data": "",
+                                        }
+                                    )
+                                    console_properties.append(
+                                        {
+                                            "level": 2,
+                                            "name": f"_CONSOLE_INFORMATION.ExeAliasList.AliasList_{index}.ExeName",
+                                            "address": exe_alias_list.ExeName.vol.offset,
+                                            "data": exe_alias_list.get_exename(),
+                                        }
+                                    )
+                                    for alias_index, alias in enumerate(exe_alias_list.get_aliases()):
+                                        console_properties.append(
+                                            {
+                                                "level": 3,
+                                                "name": f"_CONSOLE_INFORMATION.ExeAliasList.AliasList_{index}.Alias_{alias_index}.Source",
+                                                "address": alias.Source.vol.offset,
+                                                "data": alias.get_source(),
+                                            }
+                                        )
+                                        console_properties.append(
+                                            {
+                                                "level": 3,
+                                                "name": f"_CONSOLE_INFORMATION.ExeAliasList.AliasList_{index}.Alias_{alias_index}.Target",
+                                                "address": alias.Target.vol.offset,
+                                                "data": alias.get_target(),
+                                            }
+                                        )
+                                except Exception as e:
+                                    vollog.debug(
+                                        f"reading {exe_alias_list} encountered exception {e}"
+                                    )
+
+                        vollog.debug(
                             f"Getting HistoryList entries for {console_info.HistoryList}"
                         )
                         console_properties.append(
@@ -639,60 +721,66 @@ class Consoles(interfaces.plugins.PluginInterface):
                                     f"reading {command_history} encountered exception {e}"
                                 )
 
-                        vollog.debug(f"Getting ScreenBuffer entries for {console_info}")
-                        console_properties.append(
-                            {
-                                "level": 1,
-                                "name": "_CONSOLE_INFORMATION.CurrentScreenBuffer",
-                                "address": console_info.CurrentScreenBuffer.vol.offset,
-                                "data": "",
-                            }
-                        )
-                        for screen_index, screen_info in enumerate(
-                            console_info.get_screens()
-                        ):
-                            try:
-                                console_properties.append(
-                                    {
-                                        "level": 2,
-                                        "name": f"_CONSOLE_INFORMATION.ScreenBuffer_{screen_index}",
-                                        "address": screen_info,
-                                        "data": "",
-                                    }
-                                )
-                                console_properties.append(
-                                    {
-                                        "level": 2,
-                                        "name": f"_CONSOLE_INFORMATION.ScreenBuffer_{screen_index}.ScreenX",
-                                        "address": None,
-                                        "data": screen_info.ScreenX,
-                                    }
-                                )
-                                console_properties.append(
-                                    {
-                                        "level": 2,
-                                        "name": f"_CONSOLE_INFORMATION.ScreenBuffer_{screen_index}.ScreenY",
-                                        "address": None,
-                                        "data": screen_info.ScreenY,
-                                    }
-                                )
-                                console_properties.append(
-                                    {
-                                        "level": 2,
-                                        "name": f"_CONSOLE_INFORMATION.ScreenBuffer_{screen_index}.Dump",
-                                        "address": None,
-                                        "data": "\n".join(screen_info.get_buffer()),
-                                    }
-                                )
-                            except Exception as e:
-                                vollog.debug(
-                                    f"reading {screen_info} encountered exception {e}"
-                                )
+                        try:
+                            vollog.debug(f"Getting ScreenBuffer entries for {console_info}")
+                            console_properties.append(
+                                {
+                                    "level": 1,
+                                    "name": "_CONSOLE_INFORMATION.CurrentScreenBuffer",
+                                    "address": console_info.CurrentScreenBuffer.vol.offset,
+                                    "data": "",
+                                }
+                            )
+                            for screen_index, screen_info in enumerate(
+                                console_info.get_screens()
+                            ):
+                                try:
+                                    console_properties.append(
+                                        {
+                                            "level": 2,
+                                            "name": f"_CONSOLE_INFORMATION.ScreenBuffer_{screen_index}",
+                                            "address": screen_info,
+                                            "data": "",
+                                        }
+                                    )
+                                    console_properties.append(
+                                        {
+                                            "level": 2,
+                                            "name": f"_CONSOLE_INFORMATION.ScreenBuffer_{screen_index}.ScreenX",
+                                            "address": None,
+                                            "data": screen_info.ScreenX,
+                                        }
+                                    )
+                                    console_properties.append(
+                                        {
+                                            "level": 2,
+                                            "name": f"_CONSOLE_INFORMATION.ScreenBuffer_{screen_index}.ScreenY",
+                                            "address": None,
+                                            "data": screen_info.ScreenY,
+                                        }
+                                    )
+                                    console_properties.append(
+                                        {
+                                            "level": 2,
+                                            "name": f"_CONSOLE_INFORMATION.ScreenBuffer_{screen_index}.Dump",
+                                            "address": None,
+                                            "data": "\n".join(screen_info.get_buffer()),
+                                        }
+                                    )
+                                except Exception as e:
+                                    vollog.debug(
+                                        f"reading {screen_info} encountered exception {e}"
+                                    )
+                        except Exception as e:
+                            vollog.debug(
+                                f"reading _CONSOLE_INFORMATION.CurrentScreenBuffer encountered exception {e}"
+                            )
 
                     except exceptions.PagedInvalidAddressException as exp:
                         vollog.debug(
                             f"Required memory at {exp.invalid_address:#x} is not valid"
                         )
+                        continue
 
                     yield conhost_proc, console_info, console_properties
 
@@ -776,6 +864,7 @@ class Consoles(interfaces.plugins.PluginInterface):
         vollog.debug(f"Possible CommandHistorySize values: {max_history}")
         vollog.debug(f"Possible HistoryBufferMax values: {max_buffers}")
 
+        proc = None
         for proc, console_info, console_properties in self.get_console_info(
             self.context,
             kernel.layer_name,
@@ -786,13 +875,14 @@ class Consoles(interfaces.plugins.PluginInterface):
             max_buffers,
         ):
             process_name = utility.array_to_string(proc.ImageFileName)
+            process_pid = proc.UniqueProcessId
 
             if console_info and console_properties:
                 for console_property in console_properties:
                     yield (
                         console_property["level"],
                         (
-                            proc.UniqueProcessId,
+                            process_pid,
                             process_name,
                             format_hints.Hex(console_info.vol.offset),
                             console_property["name"],
@@ -804,6 +894,11 @@ class Consoles(interfaces.plugins.PluginInterface):
                             str(console_property["data"]),
                         ),
                     )
+            else:
+                vollog.warn(f"_CONSOLE_INFORMATION not found for {process_name} with pid {process_pid}.")
+
+        if proc is None:
+            vollog.warn("No conhost.exe processes found.")
 
     def _conhost_proc_filter(self, proc):
         """
@@ -811,7 +906,7 @@ class Consoles(interfaces.plugins.PluginInterface):
         """
         process_name = utility.array_to_string(proc.ImageFileName)
 
-        return process_name != "conhost.exe"
+        return process_name.lower() != "conhost.exe"
 
     def run(self):
         kernel = self.context.modules[self.config["kernel"]]

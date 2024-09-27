@@ -9,30 +9,42 @@ from volatility3.framework import constants
 class ROW(objects.StructType):
     """A Row Structure."""
 
-    def _valid_dbcs(self, c):
+    def _valid_dbcs(self, c, n):
         # TODO this need more research and testing
         # https://github.com/search?q=repo%3Amicrosoft%2Fterminal+DbcsAttr&type=code
-        valid = c in (
+        valid = n == 0 and c in (
             0x0,
             0x1,
             0x2,
+            0x8,
+            0x10,
+            0x18,
             0x20,
             0x28,
             0x30,
             0x48,
             0x50,
+            0x58,
             0x60,
+            0x68,
+            0x70,
+            0x78,
             0x80,
+            0x88,
             0xA8,
+            0xB8,
             0xC0,
             0xC8,
             0x98,
+            0xD8,
+            0xE0,
+            0xE8,
             0xF8,
             0xF0,
             0xA0,
         )
-        # if not valid:
-        #     print("Bad Dbcs Attribute {}".format(hex(c)))
+        if n == 0 and not valid:
+            print("Bad Dbcs Attribute {}".format(hex(c)))
         return valid
 
     def get_text(self, truncate=True):
@@ -50,10 +62,9 @@ class ROW(objects.StructType):
         try:
             if char_row:
                 line = "".join(
-                    # "{} {} =".format(char_row[i:i + 2].decode('utf-16le', errors='replace'), char_row[i+2]) if self._valid_dbcs(char_row[i+2]) else ""
                     (
                         char_row[i : i + 2].decode("utf-16le", errors="replace")
-                        if self._valid_dbcs(char_row[i + 2])
+                        if self._valid_dbcs(char_row[i + 2], char_row[i+1])
                         else ""
                     )
                     for i in range(0, len(char_row), 3)
@@ -68,12 +79,78 @@ class ROW(objects.StructType):
             return line
 
 
+class ALIAS(objects.StructType):
+    """An Alias Structure"""
+
+    def get_source(self):
+        if self.Source.Length < 8:
+            return self.Source.Chars.cast(
+                "string",
+                encoding="utf-16",
+                errors="replace",
+                max_length=self.Source.Length * 2,
+            )
+        elif self.Source.Length < 1024:
+            return self.Source.Pointer.dereference().cast(
+                "string", encoding="utf-16", errors="replace", max_length=512
+            )
+
+    def get_target(self):
+        if self.Target.Length < 8:
+            return self.Target.Chars.cast(
+                "string",
+                encoding="utf-16",
+                errors="replace",
+                max_length=self.Target.Length * 2,
+            )
+        elif self.Target.Length < 1024:
+            return self.Target.Pointer.dereference().cast(
+                "string", encoding="utf-16", errors="replace", max_length=512
+            )
+
+class EXE_ALIAS_LIST(objects.StructType):
+    """An Exe Alias List Structure"""
+
+    def get_exename(self):
+        exe_name = self.ExeName
+        # Windows 10 22000 and Server 20348 removed the Pointer
+        if isinstance(exe_name, objects.Pointer):
+            exe_name = exe_name.dereference()
+            return exe_name.get_string()
+
+        if self.ExeName.Length < 8:
+            return self.ExeName.Chars.cast(
+                "string",
+                encoding="utf-16",
+                errors="replace",
+                max_length=self.ExeName.Length * 2,
+            )
+        elif self.ExeName.Length < 1024:
+            return self.ExeName.Pointer.dereference().cast(
+                "string", encoding="utf-16", errors="replace", max_length=512
+            )
+
+    def get_aliases(self):
+        """Generator for the individual aliases for a
+        particular executable."""
+        for alias in self.AliasList.to_list(
+            f"{self.get_symbol_table_name()}{constants.BANG}_ALIAS",
+            "ListEntry",
+        ):
+            yield alias
+
+
 class SCREEN_INFORMATION(objects.StructType):
     """A Screen Information Structure."""
 
     @property
     def ScreenX(self):
-        return self.TextBufferInfo.BufferRows.Rows[0].Row.RowLength2
+        # 22000 change from an array of pointers to _ROW to an array of _ROW
+        row = self.TextBufferInfo.BufferRows.Rows[0]
+        if hasattr(row, "Row"):
+            return row.Row.RowLength2
+        else:
+            return row.RowLength2
 
     @property
     def ScreenY(self):
@@ -127,7 +204,9 @@ class SCREEN_INFORMATION(objects.StructType):
 
         for i in range(capacity):
             index = (start + i) % capacity
-            row = buffer_rows.Rows[index].Row
+            row = buffer_rows.Rows[index]
+            if hasattr(row, "Row"):
+                row = row.Row
             try:
                 text = row.get_text(truncate_lines)
                 rows.append(text)
@@ -138,9 +217,9 @@ class SCREEN_INFORMATION(objects.StructType):
             rows = self._truncate_rows(rows)
 
         if rows:
-            rows = ["=== Start of buffer ==="] + rows + ["=== End of buffer ==="]
+            rows = ["=== START OF BUFFER ==="] + rows + ["=== END OF BUFFER ==="]
         else:
-            rows = ["=== No buffer data found  ==="]
+            rows = ["=== NO BUFFER DATA FOUND  ==="]
         return rows
 
 
@@ -197,6 +276,17 @@ class CONSOLE_INFORMATION(objects.StructType):
             "ListEntry",
         ):
             yield cmd_hist
+
+    def get_exe_aliases(self):
+        exe_alias_list = self.ExeAliasList
+        # Windows 10 22000 and Server 20348 made this a Pointer
+        if isinstance(exe_alias_list, objects.Pointer):
+            exe_alias_list = exe_alias_list.dereference()
+        for exe_alias_list_item in exe_alias_list.to_list(
+            f"{self.get_symbol_table_name()}{constants.BANG}_EXE_ALIAS_LIST",
+            "ListEntry"
+        ):
+            yield exe_alias_list_item
 
     def get_processes(self):
         for proc in self.ConsoleProcessList.dereference().to_list(
@@ -331,6 +421,8 @@ class COMMAND_HISTORY(objects.StructType):
 
 
 win10_x64_class_types = {
+    "_EXE_ALIAS_LIST": EXE_ALIAS_LIST,
+    "_ALIAS": ALIAS,
     "_ROW": ROW,
     "_SCREEN_INFORMATION": SCREEN_INFORMATION,
     "_CONSOLE_INFORMATION": CONSOLE_INFORMATION,

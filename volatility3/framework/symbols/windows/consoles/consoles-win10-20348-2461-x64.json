@@ -152,8 +152,11 @@
                 },
                 "ExeAliasList": {
                     "type": {
-                        "kind": "base",
-                        "name": "unsigned short"
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "nt_symbols!_LIST_ENTRY"
+                        }
                     },
                     "offset": 9232
                 }
@@ -562,7 +565,8 @@
                         }
                     },
                     "offset": 88
-                }            },
+                }
+            },
             "kind": "struct",
             "size": 96
         },
@@ -581,6 +585,104 @@
             },
             "kind": "struct",
             "size": 8
+        },
+        "_EXE_ALIAS_LIST": {
+            "fields": {
+                "ListEntry": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 0
+                },
+                "ExeName": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "_ALIAS_STRING"
+                    },
+                    "offset": 16
+                },
+                "AliasList": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "nt_symbols!_LIST_ENTRY"
+                        }
+                    },
+                    "offset": 56
+                }
+            },
+            "kind": "struct",
+            "size": 64
+        },
+        "_ALIAS": {
+            "fields": {
+                "ListEntry": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 0
+                },
+                "Source": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "_ALIAS_STRING"
+                    },
+                    "offset": 16
+                },
+                "Target": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "_ALIAS_STRING"
+                    },
+                    "offset": 48
+                }
+            },
+            "kind": "struct",
+            "size": 32
+        },
+        "_ALIAS_STRING": {
+            "fields": {
+                "Chars": {
+                    "type": {
+                        "count": 1,
+                        "kind": "array",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned char"
+                        }
+                    },
+                    "offset": 0
+                },
+                "Pointer": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "string"
+                        }
+                    },
+                    "offset": 0
+                },
+                "Length": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    },
+                    "offset": 16
+                },
+                "Allocated": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    },
+                    "offset": 24
+                }
+            },
+            "kind": "struct",
+            "size": 32
         }
     },
     "metadata": {
