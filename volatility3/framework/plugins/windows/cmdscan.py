@@ -14,16 +14,8 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import scanners
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
-from volatility3.plugins.windows import pslist, vadinfo, info, verinfo, consoles
-from volatility3.plugins.windows.registry import hivelist
+from volatility3.plugins.windows import pslist, consoles
 
-
-try:
-    import capstone
-
-    has_capstone = True
-except ImportError:
-    has_capstone = False
 
 vollog = logging.getLogger(__name__)
 
@@ -32,6 +24,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
     """Looks for Windows Command History lists"""
 
     _required_framework_version = (2, 4, 0)
+    _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -46,7 +39,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                 name="pslist", component=pslist.PsList, version=(2, 0, 0)
             ),
             requirements.PluginRequirement(
-                name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
+                name="consoles", plugin=consoles.Consoles, version=(1, 0, 0)
             ),
             requirements.BooleanRequirement(
                 name="no_registry",
@@ -70,7 +63,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
         size_filter: Optional[int] = 0x40000000,
     ) -> List[Tuple[int, int]]:
         """
-        Returns vads of a process with smaller than size_filter
+        Returns vads of a process with size smaller than size_filter
 
         Args:
             conhost_proc: the process object for conhost.exe
@@ -114,12 +107,10 @@ class CmdScan(interfaces.plugins.PluginInterface):
 
         Returns:
             The conhost process object, the command history structure, a dictionary of properties for
-            that command historyn structure.
+            that command history structure.
         """
 
-        conhost_symbol_table = consoles.Consoles.create_conhost_symbol_table(
-            context, kernel_layer_name, kernel_table_name, config_path
-        )
+        conhost_symbol_table = None
 
         for conhost_proc, proc_layer_name in consoles.Consoles.find_conhost_proc(procs):
             if not conhost_proc:
@@ -143,11 +134,22 @@ class CmdScan(interfaces.plugins.PluginInterface):
 
             proc_layer = context.layers[proc_layer_name]
 
+            if conhost_symbol_table is None:
+                conhost_symbol_table = consoles.Consoles.create_conhost_symbol_table(
+                    context,
+                    kernel_layer_name,
+                    kernel_table_name,
+                    config_path,
+                    proc_layer_name,
+                    conhostexe_base,
+                )
+
             conhost_module = context.module(
                 conhost_symbol_table, proc_layer_name, offset=conhostexe_base
             )
 
             sections = cls.get_filtered_vads(conhost_proc)
+            found_history_for_proc = False
             # scan for potential _COMMAND_HISTORY structures by using the CommandHistorySize
             for max_history_value in max_history:
                 max_history_bytes = struct.pack("H", max_history_value)
@@ -258,7 +260,12 @@ class CmdScan(interfaces.plugins.PluginInterface):
                             f"reading {command_history} encountered exception {e}"
                         )
 
-                    yield conhost_proc, command_history, command_history_properties
+                    if command_history and command_history_properties:
+                        found_history_for_proc = True
+                        yield conhost_proc, command_history, command_history_properties
+
+            if not found_history_for_proc:
+                yield conhost_proc, command_history or None, []
 
     def _generator(
         self, procs: Generator[interfaces.objects.ObjectInterface, None, None]
@@ -276,19 +283,18 @@ class CmdScan(interfaces.plugins.PluginInterface):
         no_registry = self.config.get("no_registry")
 
         if no_registry is False:
-            max_history, _max_buffers = (
-                consoles.Consoles.get_console_settings_from_registry(
-                    self.context,
-                    self.config_path,
-                    kernel.layer_name,
-                    kernel.symbol_table_name,
-                    max_history,
-                    [],
-                )
+            max_history, _ = consoles.Consoles.get_console_settings_from_registry(
+                self.context,
+                self.config_path,
+                kernel.layer_name,
+                kernel.symbol_table_name,
+                max_history,
+                [],
             )
 
         vollog.debug(f"Possible CommandHistorySize values: {max_history}")
 
+        proc = None
         for (
             proc,
             command_history,
@@ -302,13 +308,14 @@ class CmdScan(interfaces.plugins.PluginInterface):
             max_history,
         ):
             process_name = utility.array_to_string(proc.ImageFileName)
+            process_pid = proc.UniqueProcessId
 
             if command_history and command_history_properties:
                 for command_history_property in command_history_properties:
                     yield (
                         command_history_property["level"],
                         (
-                            proc.UniqueProcessId,
+                            process_pid,
                             process_name,
                             format_hints.Hex(command_history.vol.offset),
                             command_history_property["name"],
@@ -322,6 +329,25 @@ class CmdScan(interfaces.plugins.PluginInterface):
                             str(command_history_property["data"]),
                         ),
                     )
+            else:
+                yield (
+                    0,
+                    (
+                        process_pid,
+                        process_name,
+                        (
+                            format_hints.Hex(command_history.vol.offset)
+                            if command_history
+                            else renderers.NotApplicableValue()
+                        ),
+                        "_COMMAND_HISTORY",
+                        renderers.NotApplicableValue(),
+                        "History Not Found",
+                    ),
+                )
+
+        if proc is None:
+            vollog.warn("No conhost.exe processes found.")
 
     def _conhost_proc_filter(self, proc):
         """

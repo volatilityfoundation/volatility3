@@ -17,18 +17,10 @@ from volatility3.framework.layers import scanners
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
-from volatility3.framework.symbols.windows import pdbutil
 from volatility3.framework.symbols.windows.extensions import pe, consoles
-from volatility3.plugins.windows import pslist, vadinfo, info, verinfo
+from volatility3.plugins.windows import pslist, info, verinfo
 from volatility3.plugins.windows.registry import hivelist
 
-
-try:
-    import capstone
-
-    has_capstone = True
-except ImportError:
-    has_capstone = False
 
 vollog = logging.getLogger(__name__)
 
@@ -37,6 +29,7 @@ class Consoles(interfaces.plugins.PluginInterface):
     """Looks for Windows console buffers"""
 
     _required_framework_version = (2, 4, 0)
+    _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -52,9 +45,6 @@ class Consoles(interfaces.plugins.PluginInterface):
             ),
             requirements.VersionRequirement(
                 name="verinfo", component=verinfo.VerInfo, version=(1, 0, 0)
-            ),
-            requirements.VersionRequirement(
-                name="pdbutil", component=pdbutil.PDBUtility, version=(1, 0, 0)
             ),
             requirements.PluginRequirement(
                 name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
@@ -443,6 +433,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                 conhost_symbol_table, proc_layer_name, offset=conhostexe_base
             )
 
+            found_console_info_for_proc = False
             # scan for potential _CONSOLE_INFORMATION structures by using the CommandHistorySize
             for max_history_value in max_history:
                 max_history_bytes = struct.pack("H", max_history_value)
@@ -790,7 +781,12 @@ class Consoles(interfaces.plugins.PluginInterface):
                         )
                         continue
 
-                    yield conhost_proc, console_info, console_properties
+                    if console_info and console_properties:
+                        found_console_info_for_proc = True
+                        yield conhost_proc, console_info, console_properties
+
+            if not found_console_info_for_proc:
+                yield conhost_proc, console_info or None, []
 
     @classmethod
     def get_console_settings_from_registry(
@@ -903,8 +899,20 @@ class Consoles(interfaces.plugins.PluginInterface):
                         ),
                     )
             else:
-                vollog.warn(
-                    f"_CONSOLE_INFORMATION not found for {process_name} with pid {process_pid}."
+                yield (
+                    0,
+                    (
+                        process_pid,
+                        process_name,
+                        (
+                            format_hints.Hex(console_info.vol.offset)
+                            if console_info
+                            else renderers.NotApplicableValue()
+                        ),
+                        "_CONSOLE_INFORMATION",
+                        renderers.NotApplicableValue(),
+                        "Console Information Not Found",
+                    ),
                 )
 
         if proc is None:
