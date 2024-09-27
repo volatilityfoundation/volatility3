@@ -244,15 +244,19 @@ class Consoles(interfaces.plugins.PluginInterface):
                 configuration.path_join(config_path, "conhost"),
                 "windows",
                 "pe",
-                class_types=pe.class_types
+                class_types=pe.class_types,
             )
 
             try:
-                (major, minor, product, build) = verinfo.VerInfo.get_version_information(
-                    context, pe_table_name, conhost_layer_name, conhost_base
+                (major, minor, product, build) = (
+                    verinfo.VerInfo.get_version_information(
+                        context, pe_table_name, conhost_layer_name, conhost_base
+                    )
                 )
                 conhost_mod_version = build
-                vollog.debug(f"Found conhost.exe version {major}.{minor}.{product}.{build} in {conhost_layer_name} at base {conhost_base:#x}")
+                vollog.debug(
+                    f"Found conhost.exe version {major}.{minor}.{product}.{build} in {conhost_layer_name} at base {conhost_base:#x}"
+                )
             except (exceptions.InvalidAddressException, TypeError, AttributeError):
                 # the following is IntelLayer specific and might need to be adapted to other architectures.
                 physical_layer_name = context.layers[layer_name].config.get(
@@ -432,7 +436,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                     kernel_table_name,
                     config_path,
                     proc_layer_name,
-                    conhostexe_base
+                    conhostexe_base,
                 )
 
             conhost_module = context.module(
@@ -620,7 +624,9 @@ class Consoles(interfaces.plugins.PluginInterface):
                                             "data": exe_alias_list.get_exename(),
                                         }
                                     )
-                                    for alias_index, alias in enumerate(exe_alias_list.get_aliases()):
+                                    for alias_index, alias in enumerate(
+                                        exe_alias_list.get_aliases()
+                                    ):
                                         console_properties.append(
                                             {
                                                 "level": 3,
@@ -722,7 +728,9 @@ class Consoles(interfaces.plugins.PluginInterface):
                                 )
 
                         try:
-                            vollog.debug(f"Getting ScreenBuffer entries for {console_info}")
+                            vollog.debug(
+                                f"Getting ScreenBuffer entries for {console_info}"
+                            )
                             console_properties.append(
                                 {
                                     "level": 1,
@@ -895,7 +903,9 @@ class Consoles(interfaces.plugins.PluginInterface):
                         ),
                     )
             else:
-                vollog.warn(f"_CONSOLE_INFORMATION not found for {process_name} with pid {process_pid}.")
+                vollog.warn(
+                    f"_CONSOLE_INFORMATION not found for {process_name} with pid {process_pid}."
+                )
 
         if proc is None:
             vollog.warn("No conhost.exe processes found.")

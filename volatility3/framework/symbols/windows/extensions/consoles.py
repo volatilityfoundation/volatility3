@@ -64,7 +64,7 @@ class ROW(objects.StructType):
                 line = "".join(
                     (
                         char_row[i : i + 2].decode("utf-16le", errors="replace")
-                        if self._valid_dbcs(char_row[i + 2], char_row[i+1])
+                        if self._valid_dbcs(char_row[i + 2], char_row[i + 1])
                         else ""
                     )
                     for i in range(0, len(char_row), 3)
@@ -107,6 +107,7 @@ class ALIAS(objects.StructType):
             return self.Target.Pointer.dereference().cast(
                 "string", encoding="utf-16", errors="replace", max_length=512
             )
+
 
 class EXE_ALIAS_LIST(objects.StructType):
     """An Exe Alias List Structure"""
@@ -284,7 +285,7 @@ class CONSOLE_INFORMATION(objects.StructType):
             exe_alias_list = exe_alias_list.dereference()
         for exe_alias_list_item in exe_alias_list.to_list(
             f"{self.get_symbol_table_name()}{constants.BANG}_EXE_ALIAS_LIST",
-            "ListEntry"
+            "ListEntry",
         ):
             yield exe_alias_list_item
 
