@@ -75,11 +75,8 @@ class PsXView(plugins.PluginInterface):
             "string", max_length=proc.ImageFileName.vol.count, errors="replace"
         )
 
-    def _is_valid_proc_name(self, str):
-        for c in str:
-            if not c in self.valid_proc_name_chars:
-                return False
-        return True
+    def _is_valid_proc_name(self, string: str) -> bool:
+        return all(c in self.valid_proc_name_chars for c in string)
 
     def _filter_garbage_procs(
         self, proc_list: Iterable[extensions.EPROCESS]
