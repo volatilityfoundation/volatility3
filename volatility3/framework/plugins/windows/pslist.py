@@ -4,7 +4,7 @@
 
 import datetime
 import logging
-from typing import Callable, Iterable, List, Type
+from typing import Callable, Iterator, List, Type, TYPE_CHECKING
 
 from volatility3.framework import renderers, interfaces, layers, exceptions, constants
 from volatility3.framework.configuration import requirements
@@ -12,6 +12,7 @@ from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
+from volatility3.framework.symbols.windows import extensions
 from volatility3.plugins import timeliner
 
 vollog = logging.getLogger(__name__)
@@ -197,7 +198,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         filter_func: Callable[
             [interfaces.objects.ObjectInterface], bool
         ] = lambda _: False,
-    ) -> Iterable[interfaces.objects.ObjectInterface]:
+    ) -> Iterator["extensions.EPROCESS"]:
         """Lists all the processes in the primary layer that are in the pid
         config option.
 
