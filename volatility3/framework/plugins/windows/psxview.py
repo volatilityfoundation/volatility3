@@ -1,9 +1,13 @@
-import datetime, logging, string
+import datetime
+import logging
+import string
+from typing import Dict, Iterable, List
 
 from volatility3.framework import constants, exceptions
-from volatility3.framework.interfaces import plugins
 from volatility3.framework.configuration import requirements
-from volatility3.framework.renderers import format_hints, TreeGrid
+from volatility3.framework.interfaces import plugins
+from volatility3.framework.renderers import TreeGrid, format_hints
+from volatility3.framework.symbols.windows import extensions
 from volatility3.plugins.windows import (
     handles,
     info,
@@ -77,14 +81,16 @@ class PsXView(plugins.PluginInterface):
                 return False
         return True
 
-    def _filter_garbage_procs(self, proc_list):
+    def _filter_garbage_procs(
+        self, proc_list: Iterable[extensions.EPROCESS]
+    ) -> List[extensions.EPROCESS]:
         return [
             p
             for p in proc_list
             if p.is_valid() and self._is_valid_proc_name(self._proc_name_to_string(p))
         ]
 
-    def _translate_offset(self, offset):
+    def _translate_offset(self, offset: int) -> int:
         if not self.config["physical-offsets"]:
             return offset
 
@@ -100,21 +106,25 @@ class PsXView(plugins.PluginInterface):
 
         return offset
 
-    def _proc_list_to_dict(self, tasks):
+    def _proc_list_to_dict(
+        self, tasks: Iterable[extensions.EPROCESS]
+    ) -> Dict[int, extensions.EPROCESS]:
         tasks = self._filter_garbage_procs(tasks)
         return {self._translate_offset(proc.vol.offset): proc for proc in tasks}
 
     def _check_pslist(self, tasks):
         return self._proc_list_to_dict(tasks)
 
-    def _check_psscan(self, layer_name, symbol_table):
+    def _check_psscan(
+        self, layer_name: str, symbol_table: str
+    ) -> Dict[int, extensions.EPROCESS]:
         res = psscan.PsScan.scan_processes(
             context=self.context, layer_name=layer_name, symbol_table=symbol_table
         )
 
         return self._proc_list_to_dict(res)
 
-    def _check_thrdscan(self):
+    def _check_thrdscan(self) -> Dict[int, extensions.EPROCESS]:
         ret = []
 
         for ethread in thrdscan.ThrdScan.scan_threads(
@@ -135,8 +145,10 @@ class PsXView(plugins.PluginInterface):
 
         return self._proc_list_to_dict(ret)
 
-    def _check_csrss_handles(self, tasks, layer_name, symbol_table):
-        ret = []
+    def _check_csrss_handles(
+        self, tasks: Iterable[extensions.EPROCESS], layer_name: str, symbol_table: str
+    ) -> Dict[int, extensions.EPROCESS]:
+        ret: List[extensions.EPROCESS] = []
 
         for p in tasks:
             name = self._proc_name_to_string(p)
