@@ -4,10 +4,16 @@
 
 import collections.abc
 import logging
+import functools
+import binascii
+import stat
+from datetime import datetime
 import socket as socket_module
-from typing import Generator, Iterable, Iterator, Optional, Tuple, List
+from typing import Generator, Iterable, Iterator, Optional, Tuple, List, Union, Dict
 
 from volatility3.framework import constants, exceptions, objects, interfaces, symbols
+from volatility3.framework.renderers import conversion
+from volatility3.framework.configuration import requirements
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
 from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
@@ -44,7 +50,7 @@ class module(generic.GenericIntelProcess):
                 ).choices
             except exceptions.SymbolError:
                 vollog.debug(
-                    f"Unable to find mod_mem_type enum. This message can be ignored for kernels < 6.4"
+                    "Unable to find mod_mem_type enum. This message can be ignored for kernels < 6.4"
                 )
                 # set to empty dict to show that the enum was not found, and so shouldn't be searched for again
                 self._mod_mem_type = {}
@@ -817,6 +823,26 @@ class dentry(objects.StructType):
             current_dentry = current_dentry.d_parent
         return None
 
+    def get_subdirs(self) -> interfaces.objects.ObjectInterface:
+        """Walks dentry subdirs
+
+        Yields:
+            A dentry object
+        """
+        if self.has_member("d_sib") and self.has_member("d_children"):
+            # kernels >= 6.8
+            walk_member = "d_sib"
+            list_head_member = self.d_children.first
+        elif self.has_member("d_child") and self.has_member("d_subdirs"):
+            # 2.5.0 <= kernels < 6.8
+            walk_member = "d_child"
+            list_head_member = self.d_subdirs
+        else:
+            raise exceptions.VolatilityException("Unsupported dentry type")
+
+        dentry_type_name = self.get_symbol_table_name() + constants.BANG + "dentry"
+        yield from list_head_member.to_list(dentry_type_name, walk_member)
+
 
 class struct_file(objects.StructType):
     def get_dentry(self) -> interfaces.objects.ObjectInterface:
@@ -933,7 +959,8 @@ class mount(objects.StructType):
         MNT_RELATIME: "relatime",
     }
 
-    def get_mnt_sb(self):
+    def get_mnt_sb(self) -> int:
+        """Returns a pointer to the super_block"""
         if self.has_member("mnt"):
             return self.mnt.mnt_sb
         elif self.has_member("mnt_sb"):
@@ -1248,6 +1275,7 @@ class vfsmount(objects.StructType):
             return self._get_real_mnt().has_parent()
 
     def get_mnt_sb(self):
+        """Returns a pointer to the super_block"""
         return self.mnt_sb
 
     def get_flags_access(self) -> str:
@@ -1581,20 +1609,59 @@ class xdp_sock(objects.StructType):
 
 
 class bpf_prog(objects.StructType):
-    def get_type(self):
+    def get_type(self) -> Union[str, None]:
+        """Returns a string with the eBPF program type"""
+
         # The program type was in `bpf_prog_aux::prog_type` from 3.18.140 to
         # 4.1.52 before it was moved to `bpf_prog::type`
         if self.has_member("type"):
             # kernel >= 4.1.52
-            return self.type
+            return self.type.description
 
         if self.has_member("aux") and self.aux:
             if self.aux.has_member("prog_type"):
                 # 3.18.140 <= kernel < 4.1.52
-                return self.aux.prog_type
+                return self.aux.prog_type.description
 
         # kernel < 3.18.140
-        raise AttributeError("Unable to find the BPF type")
+        return None
+
+    def get_tag(self) -> Union[str, None]:
+        """Returns a string with the eBPF program tag"""
+        # 'tag' was added in kernels 4.10
+        if not self.has_member("tag"):
+            return None
+
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
+
+        prog_tag_addr = self.tag.vol.offset
+        prog_tag_size = self.tag.count
+        prog_tag_bytes = vmlinux_layer.read(prog_tag_addr, prog_tag_size)
+
+        prog_tag = binascii.hexlify(prog_tag_bytes).decode()
+        return prog_tag
+
+    def get_name(self) -> Union[str, None]:
+        """Returns a string with the eBPF program name"""
+        if not self.has_member("aux"):
+            # 'prog_aux' was added in kernels 3.18
+            return None
+
+        return self.aux.get_name()
+
+
+class bpf_prog_aux(objects.StructType):
+    def get_name(self) -> Union[str, None]:
+        """Returns a string with the eBPF program name"""
+        if not self.has_member("name"):
+            # 'name' was added in kernels 4.15
+            return None
+
+        if not self.name:
+            return None
+
+        return utility.array_to_string(self.name)
 
 
 class cred(objects.StructType):
@@ -1761,3 +1828,383 @@ class kernel_cap_t(kernel_cap_struct):
             )
 
         return cap_value & self.get_kernel_cap_full()
+
+
+class timespec64(objects.StructType):
+    def to_datetime(self) -> datetime:
+        """Returns the respective aware datetime"""
+
+        dt = conversion.unixtime_to_datetime(self.tv_sec + self.tv_nsec / 1e9)
+        return dt
+
+
+class inode(objects.StructType):
+    def is_valid(self) -> bool:
+        # i_count is a 'signed' counter (atomic_t). Smear, or essentially a wrong inode
+        # pointer, will easily cause an integer overflow here.
+        return self.i_ino > 0 and self.i_count.counter >= 0
+
+    @property
+    def is_dir(self) -> bool:
+        """Returns True if the inode is a directory"""
+        return stat.S_ISDIR(self.i_mode) != 0
+
+    @property
+    def is_reg(self) -> bool:
+        """Returns True if the inode is a regular file"""
+        return stat.S_ISREG(self.i_mode) != 0
+
+    @property
+    def is_link(self) -> bool:
+        """Returns True if the inode is a symlink"""
+        return stat.S_ISLNK(self.i_mode) != 0
+
+    @property
+    def is_fifo(self) -> bool:
+        """Returns True if the inode is a FIFO"""
+        return stat.S_ISFIFO(self.i_mode) != 0
+
+    @property
+    def is_sock(self) -> bool:
+        """Returns True if the inode is a socket"""
+        return stat.S_ISSOCK(self.i_mode) != 0
+
+    @property
+    def is_block(self) -> bool:
+        """Returns True if the inode is a block device"""
+        return stat.S_ISBLK(self.i_mode) != 0
+
+    @property
+    def is_char(self) -> bool:
+        """Returns True if the inode is a char device"""
+        return stat.S_ISCHR(self.i_mode) != 0
+
+    @property
+    def is_sticky(self) -> bool:
+        """Returns True if the sticky bit is set"""
+        return (self.i_mode & stat.S_ISVTX) != 0
+
+    def get_inode_type(self) -> Union[str, None]:
+        """Returns inode type name
+
+        Returns:
+            The inode type name
+        """
+        if self.is_dir:
+            return "DIR"
+        elif self.is_reg:
+            return "REG"
+        elif self.is_link:
+            return "LNK"
+        elif self.is_fifo:
+            return "FIFO"
+        elif self.is_sock:
+            return "SOCK"
+        elif self.is_char:
+            return "CHR"
+        elif self.is_block:
+            return "BLK"
+        else:
+            return None
+
+    def _time_member_to_datetime(self, member) -> datetime:
+        if self.has_member(f"{member}_sec") and self.has_member(f"{member}_nsec"):
+            # kernels >= 6.11 it's i_*_sec -> time64_t and i_*_nsec -> u32
+            # Ref Linux commit 3aa63a569c64e708df547a8913c84e64a06e7853
+            return conversion.unixtime_to_datetime(
+                self.member(f"{member}_sec") + self.has_member(f"{member}_nsec") / 1e9
+            )
+        elif self.has_member(f"__{member}"):
+            # 6.6 <= kernels < 6.11 it's a timespec64
+            # Ref Linux commit 13bc24457850583a2e7203ded05b7209ab4bc5ef / 12cd44023651666bd44baa36a5c999698890debb
+            return self.member(f"__{member}").to_datetime()
+        elif self.has_member(member):
+            # In kernels < 6.6 it's a timespec64 or timespec
+            return self.member(member).to_datetime()
+        else:
+            raise exceptions.VolatilityException(
+                "Unsupported kernel inode type implementation"
+            )
+
+    def get_access_time(self) -> datetime:
+        """Returns the inode's last access time
+        This is updated when inode contents are read
+
+        Returns:
+            A datetime with the inode's last access time
+        """
+        return self._time_member_to_datetime("i_atime")
+
+    def get_modification_time(self) -> datetime:
+        """Returns the inode's last modification time
+        This is updated when the inode contents change
+
+        Returns:
+            A datetime with the inode's last data modification time
+        """
+
+        return self._time_member_to_datetime("i_mtime")
+
+    def get_change_time(self) -> datetime:
+        """Returns the inode's last change time
+        This is updated when the inode metadata changes
+
+        Returns:
+            A datetime with the inode's last change time
+        """
+        return self._time_member_to_datetime("i_ctime")
+
+    def get_file_mode(self) -> str:
+        """Returns the inode's file mode as string of the form '-rwxrwxrwx'.
+
+        Returns:
+            The inode's file mode string
+        """
+        return stat.filemode(self.i_mode)
+
+    def get_pages(self) -> interfaces.objects.ObjectInterface:
+        """Gets the inode's cached pages
+
+        Yields:
+            The inode's cached pages
+        """
+        if not self.i_size:
+            return
+        elif not (self.i_mapping and self.i_mapping.nrpages > 0):
+            return
+
+        page_cache = linux.PageCache(
+            context=self._context,
+            kernel_module_name="kernel",
+            page_cache=self.i_mapping.dereference(),
+        )
+        yield from page_cache.get_cached_pages()
+
+    def get_contents(self):
+        """Get the inode cached pages from the page cache
+
+        Yields:
+            page_index (int): The page index in the Tree. File offset is page_index * PAGE_SIZE.
+            page_content (str): The page content
+        """
+        for page_obj in self.get_pages():
+            page_index = int(page_obj.index)
+            page_content = page_obj.get_content()
+            yield page_index, page_content
+
+
+class address_space(objects.StructType):
+    @property
+    def i_pages(self):
+        """Returns the appropriate member containing the page cache tree"""
+        if self.has_member("i_pages"):
+            # Kernel >= 4.17
+            return self.member("i_pages")
+        elif self.has_member("page_tree"):
+            # Kernel < 4.17
+            return self.member("page_tree")
+
+        raise exceptions.VolatilityException("Unsupported page cache tree")
+
+
+class page(objects.StructType):
+    @property
+    @functools.lru_cache()
+    def pageflags_enum(self) -> Dict:
+        """Returns 'pageflags' enumeration key/values
+
+        Returns:
+            A dictionary with the pageflags enumeration key/values
+        """
+        # FIXME: It would be even better to use @functools.cached_property instead,
+        # however, this requires Python +3.8
+        try:
+            pageflags_enum = self._context.symbol_space.get_enumeration(
+                self.get_symbol_table_name() + constants.BANG + "pageflags"
+            ).choices
+        except exceptions.SymbolError:
+            vollog.debug(
+                "Unable to find pageflags enum. This can happen in kernels < 2.6.26 or wrong ISF"
+            )
+            # set to empty dict to show that the enum was not found, and so shouldn't be searched for again
+            pageflags_enum = {}
+
+        return pageflags_enum
+
+    def get_flags_list(self) -> List[str]:
+        """Returns a list of page flags
+
+        Returns:
+            List of page flags
+        """
+        flags = []
+        for name, value in self.pageflags_enum.items():
+            if self.flags & (1 << value) != 0:
+                flags.append(name)
+
+        return flags
+
+    def to_paddr(self) -> int:
+        """Converts a page's virtual address to its physical address using the current physical memory model.
+
+        Returns:
+            int: page physical address
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
+
+        vmemmap_start = None
+        if vmlinux.has_symbol("mem_section"):
+            # SPARSEMEM_VMEMMAP physical memory model: memmap is virtually contiguous
+            if vmlinux.has_symbol("vmemmap_base"):
+                # CONFIG_DYNAMIC_MEMORY_LAYOUT - KASLR kernels >= 4.9
+                vmemmap_start = vmlinux.object_from_symbol("vmemmap_base")
+            else:
+                # !CONFIG_DYNAMIC_MEMORY_LAYOUT
+                if vmlinux_layer._maxvirtaddr < 57:
+                    # 4-Level paging -> VMEMMAP_START = __VMEMMAP_BASE_L4
+                    vmemmap_base_l4 = 0xFFFFEA0000000000
+                    vmemmap_start = vmemmap_base_l4
+                else:
+                    # 5-Level paging -> VMEMMAP_START = __VMEMMAP_BASE_L5
+                    # FIXME: Once 5-level paging is supported, uncomment the following lines and remove the exception
+                    # vmemmap_base_l5 = 0xFFD4000000000000
+                    # vmemmap_start = vmemmap_base_l5
+                    raise exceptions.VolatilityException(
+                        "5-level paging is not yet supported"
+                    )
+
+        elif vmlinux.has_symbol("mem_map"):
+            # FLATMEM physical memory model, typically 32bit
+            vmemmap_start = vmlinux.object_from_symbol("mem_map")
+
+        elif vmlinux.has_symbol("node_data"):
+            raise exceptions.VolatilityException("NUMA systems are not yet supported")
+        else:
+            raise exceptions.VolatilityException("Unsupported Linux memory model")
+
+        if not vmemmap_start:
+            raise exceptions.VolatilityException(
+                "Something went wrong, we shouldn't be here"
+            )
+
+        page_type_size = vmlinux.get_type("page").size
+        pagec = vmlinux_layer.canonicalize(self.vol.offset)
+        pfn = (pagec - vmemmap_start) // page_type_size
+        page_paddr = pfn * vmlinux_layer.page_size
+
+        return page_paddr
+
+    def get_content(self) -> Union[str, None]:
+        """Returns the page content
+
+        Returns:
+            The page content
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
+        physical_layer = vmlinux.context.layers["memory_layer"]
+        page_paddr = self.to_paddr()
+        if not page_paddr:
+            return None
+
+        page_data = physical_layer.read(page_paddr, vmlinux_layer.page_size)
+        return page_data
+
+
+class IDR(objects.StructType):
+    IDR_BITS = 8
+    IDR_MASK = (1 << IDR_BITS) - 1
+    INT_SIZE = 4
+    MAX_IDR_SHIFT = INT_SIZE * 8 - 1
+    MAX_IDR_BIT = 1 << MAX_IDR_SHIFT
+
+    def idr_max(self, num_layers: int) -> int:
+        """Returns the maximum ID which can be allocated given idr::layers
+
+        Args:
+            num_layers: Number of layers
+
+        Returns:
+            Maximum ID for a given number of layers
+        """
+        # Kernel < 4.17
+        bits = min([self.INT_SIZE, num_layers * self.IDR_BITS, self.MAX_IDR_SHIFT])
+
+        return (1 << bits) - 1
+
+    def idr_find(self, idr_id: int) -> int:
+        """Finds an ID within the IDR data structure.
+        Based on idr_find_slowpath(), 3.9 <= Kernel < 4.11
+        Args:
+            idr_id: The IDR lookup ID
+
+        Returns:
+            A pointer to the given ID element
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        if not vmlinux.get_type("idr_layer").has_member("layer"):
+            vollog.info(
+                "Unsupported IDR implementation, it should be a very very old kernel, probabably < 2.6"
+            )
+            return None
+
+        if idr_id < 0:
+            return None
+
+        idr_layer = self.top
+        if not idr_layer:
+            return None
+
+        n = (idr_layer.layer + 1) * self.IDR_BITS
+
+        if idr_id > self.idr_max(idr_layer.layer + 1):
+            return None
+
+        assert n != 0
+
+        while n > 0 and idr_layer:
+            n -= self.IDR_BITS
+            assert n == idr_layer.layer * self.IDR_BITS
+            idr_layer = idr_layer.ary[(idr_id >> n) & self.IDR_MASK]
+
+        return idr_layer
+
+    def _old_kernel_get_entries(self) -> int:
+        # Kernels < 4.11
+        cur = self.cur
+        total = next_id = 0
+        while next_id < cur:
+            entry = self.idr_find(next_id)
+            if entry:
+                yield entry
+                total += 1
+
+            next_id += 1
+
+    def _new_kernel_get_entries(self) -> int:
+        # Kernels >= 4.11
+        id_storage = linux.IDStorage.choose_id_storage(
+            self._context, kernel_module_name="kernel"
+        )
+        for page_addr in id_storage.get_entries(root=self.idr_rt):
+            yield page_addr
+
+    def get_entries(self) -> int:
+        """Walks the IDR and yield a pointer associated with each element.
+
+        Args:
+            in_use (int, optional): _description_. Defaults to 0.
+
+        Yields:
+            A pointer associated with each element.
+        """
+        if self.has_member("idr_rt"):
+            # Kernels >= 4.11
+            get_entries_func = self._new_kernel_get_entries
+        else:
+            # Kernels < 4.11
+            get_entries_func = self._old_kernel_get_entries
+
+        for page_addr in get_entries_func():
+            yield page_addr

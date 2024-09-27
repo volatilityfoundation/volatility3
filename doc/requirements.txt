@@ -4,5 +4,6 @@ sphinx_autodoc_typehints>=1.4.0
 sphinx-rtd-theme>=0.4.3
 
 yara-python
+yara-x
 pycryptodome
 pefile

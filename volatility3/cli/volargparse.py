@@ -21,8 +21,6 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        # We don't want the action self-check to kick in, so we remove the choices list, the check happens in __call__
-        self.choices = None
 
     def __call__(
         self,
@@ -100,3 +98,20 @@ class HelpfulArgParser(argparse.ArgumentParser):
 
         # return the number of arguments matched
         return len(match.group(1))
+
+    def _check_value(self, action: argparse.Action, value: Any) -> None:
+        """This is called to ensure a value is correct/valid
+
+        In normal operation, it would check that a value provided is valid and return None
+        If it was not valid, it would throw an ArgumentError
+
+        When people provide a partial plugin name, we want to look for a matching plugin name
+        which happens in the HelpfulSubparserAction's __call_method
+
+        To get there without tripping the check_value failure, we have to prevent the exception
+        being thrown when the value is a HelpfulSubparserAction.  This therefore affects no other
+        checks for normal parameters.
+        """
+        if not isinstance(action, HelpfulSubparserAction):
+            super()._check_value(action, value)
+        return None

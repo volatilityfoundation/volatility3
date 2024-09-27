@@ -46,10 +46,7 @@ class VerInfo(interfaces.plugins.PluginInterface):
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
             requirements.PluginRequirement(
-                name="modules", plugin=modules.Modules, version=(1, 0, 0)
-            ),
-            requirements.VersionRequirement(
-                name="dlllist", component=dlllist.DllList, version=(2, 0, 0)
+                name="modules", plugin=modules.Modules, version=(2, 0, 0)
             ),
             requirements.BooleanRequirement(
                 name="extensive",

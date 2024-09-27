@@ -218,6 +218,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 (10, 0, 18362, 0): "netscan-win10-18362-x64",
                 (10, 0, 18363, 0): "netscan-win10-18363-x64",
                 (10, 0, 19041, 0): "netscan-win10-19041-x64",
+                (10, 0, 20348, 0): "netscan-win10-20348-x64",
             }
 
         # we do not need to check for tcpip's specific FileVersion in every case
