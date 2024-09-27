@@ -1,6 +1,7 @@
 import datetime
 import logging
 import string
+from itertools import chain
 from typing import Dict, Iterable, List
 
 from volatility3.framework import constants, exceptions
@@ -147,30 +148,33 @@ class PsXView(plugins.PluginInterface):
     ) -> Dict[int, extensions.EPROCESS]:
         ret: List[extensions.EPROCESS] = []
 
+        handles_plugin = handles.Handles(
+            context=self.context, config_path=self.config_path
+        )
+
+        type_map = handles_plugin.get_type_map(self.context, layer_name, symbol_table)
+
+        cookie = handles_plugin.find_cookie(
+            context=self.context,
+            layer_name=layer_name,
+            symbol_table=symbol_table,
+        )
+
         for p in tasks:
             name = self._proc_name_to_string(p)
-            if name == "csrss.exe":
-                try:
-                    if p.has_member("ObjectTable"):
-                        handles_plugin = handles.Handles(
-                            context=self.context, config_path=self.config_path
-                        )
-                        hndls = list(handles_plugin.handles(p.ObjectTable))
-                        for h in hndls:
-                            if (
-                                h.get_object_type(
-                                    handles_plugin.get_type_map(
-                                        self.context, layer_name, symbol_table
-                                    )
-                                )
-                                == "Process"
-                            ):
-                                ret.append(h.Body.cast("_EPROCESS"))
+            if name != "csrss.exe":
+                continue
 
-                except exceptions.InvalidAddressException:
-                    vollog.log(
-                        constants.LOGLEVEL_VVV, "Cannot access eprocess object table"
-                    )
+            try:
+                ret += [
+                    handle.Body.cast("_EPROCESS")
+                    for handle in handles_plugin.handles(p.ObjectTable)
+                    if handle.get_object_type(type_map, cookie) == "Process"
+                ]
+            except exceptions.InvalidAddressException:
+                vollog.log(
+                    constants.LOGLEVEL_VVV, "Cannot access eprocess object table"
+                )
 
         return self._proc_list_to_dict(ret)
 
@@ -187,7 +191,7 @@ class PsXView(plugins.PluginInterface):
         )
 
         # get processes from each source
-        processes = {}
+        processes: Dict[str, Dict[int, extensions.EPROCESS]] = {}
 
         processes["pslist"] = self._check_pslist(kdbg_list_processes)
         processes["psscan"] = self._check_psscan(layer_name, symbol_table)
@@ -196,27 +200,20 @@ class PsXView(plugins.PluginInterface):
             kdbg_list_processes, layer_name, symbol_table
         )
 
-        # print results
-
-        # list of lists of offsets
-        offsets = [list(processes[source].keys()) for source in processes]
-
-        # flatten to one list
-        offsets = sum(offsets, [])
-
-        # remove duplicates
-        offsets = set(offsets)
+        # Unique set of all offsets from all sources
+        offsets = set(chain(*(mapping.keys() for mapping in processes.values())))
 
         for offset in offsets:
-            proc = None
+            # We know there will be at least one process mapped to each offset
+            proc: extensions.EPROCESS = next(
+                mapping[offset] for mapping in processes.values() if offset in mapping
+            )
 
             in_sources = {src: False for src in processes}
 
-            for source in processes:
-                if offset in processes[source]:
+            for source, process_mapping in processes.items():
+                if offset in process_mapping:
                     in_sources[source] = True
-                    if not proc:
-                        proc = processes[source][offset]
 
             pid = proc.UniqueProcessId
             name = self._proc_name_to_string(proc)

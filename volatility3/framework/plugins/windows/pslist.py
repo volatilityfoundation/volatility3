@@ -4,7 +4,7 @@
 
 import datetime
 import logging
-from typing import Callable, Iterator, List, Type, TYPE_CHECKING
+from typing import Callable, Iterator, List, Type
 
 from volatility3.framework import renderers, interfaces, layers, exceptions, constants
 from volatility3.framework.configuration import requirements
