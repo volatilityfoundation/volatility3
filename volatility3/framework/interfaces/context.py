@@ -191,6 +191,9 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
                 self._native_layer_name
             ].build_configuration()
 
+        # Modules are constructable, and therefore require a class configuration variable
+        config["class"] = self.__class__.__module__ + "." + self.__class__.__name__
+
         for subconfig in subconfigs:
             for req in subconfigs[subconfig]:
                 config[interfaces.configuration.path_join(subconfig, req)] = subconfigs[
