@@ -215,11 +215,11 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             content = renderers.NotAvailableValue()
 
         yield (
-            format_hints.Hex(record_map[mft_record.RecordNumber][2]),
+            format_hints.Hex(record_map[mft_record.vol.offset][2]),
             mft_record.get_signature(),
             mft_record.RecordNumber,
             attr.Attr_Header.AttrType.lookup(),
-            record_map[mft_record.RecordNumber][0],
+            record_map[mft_record.vol.offset][0],
             ads_name,
             content,
         )
@@ -239,31 +239,29 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         Suports returning the first/main $DATA as well as however many
         ADS records a file might have
         """
-        rec_num = mft_record.RecordNumber
-        if rec_num not in record_map:
+        if mft_record.vol.offset not in record_map:
             # file name, DATA count, offset
-            record_map[rec_num] = [renderers.NotAvailableValue(), 0, None]
-
+            record_map[mft_record.vol.offset] = [renderers.NotAvailableValue(), 0, None]
         if attr.Attr_Header.AttrType.lookup() == "FILE_NAME":
             fn_object = symbol_table + constants.BANG + "FILE_NAME_ENTRY"
             attr_data = attr.Attr_Data.cast(fn_object)
             rec_name = attr_data.get_full_name()
-            record_map[rec_num][0] = rec_name
+            record_map[mft_record.vol.offset][0] = rec_name
         elif attr.Attr_Header.AttrType.lookup() == "DATA":
             # first data
-            record_map[rec_num][2] = attr.Attr_Data.vol.offset
+            record_map[mft_record.vol.offset][2] = attr.Attr_Data.vol.offset
 
             display_data = False
 
             # first DATA attribute of this record
-            if record_map[rec_num][1] == 0:
+            if record_map[mft_record.vol.offset][1] == 0:
                 if return_first_record:
                     display_data = True
 
-                record_map[rec_num][1] = 1
+                record_map[mft_record.vol.offset][1] = 1
 
             # at the second DATA attribute of this record
-            elif record_map[rec_num][1] == 1 and not return_first_record:
+            elif record_map[mft_record.vol.offset][1] == 1 and not return_first_record:
                 print("at second record")
                 display_data = True
 
