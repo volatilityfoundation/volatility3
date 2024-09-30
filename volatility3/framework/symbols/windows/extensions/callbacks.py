@@ -1,4 +1,5 @@
 import logging
+from typing import Dict
 
 from volatility3.framework import exceptions, objects
 from volatility3.framework.symbols.windows.extensions import pool
@@ -14,7 +15,7 @@ class _SHUTDOWN_PACKET(objects.StructType, pool.ExecutiveObject):
     It exposes a function which sanity-checks structure members.
     """
 
-    def is_valid(self) -> bool:
+    def is_parseable(self, type_map: Dict[int, str]) -> bool:
         """
         Perform some checks.
         """
@@ -24,6 +25,9 @@ class _SHUTDOWN_PACKET(objects.StructType, pool.ExecutiveObject):
                 and self.Entry.Blink.is_readable()
                 and self.DeviceObject.is_readable()
             ):
+                vollog.debug(
+                    f"Callback obj 0x{self.vol.offset:x} invalid due to unreadable structure members"
+                )
                 return False
 
             device = self.DeviceObject
@@ -41,10 +45,17 @@ class _SHUTDOWN_PACKET(objects.StructType, pool.ExecutiveObject):
 
         try:
             header = device.get_object_header()
-            valid = header.NameInfo.Name == "Device"
-            return valid
+            object_type = header.get_object_type(type_map)
+            is_valid = object_type == "Device"
+            if not is_valid:
+                vollog.debug(
+                    f"Callback obj 0x{self.vol.offset:x} invalid due to invalid device type: wanted 'Device', found '{object_type}'"
+                )
+            return is_valid
         except ValueError:
-            vollog.debug(f"Could not get NameInfo for object at 0x{self.vol.offset:x}")
+            vollog.debug(
+                f"Could not get object type for object at 0x{self.vol.offset:x}"
+            )
             return False
 
 

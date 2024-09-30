@@ -248,8 +248,12 @@ class Callbacks(interfaces.plugins.PluginInterface):
             context, layer_name, nt_symbol_table, constraints
         ):
             try:
-                if hasattr(mem_object, "is_valid") and not mem_object.is_valid():
-                    continue
+                if isinstance(mem_object, callbacks._SHUTDOWN_PACKET):
+                    if not mem_object.is_parseable(type_map):
+                        continue
+                elif hasattr(mem_object, "is_valid"):
+                    if not mem_object.is_valid():
+                        continue
 
                 yield cls._process_scanned_callback(mem_object, type_map)
             except exceptions.InvalidAddressException:
