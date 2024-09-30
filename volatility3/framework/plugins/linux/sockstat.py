@@ -438,7 +438,7 @@ class Sockstat(plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -449,7 +449,7 @@ class Sockstat(plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="SockHandlers", component=SockHandlers, version=(1, 0, 0)
+                name="SockHandlers", component=SockHandlers, version=(2, 0, 0)
             ),
             requirements.PluginRequirement(
                 name="lsof", plugin=lsof.Lsof, version=(1, 1, 0)
