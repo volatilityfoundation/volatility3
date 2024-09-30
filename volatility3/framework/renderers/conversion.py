@@ -28,6 +28,27 @@ def wintime_to_datetime(
         return renderers.UnparsableValue()
 
 
+def windows_bytes_to_guid(buf: bytes) -> str:
+    """
+    Converts 16 raw bytes to a windows GUID.
+
+    Raises ValueError if the provided buffer is not exactly 16 bytes.
+    """
+    if len(buf) != 16:
+        raise ValueError("Expected 16 bytes for GUID")
+
+    head_components = [format(v, "x") for v in struct.unpack("<IHH", buf[:8])]
+    tail_component = [
+        format(v, "x")
+        for v in struct.unpack(
+            ">HQ",
+            buf[8:10] + b"\x00\x00" + buf[10:16],
+        )
+    ]
+    combined = head_components + tail_component
+    return "{" + "-".join(combined) + "}"
+
+
 def unixtime_to_datetime(
     unixtime: int,
 ) -> Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]:
