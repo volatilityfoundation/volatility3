@@ -168,7 +168,7 @@ class Consoles(interfaces.plugins.PluginInterface):
             raise NotImplementedError(
                 "Kernel Debug Structure version format not supported!"
             )
-        except:
+        except Exception:
             # unsure what to raise here. Also, it might be useful to add some kind of fallback,
             # either to a user-provided version or to another method to determine conhost.exe's version
             raise exceptions.VolatilityException(
@@ -834,7 +834,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                         max_history.add(value.decode_data())
                     elif val_name == "NumberOfHistoryBuffers":
                         max_buffers.add(value.decode_data())
-            except:
+            except Exception:
                 continue
 
         return max_history, max_buffers

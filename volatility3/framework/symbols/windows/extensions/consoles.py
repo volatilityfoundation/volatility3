@@ -95,6 +95,8 @@ class ALIAS(objects.StructType):
                 "string", encoding="utf-16", errors="replace", max_length=512
             )
 
+        return None
+
     def get_target(self):
         if self.Target.Length < 8:
             return self.Target.Chars.cast(
@@ -107,6 +109,8 @@ class ALIAS(objects.StructType):
             return self.Target.Pointer.dereference().cast(
                 "string", encoding="utf-16", errors="replace", max_length=512
             )
+
+        return None
 
 
 class EXE_ALIAS_LIST(objects.StructType):
@@ -130,6 +134,8 @@ class EXE_ALIAS_LIST(objects.StructType):
             return self.ExeName.Pointer.dereference().cast(
                 "string", encoding="utf-16", errors="replace", max_length=512
             )
+
+        return None
 
     def get_aliases(self):
         """Generator for the individual aliases for a
@@ -211,7 +217,7 @@ class SCREEN_INFORMATION(objects.StructType):
             try:
                 text = row.get_text(truncate_lines)
                 rows.append(text)
-            except:
+            except Exception:
                 break
 
         if truncate_rows:
@@ -301,7 +307,7 @@ class CONSOLE_INFORMATION(objects.StructType):
             return self.Title.dereference().cast(
                 "string", encoding="utf-16", errors="replace", max_length=512
             )
-        except:
+        except Exception:
             return ""
 
     def get_original_title(self):
@@ -309,7 +315,7 @@ class CONSOLE_INFORMATION(objects.StructType):
             return self.OriginalTitle.dereference().cast(
                 "string", encoding="utf-16", errors="replace", max_length=512
             )
-        except:
+        except Exception:
             return ""
 
 
@@ -339,6 +345,8 @@ class COMMAND(objects.StructType):
             return self.Pointer.dereference().cast(
                 "string", encoding="utf-16", errors="replace", max_length=512
             )
+
+        return None
 
 
 class COMMAND_HISTORY(objects.StructType):
@@ -386,6 +394,8 @@ class COMMAND_HISTORY(objects.StructType):
             return self.Application.Pointer.dereference().cast(
                 "string", encoding="utf-16", errors="replace", max_length=512
             )
+
+        return None
 
     def scan_command_bucket(self, end=None):
         """Brute force print all strings pointed to by the CommandBucket entries by
