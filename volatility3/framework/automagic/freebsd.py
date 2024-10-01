@@ -73,9 +73,17 @@ class FreebsdIntelStacker(interfaces.automagic.StackerLayerInterface):
                 # Freebsd amd64
                 if "KPML4phys" in table.symbols:
                     layer_class = intel.Intel32e
+                    kernload_offset = 0
+                    kernload = table.get_symbol("kernload").address
+                    for interp in layer.scan(context = context, scanner = scanners.BytesScanner(b"/red/herring\x00\x00\x00\x00"), progress_callback = progress_callback):
+                        kernload_from_interp = interp & 0xfffffffffffff800
+                        # Verify 2MB alignment
+                        if kernload_from_interp & 0x1fffff == 0:
+                            kernload_offset = kernload_from_interp - kernload
+                            break
                     kernbase = table.get_symbol("kernbase").address
                     kpml4phys_ptr = table.get_symbol("KPML4phys").address
-                    kpml4phys_str = layer.read(kpml4phys_ptr - kernbase, 8)
+                    kpml4phys_str = layer.read(kpml4phys_ptr - kernbase + kernload_offset, 8)
                     dtb = struct.unpack("<Q", kpml4phys_str)[0]
                 # Freebsd i386
                 elif "IdlePTD" in table.symbols:
