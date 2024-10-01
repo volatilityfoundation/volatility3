@@ -73,28 +73,29 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
 
         return modules_addr_min, modules_addr_max
 
-    def _get_module_state_live_bytes(
+    def _get_module_state_values_bytes(
         self,
         context: interfaces.context.ContextInterface,
         vmlinux_module_name: str,
-    ) -> bytes:
-        """Retrieve the MODULE_STATE_LIVE value bytes by introspecting its enum type
+    ) -> List[bytes]:
+        """Retrieve the module state values bytes by introspecting its enum type
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             vmlinux_module_name: The name of the kernel module on which to operate
 
         Returns:
-            The MODULE_STATE_LIVE value bytes
+            A list with the module state values bytes
         """
         vmlinux = context.modules[vmlinux_module_name]
         module_state_type_template = vmlinux.get_type("module").vol.members["state"][1]
-        module_state_live_val = module_state_type_template.choices["MODULE_STATE_LIVE"]
         data_format = module_state_type_template.base_type.vol.data_format
-        module_state_live_bytes = objects.convert_value_to_data(
-            module_state_live_val, int, data_format
-        )
-        return module_state_live_bytes
+        values = module_state_type_template.choices.values()
+        values_bytes = [
+            objects.convert_value_to_data(value, int, data_format)
+            for value in sorted(values)
+        ]
+        return values_bytes
 
     def get_hidden_modules_vol2(
         self,
@@ -174,11 +175,12 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         scan_buf = b"".join(scan_list)
         del scan_list
 
-        module_state_live_bytes = self._get_module_state_live_bytes(
+        module_state_values_bytes = self._get_module_state_values_bytes(
             context, vmlinux_module_name
         )
+        values_bytes_pattern = b"|".join(module_state_values_bytes)
         # f'strings cannot be combined with bytes literals
-        for cur_addr in re.finditer(b"(?=(%s))" % (module_state_live_bytes), scan_buf):
+        for cur_addr in re.finditer(b"(?=(%s))" % values_bytes_pattern, scan_buf):
             module_addr = modules_addr_min + cur_addr.start()
 
             if module_addr in known_module_addresses:
@@ -235,7 +237,7 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
 
         module_addr_min, module_addr_max = modules_memory_boundaries
 
-        module_state_live_bytes = self._get_module_state_live_bytes(
+        module_state_values_bytes = self._get_module_state_values_bytes(
             context, vmlinux_module_name
         )
 
@@ -248,9 +250,9 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             try:
                 # This is just a pre-filter. Module readability and consistency are verified in module.is_valid()
                 module_state_bytes = vmlinux_layer.read(
-                    module_addr, len(module_state_live_bytes)
+                    module_addr, len(module_state_values_bytes[0])
                 )
-                if module_state_bytes != module_state_live_bytes:
+                if module_state_bytes not in module_state_values_bytes:
                     continue
             except (
                 exceptions.PagedInvalidAddressException,
