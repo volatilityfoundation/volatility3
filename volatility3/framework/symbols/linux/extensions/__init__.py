@@ -35,6 +35,34 @@ class module(generic.GenericIntelProcess):
         super().__init__(*args, **kwargs)
         self._mod_mem_type = None  # Initialize _mod_mem_type to None for memoization
 
+    def is_valid(self):
+        layer = self._context.layers[self.vol.layer_name]
+        # Make sure the entire module content is readable
+        if not layer.is_valid(self.vol.offset, self.vol.size):
+            return False
+
+        if not self.state.is_valid_choice:
+            return False
+
+        core_size = self.get_core_size()
+        if not (
+            1 <= core_size <= 20000000
+            and core_size + self.get_init_size() >= 4096
+            and 1 <= self.get_core_text_size() <= 20000000
+        ):
+            return False
+
+        if self.has_member("mkobj") and self.mkobj.has_member("mod"):
+            if not (
+                self.mkobj
+                and self.mkobj.mod
+                and self.mkobj.mod.is_readable()
+                and self.mkobj.mod == self.vol.offset
+            ):
+                return False
+
+        return True
+
     @property
     def mod_mem_type(self):
         """Return the mod_mem_type enum choices if available or an empty dict if not"""
@@ -111,6 +139,16 @@ class module(generic.GenericIntelProcess):
             return self.core_size
 
         raise AttributeError("Unable to determine core size of module")
+
+    def get_core_text_size(self):
+        if self.has_member("mem"):  # kernels 6.4+
+            return self._get_mem_size("MOD_TEXT")
+        elif self.has_member("core_layout"):
+            return self.core_layout.text_size
+        elif self.has_member("core_text_size"):
+            return self.core_text_size
+
+        raise AttributeError("Unable to determine core text size of module")
 
     def get_module_core(self):
         if self.has_member("mem"):  # kernels 6.4+
