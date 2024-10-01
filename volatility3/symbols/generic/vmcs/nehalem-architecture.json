@@ -1,0 +1,131 @@
+{
+  "base_types": {
+    "pointer": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 8
+    },
+    "unsigned char": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 1
+    },
+    "unsigned long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    },
+    "unsigned long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 8
+    },
+    "unsigned short": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 2
+    }
+  },
+  "enums": {},
+  "metadata": {
+    "format": "6.1.0",
+    "producer": {
+      "datetime": "2021-07-31T17:37:28.302702",
+      "name": "vmextract-by-hand",
+      "version": "0.0.1"
+    }
+  },
+  "symbols": {
+    "revision_id": {
+      "address": 0,
+      "constant_data": "MTQ="
+    }
+  },
+  "user_types": {
+    "_VMCS": {
+      "fields": {
+        "ept": {
+          "offset": 232,
+          "type": {
+            "kind": "struct",
+            "name": "unsigned long long"
+          }
+        },
+        "executive_vmcs_ptr": {
+          "offset": 208,
+          "type": {
+            "kind": "struct",
+            "name": "unsigned long long"
+          }
+        },
+        "guest_cr3": {
+          "offset": 736,
+          "type": {
+            "kind": "struct",
+            "name": "unsigned long long"
+          }
+        },
+        "guest_cr4": {
+          "offset": 744,
+          "type": {
+            "kind": "struct",
+            "name": "unsigned long long"
+          }
+        },
+        "guest_pdpte": {
+          "offset": 928,
+          "type": {
+            "count": 4,
+            "kind": "array",
+            "subtype": {
+              "kind": "struct",
+              "name": "unsigned long long"
+            }
+          }
+        },
+        "guest_physical_addr": {
+          "offset": 240,
+          "type": {
+            "kind": "struct",
+            "name": "unsigned long long"
+          }
+        },
+        "host_cr3": {
+          "offset": 832,
+          "type": {
+            "kind": "struct",
+            "name": "unsigned long long"
+          }
+        },
+        "host_cr4": {
+          "offset": 840,
+          "type": {
+            "kind": "struct",
+            "name": "unsigned long long"
+          }
+        },
+        "vmcs_link_ptr": {
+          "offset": 248,
+          "type": {
+            "kind": "struct",
+            "name": "unsigned long long"
+          }
+        },
+        "vpid": {
+          "offset": 752,
+          "type": {
+            "kind": "struct",
+            "name": "unsigned short"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 4096
+    }
+  }
+}
