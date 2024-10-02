@@ -167,7 +167,9 @@ class VolShell(cli.CommandLine):
             action="store_true",
         )
         isf_group.add_argument(
+            "-u",
             "--remote-isf-url",
+            metavar="URL",
             help="Search online for ISF json files",
             default=constants.REMOTE_ISF_URL,
             type=str,
