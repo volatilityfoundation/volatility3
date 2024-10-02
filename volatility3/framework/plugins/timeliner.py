@@ -66,7 +66,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
         if selected_list:
 
             def filter_plugins(name: str, selected: List[str]) -> bool:
-                return any([s in name for s in selected])
+                return any(s in name for s in selected)
 
             filter_func = filter_plugins
         else:
@@ -252,10 +252,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 continue
 
             if filter_list and not any(
-                [
-                    filter in plugin_class.__module__ + "." + plugin_class.__name__
-                    for filter in filter_list
-                ]
+                filter in plugin_class.__module__ + "." + plugin_class.__name__
+                for filter in filter_list
             ):
                 continue
 

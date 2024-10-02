@@ -53,7 +53,7 @@ class CLIFilter:
         """Filters the row based on each of the column_filters"""
         if not self._filters:
             return False
-        found = any([column_filter.found(row) for column_filter in self._filters])
+        found = any(column_filter.found(row) for column_filter in self._filters)
         return not found
 
 
@@ -86,7 +86,7 @@ class ColumnFilter:
         otherwise it is filtered.
         """
         if self.column_num is None:
-            found = any([self.find(x) for x in row])
+            found = any(self.find(x) for x in row)
         else:
             found = self.find(row[self.column_num])
         if self.exclude:

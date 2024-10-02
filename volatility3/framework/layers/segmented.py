@@ -51,10 +51,8 @@ class NonLinearlySegmentedLayer(
         try:
             base_layer = self._context.layers[self._base_layer]
             return all(
-                [
-                    base_layer.is_valid(mapped_offset)
-                    for _i, _i, mapped_offset, _i, _s in self.mapping(offset, length)
-                ]
+                base_layer.is_valid(mapped_offset)
+                for _i, _i, mapped_offset, _i, _s in self.mapping(offset, length)
             )
         except exceptions.InvalidAddressException:
             return False

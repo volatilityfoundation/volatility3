@@ -161,7 +161,7 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
                 "TypeError - Too many values provided to list option.",
             )
             return {config_path: self}
-        if not all([isinstance(element, self.element_type) for element in value]):
+        if not all(isinstance(element, self.element_type) for element in value):
             vollog.log(
                 constants.LOGLEVEL_V,
                 "TypeError - At least one element in the list is not of the correct type.",
@@ -181,7 +181,7 @@ class ChoiceRequirement(interfaces.configuration.RequirementInterface):
         """
         super().__init__(*args, **kwargs)
         if not isinstance(choices, list) or any(
-            [not isinstance(choice, str) for choice in choices]
+            not isinstance(choice, str) for choice in choices
         ):
             raise TypeError("ChoiceRequirement takes a list of strings as choices")
         self.choices = choices
@@ -410,11 +410,9 @@ class TranslationLayerRequirement(
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [
-                subreq.unsatisfied(context, config_path)
-                for subreq in self.requirements.values()
-                if not subreq.optional
-            ]
+            subreq.unsatisfied(context, config_path)
+            for subreq in self.requirements.values()
+            if not subreq.optional
         ):
             return None
 
@@ -485,11 +483,9 @@ class SymbolTableRequirement(
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [
-                subreq.unsatisfied(context, config_path)
-                for subreq in self.requirements.values()
-                if not subreq.optional
-            ]
+            subreq.unsatisfied(context, config_path)
+            for subreq in self.requirements.values()
+            if not subreq.optional
         ):
             return None
 
@@ -710,11 +706,9 @@ class ModuleRequirement(
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [
-                subreq.unsatisfied(context, config_path)
-                for subreq in self.requirements.values()
-                if not subreq.optional
-            ]
+            subreq.unsatisfied(context, config_path)
+            for subreq in self.requirements.values()
+            if not subreq.optional
         ):
             return None
 
