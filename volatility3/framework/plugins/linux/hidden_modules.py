@@ -326,7 +326,6 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         known_module_addresses: Set[int],
         modules_memory_boundaries: Tuple,
         fast_method: bool = False,
-        heuristic_mode: bool = False,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Enumerate hidden modules
 
@@ -336,7 +335,6 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             known_module_addresses: Set with known module addresses
             modules_memory_boundaries: Minimum and maximum address boundaries for module allocation.
             fast_method: If True, it uses the fast method. Otherwise, it uses the traditional one.
-            heuristic_mode: If True, it loosens constraints to enhance the detection of advanced threats.
         Yields:
             module objects
         """
