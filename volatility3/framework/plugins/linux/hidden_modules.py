@@ -2,10 +2,9 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import re
-import functools
 import logging
 import contextlib
-from typing import List, Iterable
+from typing import List, Set, Tuple, Iterable
 from volatility3.framework import renderers, interfaces, exceptions, objects
 from volatility3.framework.constants.architectures import LINUX_ARCHS
 from volatility3.framework.renderers import format_hints
@@ -41,7 +40,21 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             ),
         ]
 
-    def _get_modules_memory_boundaries(self, vmlinux):
+    @staticmethod
+    def get_modules_memory_boundaries(
+        context: interfaces.context.ContextInterface,
+        vmlinux_module_name: str,
+    ) -> Tuple[int]:
+        """Determine the boundaries of the module allocation area
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            vmlinux_module_name: The name of the kernel module on which to operate
+
+        Returns:
+            A tuple containing the minimum and maximum addresses for the module allocation area.
+        """
+        vmlinux = context.modules[vmlinux_module_name]
         if vmlinux.has_symbol("mod_tree"):
             mod_tree = vmlinux.object_from_symbol("mod_tree")
             modules_addr_min = mod_tree.addr_min
@@ -73,8 +86,8 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
 
         return modules_addr_min, modules_addr_max
 
+    @staticmethod
     def _get_module_state_values_bytes(
-        self,
         context: interfaces.context.ContextInterface,
         vmlinux_module_name: str,
     ) -> List[bytes]:
@@ -97,12 +110,13 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         ]
         return values_bytes
 
-    def get_hidden_modules_vol2(
-        self,
+    @classmethod
+    def _get_hidden_modules_vol2(
+        cls,
         context: interfaces.context.ContextInterface,
         vmlinux_module_name: str,
-        known_module_addresses,
-        modules_memory_boundaries: tuple,
+        known_module_addresses: Set[int],
+        modules_memory_boundaries: Tuple,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Enumerate hidden modules using the traditional implementation.
 
@@ -111,6 +125,9 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             vmlinux_module_name: The name of the kernel module on which to operate
+            known_module_addresses: Set with known module addresses
+            modules_memory_boundaries: Minimum and maximum address boundaries for module allocation.
+
         Yields:
             module objects
         """
@@ -175,7 +192,7 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         scan_buf = b"".join(scan_list)
         del scan_list
 
-        module_state_values_bytes = self._get_module_state_values_bytes(
+        module_state_values_bytes = cls._get_module_state_values_bytes(
             context, vmlinux_module_name
         )
         values_bytes_pattern = b"|".join(module_state_values_bytes)
@@ -190,27 +207,37 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             if module and module.is_valid():
                 yield module
 
-    @functools.cached_property
-    def module_address_alignment(self) -> int:
+    @classmethod
+    def _get_module_address_alignment(
+        cls,
+        context: interfaces.context.ContextInterface,
+        vmlinux_module_name: str,
+    ) -> int:
         """Obtain the module memory address alignment. This is only used with the fast scan method.
 
         struct module is aligned to the L1 cache line, which is typically 64 bytes for most
         common i386/AMD64/ARM64 configurations. In some cases, it can be 128 bytes, but this
         will still work.
 
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            vmlinux_module_name: The name of the kernel module on which to operate
+
         Returns:
             The struct module alignment
         """
         # FIXME: When dwarf2json/ISF supports type alignments. Read it directly from the type metadata
-        # The cached_property won't provide any benefits until then
+        # Also, 'context' and 'vmlinux_module_name' are not used yet, but they will be needed to obtain
+        # the type metadata
         return 64
 
-    def get_hidden_modules_fast(
-        self,
+    @classmethod
+    def _get_hidden_modules_fast(
+        cls,
         context: interfaces.context.ContextInterface,
         vmlinux_module_name: str,
-        known_module_addresses,
-        modules_memory_boundaries: tuple,
+        known_module_addresses: Set[int],
+        modules_memory_boundaries: Tuple,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Enumerate hidden modules by taking advantage of memory address alignment patterns
 
@@ -229,6 +256,9 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             vmlinux_module_name: The name of the kernel module on which to operate
+            known_module_addresses: Set with known module addresses
+            modules_memory_boundaries: Minimum and maximum address boundaries for module allocation.
+
         Yields:
             module objects
         """
@@ -237,12 +267,16 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
 
         module_addr_min, module_addr_max = modules_memory_boundaries
 
-        module_state_values_bytes = self._get_module_state_values_bytes(
+        module_state_values_bytes = cls._get_module_state_values_bytes(
+            context, vmlinux_module_name
+        )
+
+        module_address_alignment = cls._get_module_address_alignment(
             context, vmlinux_module_name
         )
 
         for module_addr in range(
-            module_addr_min, module_addr_max, self.module_address_alignment
+            module_addr_min, module_addr_max, module_address_alignment
         ):
             if module_addr in known_module_addresses:
                 continue
@@ -264,51 +298,59 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             if module and module.is_valid():
                 yield module
 
-    def _validate_alignment_patterns(self, addresses: Iterable[int]) -> bool:
+    @staticmethod
+    def _validate_alignment_patterns(
+        addresses: Iterable[int],
+        address_alignment: int,
+    ) -> bool:
         """Check if the memory addresses meet our alignments patterns
 
         Args:
             addresses: Iterable with the address values
+            address_alignment: Number of bytes for alignment validation
 
         Returns:
             True if all the addresses meet the alignment
         """
-        return all(addr % self.module_address_alignment == 0 for addr in addresses)
+        return all(addr % address_alignment == 0 for addr in addresses)
 
+    @classmethod
     def get_hidden_modules(
-        self,
+        cls,
         context: interfaces.context.ContextInterface,
         vmlinux_module_name: str,
+        known_module_addresses: Set[int],
+        modules_memory_boundaries: Tuple,
+        fast_method: bool = False,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Enumerate hidden modules
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             vmlinux_module_name: The name of the kernel module on which to operate
+            known_module_addresses: Set with known module addresses
+            modules_memory_boundaries: Minimum and maximum address boundaries for module allocation.
+            fast_method: If True, it uses the fast method. Otherwise, it uses the traditional one.
+
         Yields:
             module objects
         """
-        vmlinux = context.modules[vmlinux_module_name]
-        vmlinux_layer = context.layers[vmlinux.layer_name]
-
-        known_module_addresses = {
-            vmlinux_layer.canonicalize(module.vol.offset)
-            for module in lsmod.Lsmod.list_modules(context, vmlinux_module_name)
-        }
-
-        modules_memory_boundaries = self._get_modules_memory_boundaries(vmlinux)
-
-        if self.config.get("fast"):
-            if self._validate_alignment_patterns(known_module_addresses):
-                scan_method = self.get_hidden_modules_fast
+        if fast_method:
+            module_address_alignment = cls._get_module_address_alignment(
+                context, vmlinux_module_name
+            )
+            if cls._validate_alignment_patterns(
+                known_module_addresses, module_address_alignment
+            ):
+                scan_method = cls._get_hidden_modules_fast
             else:
                 vollog.warning(
-                    f"Module addresses aren't aligned to {self.module_address_alignment} bytes. "
+                    f"Module addresses aren't aligned to {module_address_alignment} bytes. "
                     "Switching to the traditional scan method."
                 )
-                scan_method = self.get_hidden_modules_vol2
+                scan_method = cls._get_hidden_modules_vol2
         else:
-            scan_method = self.get_hidden_modules_vol2
+            scan_method = cls._get_hidden_modules_vol2
 
         yield from scan_method(
             context,
@@ -317,9 +359,45 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             modules_memory_boundaries,
         )
 
+    @classmethod
+    def get_lsmod_module_addresses(
+        cls,
+        context: interfaces.context.ContextInterface,
+        vmlinux_module_name: str,
+    ) -> Set[int]:
+        """Obtain a set the known module addresses from linux.lsmod plugin
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            vmlinux_module_name: The name of the kernel module on which to operate
+
+        Returns:
+            A set containing known kernel module addresses
+        """
+        vmlinux = context.modules[vmlinux_module_name]
+        vmlinux_layer = context.layers[vmlinux.layer_name]
+
+        known_module_addresses = {
+            vmlinux_layer.canonicalize(module.vol.offset)
+            for module in lsmod.Lsmod.list_modules(context, vmlinux_module_name)
+        }
+        return known_module_addresses
+
     def _generator(self):
         vmlinux_module_name = self.config["kernel"]
-        for module in self.get_hidden_modules(self.context, vmlinux_module_name):
+        known_module_addresses = self.get_lsmod_module_addresses(
+            self.context, vmlinux_module_name
+        )
+        modules_memory_boundaries = self.get_modules_memory_boundaries(
+            self.context, vmlinux_module_name
+        )
+        for module in self.get_hidden_modules(
+            self.context,
+            vmlinux_module_name,
+            known_module_addresses,
+            modules_memory_boundaries,
+            fast_method=self.config.get("fast"),
+        ):
             module_addr = module.vol.offset
             module_name = module.get_name() or renderers.NotAvailableValue()
             fields = (format_hints.Hex(module_addr), module_name)
