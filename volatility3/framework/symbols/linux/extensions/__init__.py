@@ -35,13 +35,13 @@ class module(generic.GenericIntelProcess):
         super().__init__(*args, **kwargs)
         self._mod_mem_type = None  # Initialize _mod_mem_type to None for memoization
 
-    def is_valid(self):
+    def is_valid(self, strict_states=True):
         layer = self._context.layers[self.vol.layer_name]
         # Make sure the entire module content is readable
         if not layer.is_valid(self.vol.offset, self.vol.size):
             return False
 
-        if not self.state.is_valid_choice:
+        if strict_states and not self.state.is_valid_choice:
             return False
 
         core_size = self.get_core_size()

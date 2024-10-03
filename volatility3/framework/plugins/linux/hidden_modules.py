@@ -38,6 +38,13 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
                 optional=True,
                 default=False,
             ),
+            requirements.BooleanRequirement(
+                name="heuristic-mode",
+                description="Relaxed constraints. This may generate some false positives and"
+                "take a bit longer. This feature is available only when using the --fast option",
+                optional=True,
+                default=False,
+            ),
         ]
 
     @staticmethod
@@ -117,6 +124,7 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         vmlinux_module_name: str,
         known_module_addresses: Set[int],
         modules_memory_boundaries: Tuple,
+        heuristic_mode: bool = False,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Enumerate hidden modules using the traditional implementation.
 
@@ -127,6 +135,7 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             vmlinux_module_name: The name of the kernel module on which to operate
             known_module_addresses: Set with known module addresses
             modules_memory_boundaries: Minimum and maximum address boundaries for module allocation.
+            heuristic_mode: ignored for this scan method.
 
         Yields:
             module objects
@@ -227,8 +236,8 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             The struct module alignment
         """
         # FIXME: When dwarf2json/ISF supports type alignments. Read it directly from the type metadata
-        # Also, 'context' and 'vmlinux_module_name' are not used yet, but they will be needed to obtain
-        # the type metadata
+        # Additionally, while 'context' and 'vmlinux_module_name' are currently unused, they will be
+        # essential for retrieving type metadata in the future.
         return 64
 
     @classmethod
@@ -238,6 +247,7 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         vmlinux_module_name: str,
         known_module_addresses: Set[int],
         modules_memory_boundaries: Tuple,
+        heuristic_mode: bool = False,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Enumerate hidden modules by taking advantage of memory address alignment patterns
 
@@ -258,7 +268,7 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             vmlinux_module_name: The name of the kernel module on which to operate
             known_module_addresses: Set with known module addresses
             modules_memory_boundaries: Minimum and maximum address boundaries for module allocation.
-
+            heuristic_mode: If True, it loosens constraints to enhance the detection of advanced threats.
         Yields:
             module objects
         """
@@ -281,21 +291,22 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             if module_addr in known_module_addresses:
                 continue
 
-            try:
-                # This is just a pre-filter. Module readability and consistency are verified in module.is_valid()
-                module_state_bytes = vmlinux_layer.read(
-                    module_addr, len(module_state_values_bytes[0])
-                )
-                if module_state_bytes not in module_state_values_bytes:
+            if not heuristic_mode:
+                try:
+                    # This is just a pre-filter. Module readability and consistency are verified in module.is_valid()
+                    module_state_bytes = vmlinux_layer.read(
+                        module_addr, len(module_state_values_bytes[0])
+                    )
+                    if module_state_bytes not in module_state_values_bytes:
+                        continue
+                except (
+                    exceptions.PagedInvalidAddressException,
+                    exceptions.InvalidAddressException,
+                ):
                     continue
-            except (
-                exceptions.PagedInvalidAddressException,
-                exceptions.InvalidAddressException,
-            ):
-                continue
 
             module = vmlinux.object("module", offset=module_addr, absolute=True)
-            if module and module.is_valid():
+            if module and module.is_valid(strict_states=not heuristic_mode):
                 yield module
 
     @staticmethod
@@ -322,6 +333,7 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         known_module_addresses: Set[int],
         modules_memory_boundaries: Tuple,
         fast_method: bool = False,
+        heuristic_mode: bool = False,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Enumerate hidden modules
 
@@ -331,7 +343,7 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             known_module_addresses: Set with known module addresses
             modules_memory_boundaries: Minimum and maximum address boundaries for module allocation.
             fast_method: If True, it uses the fast method. Otherwise, it uses the traditional one.
-
+            heuristic_mode: If True, it loosens constraints to enhance the detection of advanced threats.
         Yields:
             module objects
         """
@@ -357,6 +369,7 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             vmlinux_module_name,
             known_module_addresses,
             modules_memory_boundaries,
+            heuristic_mode,
         )
 
     @classmethod
@@ -397,6 +410,7 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             known_module_addresses,
             modules_memory_boundaries,
             fast_method=self.config.get("fast"),
+            heuristic_mode=self.config.get("heuristic-mode"),
         ):
             module_addr = module.vol.offset
             module_name = module.get_name() or renderers.NotAvailableValue()
