@@ -38,13 +38,6 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
                 optional=True,
                 default=False,
             ),
-            requirements.BooleanRequirement(
-                name="heuristic-mode",
-                description="Relaxed constraints. This may generate false positives and "
-                "take a bit longer. This feature is available only when using the --fast option",
-                optional=True,
-                default=False,
-            ),
         ]
 
     @staticmethod
@@ -124,7 +117,6 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         vmlinux_module_name: str,
         known_module_addresses: Set[int],
         modules_memory_boundaries: Tuple,
-        heuristic_mode: bool = False,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Enumerate hidden modules using the traditional implementation.
 
@@ -135,7 +127,6 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             vmlinux_module_name: The name of the kernel module on which to operate
             known_module_addresses: Set with known module addresses
             modules_memory_boundaries: Minimum and maximum address boundaries for module allocation.
-            heuristic_mode: ignored for this scan method.
 
         Yields:
             module objects
@@ -247,7 +238,6 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         vmlinux_module_name: str,
         known_module_addresses: Set[int],
         modules_memory_boundaries: Tuple,
-        heuristic_mode: bool = False,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Enumerate hidden modules by taking advantage of memory address alignment patterns
 
@@ -268,7 +258,6 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             vmlinux_module_name: The name of the kernel module on which to operate
             known_module_addresses: Set with known module addresses
             modules_memory_boundaries: Minimum and maximum address boundaries for module allocation.
-            heuristic_mode: If True, it loosens constraints to enhance the detection of advanced threats.
         Yields:
             module objects
         """
@@ -276,14 +265,16 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         vmlinux_layer = context.layers[vmlinux.layer_name]
 
         module_addr_min, module_addr_max = modules_memory_boundaries
-
-        module_state_values_bytes = cls._get_module_state_values_bytes(
-            context, vmlinux_module_name
-        )
-
         module_address_alignment = cls._get_module_address_alignment(
             context, vmlinux_module_name
         )
+
+        mkobj_offset = vmlinux.get_type("module").relative_child_offset("mkobj")
+        mod_offset = vmlinux.get_type("module_kobject").relative_child_offset("mod")
+        offset_to_mkobj_mod = mkobj_offset + mod_offset
+        mod_member_template = vmlinux.get_type("module_kobject").vol.members["mod"][1]
+        mod_size = mod_member_template.size
+        mod_member_data_format = mod_member_template.data_format
 
         for module_addr in range(
             module_addr_min, module_addr_max, module_address_alignment
@@ -291,22 +282,24 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             if module_addr in known_module_addresses:
                 continue
 
-            if not heuristic_mode:
-                try:
-                    # This is just a pre-filter. Module readability and consistency are verified in module.is_valid()
-                    module_state_bytes = vmlinux_layer.read(
-                        module_addr, len(module_state_values_bytes[0])
-                    )
-                    if module_state_bytes not in module_state_values_bytes:
-                        continue
-                except (
-                    exceptions.PagedInvalidAddressException,
-                    exceptions.InvalidAddressException,
-                ):
+            try:
+                # This is just a pre-filter. Module readability and consistency are verified in module.is_valid()
+                self_referential_bytes = vmlinux_layer.read(
+                    module_addr + offset_to_mkobj_mod, mod_size
+                )
+                self_referential = objects.convert_data_to_value(
+                    self_referential_bytes, int, mod_member_data_format
+                )
+                if self_referential != module_addr:
                     continue
+            except (
+                exceptions.PagedInvalidAddressException,
+                exceptions.InvalidAddressException,
+            ):
+                continue
 
             module = vmlinux.object("module", offset=module_addr, absolute=True)
-            if module and module.is_valid(strict_states=not heuristic_mode):
+            if module and module.is_valid():
                 yield module
 
     @staticmethod
@@ -369,7 +362,6 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             vmlinux_module_name,
             known_module_addresses,
             modules_memory_boundaries,
-            heuristic_mode,
         )
 
     @classmethod
@@ -410,7 +402,6 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             known_module_addresses,
             modules_memory_boundaries,
             fast_method=self.config.get("fast"),
-            heuristic_mode=self.config.get("heuristic-mode"),
         ):
             module_addr = module.vol.offset
             module_name = module.get_name() or renderers.NotAvailableValue()
