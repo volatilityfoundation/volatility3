@@ -206,7 +206,14 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
                 pre_name = "pipe"
 
             elif sym == "simple_dname":
-                pre_name = cls._get_path_file(task, filp)
+                name = dentry.d_name.name
+                if name:
+                    pre_name = name.dereference().cast(
+                        "string", max_length=255, errors="replace"
+                    )
+                    return "/" + pre_name + " (deleted)"
+                else:
+                    pre_name = ""
 
             elif sym == "ns_dname":
                 # From Kernels 3.19
