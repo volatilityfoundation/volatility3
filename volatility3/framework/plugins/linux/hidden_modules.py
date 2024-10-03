@@ -40,7 +40,7 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             ),
             requirements.BooleanRequirement(
                 name="heuristic-mode",
-                description="Relaxed constraints. This may generate some false positives and"
+                description="Relaxed constraints. This may generate false positives and "
                 "take a bit longer. This feature is available only when using the --fast option",
                 optional=True,
                 default=False,
