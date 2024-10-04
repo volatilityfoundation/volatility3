@@ -22,7 +22,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (2, 0, 0)
+    _version = (3, 0, 0)
 
     def __init__(self, vmlinux, task, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -439,7 +439,7 @@ class Sockstat(plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (2, 0, 0)
+    _version = (3, 0, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -450,7 +450,7 @@ class Sockstat(plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="SockHandlers", component=SockHandlers, version=(2, 0, 0)
+                name="SockHandlers", component=SockHandlers, version=(3, 0, 0)
             ),
             requirements.PluginRequirement(
                 name="lsof", plugin=lsof.Lsof, version=(2, 0, 0)
@@ -550,7 +550,7 @@ class Sockstat(plugins.PluginInterface):
             except AttributeError:
                 netns_id = NotAvailableValue()
 
-            yield task_comm, task, netns_id, fd_num, family, sock_type, protocol, sock_fields
+            yield task, netns_id, fd_num, family, sock_type, protocol, sock_fields
 
     def _format_fields(self, sock_stat, protocol):
         """Prepare the socket fields to be rendered
@@ -597,7 +597,6 @@ class Sockstat(plugins.PluginInterface):
         )
 
         for (
-            task_comm,
             task,
             netns_id,
             fd_num,
@@ -617,6 +616,8 @@ class Sockstat(plugins.PluginInterface):
                 if extended
                 else NotAvailableValue()
             )
+
+            task_comm = utility.array_to_string(task.comm)
 
             fields = (
                 netns_id,
