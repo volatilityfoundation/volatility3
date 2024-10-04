@@ -169,12 +169,29 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         Returns:
             str: Sock pipe pathname relative to the task's root directory.
         """
+        # FIXME: This function must be moved to the 'dentry' object extension
+        # Also, the scope of this function went beyond the sock pipe path, so we need to rename this.
+        # Once https://github.com/volatilityfoundation/volatility3/pull/1263 is merged, replace the
+        # dentry inode getters
+
+        if not (filp and filp.is_readable()):
+            return f"<invalid file pointer> {filp:x}"
+
         dentry = filp.get_dentry()
+        if not (dentry and dentry.is_readable()):
+            return f"<invalid dentry pointer> {dentry:x}"
 
         kernel_module = cls.get_module_from_volobj_type(context, dentry)
 
         sym_addr = dentry.d_op.d_dname
+        if not (sym_addr and sym_addr.is_readable()):
+            return f"<invalid d_dname pointer> {sym_addr:x}"
+
         symbs = list(kernel_module.get_symbols_by_absolute_location(sym_addr))
+
+        inode = dentry.d_inode
+        if not (inode and inode.is_readable() and inode.is_valid()):
+            return f"<invalid dentry inode> {inode:x}"
 
         if len(symbs) == 1:
             sym = symbs[0].split(constants.BANG)[1]
@@ -191,15 +208,41 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             elif sym == "simple_dname":
                 pre_name = cls._get_path_file(task, filp)
 
+            elif sym == "ns_dname":
+                # From Kernels 3.19
+
+                # In Kernels >= 6.9, see Linux kernel commit 1fa08aece42512be072351f482096d5796edf7ca
+                # ns_common->stashed change from 'atomic64_t' to 'dentry*'
+                try:
+                    ns_common_type = kernel_module.get_type("ns_common")
+                    stashed_template = ns_common_type.child_template("stashed")
+                    stashed_type_full_name = stashed_template.vol.type_name
+                    stashed_type_name = stashed_type_full_name.split(constants.BANG)[1]
+                    if stashed_type_name == "atomic64_t":
+                        # 3.19 <= Kernels < 6.9
+                        fsdata_ptr = dentry.d_fsdata
+                        if not (fsdata_ptr and fsdata_ptr.is_readable()):
+                            raise IndexError
+
+                        ns_ops = fsdata_ptr.dereference().cast("proc_ns_operations")
+                    else:
+                        # Kernels >= 6.9
+                        private_ptr = inode.i_private
+                        if not (private_ptr and private_ptr.is_readable()):
+                            raise IndexError
+
+                        ns_common = private_ptr.dereference().cast("ns_common")
+                        ns_ops = ns_common.ops
+
+                    pre_name = utility.pointer_to_string(ns_ops.name, 255)
+                except IndexError:
+                    pre_name = "<unsupported ns_dname implementation>"
             else:
-                pre_name = f"<unsupported d_op symbol: {sym}>"
-
-            ret = f"{pre_name}:[{dentry.d_inode.i_ino:d}]"
-
+                pre_name = f"<unsupported d_op symbol> {sym}"
         else:
-            ret = f"<invalid d_dname pointer> {sym_addr:x}"
+            pre_name = f"<unknown d_dname pointer> {sym_addr:x}"
 
-        return ret
+        return f"{pre_name}:[{inode.i_ino:d}]"
 
     @classmethod
     def path_for_file(cls, context, task, filp) -> str:

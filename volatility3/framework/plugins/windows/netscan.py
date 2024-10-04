@@ -76,7 +76,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         # ~ vollog.debug("Using pool size constraints: TcpL {}, TcpE {}, UdpA {}".format(tcpl_size, tcpe_size, udpa_size))
 
-        return [
+        constraints = [
             # TCP listener
             poolscanner.PoolConstraint(
                 b"TcpL",
@@ -99,6 +99,19 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 page_type=poolscanner.PoolType.NONPAGED | poolscanner.PoolType.FREE,
             ),
         ]
+
+        if symbol_table.startswith("netscan-win10-20348"):
+            vollog.debug("Adding additional pool constraint for `TTcb` tags")
+            constraints.append(
+                poolscanner.PoolConstraint(
+                    b"TTcb",
+                    type_name=symbol_table + constants.BANG + "_TCP_ENDPOINT",
+                    size=(tcpe_size, None),
+                    page_type=poolscanner.PoolType.NONPAGED | poolscanner.PoolType.FREE,
+                )
+            )
+
+        return constraints
 
     @classmethod
     def determine_tcpip_version(

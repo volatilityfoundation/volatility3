@@ -134,4 +134,5 @@ def __getattr__(name):
     ]:
         warnings.warn(f"{name} is deprecated", FutureWarning)
         return globals()[f"{deprecated_tag}{name}"]
-    return None
+
+    return getattr(__import__(__name__), name)

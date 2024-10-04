@@ -5,7 +5,7 @@
 from typing import List
 import logging
 from volatility3.framework import constants, interfaces
-from volatility3.framework import renderers
+from volatility3.framework import renderers, symbols
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
@@ -63,15 +63,9 @@ class Malfind(interfaces.plugins.PluginInterface):
     def _generator(self, tasks):
         # determine if we're on a 32 or 64 bit kernel
         vmlinux = self.context.modules[self.config["kernel"]]
-        if (
-            self.context.symbol_space.get_type(
-                vmlinux.symbol_table_name + constants.BANG + "pointer"
-            ).size
-            == 4
-        ):
-            is_32bit_arch = True
-        else:
-            is_32bit_arch = False
+        is_32bit_arch = not symbols.symbol_table_is_64bit(
+            self.context, vmlinux.symbol_table_name
+        )
 
         for task in tasks:
             process_name = utility.array_to_string(task.comm)

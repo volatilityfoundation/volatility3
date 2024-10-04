@@ -22,7 +22,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 1)
+    _version = (2, 0, 0)
 
     def __init__(self, vmlinux, task, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -450,7 +450,7 @@ class Sockstat(plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="SockHandlers", component=SockHandlers, version=(1, 0, 0)
+                name="SockHandlers", component=SockHandlers, version=(2, 0, 0)
             ),
             requirements.PluginRequirement(
                 name="lsof", plugin=lsof.Lsof, version=(2, 0, 0)
@@ -550,7 +550,7 @@ class Sockstat(plugins.PluginInterface):
             except AttributeError:
                 netns_id = NotAvailableValue()
 
-            yield task, netns_id, fd_num, family, sock_type, protocol, sock_fields
+            yield task_comm, task, netns_id, fd_num, family, sock_type, protocol, sock_fields
 
     def _format_fields(self, sock_stat, protocol):
         """Prepare the socket fields to be rendered
@@ -597,6 +597,7 @@ class Sockstat(plugins.PluginInterface):
         )
 
         for (
+            task_comm,
             task,
             netns_id,
             fd_num,
@@ -619,6 +620,7 @@ class Sockstat(plugins.PluginInterface):
 
             fields = (
                 netns_id,
+                task_comm,
                 task.tgid,
                 task.pid,
                 fd_num,
@@ -639,6 +641,7 @@ class Sockstat(plugins.PluginInterface):
 
         tree_grid_args = [
             ("NetNS", int),
+            ("Process Name", str),
             ("PID", int),
             ("TID", int),
             ("FD", int),
