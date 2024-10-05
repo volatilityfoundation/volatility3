@@ -1247,6 +1247,15 @@ class CONTROL_AREA(objects.StructType):
         is_64bit = symbols.symbol_table_is_64bit(self._context, symbol_table_name)
         is_pae = self._context.layers[self.vol.layer_name].metadata.get("pae", False)
 
+        # the sector_size is used as a multiplier to the StartingSector
+        # within each _SUBSECTION. ImageSectionObjects use a multiplier
+        # of 0x200 corresponding to sector alignment on disk,
+        # while DataSectionObjects use a multiplier of 0x1000 corresponding
+        # to the size of a page
+        sector_size = 0x200
+        if self.u.Flags.Image != 1:
+            sector_size = 0x1000
+
         # This is a null-terminated single-linked list.
         while subsection != 0:
             try:
@@ -1257,7 +1266,7 @@ class CONTROL_AREA(objects.StructType):
 
             # The offset into the file is stored implicitly based on the PTE location within the Subsection.
             starting_sector = subsection.StartingSector
-            subsection_offset = starting_sector * 0x200
+            subsection_offset = starting_sector * sector_size
 
             # Similar to the check in is_valid(), make sure the SubsectionBase is not page aligned.
             # if subsection.SubsectionBase & self.PAGE_MASK == 0:
