@@ -318,10 +318,8 @@ class RegistryHive(linear.LinearlyMappedLayer):
         with contextlib.suppress(exceptions.InvalidAddressException):
             # Pass this to the lower layers for now
             return all(
-                [
-                    self.context.layers[layer].is_valid(offset, length)
-                    for (_, _, offset, length, layer) in self.mapping(offset, length)
-                ]
+                self.context.layers[layer].is_valid(offset, length)
+                for (_, _, offset, length, layer) in self.mapping(offset, length)
             )
         return False
 

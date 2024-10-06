@@ -216,7 +216,7 @@ class ObjectInterface(metaclass=abc.ABCMeta):
         Args:
             member_names: List of names to test as to members with those names validity
         """
-        return all([self.has_valid_member(member_name) for member_name in member_names])
+        return all(self.has_valid_member(member_name) for member_name in member_names)
 
     class VolTemplateProxy(metaclass=abc.ABCMeta):
         """A container for proxied methods that the ObjectTemplate of this

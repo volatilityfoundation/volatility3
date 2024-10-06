@@ -529,7 +529,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                 val, interfaces.configuration.BasicTypes
             ) and not isinstance(val, list):
                 if not isinstance(val, list) or all(
-                    [isinstance(x, interfaces.configuration.BasicTypes) for x in val]
+                    isinstance(x, interfaces.configuration.BasicTypes) for x in val
                 ):
                     raise TypeError(
                         "Configurable values must be simple types (int, bool, str, bytes)"

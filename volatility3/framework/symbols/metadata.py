@@ -24,8 +24,8 @@ class ProducerMetadata(interfaces.symbols.MetadataInterface):
         version = self._json_data.get("version", None)
         if not version:
             return None
-        if all([x in "0123456789." for x in version]):
-            return tuple([int(x) for x in version.split(".")])
+        if all(x in "0123456789." for x in version):
+            return tuple(int(x) for x in version.split("."))
         vollog.log(
             constants.LOGLEVEL_VVVV,
             f"Metadata version contains unexpected characters: '{version}'",

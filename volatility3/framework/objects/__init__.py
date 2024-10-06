@@ -928,10 +928,8 @@ class AggregateType(interfaces.objects.ObjectInterface):
             members, collections.abc.Mapping
         ), f"{agg_name} members parameter must be a mapping: {type(members)}"
         assert all(
-            [
-                (isinstance(member, tuple) and len(member) == 2)
-                for member in members.values()
-            ]
+            (isinstance(member, tuple) and len(member) == 2)
+            for member in members.values()
         ), f"{agg_name} members must be a tuple of relative_offsets and templates"
 
     def member(self, attr: str = "member") -> object:
