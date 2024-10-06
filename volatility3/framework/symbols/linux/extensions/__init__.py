@@ -638,11 +638,23 @@ class super_block(objects.StructType):
         ]
         return sb_opts
 
-    def get_type(self):
-        mnt_sb_type = utility.pointer_to_string(self.s_type.name, count=255)
-        if self.s_subtype:
-            mnt_sb_subtype = utility.pointer_to_string(self.s_subtype, count=255)
+    def get_type(self) -> Optional[str]:
+        """Gets the superblock filesystem type string"""
+
+        s_type_ptr = self.s_type
+        if not (s_type_ptr and s_type_ptr.is_readable()):
+            return None
+
+        s_type_name_ptr = s_type_ptr.name
+        if not (s_type_name_ptr and s_type_name_ptr.is_readable()):
+            return None
+
+        mnt_sb_type = utility.pointer_to_string(s_type_name_ptr, count=255)
+        s_subtype_ptr = self.s_subtype
+        if s_subtype_ptr and s_subtype_ptr.is_readable():
+            mnt_sb_subtype = utility.pointer_to_string(s_subtype_ptr, count=255)
             mnt_sb_type += "." + mnt_sb_subtype
+
         return mnt_sb_type
 
 
@@ -843,24 +855,54 @@ class dentry(objects.StructType):
         dentry_type_name = self.get_symbol_table_name() + constants.BANG + "dentry"
         yield from list_head_member.to_list(dentry_type_name, walk_member)
 
+    def get_inode(self) -> interfaces.objects.ObjectInterface:
+        """Returns the inode associated with this dentry"""
+
+        inode_ptr = self.d_inode
+        if not (inode_ptr and inode_ptr.is_readable() and inode_ptr.is_valid()):
+            return None
+
+        return inode_ptr.dereference()
+
 
 class struct_file(objects.StructType):
     def get_dentry(self) -> interfaces.objects.ObjectInterface:
-        if self.has_member("f_dentry"):
-            return self.f_dentry
-        elif self.has_member("f_path"):
+        """Returns a pointer to the dentry associated with this file"""
+        if self.has_member("f_path"):
             return self.f_path.dentry
+        elif self.has_member("f_dentry"):
+            return self.f_dentry
         else:
             raise AttributeError("Unable to find file -> dentry")
 
     def get_vfsmnt(self) -> interfaces.objects.ObjectInterface:
         """Returns the fs (vfsmount) where this file is mounted"""
-        if self.has_member("f_vfsmnt"):
-            return self.f_vfsmnt
-        elif self.has_member("f_path"):
+        if self.has_member("f_path"):
             return self.f_path.mnt
+        elif self.has_member("f_vfsmnt"):
+            return self.f_vfsmnt
         else:
             raise AttributeError("Unable to find file -> vfs mount")
+
+    def get_inode(self) -> interfaces.objects.ObjectInterface:
+        """Returns an inode associated with this file"""
+
+        inode_ptr = None
+        if self.has_member("f_inode") and self.f_inode and self.f_inode.is_readable():
+            # Try first the cached value, kernels +3.9
+            inode_ptr = self.f_inode
+
+        if not (inode_ptr and inode_ptr.is_readable() and inode_ptr.is_valid()):
+            dentry_ptr = self.get_dentry()
+            if not (dentry_ptr and dentry_ptr.is_readable()):
+                return None
+
+            inode_ptr = dentry_ptr.d_inode
+
+        if not (inode_ptr and inode_ptr.is_readable() and inode_ptr.is_valid()):
+            return None
+
+        return inode_ptr.dereference()
 
 
 class list_head(objects.StructType, collections.abc.Iterable):
