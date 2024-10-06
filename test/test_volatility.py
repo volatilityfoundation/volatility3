@@ -341,6 +341,17 @@ def test_linux_tty_check(image, volatility, python):
     assert out.count(b"\n") >= 5
     assert rc == 0
 
+def test_linux_sockstat(image, volatility, python):
+    rc, out, err = runvol_plugin("linux.sockstat.Sockstat", image, volatility, python)
+
+    assert out.count(b"AF_UNIX") >= 354
+    assert out.count(b"AF_BLUETOOTH") >= 5
+    assert out.count(b"AF_INET") >= 32
+    assert out.count(b"AF_INET6") >= 20
+    assert out.count(b"AF_PACKET") >= 1
+    assert out.count(b"AF_NETLINK") >= 43
+    assert rc == 0
+
 
 def test_linux_library_list(image, volatility, python):
     rc, out, err = runvol_plugin(
