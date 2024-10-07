@@ -246,7 +246,7 @@ class CM_KEY_NODE(objects.StructType):
             vollog.debug(f"Invalid address in get_values iteration: {excp}")
             return None
 
-    def get_name(self) -> str:
+    def get_name(self) -> interfaces.objects.ObjectInterface:
         """Gets the name for the current key node"""
         namelength = self.NameLength
         self.Name.count = namelength
