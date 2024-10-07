@@ -895,7 +895,11 @@ class Consoles(interfaces.plugins.PluginInterface):
                                 if console_property["address"] is None
                                 else format_hints.Hex(console_property["address"])
                             ),
-                            str(console_property["data"]),
+                            (
+                                str(console_property["data"])
+                                if console_property["data"]
+                                else renderers.NotAvailableValue()
+                            ),
                         ),
                     )
             else:

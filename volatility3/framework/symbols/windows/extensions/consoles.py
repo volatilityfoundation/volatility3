@@ -192,10 +192,6 @@ class SCREEN_INFORMATION(objects.StructType):
         if truncate_rows:
             rows = self._truncate_rows(rows)
 
-        if rows:
-            rows = ["=== START OF BUFFER ==="] + rows + ["=== END OF BUFFER ==="]
-        else:
-            rows = ["=== NO BUFFER DATA FOUND  ==="]
         return rows
 
 
