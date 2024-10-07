@@ -3,7 +3,7 @@
 #
 import logging
 import datetime
-from dataclasses import dataclass, astuple, field
+import dataclasses
 from typing import List, Callable, Tuple
 
 from volatility3.framework import renderers, interfaces, constants
@@ -17,7 +17,7 @@ from volatility3.plugins import timeliner
 vollog = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclasses.dataclass
 class FDUser:
     """FD user representation, featuring augmented information and formatted fields.
     This is the data the plugin will eventually display.
@@ -28,17 +28,23 @@ class FDUser:
     task_comm: str
     fd_num: int
     full_path: str
-    device: str = field(default=renderers.NotAvailableValue())
-    inode_num: int = field(default=renderers.NotAvailableValue())
-    inode_type: str = field(default=renderers.NotAvailableValue())
-    file_mode: str = field(default=renderers.NotAvailableValue())
-    change_time: datetime.datetime = field(default=renderers.NotAvailableValue())
-    modification_time: datetime.datetime = field(default=renderers.NotAvailableValue())
-    access_time: datetime.datetime = field(default=renderers.NotAvailableValue())
-    inode_size: int = field(default=renderers.NotAvailableValue())
+    device: str = dataclasses.field(default=renderers.NotAvailableValue())
+    inode_num: int = dataclasses.field(default=renderers.NotAvailableValue())
+    inode_type: str = dataclasses.field(default=renderers.NotAvailableValue())
+    file_mode: str = dataclasses.field(default=renderers.NotAvailableValue())
+    change_time: datetime.datetime = dataclasses.field(
+        default=renderers.NotAvailableValue()
+    )
+    modification_time: datetime.datetime = dataclasses.field(
+        default=renderers.NotAvailableValue()
+    )
+    access_time: datetime.datetime = dataclasses.field(
+        default=renderers.NotAvailableValue()
+    )
+    inode_size: int = dataclasses.field(default=renderers.NotAvailableValue())
 
 
-@dataclass
+@dataclasses.dataclass
 class FDInternal:
     """FD internal representation containing only the core objects
 
@@ -168,7 +174,7 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
             self.context, vmlinux_module_name, filter_func=filter_func
         ):
             fd_user = fd_internal.to_user()
-            yield (0, astuple(fd_user))
+            yield (0, dataclasses.astuple(fd_user))
 
     def run(self):
         pids = self.config.get("pid", None)
