@@ -18,7 +18,7 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("fileglob", extensions.fileglob)
         self.set_type_class("vnode", extensions.vnode)
         self.set_type_class("vm_map_entry", extensions.vm_map_entry)
-        self.set_type_class("vm_map_object", extensions.vm_map_object)
+        self.optional_set_type_class("vm_map_object", extensions.vm_map_object)
         self.set_type_class("socket", extensions.socket)
         self.set_type_class("inpcb", extensions.inpcb)
         self.set_type_class("ifnet", extensions.ifnet)
@@ -69,7 +69,7 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         cls,
         context: interfaces.context.ContextInterface,
         layer_name: str,
-        kernel,  # ikelos - how to type this??
+        kernel: interfaces.context.ModuleInterface,
         mods_list: Iterator[Any],
     ):
         try:
@@ -151,7 +151,10 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         """
 
         try:
-            num_fds = task.p_fd.fd_lastfile
+            if hasattr(task.p_fd, "fd_lastfile"):
+                num_fds = task.p_fd.fd_lastfile
+            elif hasattr(task.p_fd, "fd_afterlast"):
+                num_fds = task.p_fd.fd_afterlast
         except exceptions.InvalidAddressException:
             num_fds = 1024
 
@@ -176,20 +179,36 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         fds = objects.utility.array_of_pointers(
             table_addr, count=num_fds, subtype=file_type, context=context
         )
-
+        kernel_config_path = context.layers[task.vol.layer_name].config_path.rsplit(
+            context.config.separator, 1
+        )[0]
+        kernel_module = context.modules[context.config[kernel_config_path]]
         for fd_num, f in enumerate(fds):
             if f != 0:
+                if hasattr(f, "f_fglob"):
+                    glob = f.f_fglob
+                elif hasattr(f, "fp_glob"):
+                    glob = f.fp_glob
+                else:
+                    raise AttributeError("fileglob", "f_fglob || fp_glob")
                 try:
-                    ftype = f.f_fglob.get_fg_type()
+                    ftype = glob.get_fg_type()
                 except exceptions.InvalidAddressException:
                     continue
 
                 if ftype == "VNODE":
-                    vnode = f.f_fglob.fg_data.dereference().cast("vnode")
+                    if type(glob.fg_data) == objects.Pointer:
+                        vnode = glob.fg_data.dereference().cast("vnode")
+                    else:
+                        # On macOS 14+ versions, glob.fg_data is an uintptr_t
+                        vnode = kernel_module.object(
+                            "vnode", glob.fg_data, absolute=True
+                        )
                     path = vnode.full_path()
                 elif ftype:
                     path = f"<{ftype.lower()}>"
-
+                else:
+                    path = "UNKNOWN"
                 yield f, path, fd_num
 
     @classmethod
