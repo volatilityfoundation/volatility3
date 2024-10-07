@@ -13,7 +13,7 @@ from volatility3.framework.layers import scanners
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
-from volatility3.plugins.windows import pslist, modules, dlllist
+from volatility3.plugins.windows import pslist, modules
 
 vollog = logging.getLogger(__name__)
 
