@@ -357,13 +357,7 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             install_time = _get_datetime_utc_epoch_value(
                 values, val_enum.InstallTime.value
             )
-            _version = _get_string_value(values, val_enum.Version.value)
-
-            if isinstance(_version, str):
-                if isinstance(product, str):
-                    product = f"{product} {_version}"
-                else:
-                    product = f"UNKNOWN {_version}"
+            version = _get_string_value(values, val_enum.Version.value)
 
             yield program_id, _AmcacheEntry(
                 AmcacheEntryType.Program.name,
@@ -373,6 +367,7 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 ),
                 install_time=install_time,
                 product_name=product,
+                product_version=version,
             )
 
     @classmethod
@@ -494,11 +489,11 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             # Depending on the Windows version, the key name will be either the name
             # of the driver, or its SHA1 hash.
-            if "/" in binary_key.get_name():
-                driver_name = binary_key.get_name()
+            if "/" in str(binary_key.get_name()):
+                driver_name = str(binary_key.get_name())
                 sha1_hash = _get_string_value(values, val_enum.DriverId.name)
             else:
-                sha1_hash = binary_key.get_name()
+                sha1_hash = str(binary_key.get_name())
                 driver_name = _get_string_value(values, val_enum.DriverName.name)
 
             if isinstance(sha1_hash, str):
@@ -646,6 +641,7 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 ("SHA1", str),
                 ("Service", str),
                 ("ProductName", str),
+                ("ProductVersion", str),
             ],
             (
                 (indent, dataclasses.astuple(entry))
