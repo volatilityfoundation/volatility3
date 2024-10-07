@@ -209,7 +209,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                 (10, 0, 20348, 2520): "consoles-win10-20348-2461-x64",
                 (10, 0, 22000, 0): "consoles-win10-22000-x64",
                 (10, 0, 22621, 1): "consoles-win10-22621-x64",
-                (10, 0, 22621, 3672): "consoles-win10-22621-3672-x64",
+                (10, 0, 22621, 3527): "consoles-win10-22621-3527-x64",
                 (10, 0, 25398, 0): "consoles-win10-22000-x64",
             }
 
@@ -706,7 +706,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                                                 "level": 3,
                                                 "name": f"_CONSOLE_INFORMATION.HistoryList.CommandHistory_{index}_Command_{cmd_index}",
                                                 "address": bucket_cmd.vol.offset,
-                                                "data": bucket_cmd.get_command(),
+                                                "data": bucket_cmd.get_command_string(),
                                             }
                                         )
                                     except Exception as e:
@@ -918,7 +918,7 @@ class Consoles(interfaces.plugins.PluginInterface):
         if proc is None:
             vollog.warn("No conhost.exe processes found.")
 
-    def _conhost_proc_filter(self, proc):
+    def _conhost_proc_filter(self, proc: interfaces.objects.ObjectInterface) -> bool:
         """
         Used to filter to only conhost.exe processes
         """

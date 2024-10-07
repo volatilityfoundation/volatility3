@@ -632,14 +632,14 @@
                 "Source": {
                     "type": {
                         "kind": "struct",
-                        "name": "_ALIAS_STRING"
+                        "name": "_COMMAND"
                     },
                     "offset": 16
                 },
                 "Target": {
                     "type": {
                         "kind": "struct",
-                        "name": "_ALIAS_STRING"
+                        "name": "_COMMAND"
                     },
                     "offset": 48
                 }

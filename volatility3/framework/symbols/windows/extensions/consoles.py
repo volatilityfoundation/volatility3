@@ -2,17 +2,21 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from volatility3.framework import objects
+import logging
+from typing import Generator, List, Union, Tuple
+from volatility3.framework import objects, interfaces
 from volatility3.framework import constants
+
+vollog = logging.getLogger(__name__)
 
 
 class ROW(objects.StructType):
     """A Row Structure."""
 
-    def _valid_dbcs(self, c, n):
+    def _valid_dbcs(self, dbcs_attr: int, text_attr_msb: int) -> bool:
         # TODO this need more research and testing
         # https://github.com/search?q=repo%3Amicrosoft%2Fterminal+DbcsAttr&type=code
-        valid = n == 0 and c in (
+        valid = text_attr_msb == 0 and dbcs_attr in (
             0x0,
             0x1,
             0x2,
@@ -43,11 +47,11 @@ class ROW(objects.StructType):
             0xF0,
             0xA0,
         )
-        if n == 0 and not valid:
-            print("Bad Dbcs Attribute {}".format(hex(c)))
+        if text_attr_msb == 0 and not valid:
+            vollog.debug(f"Bad Dbcs Attribute {dbcs_attr:#x}")
         return valid
 
-    def get_text(self, truncate=True):
+    def get_text(self, truncate: bool = True) -> str:
         """A convenience method to extract the text from the _ROW.  The _ROW
         contains a pointer CharRow to an array of CharRowCell objects. Each
         CharRowCell contains the wide character and an attribute. Enumerating
@@ -70,7 +74,6 @@ class ROW(objects.StructType):
                     for i in range(0, len(char_row), 3)
                 )
         except Exception as e:
-            print(e)
             line = ""
 
         if truncate:
@@ -82,62 +85,26 @@ class ROW(objects.StructType):
 class ALIAS(objects.StructType):
     """An Alias Structure"""
 
-    def get_source(self):
-        if self.Source.Length < 8:
-            return self.Source.Chars.cast(
-                "string",
-                encoding="utf-16",
-                errors="replace",
-                max_length=self.Source.Length * 2,
-            )
-        elif self.Source.Length < 1024:
-            return self.Source.Pointer.dereference().cast(
-                "string", encoding="utf-16", errors="replace", max_length=512
-            )
+    def get_source(self) -> Union[str, None]:
+        return self.Source.get_command_string()
 
-        return None
-
-    def get_target(self):
-        if self.Target.Length < 8:
-            return self.Target.Chars.cast(
-                "string",
-                encoding="utf-16",
-                errors="replace",
-                max_length=self.Target.Length * 2,
-            )
-        elif self.Target.Length < 1024:
-            return self.Target.Pointer.dereference().cast(
-                "string", encoding="utf-16", errors="replace", max_length=512
-            )
-
-        return None
+    def get_target(self) -> Union[str, None]:
+        return self.Target.get_command_string()
 
 
 class EXE_ALIAS_LIST(objects.StructType):
     """An Exe Alias List Structure"""
 
-    def get_exename(self):
+    def get_exename(self) -> Union[str, None]:
         exe_name = self.ExeName
         # Windows 10 22000 and Server 20348 removed the Pointer
         if isinstance(exe_name, objects.Pointer):
             exe_name = exe_name.dereference()
             return exe_name.get_string()
 
-        if self.ExeName.Length < 8:
-            return self.ExeName.Chars.cast(
-                "string",
-                encoding="utf-16",
-                errors="replace",
-                max_length=self.ExeName.Length * 2,
-            )
-        elif self.ExeName.Length < 1024:
-            return self.ExeName.Pointer.dereference().cast(
-                "string", encoding="utf-16", errors="replace", max_length=512
-            )
+        return exe_name.get_command_string()
 
-        return None
-
-    def get_aliases(self):
+    def get_aliases(self) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Generator for the individual aliases for a
         particular executable."""
         for alias in self.AliasList.to_list(
@@ -151,7 +118,7 @@ class SCREEN_INFORMATION(objects.StructType):
     """A Screen Information Structure."""
 
     @property
-    def ScreenX(self):
+    def ScreenX(self) -> int:
         # 22000 change from an array of pointers to _ROW to an array of _ROW
         row = self.TextBufferInfo.BufferRows.Rows[0]
         if hasattr(row, "Row"):
@@ -160,10 +127,10 @@ class SCREEN_INFORMATION(objects.StructType):
             return row.RowLength2
 
     @property
-    def ScreenY(self):
+    def ScreenY(self) -> int:
         return self.TextBufferInfo.BufferCapacity
 
-    def _truncate_rows(self, rows):
+    def _truncate_rows(self, rows: List[str]) -> List[str]:
         """To truncate empty rows at the end, walk the list
         backwards and get the last non-empty row. Use that
         row index to splice. Rows are created based on the
@@ -187,7 +154,9 @@ class SCREEN_INFORMATION(objects.StructType):
 
         return rows
 
-    def get_buffer(self, truncate_rows=True, truncate_lines=True):
+    def get_buffer(
+        self, truncate_rows: bool = True, truncate_lines: bool = True
+    ) -> List[str]:
         """Get the screen buffer.
 
         The screen buffer is comprised of the screen's Y
@@ -206,7 +175,7 @@ class SCREEN_INFORMATION(objects.StructType):
 
         capacity = self.TextBufferInfo.BufferCapacity
         start = self.TextBufferInfo.BufferStart
-        buffer_rows = self.TextBufferInfo.BufferRows.dereference()
+        buffer_rows = self.TextBufferInfo.BufferRows
         buffer_rows.Rows.count = self.TextBufferInfo.BufferCapacity
 
         for i in range(capacity):
@@ -234,10 +203,10 @@ class CONSOLE_INFORMATION(objects.StructType):
     """A Console Information Structure."""
 
     @property
-    def ScreenBuffer(self):
+    def ScreenBuffer(self) -> interfaces.objects.ObjectInterface:
         return self.GetScreenBuffer
 
-    def is_valid(self, max_buffers=4) -> bool:
+    def is_valid(self, max_buffers: int = 4) -> bool:
         """Determine if the structure is valid."""
 
         # Last displayed must be between -1 and max
@@ -249,7 +218,7 @@ class CONSOLE_INFORMATION(objects.StructType):
 
         return True
 
-    def get_screens(self):
+    def get_screens(self) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Generator for screens in the console.
 
         A console can have multiple screen buffers at a time,
@@ -277,14 +246,18 @@ class CONSOLE_INFORMATION(objects.StructType):
                 seen.add(cur.vol.offset)
                 cur = cur.Next
 
-    def get_histories(self):
-        for cmd_hist in self.HistoryList.dereference().to_list(
+    def get_histories(
+        self,
+    ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
+        for cmd_hist in self.HistoryList.to_list(
             f"{self.get_symbol_table_name()}{constants.BANG}_COMMAND_HISTORY",
             "ListEntry",
         ):
             yield cmd_hist
 
-    def get_exe_aliases(self):
+    def get_exe_aliases(
+        self,
+    ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         exe_alias_list = self.ExeAliasList
         # Windows 10 22000 and Server 20348 made this a Pointer
         if isinstance(exe_alias_list, objects.Pointer):
@@ -295,14 +268,16 @@ class CONSOLE_INFORMATION(objects.StructType):
         ):
             yield exe_alias_list_item
 
-    def get_processes(self):
-        for proc in self.ConsoleProcessList.dereference().to_list(
+    def get_processes(
+        self,
+    ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
+        for proc in self.ConsoleProcessList.to_list(
             f"{self.get_symbol_table_name()}{constants.BANG}_CONSOLE_PROCESS_LIST",
             "ListEntry",
         ):
             yield proc
 
-    def get_title(self):
+    def get_title(self) -> Union[str, None]:
         try:
             return self.Title.dereference().cast(
                 "string", encoding="utf-16", errors="replace", max_length=512
@@ -310,7 +285,7 @@ class CONSOLE_INFORMATION(objects.StructType):
         except Exception:
             return ""
 
-    def get_original_title(self):
+    def get_original_title(self) -> Union[str, None]:
         try:
             return self.OriginalTitle.dereference().cast(
                 "string", encoding="utf-16", errors="replace", max_length=512
@@ -322,7 +297,7 @@ class CONSOLE_INFORMATION(objects.StructType):
 class COMMAND(objects.StructType):
     """A Command Structure"""
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         if (
             self.Length < 1
             or self.Allocated < 1
@@ -333,7 +308,7 @@ class COMMAND(objects.StructType):
 
         return True
 
-    def get_command(self):
+    def get_command_string(self) -> Union[str, None]:
         if self.Length < 8:
             return self.Chars.cast(
                 "string",
@@ -343,7 +318,10 @@ class COMMAND(objects.StructType):
             )
         elif self.Length < 1024:
             return self.Pointer.dereference().cast(
-                "string", encoding="utf-16", errors="replace", max_length=512
+                "string",
+                encoding="utf-16",
+                errors="replace",
+                max_length=self.Length * 2,
             )
 
         return None
@@ -353,17 +331,17 @@ class COMMAND_HISTORY(objects.StructType):
     """A Command History Structure."""
 
     @property
-    def CommandCount(self):
+    def CommandCount(self) -> int:
         command_type = self.get_symbol_table_name() + constants.BANG + "_COMMAND"
         command_size = self._context.symbol_space.get_type(command_type).size
         return int((self.CommandBucket.End - self.CommandBucket.Begin) / command_size)
 
     @property
-    def ProcessHandle(self):
+    def ProcessHandle(self) -> int:
         """Allow ProcessHandle to be referenced regardless of OS version"""
         return self.ConsoleProcessHandle.ProcessHandle
 
-    def is_valid(self, max_history=50):
+    def is_valid(self, max_history: int = 50) -> bool:
         # The count must be between zero and max
         if self.CommandCount < 0 or self.CommandCount > max_history:
             return False
@@ -382,22 +360,12 @@ class COMMAND_HISTORY(objects.StructType):
 
         return True
 
-    def get_application(self):
-        if self.Application.Length < 8:
-            return self.Application.Chars.cast(
-                "string",
-                encoding="utf-16",
-                errors="replace",
-                max_length=self.Application.Length * 2,
-            )
-        elif self.Application.Length < 1024:
-            return self.Application.Pointer.dereference().cast(
-                "string", encoding="utf-16", errors="replace", max_length=512
-            )
+    def get_application(self) -> Union[str, None]:
+        return self.Application.get_command_string()
 
-        return None
-
-    def scan_command_bucket(self, end=None):
+    def scan_command_bucket(
+        self, end: Union[int, None] = None
+    ) -> Generator[Tuple[int, interfaces.objects.ObjectInterface], None, None]:
         """Brute force print all strings pointed to by the CommandBucket entries by
         going to greater of EndCapacity or CommandCountMax*sizeof(_COMMAND)"""
 
@@ -418,7 +386,9 @@ class COMMAND_HISTORY(objects.StructType):
             if cmd.is_valid():
                 yield i, cmd
 
-    def get_commands(self):
+    def get_commands(
+        self,
+    ) -> Generator[Tuple[int, interfaces.objects.ObjectInterface], None, None]:
         """Generator for commands in the history buffer.
 
         The CommandBucket is an array of pointers to _COMMAND

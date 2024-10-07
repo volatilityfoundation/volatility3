@@ -61,7 +61,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
         cls,
         conhost_proc: interfaces.context.ContextInterface,
         size_filter: Optional[int] = 0x40000000,
-    ) -> List[Tuple[int, int]]:
+    ) -> Generator[Tuple[int, int], None, None]:
         """
         Returns vads of a process with size smaller than size_filter
 
@@ -73,20 +73,17 @@ class CmdScan(interfaces.plugins.PluginInterface):
             vad_base: the base address
             vad_size: the size of the VAD
         """
-        vads = []
         for vad in conhost_proc.get_vad_root().traverse():
             base = vad.get_start()
             if vad.get_size() < size_filter:
-                vads.append((base, vad.get_size()))
-
-        return vads
+                yield (base, vad.get_size())
 
     @classmethod
     def get_command_history(
         cls,
         context: interfaces.context.ContextInterface,
         kernel_layer_name: str,
-        kernel_table_name: str,
+        kernel_symbol_table_name: str,
         config_path: str,
         procs: Generator[interfaces.objects.ObjectInterface, None, None],
         max_history: Set[int],
@@ -100,7 +97,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             kernel_layer_name: The name of the layer on which to operate
-            kernel_table_name: The name of the table containing the kernel symbols
+            kernel_symbol_table_name: The name of the table containing the kernel symbols
             config_path: The config path where to find symbol files
             procs: list of process objects
             max_history: an initial set of CommandHistorySize values
@@ -138,7 +135,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                 conhost_symbol_table = consoles.Consoles.create_conhost_symbol_table(
                     context,
                     kernel_layer_name,
-                    kernel_table_name,
+                    kernel_symbol_table_name,
                     config_path,
                     proc_layer_name,
                     conhostexe_base,
@@ -147,6 +144,9 @@ class CmdScan(interfaces.plugins.PluginInterface):
             conhost_module = context.module(
                 conhost_symbol_table, proc_layer_name, offset=conhostexe_base
             )
+            command_count_max_offset = conhost_module.get_type(
+                "_COMMAND_HISTORY"
+            ).relative_child_offset("CommandCountMax")
 
             sections = cls.get_filtered_vads(conhost_proc)
             found_history_for_proc = False
@@ -161,15 +161,13 @@ class CmdScan(interfaces.plugins.PluginInterface):
                     scanners.BytesScanner(max_history_bytes),
                     sections=sections,
                 ):
+                    command_history = None
                     command_history_properties = []
 
                     try:
                         command_history = conhost_module.object(
                             "_COMMAND_HISTORY",
-                            offset=address
-                            - conhost_module.get_type(
-                                "_COMMAND_HISTORY"
-                            ).relative_child_offset("CommandCountMax"),
+                            offset=address - command_count_max_offset,
                             absolute=True,
                         )
 
@@ -184,13 +182,13 @@ class CmdScan(interfaces.plugins.PluginInterface):
                                 "level": 0,
                                 "name": "_COMMAND_HISTORY",
                                 "address": command_history.vol.offset,
-                                "data": "",
+                                "data": None,
                             }
                         )
                         command_history_properties.append(
                             {
                                 "level": 1,
-                                "name": f"_COMMAND_HISTORY.Application",
+                                "name": "_COMMAND_HISTORY.Application",
                                 "address": command_history.Application.vol.offset,
                                 "data": command_history.get_application(),
                             }
@@ -198,7 +196,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                         command_history_properties.append(
                             {
                                 "level": 1,
-                                "name": f"_COMMAND_HISTORY.ProcessHandle",
+                                "name": "_COMMAND_HISTORY.ProcessHandle",
                                 "address": command_history.ConsoleProcessHandle.ProcessHandle.vol.offset,
                                 "data": hex(
                                     command_history.ConsoleProcessHandle.ProcessHandle
@@ -208,7 +206,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                         command_history_properties.append(
                             {
                                 "level": 1,
-                                "name": f"_COMMAND_HISTORY.CommandCount",
+                                "name": "_COMMAND_HISTORY.CommandCount",
                                 "address": None,
                                 "data": command_history.CommandCount,
                             }
@@ -216,7 +214,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                         command_history_properties.append(
                             {
                                 "level": 1,
-                                "name": f"_COMMAND_HISTORY.LastDisplayed",
+                                "name": "_COMMAND_HISTORY.LastDisplayed",
                                 "address": command_history.LastDisplayed.vol.offset,
                                 "data": command_history.LastDisplayed,
                             }
@@ -224,7 +222,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                         command_history_properties.append(
                             {
                                 "level": 1,
-                                "name": f"_COMMAND_HISTORY.CommandCountMax",
+                                "name": "_COMMAND_HISTORY.CommandCountMax",
                                 "address": command_history.CommandCountMax.vol.offset,
                                 "data": command_history.CommandCountMax,
                             }
@@ -233,7 +231,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                         command_history_properties.append(
                             {
                                 "level": 1,
-                                "name": f"_COMMAND_HISTORY.CommandBucket",
+                                "name": "_COMMAND_HISTORY.CommandBucket",
                                 "address": command_history.CommandBucket.vol.offset,
                                 "data": "",
                             }
@@ -248,7 +246,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                                         "level": 2,
                                         "name": f"_COMMAND_HISTORY.CommandBucket_Command_{cmd_index}",
                                         "address": bucket_cmd.vol.offset,
-                                        "data": bucket_cmd.get_command(),
+                                        "data": bucket_cmd.get_command_string(),
                                     }
                                 )
                             except Exception as e:
@@ -264,6 +262,9 @@ class CmdScan(interfaces.plugins.PluginInterface):
                         found_history_for_proc = True
                         yield conhost_proc, command_history, command_history_properties
 
+            # if found_history_for_proc is still False, then none of the scanned locations found
+            # a valid _COMMAND_HISTORY for the process, so yield the process and some empty data
+            # so the process can at least be reported that it was found with no history
             if not found_history_for_proc:
                 yield conhost_proc, command_history or None, []
 
@@ -349,7 +350,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
         if proc is None:
             vollog.warn("No conhost.exe processes found.")
 
-    def _conhost_proc_filter(self, proc):
+    def _conhost_proc_filter(self, proc: interfaces.objects.ObjectInterface):
         """
         Used to filter to only conhost.exe processes
         """

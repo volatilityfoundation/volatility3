@@ -625,7 +625,7 @@
                 "ExeName": {
                     "type": {
                         "kind": "struct",
-                        "name": "_ALIAS_STRING"
+                        "name": "_COMMAND"
                     },
                     "offset": 16
                 },
@@ -655,57 +655,16 @@
                 "Source": {
                     "type": {
                         "kind": "struct",
-                        "name": "_ALIAS_STRING"
+                        "name": "_COMMAND"
                     },
                     "offset": 16
                 },
                 "Target": {
                     "type": {
                         "kind": "struct",
-                        "name": "_ALIAS_STRING"
+                        "name": "_COMMAND"
                     },
                     "offset": 48
-                }
-            },
-            "kind": "struct",
-            "size": 32
-        },
-        "_ALIAS_STRING": {
-            "fields": {
-                "Chars": {
-                    "type": {
-                        "count": 1,
-                        "kind": "array",
-                        "subtype": {
-                            "kind": "base",
-                            "name": "unsigned char"
-                        }
-                    },
-                    "offset": 0
-                },
-                "Pointer": {
-                    "type": {
-                        "kind": "pointer",
-                        "subtype": {
-                            "kind": "base",
-                            "name": "string"
-                        }
-                    },
-                    "offset": 0
-                },
-                "Length": {
-                    "type": {
-                        "kind": "base",
-                        "name": "unsigned int"
-                    },
-                    "offset": 16
-                },
-                "Allocated": {
-                    "type": {
-                        "kind": "base",
-                        "name": "unsigned int"
-                    },
-                    "offset": 24
                 }
             },
             "kind": "struct",
