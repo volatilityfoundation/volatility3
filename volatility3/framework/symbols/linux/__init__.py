@@ -306,7 +306,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         task: interfaces.objects.ObjectInterface,
     ):
         # task.files can be null
-        if not task.files:
+        if not (task.files and task.files.is_readable()):
             return None
 
         fd_table = task.files.get_fds()
@@ -326,7 +326,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         )
 
         for fd_num, filp in enumerate(fds):
-            if filp != 0:
+            if filp and filp.is_readable():
                 full_path = LinuxUtilities.path_for_file(context, task, filp)
 
                 yield fd_num, filp, full_path
