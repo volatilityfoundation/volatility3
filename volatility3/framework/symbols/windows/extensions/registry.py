@@ -175,15 +175,6 @@ class CM_KEY_NODE(objects.StructType):
             subkey_node = hive.get_cell(self.SubKeyLists[index]).u.KeyIndex
             yield from self._get_subkeys_recursive(hive, subkey_node)
 
-    def get_value(self, value_name) -> Optional["CM_KEY_VALUE"]:
-        for value in self.get_values():
-            if value.name == value_name:
-                return value
-        return next(
-            (value for value in self.get_values() if value.get_name() == value_name),
-            None,
-        )
-
     def _get_subkeys_recursive(
         self, hive: RegistryHive, node: interfaces.objects.ObjectInterface
     ) -> Iterator["CM_KEY_NODE"]:
