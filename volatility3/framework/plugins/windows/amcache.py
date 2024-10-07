@@ -5,8 +5,8 @@
 import dataclasses
 import datetime
 import enum
-import logging
 import itertools
+import logging
 from typing import Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
 from volatility3.framework import interfaces, renderers
@@ -132,6 +132,7 @@ class _AmcacheEntry:
     sha1_hash: NullableString = renderers.NotApplicableValue()
     service: NullableString = renderers.NotApplicableValue()
     product_name: NullableString = renderers.NotApplicableValue()
+    product_version: NullableString = renderers.NotApplicableValue()
 
 
 def _entry_sort_key(entry_tuple: Tuple[NullableString, _AmcacheEntry]) -> str:
@@ -279,6 +280,10 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         correlating `Root\\Program` entries, and the second member is the `AmcacheEntry`.
         """
 
+        val_enum = Win8FileValName
+
+        wanted_values = [key.value for key in val_enum]
+
         for file_entry_key in itertools.chain(
             *(key.get_subkeys() for key in file_key.get_subkeys())
         ):
@@ -286,27 +291,27 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             values = {
                 str(value.get_name()): value
                 for value in file_entry_key.get_values()
-                if value.get_name() in [key.value for key in Win8FileValName]
+                if value.get_name() in wanted_values
             }
 
-            program_id = _get_string_value(values, Win8FileValName.ProgramID.value)
-            path = _get_string_value(values, Win8FileValName.Path.value)
-            company = _get_string_value(values, Win8FileValName.Company.value)
+            program_id = _get_string_value(values, val_enum.ProgramID.value)
+            path = _get_string_value(values, val_enum.Path.value)
+            company = _get_string_value(values, val_enum.Company.value)
             last_mod_time = _get_datetime_filetime_value(
-                values, Win8FileValName.LastModTime.value
+                values, val_enum.LastModTime.value
             )
             last_mod_time_2 = _get_datetime_filetime_value(
-                values, Win8FileValName.LastModTime2.value
+                values, val_enum.LastModTime2.value
             )
             install_time = _get_datetime_filetime_value(
-                values, Win8FileValName.CreateTime.value
+                values, val_enum.CreateTime.value
             )
             compile_time = _get_datetime_utc_epoch_value(
-                values, Win8FileValName.CompileTime.value
+                values, val_enum.CompileTime.value
             )
-            sha1_hash = _get_string_value(values, Win8FileValName.SHA1Hash.value)
+            sha1_hash = _get_string_value(values, val_enum.SHA1Hash.value)
             vollog.debug(f"Found sha1hash {sha1_hash}")
-            product_name = _get_string_value(values, Win8FileValName.Product.value)
+            product_name = _get_string_value(values, val_enum.Product.value)
 
             yield program_id, _AmcacheEntry(
                 AmcacheEntryType.File.name,
@@ -335,21 +340,24 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         :return: An iterator of tuples, where the first member is the program ID string for
         correlating `Root\\File` entries, and the second member is the `AmcacheEntry`.
         """
+        val_enum = Win8ProgramValName
+
+        wanted_values = [key.value for key in val_enum]
         for program_key in programs_key.get_subkeys():
             values = {
                 str(value.get_name()): value
                 for value in program_key.get_values()
-                if value.get_name() in [key.value for key in Win8ProgramValName]
+                if value.get_name() in wanted_values
             }
             vollog.debug(f"Parsing Win8 Program key {program_key.get_name()}")
             program_id = program_key.get_name().strip().strip("\u0000")
 
-            product = _get_string_value(values, Win8ProgramValName.Product.value)
-            company = _get_string_value(values, Win8ProgramValName.Publisher.value)
+            product = _get_string_value(values, val_enum.Product.value)
+            company = _get_string_value(values, val_enum.Publisher.value)
             install_time = _get_datetime_utc_epoch_value(
-                values, Win8ProgramValName.InstallTime.value
+                values, val_enum.InstallTime.value
             )
-            _version = _get_string_value(values, Win8ProgramValName.Version.value)
+            _version = _get_string_value(values, val_enum.Version.value)
 
             if isinstance(_version, str):
                 if isinstance(product, str):
@@ -378,29 +386,29 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         :return: An iterator of tuples, where the first member is the program ID string for
         correlating `Root\\InventoryApplicationFile` entries, and the second member is the `AmcacheEntry`.
         """
+        val_enum = Win10InvAppValName
+
+        wanted_values = [key.value for key in val_enum]
+
         for program_key in inv_app_key.get_subkeys():
             program_id = program_key.get_name()
 
             values = {
                 str(value.get_name()): value
                 for value in program_key.get_values()
-                if value.get_name() in [key.value for key in Win10InvAppValName]
+                if value.get_name() in wanted_values
             }
 
-            name = _get_string_value(values, Win10InvAppValName.Name.value)
-            version = _get_string_value(values, Win10InvAppValName.Version.value)
-            publisher = _get_string_value(values, Win10InvAppValName.Publisher.value)
-            path = _get_string_value(values, Win10InvAppValName.RootDirPath.value)
-            install_date = _get_datetime_str_value(
-                values, Win10InvAppValName.InstallDate.value
-            )
+            name = _get_string_value(values, val_enum.Name.value)
+            version = _get_string_value(values, val_enum.Version.value)
+            publisher = _get_string_value(values, val_enum.Publisher.value)
+            path = _get_string_value(values, val_enum.RootDirPath.value)
+            install_date = _get_datetime_str_value(values, val_enum.InstallDate.value)
             last_mod = conversion.wintime_to_datetime(
                 program_key.LastWriteTime.QuadPart
             )
 
             product: str = name if isinstance(name, str) else "UNKNOWN"  # type: ignore
-            if isinstance(version, str):
-                product += " " + version
 
             yield program_id.strip().strip("\u0000"), _AmcacheEntry(
                 AmcacheEntryType.Program.name,
@@ -409,6 +417,7 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 install_time=install_date,
                 product_name=product,
                 company=publisher,
+                product_version=version,
             )
 
     @classmethod
@@ -422,7 +431,9 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         with it's parent `InventoryApplication` program entry, and the second member is the `Amcache` entry.
         """
 
-        valName = Win10InvAppFileValName
+        val_enum = Win10InvAppFileValName
+
+        wanted_values = [key.value for key in val_enum]
 
         for file_key in inv_app_file_key.get_subkeys():
 
@@ -433,23 +444,17 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             values = {
                 str(value.get_name()): value
                 for value in file_key.get_values()
-                if value.get_name() in [key.value for key in valName]
+                if value.get_name() in wanted_values
             }
 
             last_mod = conversion.wintime_to_datetime(file_key.LastWriteTime.QuadPart)
-            path = _get_string_value(values, valName.LowerCaseLongPath.value)
-            linkdate = _get_datetime_str_value(values, valName.LinkDate.value)
-            sha1_hash = _get_string_value(values, valName.FileId.value)
-            publisher = _get_string_value(values, valName.Publisher.value)
-            prod_name = _get_string_value(values, valName.ProductName.value)
-            prod_ver = _get_string_value(values, valName.ProductVersion.value)
-            program_id = _get_string_value(values, valName.ProgramID.value)
-
-            if isinstance(prod_ver, str):
-                if isinstance(prod_name, str):
-                    prod_name = f"{prod_name} {prod_ver}"
-                else:
-                    prod_name = f"UNKNOWN {prod_ver}"
+            path = _get_string_value(values, val_enum.LowerCaseLongPath.value)
+            linkdate = _get_datetime_str_value(values, val_enum.LinkDate.value)
+            sha1_hash = _get_string_value(values, val_enum.FileId.value)
+            publisher = _get_string_value(values, val_enum.Publisher.value)
+            prod_name = _get_string_value(values, val_enum.ProductName.value)
+            prod_ver = _get_string_value(values, val_enum.ProductVersion.value)
+            program_id = _get_string_value(values, val_enum.ProgramID.value)
 
             yield program_id, _AmcacheEntry(
                 AmcacheEntryType.File.name,
@@ -463,6 +468,7 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     else sha1_hash
                 ),
                 product_name=prod_name,
+                product_version=prod_ver,
             )
 
     @classmethod
@@ -474,34 +480,36 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         :param driver_binary_key: The `Root\\InventoryDriverBinary` registry key
         :return: An iterator of `AmcacheEntry`s
         """
-        for binary_key in driver_binary_key.get_subkeys():
+        val_enum = Win10DriverBinaryValName
 
-            valName = Win10DriverBinaryValName
+        wanted_values = [key.value for key in val_enum]
+
+        for binary_key in driver_binary_key.get_subkeys():
 
             values = {
                 str(value.get_name()): value
                 for value in binary_key.get_values()
-                if value.get_name() in [key.value for key in valName]
+                if value.get_name() in wanted_values
             }
 
             # Depending on the Windows version, the key name will be either the name
             # of the driver, or its SHA1 hash.
             if "/" in binary_key.get_name():
                 driver_name = binary_key.get_name()
-                sha1_hash = _get_string_value(values, valName.DriverId.name)
+                sha1_hash = _get_string_value(values, val_enum.DriverId.name)
             else:
                 sha1_hash = binary_key.get_name()
-                driver_name = _get_string_value(values, valName.DriverName.name)
+                driver_name = _get_string_value(values, val_enum.DriverName.name)
 
             if isinstance(sha1_hash, str):
                 sha1_hash = sha1_hash[4:] if sha1_hash.startswith("0000") else sha1_hash
 
             company, product, service, last_write_time, driver_timestamp = (
-                _get_string_value(values, valName.DriverCompany.name),
-                _get_string_value(values, valName.Product.name),
-                _get_string_value(values, valName.Service.name),
+                _get_string_value(values, val_enum.DriverCompany.name),
+                _get_string_value(values, val_enum.Product.name),
+                _get_string_value(values, val_enum.Service.name),
                 conversion.wintime_to_datetime(binary_key.LastWriteTime.QuadPart),
-                _get_datetime_utc_epoch_value(values, valName.DriverTimeStamp.name),
+                _get_datetime_utc_epoch_value(values, val_enum.DriverTimeStamp.name),
             )
 
             yield _AmcacheEntry(
