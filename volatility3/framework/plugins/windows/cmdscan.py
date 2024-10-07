@@ -6,7 +6,7 @@
 
 import logging
 import struct
-from typing import Tuple, Generator, Set, Dict, Any, List, Optional
+from typing import Tuple, Generator, Set, Dict, Any, Optional
 
 from volatility3.framework import interfaces
 from volatility3.framework import renderers
