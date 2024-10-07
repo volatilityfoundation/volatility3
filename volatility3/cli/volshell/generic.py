@@ -112,7 +112,7 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         variables = []
         print("\nMethods:")
-        for aliases, item in self.construct_locals():
+        for aliases, item in sorted(self.construct_locals()):
             name = ", ".join(aliases)
             if item.__doc__ and callable(item):
                 print(f"* {name}")
@@ -125,8 +125,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             print(f"  {var}")
 
     def construct_locals(self) -> List[Tuple[List[str], Any]]:
-        """Returns a dictionary listing the functions to be added to the
-        environment."""
+        """Returns a listing of the functions to be added to the environment."""
         return [
             (["dt", "display_type"], self.display_type),
             (["db", "display_bytes"], self.display_bytes),
