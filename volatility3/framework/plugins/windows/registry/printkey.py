@@ -20,7 +20,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
     """Lists the registry keys under a hive or specific key value."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -282,7 +282,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                         renderers.UnreadableValue(),
                         format_hints.Hex(hive.hive_offset),
                         "Key",
-                        "?\\" + (key or ""),
+                        f"{hive.get_name()}\\" + (key or ""),
                         renderers.UnreadableValue(),
                         renderers.UnreadableValue(),
                         renderers.UnreadableValue(),
