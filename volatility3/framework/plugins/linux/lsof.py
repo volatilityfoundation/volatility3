@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from datetime import datetime
+import datetime
 from dataclasses import dataclass, astuple, field
 from typing import List, Callable, Tuple
 
@@ -32,9 +32,9 @@ class FDUser:
     inode_num: int = field(default=renderers.NotAvailableValue())
     inode_type: str = field(default=renderers.NotAvailableValue())
     file_mode: str = field(default=renderers.NotAvailableValue())
-    change_time: datetime = field(default=renderers.NotAvailableValue())
-    modification_time: datetime = field(default=renderers.NotAvailableValue())
-    access_time: datetime = field(default=renderers.NotAvailableValue())
+    change_time: datetime.datetime = field(default=renderers.NotAvailableValue())
+    modification_time: datetime.datetime = field(default=renderers.NotAvailableValue())
+    access_time: datetime.datetime = field(default=renderers.NotAvailableValue())
     inode_size: int = field(default=renderers.NotAvailableValue())
 
 
@@ -184,9 +184,9 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
             ("Inode", int),
             ("Type", str),
             ("Mode", str),
-            ("Changed", datetime),
-            ("Modified", datetime),
-            ("Accessed", datetime),
+            ("Changed", datetime.datetime),
+            ("Modified", datetime.datetime),
+            ("Accessed", datetime.datetime),
             ("Size", int),
         ]
         return renderers.TreeGrid(
