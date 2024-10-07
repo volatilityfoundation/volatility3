@@ -4,7 +4,7 @@
 import logging
 import datetime
 import dataclasses
-from typing import List, Callable, Tuple
+from typing import List, Callable, Tuple, Iterable
 
 from volatility3.framework import renderers, interfaces, constants
 from volatility3.framework.configuration import requirements
@@ -140,7 +140,7 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
         context: interfaces.context.ContextInterface,
         vmlinux_module_name: str,
         filter_func: Callable[[int], bool] = lambda _: False,
-    ) -> FDInternal:
+    ) -> Iterable[FDInternal]:
         """Enumerates open file descriptors in tasks
 
         Args:
