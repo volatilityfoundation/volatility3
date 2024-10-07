@@ -49,7 +49,7 @@ class FDInternal:
     """FD internal representation containing only the core objects
 
     Fields:
-        task: 'task_truct' object
+        task: 'task_struct' object
         fd_fields: FD fields as obtained from LinuxUtilities.files_descriptors_for_process()
     """
 
