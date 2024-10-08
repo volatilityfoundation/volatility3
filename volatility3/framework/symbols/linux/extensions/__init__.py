@@ -13,13 +13,12 @@ from typing import Generator, Iterable, Iterator, Optional, Tuple, List, Union, 
 
 from volatility3.framework import constants, exceptions, objects, interfaces, symbols
 from volatility3.framework.renderers import conversion
-from volatility3.framework.configuration import requirements
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
 from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
 from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
-from volatility3.framework.constants.linux import CAPABILITIES
+from volatility3.framework.constants.linux import CAPABILITIES, PT_FLAGS
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import generic, linux, intermed
@@ -373,6 +372,41 @@ class task_struct(generic.GenericIntelProcess):
             f"{task_symbol_table_name}{constants.BANG}task_struct", "thread_group"
         ):
             yield task
+
+    @property
+    def is_being_ptraced(self) -> bool:
+        """Returns True if this task is being traced using ptrace"""
+        return self.ptrace != 0
+
+    @property
+    def is_ptracing(self) -> bool:
+        """Returns True if this task is tracing other tasks using ptrace"""
+        is_tracing = (
+            self.ptraced.next.is_readable()
+            and self.ptraced.next.dereference().vol.offset != self.ptraced.vol.offset
+        )
+        return is_tracing
+
+    def get_ptrace_tracer_tid(self) -> Optional[int]:
+        """Returns the tracer's TID tracing this task"""
+        return self.parent.pid if self.is_being_ptraced else None
+
+    def get_ptrace_tracee_tids(self) -> List[int]:
+        """Returns the list of TIDs being traced by this task"""
+        task_symbol_table_name = self.get_symbol_table_name()
+
+        task_struct_symname = f"{task_symbol_table_name}{constants.BANG}task_struct"
+        tracing_tid_list = [
+            task_being_traced.pid
+            for task_being_traced in self.ptraced.to_list(
+                task_struct_symname, "ptrace_entry"
+            )
+        ]
+        return tracing_tid_list
+
+    def get_ptrace_tracee_flags(self) -> Optional[str]:
+        """Returns a string with the ptrace flags"""
+        return PT_FLAGS(self.ptrace).flags if self.is_being_ptraced else None
 
 
 class fs_struct(objects.StructType):
