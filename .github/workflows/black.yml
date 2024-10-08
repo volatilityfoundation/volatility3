@@ -11,3 +11,5 @@ jobs:
         with:
           options: "--check --diff --verbose"
           src: "./volatility3"
+          # FIXME: Remove when Volatility3 minimum Python version is >3.8
+          version: "24.8.0"
