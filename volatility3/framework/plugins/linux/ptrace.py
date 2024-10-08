@@ -19,7 +19,7 @@ class Ptrace(plugins.PluginInterface):
     """Enumerates ptrace's tracer and tracee tasks"""
 
     _required_framework_version = (2, 10, 0)
-    _version = (1, 0, 1)
+    _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
