@@ -31,7 +31,7 @@ class Ptrace(plugins.PluginInterface):
                 architectures=LINUX_ARCHS,
             ),
             requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 2, 1)
+                name="pslist", plugin=pslist.PsList, version=(2, 2, 0)
             ),
         ]
 
