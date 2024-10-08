@@ -3,10 +3,9 @@
 #
 
 import logging
-from typing import List
+from typing import List, Iterator
 
-from volatility3.framework import renderers, interfaces, constants, objects
-from volatility3.framework.constants.linux import PT_FLAGS
+from volatility3.framework import renderers, interfaces
 from volatility3.framework.constants.architectures import LINUX_ARCHS
 from volatility3.framework.objects import utility
 from volatility3.framework.configuration import requirements
@@ -17,7 +16,7 @@ vollog = logging.getLogger(__name__)
 
 
 class Ptrace(plugins.PluginInterface):
-    """Enumerates tracer and tracee tasks"""
+    """Enumerates ptrace's tracer and tracee tasks"""
 
     _required_framework_version = (2, 10, 0)
     _version = (1, 0, 0)
@@ -36,85 +35,63 @@ class Ptrace(plugins.PluginInterface):
         ]
 
     @classmethod
-    def enumerate_ptraced_tasks(
+    def enumerate_ptrace_tasks(
         cls,
         context: interfaces.context.ContextInterface,
-        symbol_table: str,
-    ):
-        vmlinux = context.modules[symbol_table]
+        vmlinux_module_name: str,
+    ) -> Iterator[interfaces.objects.ObjectInterface]:
+        """Enumerates ptrace's tracer and tracee tasks
 
-        tsk_struct_symname = vmlinux.symbol_table_name + constants.BANG + "task_struct"
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            vmlinux_module_name: The name of the kernel module on which to operate
+
+        Yields:
+            A task_struct object
+        """
 
         tasks = pslist.PsList.list_tasks(
             context,
-            symbol_table,
+            vmlinux_module_name,
             filter_func=pslist.PsList.create_pid_filter(),
             include_threads=True,
         )
 
         for task in tasks:
-            tracing_tid_list = [
-                int(task_being_traced.pid)
-                for task_being_traced in task.ptraced.to_list(
-                    tsk_struct_symname, "ptrace_entry"
-                )
+            if task.is_being_ptraced or task.is_ptracing:
+                yield task
+
+    def _generator(self, vmlinux_module_name):
+        for task in self.enumerate_ptrace_tasks(self.context, vmlinux_module_name):
+            task_comm = utility.array_to_string(task.comm)
+            user_pid = task.tgid
+            user_tid = task.pid
+            tracer_tid = task.get_ptrace_tracer_tid() or renderers.NotAvailableValue()
+            tracee_tids = task.get_ptrace_tracee_tids() or [
+                renderers.NotAvailableValue()
             ]
+            flags = task.get_ptrace_tracee_flags() or renderers.NotAvailableValue()
 
-            if task.ptrace == 0 and not tracing_tid_list:
-                continue
-
-            flags = (
-                PT_FLAGS(task.ptrace).flags
-                if task.ptrace != 0
-                else renderers.NotAvailableValue()
-            )
-
-            traced_by_tid = (
-                task.parent.pid
-                if task.real_parent != task.parent
-                else renderers.NotAvailableValue()
-            )
-
-            tracing_tids = ",".join(map(str, tracing_tid_list))
-
-            yield task.comm, task.tgid, task.pid, traced_by_tid, tracing_tids, flags
-
-    def _generator(self, symbol_table):
-        for fields in self.enumerate_ptraced_tasks(self.context, symbol_table):
-            yield (0, fields)
-
-    @staticmethod
-    def format_fields_with_headers(headers, generator):
-        """Uses the headers type to cast the fields obtained from the generator"""
-        for level, fields in generator:
-            formatted_fields = []
-            for header, field in zip(headers, fields):
-                header_type = header[1]
-
-                if isinstance(
-                    field, (header_type, interfaces.renderers.BaseAbsentValue)
-                ):
-                    formatted_field = field
-                elif isinstance(field, objects.Array) and header_type is str:
-                    formatted_field = utility.array_to_string(field)
-                else:
-                    formatted_field = header_type(field)
-
-                formatted_fields.append(formatted_field)
-            yield level, formatted_fields
+            for tree, tracing_tid in enumerate(tracee_tids):
+                fields = [
+                    task_comm,
+                    user_pid,
+                    user_tid,
+                    tracer_tid,
+                    tracing_tid,
+                    flags,
+                ]
+                yield (tree, fields)
 
     def run(self):
-        symbol_table = self.config["kernel"]
+        vmlinux_module_name = self.config["kernel"]
 
         headers = [
             ("Process", str),
             ("PID", int),
             ("TID", int),
             ("Traced by TID", int),
-            ("Tracing TIDs", str),
+            ("Tracing TID", int),
             ("Flags", str),
         ]
-        return renderers.TreeGrid(
-            headers,
-            self.format_fields_with_headers(headers, self._generator(symbol_table)),
-        )
+        return renderers.TreeGrid(headers, self._generator(vmlinux_module_name))
