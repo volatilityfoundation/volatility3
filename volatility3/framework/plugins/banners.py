@@ -41,7 +41,7 @@ class Banners(interfaces.plugins.PluginInterface):
         for offset in layer.scan(
             context=context,
             scanner=scanners.RegExScanner(
-                rb"(Linux version|Darwin Kernel Version) [0-9]+\.[0-9]+\.[0-9]+"
+                rb"((Linux version|Darwin Kernel Version) [0-9]+\.[0-9]+\.[0-9]+|FreeBSD [0-9]+\.[0-9]+)"
             ),
         ):
             data = layer.read(offset, 0xFFF)

@@ -75,6 +75,8 @@ class MacIdentifier(IdentifierProcessor):
         mac_banner = (
             json.get("symbols", {}).get("version", {}).get("constant_data", None)
         )
+        if mac_banner and json.get("symbols", {}).get("kfreebsd_brand_info", {}):
+            return None
         if mac_banner:
             return base64.b64decode(mac_banner)
         return None
@@ -90,6 +92,19 @@ class LinuxIdentifier(IdentifierProcessor):
         )
         if linux_banner:
             return base64.b64decode(linux_banner)
+        return None
+
+
+class FreebsdIdentifier(IdentifierProcessor):
+    operating_system = "freebsd"
+
+    @classmethod
+    def get_identifier(cls, json) -> Optional[bytes]:
+        freebsd_banner = (json.get("symbols", {}).get("version", {}).get("constant_data", None))
+        if freebsd_banner and not json.get("symbols", {}).get("kfreebsd_brand_info", {}):
+            return None
+        if freebsd_banner:
+            return base64.b64decode(freebsd_banner)
         return None
 
 

@@ -48,7 +48,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     priority = 30
     max_pdb_size = 0x400000
-    exclusion_list = ["linux", "mac"]
+    exclusion_list = ["freebsd", "linux", "mac"]
 
     def find_virtual_layers_from_req(
         self,
