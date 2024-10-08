@@ -511,6 +511,9 @@ class AArch64(linear.LinearlyMappedLayer):
             -------|------------------
             0      | Read/write
             1      | Read-only
+
+         AF=0. Region not accessed.
+         AF=1. Region accessed.
         """
         if self._feat_hafdbs:
             # Dirty Bit Modifier and Access Permissions bits
@@ -518,7 +521,7 @@ class AArch64(linear.LinearlyMappedLayer):
             return bool((entry & (1 << 51)) and not (entry & (1 << 7)))
         else:
             raise NotImplementedError(
-                "Hardware updates to Access flag and Dirty state in translation tables are not available in the target kernel. Please try using a software based implementation of dirty bit management."
+                "Hardware updates to Access flag and Dirty state in translation tables are not available. Please try using a software based implementation of dirty state management."
             )
 
     @property
@@ -695,6 +698,7 @@ class LinuxAArch64Mixin(AArch64):
 
         The following is based on Linux software AArch64 dirty bit management.
          [2], see arch/arm64/include/asm/pgtable-prot.h#L18
+         [2], see pte_wrprotect()
          [3], see page 12-25
          https://lkml.org/lkml/2023/7/7/77 -> Linux implementation detail
         """
@@ -717,10 +721,19 @@ class WindowsAArch64Mixin(AArch64):
         has been modified and has not been saved to storage yet.
 
         The following is based on the Windows kernel function MiMarkPteDirty().
-        Windows software DBM bit is located at offset 56, and does not account
-        of hardware bit 51.
+        Capabilities are initialized in MiInitializeSystemDefaults().
+        When marking a PTE dirty, MiMarkPteDirty() will:
+         - set AF to 1 (ACCESSED) manually if hardware does not support it;
+         - set AP to 0 (RW) manually if hardware does not support it.
+        In the end, we need to detect if the DBM is software (56) or hardware (51),
+        and if in any scenario the AP bit is set to 0.
         """
-        return bool((entry & (1 << 56)) and not (entry & (1 << 7)))
+        sw_dirty = bool((entry & (1 << 56)) and not (entry & (1 << 7)))
+        try:
+            hw_dirty = super()._page_is_dirty(entry)
+            return sw_dirty or hw_dirty
+        except NotImplementedError:
+            return sw_dirty
 
 
 class WindowsAArch64(WindowsAArch64Mixin, AArch64):
