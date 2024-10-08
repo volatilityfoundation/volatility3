@@ -72,16 +72,16 @@ class Ptrace(plugins.PluginInterface):
             ]
             flags = task.get_ptrace_tracee_flags() or renderers.NotAvailableValue()
 
-            for tree, tracing_tid in enumerate(tracee_tids):
+            for level, tracee_tid in enumerate(tracee_tids):
                 fields = [
                     task_comm,
                     user_pid,
                     user_tid,
                     tracer_tid,
-                    tracing_tid,
+                    tracee_tid,
                     flags,
                 ]
-                yield (tree, fields)
+                yield (level, fields)
 
     def run(self):
         vmlinux_module_name = self.config["kernel"]
@@ -90,8 +90,8 @@ class Ptrace(plugins.PluginInterface):
             ("Process", str),
             ("PID", int),
             ("TID", int),
-            ("Traced by TID", int),
-            ("Tracing TID", int),
+            ("Tracer TID", int),
+            ("Tracee TID", int),
             ("Flags", str),
         ]
         return renderers.TreeGrid(headers, self._generator(vmlinux_module_name))
