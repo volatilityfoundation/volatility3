@@ -122,10 +122,30 @@ class Malfind(interfaces.plugins.PluginInterface):
                 vadinfo.winnt_protections,
             )
             write_exec = "EXECUTE" in protection_string and "WRITE" in protection_string
+            dirty_page_check = False
 
-            # the write/exec check applies to everything
             if not write_exec:
-                continue
+                """
+                # Inspect "PAGE_EXECUTE_READ" VAD pages to detect
+                # non writable memory regions having been injected
+                # using elevated WriteProcessMemory().
+                """
+                if "EXECUTE" in protection_string:
+                    for page in range(
+                        vad.get_start(), vad.get_end(), proc_layer.page_size
+                    ):
+                        try:
+                            # If we have a dirty page in a non writable "EXECUTE" region, it is suspicious.
+                            if proc_layer.is_dirty(page):
+                                dirty_page_check = True
+                                break
+                        except exceptions.InvalidAddressException:
+                            # Abort as it is likely that other addresses in the same range will also fail
+                            break
+                    if not dirty_page_check:
+                        continue
+                else:
+                    continue
 
             if (vad.get_private_memory() == 1 and vad.get_tag() == "VadS") or (
                 vad.get_private_memory() == 0
@@ -134,6 +154,11 @@ class Malfind(interfaces.plugins.PluginInterface):
                 if cls.is_vad_empty(proc_layer, vad):
                     continue
 
+                if dirty_page_check:
+                    # Useful information to investigate the page content with volshell afterwards.
+                    vollog.warning(
+                        f"[proc_id {proc_id}] Found suspicious DIRTY + {protection_string} page at {hex(page)}",
+                    )
                 data = proc_layer.read(vad.get_start(), 64, pad=True)
                 yield vad, data
 
