@@ -126,3 +126,7 @@ class OfflineException(VolatilityException):
 
     def __str__(self):
         return f"Volatility 3 is offline: unable to access {self._url}"
+
+
+class RenderException(VolatilityException):
+    """Thrown if there is an error during rendering"""
