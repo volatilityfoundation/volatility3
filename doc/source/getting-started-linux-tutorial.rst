@@ -191,3 +191,22 @@ Now to find the commands that were run in the bash shell by using ``linux.bash``
         1733    bash    2020-01-16 14:00:36.000000      sudo apt upgrade
         1733    bash    2020-01-16 14:00:41.000000      chmod +x meterpreter
         1733    bash    2020-01-16 14:00:42.000000      sudo ./meterpreter
+
+PIDs, TIDs, and TGID
+--------------------
+Typically processes are a collection of threads that are working together for a single program to run. On Windows `notepad.exe` would be a process that might contain multiple threads, in task manager you would only see the single process. In Linux you will also see processes split into multiple threads working together, however Linux uses a single `task` structure to represent processes and the threads that make them up.
+
+This can cause confusion as a `task_struct` includes a `pid` field which you may resonaibly assume is "the pid". The issue is that what "the pid" is in linux depends on the context. Within the kernel "the pid" is exactly that `pid`` field, however from the users view "the pid" almost always actually means `tgid`. This can be seen in the `sys_getpid` function from the Linux kernel:
+
+.. code-block:: sys_getpid
+    /**
+    * sys_getpid - return the thread group id of the current process
+    *
+    * Note, despite the name, this returns the tgid not the pid.  The tgid and
+    * the pid are identical unless CLONE_THREAD was specified on clone() in
+    * which case the tgid is the same in all threads of the same group.
+    *
+    * This is SMP safe as current->tgid does not change.
+    */
+
+This is why many volatility3 plugins use the `tgid` member for "pid" and the `pid` member for "tid". The `tgid` member more accuratly represents the process id (pid) you would see in a `ps` output while the `pid` member is more like a thread id (tid).
