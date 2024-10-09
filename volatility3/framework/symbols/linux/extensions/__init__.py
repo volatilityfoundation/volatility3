@@ -381,23 +381,11 @@ class task_struct(generic.GenericIntelProcess):
     def get_parent_pid(self) -> int:
         """Returns the pid of parent of this process"""
         # Uses real_parent rather than parent to match Linux kernel getppid
-        # /*
-        #  * Accessing ->real_parent is not SMP-safe, it could
-        #  * change from under us. However, we can use a stale
-        #  * value of ->real_parent under rcu_read_lock(), see
-        #  * release_task()->call_rcu(delayed_put_task_struct).
-        #  */
-        # SYSCALL_DEFINE0(getppid)
-        # {
-        # 	int pid;
-
-        # 	rcu_read_lock();
-        # 	pid = task_tgid_vnr(rcu_dereference(current->real_parent));
-        # 	rcu_read_unlock();
-
-        # 	return pid;
-        # }
-        return self.real_parent.get_pid() if self.parent else 0
+        return (
+            self.real_parent.get_pid()
+            if self.real_parent and self.real_parent.is_readable()
+            else 0
+        )
 
     def get_name(self) -> str:
         """Returns the name of this process"""
