@@ -122,7 +122,7 @@ class proc(generic.GenericIntelProcess):
         start_time_seconds = self.p_start.tv_sec
         start_time_microseconds = self.p_start.tv_usec
         return datetime.datetime.fromtimestamp(
-            start_time_seconds + start_time_microseconds / 1e6
+            start_time_seconds + start_time_microseconds / 1e6, datetime.timezone.utc
         )
 
 
