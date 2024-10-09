@@ -14,7 +14,7 @@ authors:
 identifiers:
   - type: url
     value: 'https://github.com/volatilityfoundation/volatility3'
-    description: Volatility 3 source code respository
+    description: Volatility 3 source code repository
 repository-code: 'https://github.com/volatilityfoundation/volatility3'
 url: 'https://github.com/volatilityfoundation/volatility3'
 abstract: >-
