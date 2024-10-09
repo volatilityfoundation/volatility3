@@ -84,7 +84,7 @@ def valid(
     if producer:
         if producer.get("name") == "dwarf2json" and [
             int(x) for x in ".".split(producer.get("version"))
-        ] < (0, 8, 0):
+        ] < (0, 9, 0):
             vollog.warning(
                 "Dwarf2json < 0.9.0 is known to produce faulty symbols for kernels > 6.0.0"
             )
