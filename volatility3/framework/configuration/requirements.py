@@ -161,7 +161,7 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
                 "TypeError - Too many values provided to list option.",
             )
             return {config_path: self}
-        if not all([isinstance(element, self.element_type) for element in value]):
+        if not all(isinstance(element, self.element_type) for element in value):
             vollog.log(
                 constants.LOGLEVEL_V,
                 "TypeError - At least one element in the list is not of the correct type.",
@@ -181,7 +181,7 @@ class ChoiceRequirement(interfaces.configuration.RequirementInterface):
         """
         super().__init__(*args, **kwargs)
         if not isinstance(choices, list) or any(
-            [not isinstance(choice, str) for choice in choices]
+            not isinstance(choice, str) for choice in choices
         ):
             raise TypeError("ChoiceRequirement takes a list of strings as choices")
         self.choices = choices
@@ -410,11 +410,9 @@ class TranslationLayerRequirement(
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [
-                subreq.unsatisfied(context, config_path)
-                for subreq in self.requirements.values()
-                if not subreq.optional
-            ]
+            subreq.unsatisfied(context, config_path)
+            for subreq in self.requirements.values()
+            if not subreq.optional
         ):
             return None
 
@@ -485,11 +483,9 @@ class SymbolTableRequirement(
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [
-                subreq.unsatisfied(context, config_path)
-                for subreq in self.requirements.values()
-                if not subreq.optional
-            ]
+            subreq.unsatisfied(context, config_path)
+            for subreq in self.requirements.values()
+            if not subreq.optional
         ):
             return None
 
@@ -527,12 +523,14 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
     def __init__(
         self,
         name: str,
-        description: str = None,
+        description: Optional[str] = None,
         default: bool = False,
         optional: bool = False,
         component: Type[interfaces.configuration.VersionableInterface] = None,
         version: Optional[Tuple[int, ...]] = None,
     ) -> None:
+        if description is None:
+            description = f"Version {'.'.join([str(x) for x in version])} dependency on {component.__module__}.{component.__name__} unmet"
         super().__init__(
             name=name, description=description, default=default, optional=optional
         )
@@ -544,15 +542,51 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
         self._version = version
 
     def unsatisfied(
-        self, context: interfaces.context.ContextInterface, config_path: str
+        self,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        accumulator: Optional[
+            List[interfaces.configuration.VersionableInterface]
+        ] = None,
     ) -> Dict[str, interfaces.configuration.RequirementInterface]:
         # Mypy doesn't appreciate our classproperty implementation, self._plugin.version has no type
         config_path = interfaces.configuration.path_join(config_path, self.name)
         if not self.matches_required(self._version, self._component.version):
             return {config_path: self}
-        context.config[
-            interfaces.configuration.path_join(config_path, self.name)
-        ] = True
+
+        recurse = True
+        if accumulator is None:
+            accumulator = set([self._component])
+        else:
+            if self._component in accumulator:
+                recurse = False
+            else:
+                accumulator.add(self._component)
+
+        # Check for child requirements
+        if (
+            issubclass(self._component, interfaces.configuration.ConfigurableInterface)
+            and recurse
+        ):
+            result = {}
+            for requirement in self._component.get_requirements():
+                if not requirement.optional and isinstance(
+                    requirement, VersionRequirement
+                ):
+                    result.update(
+                        requirement.unsatisfied(
+                            context, config_path, accumulator.copy()
+                        )
+                    )
+
+            if result:
+                result.update({config_path: self})
+                return result
+
+        context.config[interfaces.configuration.path_join(config_path, self.name)] = (
+            True
+        )
+
         return {}
 
     @classmethod
@@ -672,11 +706,9 @@ class ModuleRequirement(
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [
-                subreq.unsatisfied(context, config_path)
-                for subreq in self.requirements.values()
-                if not subreq.optional
-            ]
+            subreq.unsatisfied(context, config_path)
+            for subreq in self.requirements.values()
+            if not subreq.optional
         ):
             return None
 

@@ -13,7 +13,7 @@ from volatility3.framework.layers import scanners
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
-from volatility3.plugins.windows import pslist, modules, dlllist
+from volatility3.plugins.windows import pslist, modules
 
 vollog = logging.getLogger(__name__)
 
@@ -46,10 +46,7 @@ class VerInfo(interfaces.plugins.PluginInterface):
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
             requirements.PluginRequirement(
-                name="modules", plugin=modules.Modules, version=(1, 0, 0)
-            ),
-            requirements.VersionRequirement(
-                name="dlllist", component=dlllist.DllList, version=(2, 0, 0)
+                name="modules", plugin=modules.Modules, version=(2, 0, 0)
             ),
             requirements.BooleanRequirement(
                 name="extensive",

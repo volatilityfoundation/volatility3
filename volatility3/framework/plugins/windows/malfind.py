@@ -110,7 +110,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                     proc_id, excp.invalid_address, excp.layer_name
                 )
             )
-            return
+            return None
 
         proc_layer = context.layers[proc_layer_name]
 
@@ -141,16 +141,30 @@ class Malfind(interfaces.plugins.PluginInterface):
         # determine if we're on a 32 or 64 bit kernel
         kernel = self.context.modules[self.config["kernel"]]
 
+        # set refined criteria to know when to add to "Notes" column
+        refined_criteria = {
+            b"MZ": "MZ header",
+            b"\x55\x8B": "PE header",
+            b"\x55\x48": "Function prologue",
+            b"\x55\x89": "Function prologue",
+        }
+
         is_32bit_arch = not symbols.symbol_table_is_64bit(
             self.context, kernel.symbol_table_name
         )
 
         for proc in procs:
+            # by default, "Notes" column will be set to N/A
             process_name = utility.array_to_string(proc.ImageFileName)
 
             for vad, data in self.list_injections(
                 self.context, kernel.layer_name, kernel.symbol_table_name, proc
             ):
+                notes = renderers.NotApplicableValue()
+                # Check for unique headers and update "Notes" column if criteria is met
+                if data[0:2] in refined_criteria:
+                    notes = refined_criteria[data[0:2]]
+
                 # if we're on a 64 bit kernel, we may still need 32 bit disasm due to wow64
                 if is_32bit_arch or proc.get_is_wow64():
                     architecture = "intel"
@@ -196,6 +210,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                         vad.get_commit_charge(),
                         vad.get_private_memory(),
                         file_output,
+                        notes,
                         format_hints.HexBytes(data),
                         disasm,
                     ),
@@ -216,6 +231,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                 ("CommitCharge", int),
                 ("PrivateMemory", int),
                 ("File output", str),
+                ("Notes", str),
                 ("Hexdump", format_hints.HexBytes),
                 ("Disasm", interfaces.renderers.Disassembly),
             ],

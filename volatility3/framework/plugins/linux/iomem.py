@@ -16,7 +16,7 @@ class IOMem(interfaces.plugins.PluginInterface):
     """Generates an output similar to /proc/iomem on a running system."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -53,7 +53,7 @@ class IOMem(interfaces.plugins.PluginInterface):
 
         # create the resource object with protection against memory smear
         try:
-            resource = vmlinux.object("resource", resource_offset)
+            resource = vmlinux.object("resource", resource_offset, absolute=True)
         except exceptions.InvalidAddressException:
             vollog.warning(
                 f"Unable to create resource object at {resource_offset:#x}. This resource, "

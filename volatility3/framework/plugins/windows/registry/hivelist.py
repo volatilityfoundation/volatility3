@@ -2,9 +2,9 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from typing import Iterator, List, Tuple, Iterable, Optional
+from typing import Iterator, List, Optional, Tuple
 
-from volatility3.framework import renderers, interfaces, exceptions
+from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import registry
 from volatility3.framework.renderers import format_hints
@@ -30,7 +30,7 @@ class HiveGenerator:
         ):
             if not hive.is_valid():
                 self._invalid = hive.vol.offset
-                return
+                return None
             yield hive
 
     @property
@@ -140,8 +140,8 @@ class HiveList(interfaces.plugins.PluginInterface):
         layer_name: str,
         symbol_table: str,
         filter_string: Optional[str] = None,
-        hive_offsets: List[int] = None,
-    ) -> Iterable[registry.RegistryHive]:
+        hive_offsets: Optional[List[int]] = None,
+    ) -> Iterator[registry.RegistryHive]:
         """Walks through a registry, hive by hive returning the constructed
         registry layer name.
 
@@ -200,7 +200,7 @@ class HiveList(interfaces.plugins.PluginInterface):
         context: interfaces.context.ContextInterface,
         layer_name: str,
         symbol_table: str,
-        filter_string: str = None,
+        filter_string: Optional[str] = None,
     ) -> Iterator[interfaces.objects.ObjectInterface]:
         """Lists all the hives in the primary layer.
 

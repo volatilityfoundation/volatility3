@@ -103,7 +103,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 appropriate_config_path, layer_name = result
                 context.config.merge(appropriate_config_path, subconfig)
                 context.config[appropriate_config_path] = top_layer_name
-                return
+                return None
             self._cached = None
 
         new_context = context.clone()
@@ -156,6 +156,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 self._cached = context.config.get(path, None), context.config.branch(
                     path
                 )
+        vollog.debug(
+            f"physical_layer maximum_address: {physical_layer.maximum_address}"
+        )
         vollog.debug(f"Stacked layers: {stacked_layers}")
 
     @classmethod

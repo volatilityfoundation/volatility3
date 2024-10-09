@@ -11,6 +11,7 @@ from typing import Union
 from volatility3.framework import interfaces, renderers
 
 
+# FIXME: Move wintime_to_datetime() and unixtime_to_datetime() out of renderers, possibly framework.objects.utility
 def wintime_to_datetime(
     wintime: int,
 ) -> Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]:
@@ -19,22 +20,26 @@ def wintime_to_datetime(
         return renderers.NotApplicableValue()
     unix_time = unix_time - 11644473600
     try:
-        return datetime.datetime.utcfromtimestamp(unix_time)
-        # Windows sometimes throws OSErrors rather than ValueErrors when it can't convert a value
-    except (ValueError, OSError):
+        return datetime.datetime.fromtimestamp(unix_time, datetime.timezone.utc)
+        # Windows sometimes throws OSErrors rather than ValueError/OverflowError when it can't convert a value
+        # Since Python 3.3, this should raise OverflowError instead of ValueError. However, it was observed
+        # that even in Python 3.7.17, ValueError is still being raised.
+    except (ValueError, OverflowError, OSError):
         return renderers.UnparsableValue()
 
 
 def unixtime_to_datetime(
     unixtime: int,
 ) -> Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]:
-    ret: Union[
-        interfaces.renderers.BaseAbsentValue, datetime.datetime
-    ] = renderers.UnparsableValue()
+    ret: Union[interfaces.renderers.BaseAbsentValue, datetime.datetime] = (
+        renderers.UnparsableValue()
+    )
 
     if unixtime > 0:
-        with contextlib.suppress(ValueError):
-            ret = datetime.datetime.utcfromtimestamp(unixtime)
+        # Since Python 3.3, this should raise OverflowError instead of ValueError. However, it was observed
+        # that even in Python 3.7.17, ValueError is still being raised. OSError is also raised on Linux
+        with contextlib.suppress(ValueError, OverflowError, OSError):
+            ret = datetime.datetime.fromtimestamp(unixtime, datetime.timezone.utc)
 
     return ret
 

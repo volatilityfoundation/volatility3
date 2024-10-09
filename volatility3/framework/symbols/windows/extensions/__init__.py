@@ -20,9 +20,10 @@ from volatility3.framework import (
 )
 from volatility3.framework.interfaces.objects import ObjectInterface
 from volatility3.framework.layers import intel
+from volatility3.framework.objects import utility
 from volatility3.framework.renderers import conversion
 from volatility3.framework.symbols import generic
-from volatility3.framework.symbols.windows.extensions import kdbg, pe, pool
+from volatility3.framework.symbols.windows.extensions import pool
 
 vollog = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ class MMVAD_SHORT(objects.StructType):
 
         if vad_address in visited:
             vollog.log(constants.LOGLEVEL_VVV, "VAD node already seen!")
-            return
+            return None
 
         visited.add(vad_address)
         tag = self.get_tag()
@@ -111,7 +112,7 @@ class MMVAD_SHORT(objects.StructType):
                 constants.LOGLEVEL_VVV,
                 f"Skipping VAD at {self.vol.offset} depth {depth} with tag {tag}",
             )
-            return
+            return None
 
         if target:
             vad_object = self.cast(target)
@@ -306,16 +307,19 @@ class MMVAD_SHORT(objects.StructType):
 
         raise AttributeError("Unable to find the private memory member")
 
+    @property
+    def Protection(self):
+        if self.has_member("u"):
+            return self.u.VadFlags.Protection
+        elif self.has_member("Core"):
+            return self.Core.u.VadFlags.Protection
+        else:
+            return None
+
     def get_protection(self, protect_values, winnt_protections):
         """Get the VAD's protection constants as a string."""
 
-        protect = None
-
-        if self.has_member("u"):
-            protect = self.u.VadFlags.Protection
-
-        elif self.has_member("Core"):
-            protect = self.Core.u.VadFlags.Protection
+        protect = self.Protection
 
         try:
             value = protect_values[protect]
@@ -452,9 +456,9 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
         ].is_valid(self.FileName.Buffer)
 
     def file_name_with_device(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
-        name: Union[
-            str, interfaces.renderers.BaseAbsentValue
-        ] = renderers.UnreadableValue()
+        name: Union[str, interfaces.renderers.BaseAbsentValue] = (
+            renderers.UnreadableValue()
+        )
 
         # this pointer needs to be checked against native_layer_name because the object may
         # be instantiated from a primary (virtual) layer or a memory (physical) layer.
@@ -492,8 +496,46 @@ class KMUTANT(objects.StructType, pool.ExecutiveObject):
         return header.NameInfo.Name.String  # type: ignore
 
 
-class ETHREAD(objects.StructType):
+class ETHREAD(objects.StructType, pool.ExecutiveObject):
     """A class for executive thread objects."""
+
+    def is_valid(self) -> bool:
+        """Determine if the object is valid."""
+
+        try:
+            # validation by TID:
+            if self.Cid.UniqueThread % 4 != 0:  # NT tids are divisible by 4
+                return False
+
+            # validation by PID of parent process:
+            if self.Cid.UniqueProcess % 4 != 0:
+                return False
+
+            # validation by thread creation time:
+            if (
+                self.Cid.UniqueProcess != 4
+            ):  # The System process (PID 4) has no create time
+                ctime = self.get_create_time()
+                if not isinstance(ctime, datetime.datetime):
+                    return False
+
+                if not (1998 < ctime.year < 2030):
+                    return False
+
+        except exceptions.InvalidAddressException:
+            return False
+
+        # passed all validations
+        return True
+
+    def get_create_time(self):
+        # For Windows XPs
+        if self.has_member("ThreadsProcess"):
+            return conversion.wintime_to_datetime(self.CreateTime.QuadPart >> 3)
+        return conversion.wintime_to_datetime(self.CreateTime.QuadPart)
+
+    def get_exit_time(self):
+        return conversion.wintime_to_datetime(self.ExitTime.QuadPart)
 
     def owning_process(self) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""
@@ -555,6 +597,38 @@ class UNICODE_STRING(objects.StructType):
     String = property(get_string)
 
 
+class ERESOURCE(objects.StructType):
+    def is_valid(self) -> bool:
+        vollog.debug(f"Checking ERESOURCE Validity: {hex(self.vol.offset)}")
+
+        if not self._context.layers[self.vol.layer_name].is_valid(self.vol.offset):
+            return False
+
+        sym_table = self.get_symbol_table_name()
+
+        waiters_valid = self.SharedWaiters == 0 or self._context.layers[
+            self.vol.layer_name
+        ].is_valid(
+            self.SharedWaiters.vol.offset,
+            self._context.symbol_space.get_type(
+                sym_table + constants.BANG + "_KSEMAPHORE"
+            ).size,
+        )
+
+        try:
+            return (
+                waiters_valid
+                and self.SystemResourcesList.Flink is not None
+                and self.SystemResourcesList.Blink is not None
+                and self.SystemResourcesList.Flink != self.SystemResourcesList.Blink
+                and self.SystemResourcesList.Flink.Blink == self.vol.offset
+                and self.SystemResourcesList.Blink.Flink == self.vol.offset
+                and self.NumberOfSharedWaiters == 0
+            )
+        except exceptions.InvalidAddressException:
+            return False
+
+
 class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
     """A class for executive kernel processes objects."""
 
@@ -573,10 +647,22 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
                 ctime = self.get_create_time()
                 if not isinstance(ctime, datetime.datetime):
+                    # A process must have a creation time
                     return False
 
-                if not (1998 < ctime.year < 2030):
+                current_year = datetime.datetime.now().year
+                if not (1998 < ctime.year < current_year + 10):
                     return False
+
+                etime = self.get_exit_time()
+                if isinstance(etime, datetime.datetime):
+                    if not (1998 < etime.year < current_year + 10):
+                        return False
+
+                    # Exit time, if available, must be after the creation time
+                    # At this point, we are sure both are datetimes, so let's compare them
+                    if ctime > etime:
+                        return False
 
             # NT pids are divisible by 4
             if self.UniqueProcessId % 4 != 0:
@@ -595,7 +681,11 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             if dtb & ~0xFFF == 0:
                 return False
 
-            ## TODO: we can also add the thread Flink and Blink tests if necessary
+            # Quick smear test on thread Flink and Blink
+            kernel = 0x80000000  # Yes, it's a quick test
+            list_head = self.ThreadListHead
+            if list_head.Flink < kernel or list_head.Blink < kernel:
+                return False
 
         except exceptions.InvalidAddressException:
             return False
@@ -665,7 +755,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             ):
                 yield entry
         except exceptions.InvalidAddressException:
-            return
+            return None
 
     def init_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Generator for DLLs in the order that they were initialized"""
@@ -678,7 +768,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             ):
                 yield entry
         except exceptions.InvalidAddressException:
-            return
+            return None
 
     def mem_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Generator for DLLs in the order that they appear in memory"""
@@ -691,7 +781,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             ):
                 yield entry
         except exceptions.InvalidAddressException:
-            return
+            return None
 
     def get_handle_count(self):
         try:
@@ -855,11 +945,11 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
         try:
             is_valid = trans_layer.is_valid(self.vol.offset)
             if not is_valid:
-                return
+                return None
 
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
-            return
+            return None
 
         if not sentinel:
             yield self._context.object(
@@ -874,7 +964,7 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
             obj_offset = link.vol.offset - relative_offset
 
             if not trans_layer.is_valid(obj_offset):
-                return
+                return None
 
             obj = self._context.object(
                 symbol_type,
@@ -889,7 +979,7 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
             try:
                 link = getattr(link, direction).dereference()
             except exceptions.InvalidAddressException:
-                return
+                return None
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
@@ -919,10 +1009,10 @@ class TOKEN(objects.StructType):
                     sid = sid_and_attr.Sid.dereference().cast("_SID")
                     # catch invalid pointers (UserAndGroupCount is too high)
                     if sid is None:
-                        return
+                        return None
                     # this mimics the windows API IsValidSid
                     if sid.Revision & 0xF != 1 or sid.SubAuthorityCount > 15:
-                        return
+                        return None
                     id_auth = ""
                     for i in sid.IdentifierAuthority.Value:
                         id_auth = i
@@ -968,6 +1058,83 @@ class TOKEN(objects.StructType):
                     yield luid.Luid.LowPart, True, enabled, default
             else:
                 vollog.log(constants.LOGLEVEL_VVVV, "Broken Token Privileges.")
+
+
+class KTIMER(objects.StructType):
+    """A class for Kernel Timers"""
+
+    VALID_TYPES = {
+        8: "TimerNotificationObject",
+        9: "TimerSynchronizationObject",
+    }
+
+    def get_signaled(self):
+        if self.Header.SignalState:
+            return "Yes"
+        return "-"
+
+    def get_raw_dpc(self):
+        """Returns the encoded DPC since it may not look like a pointer after encoding"""
+        symbol_table_name = self.get_symbol_table_name()
+        pointer_type = self._context.symbol_space.get_type(
+            symbol_table_name + constants.BANG + "pointer"
+        )
+
+        return self._context.object(
+            object_type=pointer_type,
+            layer_name=self.vol.layer_name,
+            offset=self.Dpc.vol.offset,
+        )
+
+    def valid_type(self):
+        return self.Header.Type in self.VALID_TYPES
+
+    def get_due_time(self):
+        return "{0:#010x}:{1:#010x}".format(self.DueTime.HighPart, self.DueTime.LowPart)
+
+    def get_dpc(self):
+        """Return Dpc, and if Windows 7 or later, decode it"""
+        symbol_table_name = self.get_symbol_table_name()
+        kvo = self._context.layers[self.vol.native_layer_name].config[
+            "kernel_virtual_offset"
+        ]
+        ntkrnlmp = self._context.module(
+            symbol_table_name,
+            layer_name=self.vol.native_layer_name,
+            offset=kvo,
+            native_layer_name=self.vol.native_layer_name,
+        )
+
+        if ntkrnlmp.has_symbol("KiWaitNever") and ntkrnlmp.has_symbol("KiWaitAlways"):
+            wait_never = ntkrnlmp.object(
+                object_type="unsigned long long",
+                offset=ntkrnlmp.get_symbol("KiWaitNever").address,
+            )
+            wait_always = ntkrnlmp.object(
+                object_type="unsigned long long",
+                offset=ntkrnlmp.get_symbol("KiWaitAlways").address,
+            )
+
+            low_byte = (wait_never) & 0xFF
+            entry = utility.rol(self.get_raw_dpc() ^ wait_never, low_byte)
+            swap_xor = self._context.layers[self.vol.native_layer_name].canonicalize(
+                self.vol.offset
+            )
+            entry = utility.bswap_64(entry ^ swap_xor)
+            dpc = entry ^ wait_always
+
+            symbol_table_name = self.get_symbol_table_name()
+            kdpc_type = self._context.symbol_space.get_type(
+                symbol_table_name + constants.BANG + "_KDPC"
+            )
+
+            return self._context.object(
+                object_type=kdpc_type,
+                layer_name=self.vol.layer_name,
+                offset=dpc,
+            )
+        else:
+            return self.Dpc
 
 
 class KTHREAD(objects.StructType):
@@ -1094,6 +1261,15 @@ class CONTROL_AREA(objects.StructType):
         is_64bit = symbols.symbol_table_is_64bit(self._context, symbol_table_name)
         is_pae = self._context.layers[self.vol.layer_name].metadata.get("pae", False)
 
+        # the sector_size is used as a multiplier to the StartingSector
+        # within each _SUBSECTION. ImageSectionObjects use a multiplier
+        # of 0x200 corresponding to sector alignment on disk,
+        # while DataSectionObjects use a multiplier of 0x1000 corresponding
+        # to the size of a page
+        sector_size = 0x200
+        if self.u.Flags.Image != 1:
+            sector_size = 0x1000
+
         # This is a null-terminated single-linked list.
         while subsection != 0:
             try:
@@ -1104,7 +1280,7 @@ class CONTROL_AREA(objects.StructType):
 
             # The offset into the file is stored implicitly based on the PTE location within the Subsection.
             starting_sector = subsection.StartingSector
-            subsection_offset = starting_sector * 0x200
+            subsection_offset = starting_sector * sector_size
 
             # Similar to the check in is_valid(), make sure the SubsectionBase is not page aligned.
             # if subsection.SubsectionBase & self.PAGE_MASK == 0:

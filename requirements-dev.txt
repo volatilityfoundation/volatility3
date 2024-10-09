@@ -1,22 +1,9 @@
-# The following packages are required for core functionality.
-pefile>=2017.8.1
-
-# The following packages are optional.
-# If certain packages are not necessary, place a comment (#) at the start of the line.
-
-# This is required for the yara plugins
-yara-python>=3.8.0
-
-# This is required for several plugins that perform malware analysis and disassemble code.
-# It can also improve accuracy of Windows 8 and later memory samples.
-capstone>=3.0.5
-
-# This is required by plugins that decrypt passwords, password hashes, etc.
-pycryptodome
+-r requirements.txt
 
 # This can improve error messages regarding improperly configured ISF files,
 # but is only recommended for development
 jsonschema>=2.3.0
 
-# This is required for memory acquisition via leechcore/pcileech.
-leechcorepyc>=2.4.0
+# Used to build executable file
+pyinstaller>=6.5.0
+pyinstaller-hooks-contrib>=2024.3

@@ -87,7 +87,7 @@ class ContextInterface(metaclass=ABCMeta):
         offset: int,
         native_layer_name: str = None,
         **arguments,
-    ):
+    ) -> "interfaces.objects.ObjectInterface":
         """Object factory, takes a context, symbol, offset and optional
         layer_name.
 
@@ -190,6 +190,9 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
             subconfigs["native_layer_name"] = self.context.layers[
                 self._native_layer_name
             ].build_configuration()
+
+        # Modules are constructable, and therefore require a class configuration variable
+        config["class"] = self.__class__.__module__ + "." + self.__class__.__name__
 
         for subconfig in subconfigs:
             for req in subconfigs[subconfig]:

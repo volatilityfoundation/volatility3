@@ -5,11 +5,10 @@
 
 Linux-specific values that aren't found in debug symbols
 """
+from enum import IntEnum
 
 KERNEL_NAME = "__kernel__"
 
-# arch/x86/include/asm/page_types.h
-PAGE_SHIFT = 12
 """The value hard coded from the Linux Kernel (hence not extracted from the layer itself)"""
 
 # include/linux/sched.h
@@ -281,3 +280,25 @@ CAPABILITIES = (
 )
 
 ELF_MAX_EXTRACTION_SIZE = 1024 * 1024 * 1024 * 4 - 1
+
+
+class ELF_IDENT(IntEnum):
+    """ELF header e_ident indexes"""
+
+    EI_MAG0 = 0
+    EI_MAG1 = 1
+    EI_MAG2 = 2
+    EI_MAG3 = 3
+    EI_CLASS = 4
+    EI_DATA = 5
+    EI_VERSION = 6
+    EI_OSABI = 7
+    EI_PAD = 8
+
+
+class ELF_CLASS(IntEnum):
+    """ELF header class types"""
+
+    ELFCLASSNONE = 0
+    ELFCLASS32 = 1
+    ELFCLASS64 = 2

@@ -114,11 +114,38 @@ is_windows_xp = OsDistinguisher(
     ],
 )
 
+is_windows_xp_sp2 = OsDistinguisher(
+    version_check=lambda x: (5, 1) <= x < (5, 2),
+    fallback_checks=[
+        ("KdCopyDataBlock", None, False),
+        ("_MMFREE_POOL_ENTRY", None, False),
+        ("_HANDLE_TABLE", "HandleCount", True),
+    ],
+)
+
+is_windows_xp_sp3 = OsDistinguisher(
+    version_check=lambda x: (5, 1) <= x < (5, 2),
+    fallback_checks=[
+        ("KdCopyDataBlock", None, False),
+        ("_MMFREE_POOL_ENTRY", None, True),
+        ("_HANDLE_TABLE", "HandleCount", True),
+    ],
+)
+
 is_xp_or_2003 = OsDistinguisher(
     version_check=lambda x: (5, 1) <= x < (6, 0),
     fallback_checks=[
         ("KdCopyDataBlock", None, False),
         ("_HANDLE_TABLE", "HandleCount", True),
+    ],
+)
+
+is_2003 = OsDistinguisher(
+    version_check=lambda x: (5, 2) <= x < (5, 3),
+    fallback_checks=[
+        ("KdCopyDataBlock", None, False),
+        ("_HANDLE_TABLE", "HandleCount", True),
+        ("_MM_AVL_TABLE", None, True),
     ],
 )
 
@@ -141,6 +168,15 @@ is_win10_15063 = OsDistinguisher(
     ],
 )
 
+is_win10_15063_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0, 15063),
+    fallback_checks=[
+        ("ObHeaderCookie", None, True),
+        ("_HANDLE_TABLE", "HandleCount", False),
+        ("_EPROCESS", "KeepAliveCounter", False),
+    ],
+)
+
 is_win10_16299_or_later = OsDistinguisher(
     version_check=lambda x: x >= (10, 0, 16299),
     fallback_checks=[
@@ -151,9 +187,43 @@ is_win10_16299_or_later = OsDistinguisher(
     ],
 )
 
+is_win10_17763_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0, 17763),
+    fallback_checks=[
+        ("_EPROCESS", "TrustletIdentity", False),
+        ("ParentSecurityDomain", None, True),
+    ],
+)
+
+is_win10_18362_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0, 18362),
+    fallback_checks=[
+        ("ObHeaderCookie", None, True),
+        ("_CM_CACHED_VALUE_INDEX", None, False),
+        ("_WNF_PROCESS_CONTEXT", None, True),
+    ],
+)
+
 is_win10_18363_or_later = OsDistinguisher(
     version_check=lambda x: x >= (10, 0, 18363),
     fallback_checks=[("_KQOS_GROUPING_SETS", None, True)],
+)
+
+is_win10_19041_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0, 19041),
+    fallback_checks=[
+        ("_EPROCESS", "TimerResolutionIgnore", True),
+        ("_EPROCESS", "VmProcessorHostTransition", True),
+        ("_KQOS_GROUPING_SETS", None, True),
+    ],
+)
+
+is_win10_25398_or_later = OsDistinguisher(
+    version_check=lambda x: x >= (10, 0, 25398),
+    fallback_checks=[
+        ("_EPROCESS", "MmSlabIdentity", True),
+        ("_EPROCESS", "EnableProcessImpersonationLogging", True),
+    ],
 )
 
 is_windows_10 = OsDistinguisher(

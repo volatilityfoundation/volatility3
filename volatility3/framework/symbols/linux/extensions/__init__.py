@@ -4,17 +4,22 @@
 
 import collections.abc
 import logging
+import functools
+import binascii
+import stat
+from datetime import datetime
 import socket as socket_module
-from typing import Generator, Iterable, Iterator, Optional, Tuple, List
+from typing import Generator, Iterable, Iterator, Optional, Tuple, List, Union, Dict
 
-from volatility3.framework import constants
+from volatility3.framework import constants, exceptions, objects, interfaces, symbols
+from volatility3.framework.renderers import conversion
+from volatility3.framework.configuration import requirements
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
 from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
 from volatility3.framework.constants.linux import ETH_PROTOCOLS, BLUETOOTH_STATES
 from volatility3.framework.constants.linux import BLUETOOTH_PROTOCOLS, SOCKET_STATES
 from volatility3.framework.constants.linux import CAPABILITIES
-from volatility3.framework import exceptions, objects, interfaces, symbols
 from volatility3.framework.layers import linear
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import generic, linux, intermed
@@ -26,14 +31,58 @@ vollog = logging.getLogger(__name__)
 
 
 class module(generic.GenericIntelProcess):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._mod_mem_type = None  # Initialize _mod_mem_type to None for memoization
+
+    @property
+    def mod_mem_type(self):
+        """Return the mod_mem_type enum choices if available or an empty dict if not"""
+        # mod_mem_type and module_memory were added in kernel 6.4 which replaces
+        # module_layout for storing the information around core_layout etc.
+        # see commit ac3b43283923440900b4f36ca5f9f0b1ca43b70e for more information
+
+        if self._mod_mem_type is None:
+            try:
+                self._mod_mem_type = self._context.symbol_space.get_enumeration(
+                    self.get_symbol_table_name() + constants.BANG + "mod_mem_type"
+                ).choices
+            except exceptions.SymbolError:
+                vollog.debug(
+                    "Unable to find mod_mem_type enum. This message can be ignored for kernels < 6.4"
+                )
+                # set to empty dict to show that the enum was not found, and so shouldn't be searched for again
+                self._mod_mem_type = {}
+        return self._mod_mem_type
+
     def get_module_base(self):
-        if self.has_member("core_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return self.mem[self.mod_mem_type["MOD_TEXT"]].base
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_module_base: Unable to get module base. Cannot read base from MOD_TEXT."
+                )
+        elif self.has_member("core_layout"):
             return self.core_layout.base
-        else:
+        elif self.has_member("module_core"):
             return self.module_core
+        raise AttributeError("module -> get_module_base: Unable to get module base")
 
     def get_init_size(self):
-        if self.has_member("init_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return (
+                    self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].size
+                    + self.mem[self.mod_mem_type["MOD_INIT_DATA"]].size
+                    + self.mem[self.mod_mem_type["MOD_INIT_RODATA"]].size
+                )
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_init_size: Unable to determine .init section size of module. Cannot read size of MOD_INIT_TEXT, MOD_INIT_DATA, and MOD_INIT_RODATA"
+                )
+        elif self.has_member("init_layout"):
             return self.init_layout.size
         elif self.has_member("init_size"):
             return self.init_size
@@ -42,7 +91,19 @@ class module(generic.GenericIntelProcess):
         )
 
     def get_core_size(self):
-        if self.has_member("core_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return (
+                    self.mem[self.mod_mem_type["MOD_TEXT"]].size
+                    + self.mem[self.mod_mem_type["MOD_DATA"]].size
+                    + self.mem[self.mod_mem_type["MOD_RODATA"]].size
+                    + self.mem[self.mod_mem_type["MOD_RO_AFTER_INIT"]].size
+                )
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_core_size: Unable to determine core size of module. Cannot read size of MOD_TEXT, MOD_DATA, MOD_RODATA, and MOD_RO_AFTER_INIT."
+                )
+        elif self.has_member("core_layout"):
             return self.core_layout.size
         elif self.has_member("core_size"):
             return self.core_size
@@ -51,18 +112,32 @@ class module(generic.GenericIntelProcess):
         )
 
     def get_module_core(self):
-        if self.has_member("core_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return self.mem[self.mod_mem_type["MOD_TEXT"]].base
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_module_core: Unable to get module core. Cannot read base from MOD_TEXT."
+                )
+        elif self.has_member("core_layout"):
             return self.core_layout.base
         elif self.has_member("module_core"):
             return self.module_core
         raise AttributeError("module -> get_module_core: Unable to get module core")
 
     def get_module_init(self):
-        if self.has_member("init_layout"):
+        if self.has_member("mem"):  # kernels 6.4+
+            try:
+                return self.mem[self.mod_mem_type["MOD_INIT_TEXT"]].base
+            except KeyError:
+                raise AttributeError(
+                    "module -> get_module_core: Unable to get module init. Cannot read base from MOD_INIT_TEXT."
+                )
+        elif self.has_member("init_layout"):
             return self.init_layout.base
         elif self.has_member("module_init"):
             return self.module_init
-        raise AttributeError("module -> get_module_core: Unable to get module init")
+        raise AttributeError("module -> get_module_init: Unable to get module init")
 
     def get_name(self):
         """Get the name of the module as a string"""
@@ -71,11 +146,11 @@ class module(generic.GenericIntelProcess):
     def _get_sect_count(self, grp):
         """Try to determine the number of valid sections"""
         arr = self._context.object(
-            self.get_symbol_table().name + constants.BANG + "array",
+            self.get_symbol_table_name() + constants.BANG + "array",
             layer_name=self.vol.layer_name,
             offset=grp.attrs,
             subtype=self._context.symbol_space.get_type(
-                self.get_symbol_table().name + constants.BANG + "pointer"
+                self.get_symbol_table_name() + constants.BANG + "pointer"
             ),
             count=25,
         )
@@ -92,11 +167,11 @@ class module(generic.GenericIntelProcess):
         else:
             num_sects = self._get_sect_count(self.sect_attrs.grp)
         arr = self._context.object(
-            self.get_symbol_table().name + constants.BANG + "array",
+            self.get_symbol_table_name() + constants.BANG + "array",
             layer_name=self.vol.layer_name,
             offset=self.sect_attrs.attrs.vol.offset,
             subtype=self._context.symbol_space.get_type(
-                self.get_symbol_table().name + constants.BANG + "module_sect_attr"
+                self.get_symbol_table_name() + constants.BANG + "module_sect_attr"
             ),
             count=num_sects,
         )
@@ -104,41 +179,82 @@ class module(generic.GenericIntelProcess):
         for attr in arr:
             yield attr
 
-    def get_symbols(self):
-        if symbols.symbol_table_is_64bit(self._context, self.get_symbol_table().name):
-            prefix = "Elf64_"
-        else:
-            prefix = "Elf32_"
+    def get_elf_table_name(self):
         elf_table_name = intermed.IntermediateSymbolTable.create(
-            self.context,
-            self.config_path,
+            self._context,
+            "elf_symbol_table",
             "linux",
             "elf",
             native_types=None,
             class_types=elf.class_types,
         )
+        return elf_table_name
 
+    def get_symbols(self):
+        """Get symbols of the module
+
+        Yields:
+                A symbol object
+        """
+
+        if not hasattr(self, "_elf_table_name"):
+            self._elf_table_name = self.get_elf_table_name()
+        if symbols.symbol_table_is_64bit(self._context, self.get_symbol_table_name()):
+            prefix = "Elf64_"
+        else:
+            prefix = "Elf32_"
         syms = self._context.object(
-            self.get_symbol_table().name + constants.BANG + "array",
+            self.get_symbol_table_name() + constants.BANG + "array",
             layer_name=self.vol.layer_name,
             offset=self.section_symtab,
             subtype=self._context.symbol_space.get_type(
-                elf_table_name + constants.BANG + prefix + "Sym"
+                self._elf_table_name + constants.BANG + prefix + "Sym"
             ),
             count=self.num_symtab + 1,
         )
         if self.section_strtab:
             for sym in syms:
-                sym.set_cached_strtab(self.section_strtab)
                 yield sym
 
-    def get_symbol(self, wanted_sym_name):
-        """Get value for a given symbol name"""
+    def get_symbols_names_and_addresses(self) -> Tuple[str, int]:
+        """Get names and addresses for each symbol of the module
+
+        Yields:
+                A tuple for each symbol containing the symbol name and its corresponding value
+        """
+
         for sym in self.get_symbols():
-            sym_name = sym.get_name()
-            sym_addr = sym.st_value
+            sym_arr = self._context.object(
+                self.get_symbol_table_name() + constants.BANG + "array",
+                layer_name=self.vol.native_layer_name,
+                offset=self.section_strtab + sym.st_name,
+            )
+            try:
+                sym_name = utility.array_to_string(
+                    sym_arr, 512
+                )  # 512 is the value of KSYM_NAME_LEN kernel constant
+            except exceptions.InvalidAddressException:
+                continue
+            if sym_name != "":
+                # Normalize sym.st_value offset, which is an address pointing to the symbol value
+                mask = self._context.layers[self.vol.layer_name].address_mask
+                sym_address = sym.st_value & mask
+                yield (sym_name, sym_address)
+
+    def get_symbol(self, wanted_sym_name):
+        """Get symbol value for a given symbol name"""
+        for sym_name, sym_address in self.get_symbols_names_and_addresses():
             if wanted_sym_name == sym_name:
-                return sym_addr
+                return sym_address
+
+        return None
+
+    def get_symbol_by_address(self, wanted_sym_address):
+        """Get symbol name for a given symbol address"""
+        for sym_name, sym_address in self.get_symbols_names_and_addresses():
+            if wanted_sym_address == sym_address:
+                return sym_name
+
         return None
 
     @property
@@ -321,19 +437,30 @@ class maple_tree(objects.StructType):
         maple_tree_entry,
         parent,
         expected_maple_tree_depth,
-        seen=set(),
+        seen=None,
         current_depth=1,
     ):
         """Recursively parse Maple Tree Nodes and yield all non empty slots"""
+
+        # Create seen set if it does not exist, e.g. on the first call into this recursive function. This
+        # must be None or an existing set of addresses for MTEs that have already been processed or that
+        # should otherwise be ignored. If parsing from the root node for example this should be None on the
+        # first call. If you needed to parse all nodes downwards from part of the tree this should still be
+        # None. If however you wanted to parse from a node, but ignore some parts of the tree below it then
+        # this could be populated with the addresses of the nodes you wish to ignore.
+
+        if seen is None:
+            seen = set()
 
         # protect against unlikely loop
         if maple_tree_entry in seen:
             vollog.warning(
                 f"The mte {hex(maple_tree_entry)} has all ready been seen, no further results will be produced for this node."
             )
-            return
+            return None
         else:
             seen.add(maple_tree_entry)
+
         # check if we have exceeded the expected depth of this maple tree.
         # e.g. when current_depth is larger than expected_maple_tree_depth there may be an issue.
         # it is normal that expected_maple_tree_depth is equal to current_depth.
@@ -342,6 +469,7 @@ class maple_tree(objects.StructType):
                 f"The depth for the maple tree at {hex(self.vol.offset)} is {expected_maple_tree_depth}, however when parsing the nodes "
                 f"a depth of {current_depth} was reached. This is unexpected and may lead to incorrect results."
             )
+
         # parse the mte to extract the pointer value, node type, and leaf status
         pointer = maple_tree_entry & ~(self.MAPLE_NODE_POINTER_MASK)
         node_type = (
@@ -406,15 +534,28 @@ class maple_tree(objects.StructType):
 
 
 class mm_struct(objects.StructType):
+
+    # TODO: As of version 3.0.0 this method should be removed
     def get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Returns an iterator for the mmap list member of an mm_struct."""
+        """
+        Deprecated: Use either get_vma_iter() or _get_mmap_iter().
+        """
+        vollog.warning(
+            "This method has been deprecated in favour of using the get_vma_iter() method."
+        )
+        yield from self.get_vma_iter()
+
+    def _get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns an iterator for the mmap list member of an mm_struct. Use this only if
+        required, get_vma_iter() will choose the correct _get_maple_tree_iter() or
+        _get_mmap_iter() automatically as required."""
 
         if not self.has_member("mmap"):
             raise AttributeError(
-                "get_mmap_iter called on mm_struct where no mmap member exists."
+                "_get_mmap_iter called on mm_struct where no mmap member exists."
             )
         if not self.mmap:
-            return
+            return None
         yield self.mmap
 
         seen = {self.mmap.vol.offset}
@@ -425,12 +566,24 @@ class mm_struct(objects.StructType):
             seen.add(link.vol.offset)
             link = link.vm_next
 
+    # TODO: As of version 3.0.0 this method should be removed
     def get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Returns an iterator for the mm_mt member of an mm_struct."""
+        """
+        Deprecated: Use either get_vma_iter() or _get_maple_tree_iter().
+        """
+        vollog.warning(
+            "This method has been deprecated in favour of using the get_vma_iter() method."
+        )
+        yield from self.get_vma_iter()
+
+    def _get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns an iterator for the mm_mt member of an mm_struct. Use this only if
+        required, get_vma_iter() will choose the correct _get_maple_tree_iter() or
+        get_mmap_iter() automatically as required."""
 
         if not self.has_member("mm_mt"):
             raise AttributeError(
-                "get_maple_tree_iter called on mm_struct where no mm_mt member exists."
+                "_get_maple_tree_iter called on mm_struct where no mm_mt member exists."
             )
         symbol_table_name = self.get_symbol_table_name()
         for vma_pointer in self.mm_mt.get_slot_iter():
@@ -446,9 +599,9 @@ class mm_struct(objects.StructType):
         """Returns an iterator for the VMAs in an mm_struct. Automatically choosing the mmap or mm_mt as required."""
 
         if self.has_member("mmap"):
-            yield from self.get_mmap_iter()
+            yield from self._get_mmap_iter()
         elif self.has_member("mm_mt"):
-            yield from self.get_maple_tree_iter()
+            yield from self._get_maple_tree_iter()
         else:
             raise AttributeError("Unable to find mmap or mm_mt in mm_struct")
 
@@ -497,11 +650,23 @@ class super_block(objects.StructType):
         ]
         return sb_opts
 
-    def get_type(self):
-        mnt_sb_type = utility.pointer_to_string(self.s_type.name, count=255)
-        if self.s_subtype:
-            mnt_sb_subtype = utility.pointer_to_string(self.s_subtype, count=255)
+    def get_type(self) -> Optional[str]:
+        """Gets the superblock filesystem type string"""
+
+        s_type_ptr = self.s_type
+        if not (s_type_ptr and s_type_ptr.is_readable()):
+            return None
+
+        s_type_name_ptr = s_type_ptr.name
+        if not (s_type_name_ptr and s_type_name_ptr.is_readable()):
+            return None
+
+        mnt_sb_type = utility.pointer_to_string(s_type_name_ptr, count=255)
+        s_subtype_ptr = self.s_subtype
+        if s_subtype_ptr and s_subtype_ptr.is_readable():
+            mnt_sb_subtype = utility.pointer_to_string(s_subtype_ptr, count=255)
             mnt_sb_type += "." + mnt_sb_subtype
+
         return mnt_sb_type
 
 
@@ -571,7 +736,8 @@ class vm_area_struct(objects.StructType):
     def get_page_offset(self) -> int:
         if self.vm_file == 0:
             return 0
-        return self.vm_pgoff << constants.linux.PAGE_SHIFT
+        parent_layer = self._context.layers[self.vol.layer_name]
+        return self.vm_pgoff << parent_layer.page_shift
 
     def get_name(self, context, task):
         if self.vm_file != 0:
@@ -600,7 +766,7 @@ class vm_area_struct(objects.StructType):
         elif flags_str == "r-x" and self.vm_file.dereference().vol.offset == 0:
             ret = True
         elif proclayer and "x" in flags_str:
-            for i in range(self.vm_start, self.vm_end, 1 << constants.linux.PAGE_SHIFT):
+            for i in range(self.vm_start, self.vm_end, proclayer.page_size):
                 try:
                     if proclayer.is_dirty(i):
                         vollog.warning(
@@ -681,24 +847,74 @@ class dentry(objects.StructType):
             current_dentry = current_dentry.d_parent
         return None
 
+    def get_subdirs(self) -> interfaces.objects.ObjectInterface:
+        """Walks dentry subdirs
+
+        Yields:
+            A dentry object
+        """
+        if self.has_member("d_sib") and self.has_member("d_children"):
+            # kernels >= 6.8
+            walk_member = "d_sib"
+            list_head_member = self.d_children.first
+        elif self.has_member("d_child") and self.has_member("d_subdirs"):
+            # 2.5.0 <= kernels < 6.8
+            walk_member = "d_child"
+            list_head_member = self.d_subdirs
+        else:
+            raise exceptions.VolatilityException("Unsupported dentry type")
+
+        dentry_type_name = self.get_symbol_table_name() + constants.BANG + "dentry"
+        yield from list_head_member.to_list(dentry_type_name, walk_member)
+
+    def get_inode(self) -> interfaces.objects.ObjectInterface:
+        """Returns the inode associated with this dentry"""
+
+        inode_ptr = self.d_inode
+        if not (inode_ptr and inode_ptr.is_readable() and inode_ptr.is_valid()):
+            return None
+
+        return inode_ptr.dereference()
+
 
 class struct_file(objects.StructType):
     def get_dentry(self) -> interfaces.objects.ObjectInterface:
-        if self.has_member("f_dentry"):
-            return self.f_dentry
-        elif self.has_member("f_path"):
+        """Returns a pointer to the dentry associated with this file"""
+        if self.has_member("f_path"):
             return self.f_path.dentry
+        elif self.has_member("f_dentry"):
+            return self.f_dentry
         else:
             raise AttributeError("Unable to find file -> dentry")
 
     def get_vfsmnt(self) -> interfaces.objects.ObjectInterface:
         """Returns the fs (vfsmount) where this file is mounted"""
-        if self.has_member("f_vfsmnt"):
-            return self.f_vfsmnt
-        elif self.has_member("f_path"):
+        if self.has_member("f_path"):
             return self.f_path.mnt
+        elif self.has_member("f_vfsmnt"):
+            return self.f_vfsmnt
         else:
             raise AttributeError("Unable to find file -> vfs mount")
+
+    def get_inode(self) -> interfaces.objects.ObjectInterface:
+        """Returns an inode associated with this file"""
+
+        inode_ptr = None
+        if self.has_member("f_inode") and self.f_inode and self.f_inode.is_readable():
+            # Try first the cached value, kernels +3.9
+            inode_ptr = self.f_inode
+
+        if not (inode_ptr and inode_ptr.is_readable() and inode_ptr.is_valid()):
+            dentry_ptr = self.get_dentry()
+            if not (dentry_ptr and dentry_ptr.is_readable()):
+                return None
+
+            inode_ptr = dentry_ptr.d_inode
+
+        if not (inode_ptr and inode_ptr.is_readable() and inode_ptr.is_valid()):
+            return None
+
+        return inode_ptr.dereference()
 
 
 class list_head(objects.StructType, collections.abc.Iterable):
@@ -735,7 +951,7 @@ class list_head(objects.StructType, collections.abc.Iterable):
         try:
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
-            return
+            return None
         if not sentinel:
             yield self._context.object(
                 symbol_type, layer, offset=self.vol.offset - relative_offset
@@ -797,7 +1013,8 @@ class mount(objects.StructType):
         MNT_RELATIME: "relatime",
     }
 
-    def get_mnt_sb(self):
+    def get_mnt_sb(self) -> int:
+        """Returns a pointer to the super_block"""
         if self.has_member("mnt"):
             return self.mnt.mnt_sb
         elif self.has_member("mnt_sb"):
@@ -1001,17 +1218,17 @@ class vfsmount(objects.StructType):
         """Helper to make sure it is comparing two pointers to 'vfsmount'.
 
         Depending on the kernel version, the calling object (self) could be
-        a 'vfsmount \*' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
+        a 'vfsmount \\*' (<3.3.8) or a 'vfsmount' (>=3.3.8). This way we trust
         in the framework "auto" dereferencing ability to assure that when we
         reach this point 'self' will be a 'vfsmount' already and self.vol.offset
-        a 'vfsmount \*' and not a 'vfsmount \*\*'. The argument must be a 'vfsmount \*'.
+        a 'vfsmount \\*' and not a 'vfsmount \\*\\*'. The argument must be a 'vfsmount \\*'.
         Typically, it's called from do_get_path().
 
         Args:
-            vfsmount_ptr (vfsmount \*): A pointer to a 'vfsmount'
+            vfsmount_ptr (vfsmount *): A pointer to a 'vfsmount'
 
         Raises:
-            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount \*'
+            exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount \\*'
 
         Returns:
             bool: 'True' if the given argument points to the the same 'vfsmount'
@@ -1112,6 +1329,7 @@ class vfsmount(objects.StructType):
             return self._get_real_mnt().has_parent()
 
     def get_mnt_sb(self):
+        """Returns a pointer to the super_block"""
         return self.mnt_sb
 
     def get_flags_access(self) -> str:
@@ -1144,7 +1362,7 @@ class vfsmount(objects.StructType):
 class kobject(objects.StructType):
     def reference_count(self):
         refcnt = self.kref.refcount
-        if self.has_member("counter"):
+        if refcnt.has_member("counter"):
             ret = refcnt.counter
         else:
             ret = refcnt.refs.counter
@@ -1230,7 +1448,7 @@ class sock(objects.StructType):
         return self.sk_socket.get_inode()
 
     def get_protocol(self):
-        return
+        return None
 
     def get_state(self):
         # Return the generic socket state
@@ -1242,13 +1460,13 @@ class sock(objects.StructType):
 class unix_sock(objects.StructType):
     def get_name(self):
         if not self.addr:
-            return
+            return None
         sockaddr_un = self.addr.name.cast("sockaddr_un")
         saddr = str(utility.array_to_string(sockaddr_un.sun_path))
         return saddr
 
     def get_protocol(self):
-        return
+        return None
 
     def get_state(self):
         """Return a string representing the sock state."""
@@ -1307,7 +1525,7 @@ class inet_sock(objects.StructType):
         elif hasattr(sk_common, "skc_dport"):
             dport_le = sk_common.skc_dport
         else:
-            return
+            return None
         return socket_module.htons(dport_le)
 
     def get_src_addr(self):
@@ -1325,7 +1543,7 @@ class inet_sock(objects.StructType):
             addr_size = 16
             saddr = self.pinet6.saddr
         else:
-            return
+            return None
         parent_layer = self._context.layers[self.vol.layer_name]
         try:
             addr_bytes = parent_layer.read(saddr.vol.offset, addr_size)
@@ -1333,7 +1551,7 @@ class inet_sock(objects.StructType):
             vollog.debug(
                 f"Unable to read socket src address from {saddr.vol.offset:#x}"
             )
-            return
+            return None
         return socket_module.inet_ntop(family, addr_bytes)
 
     def get_dst_addr(self):
@@ -1354,7 +1572,7 @@ class inet_sock(objects.StructType):
                 daddr = sk_common.skc_v6_daddr
             addr_size = 16
         else:
-            return
+            return None
         parent_layer = self._context.layers[self.vol.layer_name]
         try:
             addr_bytes = parent_layer.read(daddr.vol.offset, addr_size)
@@ -1362,7 +1580,7 @@ class inet_sock(objects.StructType):
             vollog.debug(
                 f"Unable to read socket dst address from {daddr.vol.offset:#x}"
             )
-            return
+            return None
         return socket_module.inet_ntop(family, addr_bytes)
 
 
@@ -1400,7 +1618,7 @@ class netlink_sock(objects.StructType):
 class vsock_sock(objects.StructType):
     def get_protocol(self):
         # The protocol should always be 0 for vsocks
-        return
+        return None
 
     def get_state(self):
         # Return the generic socket state
@@ -1411,7 +1629,7 @@ class packet_sock(objects.StructType):
     def get_protocol(self):
         eth_proto = socket_module.htons(self.num)
         if eth_proto == 0:
-            return
+            return None
         elif eth_proto in ETH_PROTOCOLS:
             return ETH_PROTOCOLS[eth_proto]
         else:
@@ -1437,7 +1655,7 @@ class bt_sock(objects.StructType):
 class xdp_sock(objects.StructType):
     def get_protocol(self):
         # The protocol should always be 0 for xdp_sock
-        return
+        return None
 
     def get_state(self):
         # xdp_sock.state is an enum
@@ -1445,20 +1663,59 @@ class xdp_sock(objects.StructType):
 
 
 class bpf_prog(objects.StructType):
-    def get_type(self):
+    def get_type(self) -> Union[str, None]:
+        """Returns a string with the eBPF program type"""
+
         # The program type was in `bpf_prog_aux::prog_type` from 3.18.140 to
         # 4.1.52 before it was moved to `bpf_prog::type`
         if self.has_member("type"):
             # kernel >= 4.1.52
-            return self.type
+            return self.type.description
 
         if self.has_member("aux") and self.aux:
             if self.aux.has_member("prog_type"):
                 # 3.18.140 <= kernel < 4.1.52
-                return self.aux.prog_type
+                return self.aux.prog_type.description
 
         # kernel < 3.18.140
-        raise AttributeError("Unable to find the BPF type")
+        return None
+
+    def get_tag(self) -> Union[str, None]:
+        """Returns a string with the eBPF program tag"""
+        # 'tag' was added in kernels 4.10
+        if not self.has_member("tag"):
+            return None
+
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
+
+        prog_tag_addr = self.tag.vol.offset
+        prog_tag_size = self.tag.count
+        prog_tag_bytes = vmlinux_layer.read(prog_tag_addr, prog_tag_size)
+
+        prog_tag = binascii.hexlify(prog_tag_bytes).decode()
+        return prog_tag
+
+    def get_name(self) -> Union[str, None]:
+        """Returns a string with the eBPF program name"""
+        if not self.has_member("aux"):
+            # 'prog_aux' was added in kernels 3.18
+            return None
+
+        return self.aux.get_name()
+
+
+class bpf_prog_aux(objects.StructType):
+    def get_name(self) -> Union[str, None]:
+        """Returns a string with the eBPF program name"""
+        if not self.has_member("name"):
+            # 'name' was added in kernels 4.15
+            return None
+
+        if not self.name:
+            return None
+
+        return utility.array_to_string(self.name)
 
 
 class cred(objects.StructType):
@@ -1502,13 +1759,13 @@ class cred(objects.StructType):
 
 
 class kernel_cap_struct(objects.StructType):
-    # struct kernel_cap_struct was added in kernels 2.5.0
+    # struct kernel_cap_struct exists from 2.1.92 <= kernels < 6.3
     @classmethod
     def get_last_cap_value(cls) -> int:
         """Returns the latest capability ID supported by the framework.
 
         Returns:
-            int: The latest supported capability ID supported by the framework.
+            int: The latest capability ID supported by the framework.
         """
         return len(CAPABILITIES) - 1
 
@@ -1516,7 +1773,7 @@ class kernel_cap_struct(objects.StructType):
         """Return the maximum value allowed for this kernel for a capability
 
         Returns:
-            int: _description_
+            int: The capability full bitfield mask
         """
         vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         try:
@@ -1552,17 +1809,29 @@ class kernel_cap_struct(objects.StructType):
             int: The capability bitfield value.
         """
 
+        if not self.has_member("cap"):
+            raise exceptions.VolatilityException(
+                "Unsupported kernel capabilities implementation"
+            )
+
         if isinstance(self.cap, objects.Array):
-            # In 2.6.25.x <= kernels < 6.3 kernel_cap_struct::cap is a two
-            # elements __u32 array that constitutes a 64bit bitfield.
-            # Technically, it can also be an array of 1 element if
-            # _KERNEL_CAPABILITY_U32S = _LINUX_CAPABILITY_U32S_1
-            # However, in the source code, that never happens.
-            # From 2.6.24 to 2.6.25 cap became an array of 2 elements.
-            cap_value = (self.cap[1] << 32) | self.cap[0]
+            if len(self.cap) == 1:
+                # At least in the vanilla kernel, from 2.6.24 to 2.6.25
+                # kernel_cap_struct::cap become a two elements array.
+                # However, in some distros or custom kernel can technically
+                # be _KERNEL_CAPABILITY_U32S = _LINUX_CAPABILITY_U32S_1
+                # Leaving this code here for the sake of ensuring completeness.
+                cap_value = self.cap[0]
+            elif len(self.cap) == 2:
+                # In 2.6.25.x <= kernels < 6.3 kernel_cap_struct::cap is a two
+                # elements __u32 array that constitutes a 64bit bitfield.
+                cap_value = (self.cap[1] << 32) | self.cap[0]
+            else:
+                raise exceptions.VolatilityException(
+                    "Unsupported kernel capabilities implementation"
+                )
         else:
-            # In kernels < 2.6.25.x kernel_cap_struct::cap was a __u32
-            # In kernels >= 6.3 kernel_cap_struct::cap is a u64
+            # In kernels < 2.6.25.x kernel_cap_struct::cap is a __u32
             cap_value = self.cap
 
         return cap_value & self.get_kernel_cap_full()
@@ -1593,3 +1862,403 @@ class kernel_cap_struct(objects.StructType):
 
         cap_value = 1 << CAPABILITIES.index(capability)
         return cap_value & self.get_capabilities() != 0
+
+
+class kernel_cap_t(kernel_cap_struct):
+    # In kernels 6.3 kernel_cap_struct became the kernel_cap_t typedef
+    def get_capabilities(self) -> int:
+        """Returns the capability bitfield value
+
+        Returns:
+            int: The capability bitfield value.
+        """
+
+        if self.has_member("val"):
+            # In kernels >= 6.3 kernel_cap_t::val is a u64
+            cap_value = self.val
+        else:
+            raise exceptions.VolatilityException(
+                "Unsupported kernel capabilities implementation"
+            )
+
+        return cap_value & self.get_kernel_cap_full()
+
+
+class timespec64(objects.StructType):
+    def to_datetime(self) -> datetime:
+        """Returns the respective aware datetime"""
+
+        dt = conversion.unixtime_to_datetime(self.tv_sec + self.tv_nsec / 1e9)
+        return dt
+
+
+class inode(objects.StructType):
+    def is_valid(self) -> bool:
+        # i_count is a 'signed' counter (atomic_t). Smear, or essentially a wrong inode
+        # pointer, will easily cause an integer overflow here.
+        return self.i_ino > 0 and self.i_count.counter >= 0
+
+    @property
+    def is_dir(self) -> bool:
+        """Returns True if the inode is a directory"""
+        return stat.S_ISDIR(self.i_mode) != 0
+
+    @property
+    def is_reg(self) -> bool:
+        """Returns True if the inode is a regular file"""
+        return stat.S_ISREG(self.i_mode) != 0
+
+    @property
+    def is_link(self) -> bool:
+        """Returns True if the inode is a symlink"""
+        return stat.S_ISLNK(self.i_mode) != 0
+
+    @property
+    def is_fifo(self) -> bool:
+        """Returns True if the inode is a FIFO"""
+        return stat.S_ISFIFO(self.i_mode) != 0
+
+    @property
+    def is_sock(self) -> bool:
+        """Returns True if the inode is a socket"""
+        return stat.S_ISSOCK(self.i_mode) != 0
+
+    @property
+    def is_block(self) -> bool:
+        """Returns True if the inode is a block device"""
+        return stat.S_ISBLK(self.i_mode) != 0
+
+    @property
+    def is_char(self) -> bool:
+        """Returns True if the inode is a char device"""
+        return stat.S_ISCHR(self.i_mode) != 0
+
+    @property
+    def is_sticky(self) -> bool:
+        """Returns True if the sticky bit is set"""
+        return (self.i_mode & stat.S_ISVTX) != 0
+
+    def get_inode_type(self) -> Union[str, None]:
+        """Returns inode type name
+
+        Returns:
+            The inode type name
+        """
+        if self.is_dir:
+            return "DIR"
+        elif self.is_reg:
+            return "REG"
+        elif self.is_link:
+            return "LNK"
+        elif self.is_fifo:
+            return "FIFO"
+        elif self.is_sock:
+            return "SOCK"
+        elif self.is_char:
+            return "CHR"
+        elif self.is_block:
+            return "BLK"
+        else:
+            return None
+
+    def _time_member_to_datetime(self, member) -> datetime:
+        if self.has_member(f"{member}_sec") and self.has_member(f"{member}_nsec"):
+            # kernels >= 6.11 it's i_*_sec -> time64_t and i_*_nsec -> u32
+            # Ref Linux commit 3aa63a569c64e708df547a8913c84e64a06e7853
+            return conversion.unixtime_to_datetime(
+                self.member(f"{member}_sec") + self.has_member(f"{member}_nsec") / 1e9
+            )
+        elif self.has_member(f"__{member}"):
+            # 6.6 <= kernels < 6.11 it's a timespec64
+            # Ref Linux commit 13bc24457850583a2e7203ded05b7209ab4bc5ef / 12cd44023651666bd44baa36a5c999698890debb
+            return self.member(f"__{member}").to_datetime()
+        elif self.has_member(member):
+            # In kernels < 6.6 it's a timespec64 or timespec
+            return self.member(member).to_datetime()
+        else:
+            raise exceptions.VolatilityException(
+                "Unsupported kernel inode type implementation"
+            )
+
+    def get_access_time(self) -> datetime:
+        """Returns the inode's last access time
+        This is updated when inode contents are read
+
+        Returns:
+            A datetime with the inode's last access time
+        """
+        return self._time_member_to_datetime("i_atime")
+
+    def get_modification_time(self) -> datetime:
+        """Returns the inode's last modification time
+        This is updated when the inode contents change
+
+        Returns:
+            A datetime with the inode's last data modification time
+        """
+
+        return self._time_member_to_datetime("i_mtime")
+
+    def get_change_time(self) -> datetime:
+        """Returns the inode's last change time
+        This is updated when the inode metadata changes
+
+        Returns:
+            A datetime with the inode's last change time
+        """
+        return self._time_member_to_datetime("i_ctime")
+
+    def get_file_mode(self) -> str:
+        """Returns the inode's file mode as string of the form '-rwxrwxrwx'.
+
+        Returns:
+            The inode's file mode string
+        """
+        return stat.filemode(self.i_mode)
+
+    def get_pages(self) -> interfaces.objects.ObjectInterface:
+        """Gets the inode's cached pages
+
+        Yields:
+            The inode's cached pages
+        """
+        if not self.i_size:
+            return
+        elif not (self.i_mapping and self.i_mapping.nrpages > 0):
+            return
+
+        page_cache = linux.PageCache(
+            context=self._context,
+            kernel_module_name="kernel",
+            page_cache=self.i_mapping.dereference(),
+        )
+        yield from page_cache.get_cached_pages()
+
+    def get_contents(self):
+        """Get the inode cached pages from the page cache
+
+        Yields:
+            page_index (int): The page index in the Tree. File offset is page_index * PAGE_SIZE.
+            page_content (str): The page content
+        """
+        for page_obj in self.get_pages():
+            page_index = int(page_obj.index)
+            page_content = page_obj.get_content()
+            yield page_index, page_content
+
+
+class address_space(objects.StructType):
+    @property
+    def i_pages(self):
+        """Returns the appropriate member containing the page cache tree"""
+        if self.has_member("i_pages"):
+            # Kernel >= 4.17
+            return self.member("i_pages")
+        elif self.has_member("page_tree"):
+            # Kernel < 4.17
+            return self.member("page_tree")
+
+        raise exceptions.VolatilityException("Unsupported page cache tree")
+
+
+class page(objects.StructType):
+    @property
+    @functools.lru_cache()
+    def pageflags_enum(self) -> Dict:
+        """Returns 'pageflags' enumeration key/values
+
+        Returns:
+            A dictionary with the pageflags enumeration key/values
+        """
+        # FIXME: It would be even better to use @functools.cached_property instead,
+        # however, this requires Python +3.8
+        try:
+            pageflags_enum = self._context.symbol_space.get_enumeration(
+                self.get_symbol_table_name() + constants.BANG + "pageflags"
+            ).choices
+        except exceptions.SymbolError:
+            vollog.debug(
+                "Unable to find pageflags enum. This can happen in kernels < 2.6.26 or wrong ISF"
+            )
+            # set to empty dict to show that the enum was not found, and so shouldn't be searched for again
+            pageflags_enum = {}
+
+        return pageflags_enum
+
+    def get_flags_list(self) -> List[str]:
+        """Returns a list of page flags
+
+        Returns:
+            List of page flags
+        """
+        flags = []
+        for name, value in self.pageflags_enum.items():
+            if self.flags & (1 << value) != 0:
+                flags.append(name)
+
+        return flags
+
+    def to_paddr(self) -> int:
+        """Converts a page's virtual address to its physical address using the current physical memory model.
+
+        Returns:
+            int: page physical address
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
+
+        vmemmap_start = None
+        if vmlinux.has_symbol("mem_section"):
+            # SPARSEMEM_VMEMMAP physical memory model: memmap is virtually contiguous
+            if vmlinux.has_symbol("vmemmap_base"):
+                # CONFIG_DYNAMIC_MEMORY_LAYOUT - KASLR kernels >= 4.9
+                vmemmap_start = vmlinux.object_from_symbol("vmemmap_base")
+            else:
+                # !CONFIG_DYNAMIC_MEMORY_LAYOUT
+                if vmlinux_layer._maxvirtaddr < 57:
+                    # 4-Level paging -> VMEMMAP_START = __VMEMMAP_BASE_L4
+                    vmemmap_base_l4 = 0xFFFFEA0000000000
+                    vmemmap_start = vmemmap_base_l4
+                else:
+                    # 5-Level paging -> VMEMMAP_START = __VMEMMAP_BASE_L5
+                    # FIXME: Once 5-level paging is supported, uncomment the following lines and remove the exception
+                    # vmemmap_base_l5 = 0xFFD4000000000000
+                    # vmemmap_start = vmemmap_base_l5
+                    raise exceptions.VolatilityException(
+                        "5-level paging is not yet supported"
+                    )
+
+        elif vmlinux.has_symbol("mem_map"):
+            # FLATMEM physical memory model, typically 32bit
+            vmemmap_start = vmlinux.object_from_symbol("mem_map")
+
+        elif vmlinux.has_symbol("node_data"):
+            raise exceptions.VolatilityException("NUMA systems are not yet supported")
+        else:
+            raise exceptions.VolatilityException("Unsupported Linux memory model")
+
+        if not vmemmap_start:
+            raise exceptions.VolatilityException(
+                "Something went wrong, we shouldn't be here"
+            )
+
+        page_type_size = vmlinux.get_type("page").size
+        pagec = vmlinux_layer.canonicalize(self.vol.offset)
+        pfn = (pagec - vmemmap_start) // page_type_size
+        page_paddr = pfn * vmlinux_layer.page_size
+
+        return page_paddr
+
+    def get_content(self) -> Union[str, None]:
+        """Returns the page content
+
+        Returns:
+            The page content
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
+        physical_layer = vmlinux.context.layers["memory_layer"]
+        page_paddr = self.to_paddr()
+        if not page_paddr:
+            return None
+
+        page_data = physical_layer.read(page_paddr, vmlinux_layer.page_size)
+        return page_data
+
+
+class IDR(objects.StructType):
+    IDR_BITS = 8
+    IDR_MASK = (1 << IDR_BITS) - 1
+    INT_SIZE = 4
+    MAX_IDR_SHIFT = INT_SIZE * 8 - 1
+    MAX_IDR_BIT = 1 << MAX_IDR_SHIFT
+
+    def idr_max(self, num_layers: int) -> int:
+        """Returns the maximum ID which can be allocated given idr::layers
+
+        Args:
+            num_layers: Number of layers
+
+        Returns:
+            Maximum ID for a given number of layers
+        """
+        # Kernel < 4.17
+        bits = min([self.INT_SIZE, num_layers * self.IDR_BITS, self.MAX_IDR_SHIFT])
+
+        return (1 << bits) - 1
+
+    def idr_find(self, idr_id: int) -> int:
+        """Finds an ID within the IDR data structure.
+        Based on idr_find_slowpath(), 3.9 <= Kernel < 4.11
+        Args:
+            idr_id: The IDR lookup ID
+
+        Returns:
+            A pointer to the given ID element
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        if not vmlinux.get_type("idr_layer").has_member("layer"):
+            vollog.info(
+                "Unsupported IDR implementation, it should be a very very old kernel, probabably < 2.6"
+            )
+            return None
+
+        if idr_id < 0:
+            return None
+
+        idr_layer = self.top
+        if not idr_layer:
+            return None
+
+        n = (idr_layer.layer + 1) * self.IDR_BITS
+
+        if idr_id > self.idr_max(idr_layer.layer + 1):
+            return None
+
+        assert n != 0
+
+        while n > 0 and idr_layer:
+            n -= self.IDR_BITS
+            assert n == idr_layer.layer * self.IDR_BITS
+            idr_layer = idr_layer.ary[(idr_id >> n) & self.IDR_MASK]
+
+        return idr_layer
+
+    def _old_kernel_get_entries(self) -> int:
+        # Kernels < 4.11
+        cur = self.cur
+        total = next_id = 0
+        while next_id < cur:
+            entry = self.idr_find(next_id)
+            if entry:
+                yield entry
+                total += 1
+
+            next_id += 1
+
+    def _new_kernel_get_entries(self) -> int:
+        # Kernels >= 4.11
+        id_storage = linux.IDStorage.choose_id_storage(
+            self._context, kernel_module_name="kernel"
+        )
+        for page_addr in id_storage.get_entries(root=self.idr_rt):
+            yield page_addr
+
+    def get_entries(self) -> int:
+        """Walks the IDR and yield a pointer associated with each element.
+
+        Args:
+            in_use (int, optional): _description_. Defaults to 0.
+
+        Yields:
+            A pointer associated with each element.
+        """
+        if self.has_member("idr_rt"):
+            # Kernels >= 4.11
+            get_entries_func = self._new_kernel_get_entries
+        else:
+            # Kernels < 4.11
+            get_entries_func = self._old_kernel_get_entries
+
+        for page_addr in get_entries_func():
+            yield page_addr

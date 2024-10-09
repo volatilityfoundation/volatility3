@@ -6,8 +6,10 @@ jobs:
   lint:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: psf/black@stable
         with:
           options: "--check --diff --verbose"
           src: "./volatility3"
+          # FIXME: Remove when Volatility3 minimum Python version is >3.8
+          version: "24.8.0"

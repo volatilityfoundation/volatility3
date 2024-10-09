@@ -10,6 +10,8 @@ Text renderers should attempt to honour all hints provided in this module where 
 """
 from typing import Type, Union
 
+from volatility3.framework import interfaces
+
 
 class Bin(int):
     """A class to indicate that the integer value should be represented as a
@@ -59,9 +61,24 @@ class MultiTypeData(bytes):
 
     def __eq__(self, other):
         return (
-            super(self) == super(other)
+            isinstance(other, self.__class__)
+            and super() == super(self.__class__, other)
             and self.converted_int == other.converted_int
             and self.encoding == other.encoding
             and self.split_nulls == other.split_nulls
             and self.show_hex == other.show_hex
         )
+
+
+BinOrAbsent = lambda x: (
+    Bin(x) if not isinstance(x, interfaces.renderers.BaseAbsentValue) else x
+)
+HexOrAbsent = lambda x: (
+    Hex(x) if not isinstance(x, interfaces.renderers.BaseAbsentValue) else x
+)
+HexBytesOrAbsent = lambda x: (
+    HexBytes(x) if not isinstance(x, interfaces.renderers.BaseAbsentValue) else x
+)
+MultiTypeDataOrAbsent = lambda x: (
+    MultiTypeData(x) if not isinstance(x, interfaces.renderers.BaseAbsentValue) else x
+)

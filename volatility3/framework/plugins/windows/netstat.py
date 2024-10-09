@@ -35,7 +35,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 name="netscan", component=netscan.NetScan, version=(1, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="modules", component=modules.Modules, version=(1, 0, 0)
+                name="modules", component=modules.Modules, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="pdbutil", component=pdbutil.PDBUtility, version=(1, 0, 0)
@@ -154,7 +154,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             )
         else:
             # invalid argument.
-            return
+            return None
 
         vollog.debug(f"Current Port: {port}")
         # the given port serves as a shifted index into the port pool lists
@@ -175,7 +175,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         assignment = inpa.InPaBigPoolBase.Assignments[truncated_port]
 
         if not assignment:
-            return
+            return None
 
         # the value within assignment.Entry is a) masked and b) points inside of the network object
         # first decode the pointer

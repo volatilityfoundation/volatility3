@@ -1,7 +1,7 @@
 # This file is Copyright 2021 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-from typing import Any, Callable, Iterable, List
+from typing import Any, Callable, Iterable, List, Tuple
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
@@ -17,7 +17,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (2, 1, 0)
+    _version = (2, 2, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -78,6 +78,74 @@ class PsList(interfaces.plugins.PluginInterface):
         else:
             return lambda _: False
 
+    @classmethod
+    def get_task_fields(
+        cls, task: interfaces.objects.ObjectInterface, decorate_comm: bool = False
+    ) -> Tuple[int, int, int, str]:
+        """Extract the fields needed for the final output
+
+        Args:
+            task: A task object from where to get the fields.
+            decorate_comm: If True, it decorates the comm string of user threads in curly brackets,
+                           and of Kernel threads in square brackets.
+                           Defaults to False.
+        Returns:
+            A tuple with the fields to show in the plugin output.
+        """
+        pid = task.tgid
+        tid = task.pid
+        ppid = task.parent.tgid if task.parent else 0
+        name = utility.array_to_string(task.comm)
+        if decorate_comm:
+            if task.is_kernel_thread:
+                name = f"[{name}]"
+            elif task.is_user_thread:
+                name = f"{{{name}}}"
+
+        task_fields = (task.vol.offset, pid, tid, ppid, name)
+        return task_fields
+
+    def _get_file_output(self, task: interfaces.objects.ObjectInterface) -> str:
+        """Extract the elf for the process if requested
+        Args:
+            task: A task object to extract from.
+        Returns:
+            A string showing the results of the extraction, either
+            the filename used or an error.
+        """
+        elf_table_name = intermed.IntermediateSymbolTable.create(
+            self.context,
+            self.config_path,
+            "linux",
+            "elf",
+            class_types=elf.class_types,
+        )
+        proc_layer_name = task.add_process_layer()
+        if not proc_layer_name:
+            # if we can't build a proc layer we can't
+            # extract the elf
+            return renderers.NotApplicableValue()
+        else:
+            # Find the vma that belongs to the main ELF of the process
+            file_output = "Error outputting file"
+            for v in task.mm.get_vma_iter():
+                if v.vm_start == task.mm.start_code:
+                    file_handle = elfs.Elfs.elf_dump(
+                        self.context,
+                        proc_layer_name,
+                        elf_table_name,
+                        v,
+                        task,
+                        self.open,
+                    )
+                    if file_handle:
+                        file_output = str(file_handle.preferred_filename)
+                        file_handle.close()
+                    break
+            else:
+                file_output = "VMA start matching task start_code not found"
+        return file_output
+
     def _generator(
         self,
         pid_filter: Callable[[Any], bool],
@@ -104,49 +172,15 @@ class PsList(interfaces.plugins.PluginInterface):
         for task in self.list_tasks(
             self.context, self.config["kernel"], pid_filter, include_threads
         ):
-            elf_table_name = intermed.IntermediateSymbolTable.create(
-                self.context,
-                self.config_path,
-                "linux",
-                "elf",
-                class_types=elf.class_types,
-            )
-            file_output = "Disabled"
             if dump:
-                proc_layer_name = task.add_process_layer()
-                if not proc_layer_name:
-                    continue
+                file_output = self._get_file_output(task)
+            else:
+                file_output = "Disabled"
 
-                # Find the vma that belongs to the main ELF of the process
-                file_output = "Error outputting file"
-
-                for v in task.mm.get_mmap_iter():
-                    if v.vm_start == task.mm.start_code:
-                        file_handle = elfs.Elfs.elf_dump(
-                            self.context,
-                            proc_layer_name,
-                            elf_table_name,
-                            v,
-                            task,
-                            self.open,
-                        )
-                        if file_handle:
-                            file_output = str(file_handle.preferred_filename)
-                            file_handle.close()
-                        break
-
-            pid = task.tgid
-            tid = task.pid
-            ppid = task.parent.tgid if task.parent else 0
-            name = utility.array_to_string(task.comm)
-            if decorate_comm:
-                if task.is_kernel_thread:
-                    name = f"[{name}]"
-                elif task.is_user_thread:
-                    name = f"{{{name}}}"
+            offset, pid, tid, ppid, name = self.get_task_fields(task, decorate_comm)
 
             yield 0, (
-                format_hints.Hex(task.vol.offset),
+                format_hints.Hex(offset),
                 pid,
                 tid,
                 ppid,

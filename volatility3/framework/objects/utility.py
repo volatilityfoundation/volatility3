@@ -7,6 +7,27 @@ from typing import Optional, Union
 from volatility3.framework import interfaces, objects, constants
 
 
+def rol(value: int, count: int, max_bits: int = 64) -> int:
+    """A rotate-left instruction in Python"""
+    max_bits_mask = (1 << max_bits) - 1
+    return (value << count % max_bits) & max_bits_mask | (
+        (value & max_bits_mask) >> (max_bits - (count % max_bits))
+    )
+
+
+def bswap_32(value: int) -> int:
+    value = ((value << 8) & 0xFF00FF00) | ((value >> 8) & 0x00FF00FF)
+
+    return ((value << 16) | (value >> 16)) & 0xFFFFFFFF
+
+
+def bswap_64(value: int) -> int:
+    low = bswap_32((value >> 32))
+    high = bswap_32((value & 0xFFFFFFFF))
+
+    return ((high << 32) | low) & 0xFFFFFFFFFFFFFFFF
+
+
 def array_to_string(
     array: "objects.Array", count: Optional[int] = None, errors: str = "replace"
 ) -> interfaces.objects.ObjectInterface:
@@ -44,8 +65,9 @@ def array_of_pointers(
         raise TypeError(
             "Subtype must be a valid template (or string name of an object template)"
         )
+    # We have to clone the pointer class, or we'll be defining the pointer subtype for all future pointers
     subtype_pointer = context.symbol_space.get_type(
         symbol_table + constants.BANG + "pointer"
-    )
+    ).clone()
     subtype_pointer.update_vol(subtype=subtype)
     return array.cast("array", count=count, subtype=subtype_pointer)

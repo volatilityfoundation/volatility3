@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Callable, List, Generator, Iterable, Type, Optional
+from typing import Callable, List, Generator, Iterable, Type, Optional, Tuple
 
 from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
@@ -196,11 +196,31 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
         return file_handle
 
-    def _generator(self, procs):
+    def _generator(self, procs: List[interfaces.objects.ObjectInterface]) -> Generator[
+        Tuple[
+            int,
+            Tuple[
+                int,
+                str,
+                format_hints.Hex,
+                format_hints.Hex,
+                format_hints.Hex,
+                str,
+                str,
+                int,
+                int,
+                format_hints.Hex,
+                str,
+                str,
+            ],
+        ],
+        None,
+        None,
+    ]:
         kernel = self.context.modules[self.config["kernel"]]
         kernel_layer = self.context.layers[kernel.layer_name]
 
-        def passthrough(_: interfaces.objects.ObjectInterface) -> bool:
+        def passthrough(x: interfaces.objects.ObjectInterface) -> bool:
             return False
 
         filter_func = passthrough
@@ -250,7 +270,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
                     ),
                 )
 
-    def run(self):
+    def run(self) -> renderers.TreeGrid:
         kernel = self.context.modules[self.config["kernel"]]
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))

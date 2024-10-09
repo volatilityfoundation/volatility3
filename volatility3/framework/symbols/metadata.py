@@ -2,9 +2,49 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
+import datetime
+import logging
 from typing import Optional, Tuple, Union
 
-from volatility3.framework import interfaces
+from volatility3.framework import constants, interfaces
+
+vollog = logging.getLogger(__name__)
+
+
+class ProducerMetadata(interfaces.symbols.MetadataInterface):
+    """Class to handle the Producer metadata from an ISF"""
+
+    @property
+    def name(self) -> Optional[str]:
+        return self._json_data.get("name", None)
+
+    @property
+    def version(self) -> Optional[Tuple[int]]:
+        """Returns the version of the ISF file producer"""
+        version = self._json_data.get("version", None)
+        if not version:
+            return None
+        if all(x in "0123456789." for x in version):
+            return tuple(int(x) for x in version.split("."))
+        vollog.log(
+            constants.LOGLEVEL_VVVV,
+            f"Metadata version contains unexpected characters: '{version}'",
+        )
+        return None
+
+    @property
+    def datetime(self) -> Optional[datetime.datetime]:
+        """Returns a timestamp for when the file was produced"""
+        if "datetime" not in self._json_data:
+            return None
+        try:
+            timestamp = datetime.datetime.strptime(
+                self._json_data["datetime"], "YYYY-MM-DD"
+            )
+        except (TypeError, ValueError):
+            vollog.debug("Invalid timestamp in producer information of symbol table")
+            return None
+        return timestamp
 
 
 class WindowsMetadata(interfaces.symbols.MetadataInterface):

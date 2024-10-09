@@ -183,6 +183,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     types = _construct_delegate_function("types", True)
     enumerations = _construct_delegate_function("enumerations", True)
     metadata = _construct_delegate_function("metadata", True)
+    producer = _construct_delegate_function("producer", True)
     clear_symbol_cache = _construct_delegate_function("clear_symbol_cache")
     get_type = _construct_delegate_function("get_type")
     get_symbol = _construct_delegate_function("get_symbol")
@@ -281,7 +282,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         urls = list(cls.file_symbol_url(sub_path, filename))
         if not urls:
             raise FileNotFoundError(
-                "No symbol files found at provided filename: {}", filename
+                f"No symbol files found at provided filename: {filename}",
             )
         table_name = context.symbol_space.free_table_name(filename)
         table = cls(
@@ -371,6 +372,14 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass=ABCMeta):
         """Returns a metadata object containing information about the symbol
         table."""
         return None
+
+    @property
+    def producer(self) -> Optional["metadata.ProducerMetadata"]:
+        """Returns a metadata object containing information about the symbol
+        table."""
+        return metadata.ProducerMetadata(
+            self._json_object.get("metadata", {}).get("producer", {})
+        )
 
     def clear_symbol_cache(self) -> None:
         """Clears the symbol cache of the symbol table."""

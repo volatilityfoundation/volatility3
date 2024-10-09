@@ -19,9 +19,17 @@ import os
 import sys
 import tempfile
 import traceback
-from typing import Any, Dict, Type, Union
+from typing import Any, Dict, List, Tuple, Type, Union
 from urllib import parse, request
 
+try:
+    import argcomplete
+
+    HAS_ARGCOMPLETE = True
+except ImportError:
+    HAS_ARGCOMPLETE = False
+
+from volatility3.cli import text_filter
 import volatility3.plugins
 import volatility3.symbols
 from volatility3 import framework
@@ -104,6 +112,9 @@ class CommandLine:
                 for x in framework.class_subclasses(text_renderer.CLIRenderer)
             ]
         )
+
+        # Load up system defaults
+        delayed_logs, default_config = self.load_system_defaults("vol.json")
 
         parser = volargparse.HelpfulArgParser(
             add_help=False,
@@ -224,12 +235,29 @@ class CommandLine:
             default=constants.CACHE_PATH,
             type=str,
         )
-        parser.add_argument(
+        isf_group = parser.add_mutually_exclusive_group()
+        isf_group.add_argument(
             "--offline",
             help="Do not search online for additional JSON files",
             default=False,
             action="store_true",
         )
+        isf_group.add_argument(
+            "-u",
+            "--remote-isf-url",
+            metavar="URL",
+            help="Search online for ISF json files",
+            default=constants.REMOTE_ISF_URL,
+            type=str,
+        )
+        parser.add_argument(
+            "--filters",
+            help="List of filters to apply to the output (in the form of [+-]columname,pattern[!])",
+            default=[],
+            action="append",
+        )
+
+        parser.set_defaults(**default_config)
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
@@ -241,6 +269,30 @@ class CommandLine:
             banner_output = sys.stderr
         banner_output.write(f"Volatility 3 Framework {constants.PACKAGE_VERSION}\n")
 
+        ### Start up logging
+        if partial_args.log:
+            file_logger = logging.FileHandler(partial_args.log)
+            file_logger.setLevel(1)
+            file_formatter = logging.Formatter(
+                datefmt="%y-%m-%d %H:%M:%S",
+                fmt="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
+            )
+            file_logger.setFormatter(file_formatter)
+            rootlog.addHandler(file_logger)
+            vollog.info("Logging started")
+
+        self.order_extra_verbose_levels()
+        if partial_args.verbosity < 3:
+            if partial_args.verbosity < 1:
+                sys.tracebacklimit = None
+            console.setLevel(logging.WARNING - (partial_args.verbosity * 10))
+        else:
+            console.setLevel(logging.DEBUG - (partial_args.verbosity - 2))
+
+        for level, msg in delayed_logs:
+            vollog.log(level, msg)
+
+        ### Alter constants if necessary
         if partial_args.plugin_dirs:
             volatility3.plugins.__path__ = [
                 os.path.abspath(p) for p in partial_args.plugin_dirs.split(";")
@@ -253,23 +305,6 @@ class CommandLine:
 
         if partial_args.cache_path:
             constants.CACHE_PATH = partial_args.cache_path
-
-        if partial_args.log:
-            file_logger = logging.FileHandler(partial_args.log)
-            file_logger.setLevel(1)
-            file_formatter = logging.Formatter(
-                datefmt="%y-%m-%d %H:%M:%S",
-                fmt="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
-            )
-            file_logger.setFormatter(file_formatter)
-            rootlog.addHandler(file_logger)
-            vollog.info("Logging started")
-        if partial_args.verbosity < 3:
-            if partial_args.verbosity < 1:
-                sys.tracebacklimit = None
-            console.setLevel(30 - (partial_args.verbosity * 10))
-        else:
-            console.setLevel(10 - (partial_args.verbosity - 2))
 
         vollog.info(f"Volatility plugins path: {volatility3.plugins.__path__}")
         vollog.info(f"Volatility symbols path: {volatility3.symbols.__path__}")
@@ -287,6 +322,8 @@ class CommandLine:
 
         if partial_args.offline:
             constants.OFFLINE = partial_args.offline
+        elif partial_args.remote_isf_url:
+            constants.REMOTE_ISF_URL = partial_args.remote_isf_url
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
@@ -332,6 +369,10 @@ class CommandLine:
         # Hand the plugin requirements over to the CLI (us) and let it construct the config tree
 
         # Run the argparser
+        if HAS_ARGCOMPLETE:
+            # The autocompletion line must be after the partial_arg handling, so that it doesn't trip it
+            # before all the plugins have been added
+            argcomplete.autocomplete(parser)
         args = parser.parse_args()
         if args.plugin is None:
             parser.error("Please select a plugin to run")
@@ -444,7 +485,10 @@ class CommandLine:
         try:
             # Construct and run the plugin
             if constructed:
-                renderers[args.renderer]().render(constructed.run())
+                grid = constructed.run()
+                renderer = renderers[args.renderer]()
+                renderer.filter = text_filter.CLIFilter(grid, args.filters)
+                renderer.render(grid)
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
 
@@ -462,6 +506,50 @@ class CommandLine:
             f"{__name__}.location_from_file has been deprecated and moved to requirements.URIRequirement.location_from_file"
         )
         return requirements.URIRequirement.location_from_file(filename)
+
+    def load_system_defaults(
+        self, filename: str
+    ) -> Tuple[List[Tuple[int, str]], Dict[str, Any]]:
+        """Modify the main configuration based on the default configuration override"""
+        # Build the config path
+        default_config_path = os.path.join(
+            os.path.expanduser("~"), ".config", "volatility3", filename
+        )
+        if sys.platform == "win32":
+            default_config_path = os.path.join(
+                os.environ.get("APPDATA", os.path.expanduser("~")),
+                "volatility3",
+                filename,
+            )
+
+        delayed_logs = []
+
+        # Process it if the files exist
+        if os.path.exists(default_config_path):
+            with open(default_config_path, "rb") as config_json:
+                result = json.load(config_json)
+            if not isinstance(result, dict):
+                delayed_logs.append(
+                    (
+                        logging.INFO,
+                        f"Default configuration file {default_config_path} does not contain a dictionary",
+                    )
+                )
+            else:
+                delayed_logs.append(
+                    (
+                        logging.INFO,
+                        f"Loading default configuration options from {default_config_path}",
+                    )
+                )
+                delayed_logs.append(
+                    (
+                        logging.DEBUG,
+                        f"Loaded configuration: {json.dumps(result, indent = 2, sort_keys = True)}",
+                    )
+                )
+                return delayed_logs, result
+        return delayed_logs, {}
 
     def process_exceptions(self, excp):
         """Provide useful feedback if an exception occurs during a run of a plugin."""
@@ -631,6 +719,17 @@ class CommandLine:
                     )
                     context.config[extended_path] = value
 
+    def order_extra_verbose_levels(self):
+        for level, level_value in enumerate(
+            [
+                constants.LOGLEVEL_V,
+                constants.LOGLEVEL_VV,
+                constants.LOGLEVEL_VVV,
+                constants.LOGLEVEL_VVVV,
+            ]
+        ):
+            logging.addLevelName(level_value, f"DETAIL {level+1}")
+
     def file_handler_class_factory(self, direct=True):
         output_dir = self.output_dir
 
@@ -639,19 +738,17 @@ class CommandLine:
                 """Gets the final filename"""
                 if output_dir is None:
                     raise TypeError("Output directory is not a string")
+
                 os.makedirs(output_dir, exist_ok=True)
 
-                pref_name_array = self.preferred_filename.split(".")
-                filename, extension = (
-                    os.path.join(output_dir, ".".join(pref_name_array[:-1])),
-                    pref_name_array[-1],
-                )
-                output_filename = f"{filename}.{extension}"
+                output_filename = os.path.join(output_dir, self.preferred_filename)
+                filename, extension = os.path.splitext(output_filename)
 
                 counter = 1
                 while os.path.exists(output_filename):
-                    output_filename = f"{filename}-{counter}.{extension}"
+                    output_filename = f"{filename}-{counter}{extension}"
                     counter += 1
+
                 return output_filename
 
         class CLIMemFileHandler(io.BytesIO, CLIFileHandler):
@@ -662,7 +759,7 @@ class CommandLine:
             def close(self):
                 # Don't overcommit
                 if self.closed:
-                    return
+                    return None
 
                 self.seek(0)
 
@@ -712,10 +809,18 @@ class CommandLine:
                 """Closes and commits the file (by moving the temporary file to the correct name"""
                 # Don't overcommit
                 if self._file.closed:
-                    return
+                    return None
+
+                output_filename = self._get_final_filename()
+
+                # Update the filename, which may have changed if a file with
+                # the same name already existed. This needs to be done before
+                # closing the file, otherwise FileHandlerInterface will raise
+                # an exception. Also, the preferred_filename setter only allows
+                #  a specific set of characters, where '/' is not in that list
+                self.preferred_filename = os.path.basename(output_filename)
 
                 self._file.close()
-                output_filename = self._get_final_filename()
                 os.rename(self._name, output_filename)
 
         if direct:
@@ -763,7 +868,11 @@ class CommandLine:
                 requirement,
                 volatility3.framework.configuration.requirements.ListRequirement,
             ):
-                additional["type"] = requirement.element_type
+                # Allow a list of integers, specified with the convenient 0x hexadecimal format
+                if requirement.element_type == int:
+                    additional["type"] = lambda x: int(x, 0)
+                else:
+                    additional["type"] = requirement.element_type
                 nargs = "*" if requirement.optional else "+"
                 additional["nargs"] = nargs
             elif isinstance(

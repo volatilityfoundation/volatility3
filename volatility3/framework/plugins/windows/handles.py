@@ -9,7 +9,7 @@ from volatility3.framework import constants, exceptions, renderers, interfaces, 
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
-from volatility3.plugins.windows import pslist
+from volatility3.plugins.windows import pslist, psscan
 
 vollog = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class Handles(interfaces.plugins.PluginInterface):
     """Lists process open handles."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 2)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -43,14 +43,22 @@ class Handles(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="psscan", component=psscan.PsScan, version=(1, 1, 0)
+            ),
             requirements.ListRequirement(
                 name="pid",
                 element_type=int,
                 description="Process IDs to include (all other processes are excluded)",
                 optional=True,
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.IntRequirement(
+                name="offset",
+                description="Process offset in the physical address space",
+                optional=True,
             ),
         ]
 
@@ -134,9 +142,13 @@ class Handles(interfaces.plugins.PluginInterface):
         pointers in the _HANDLE_TABLE_ENTRY which allows us to find the
         associated _OBJECT_HEADER.
         """
+        DEFAULT_SAR_VALUE = 0x10  # to be used only when decoding fails
 
         if self._sar_value is None:
             if not has_capstone:
+                vollog.debug(
+                    "capstone module is missing, unable to create disassembly of ObpCaptureHandleInformationEx"
+                )
                 return None
             kernel = self.context.modules[self.config["kernel"]]
 
@@ -151,24 +163,47 @@ class Handles(interfaces.plugins.PluginInterface):
             try:
                 func_addr = ntkrnlmp.get_symbol("ObpCaptureHandleInformationEx").address
             except exceptions.SymbolError:
+                vollog.debug("Unable to locate ObpCaptureHandleInformationEx symbol")
                 return None
 
-            data = self.context.layers.read(virtual_layer_name, kvo + func_addr, 0x200)
-            if data is None:
-                return None
+            try:
+                func_addr_to_read = kvo + func_addr
+                num_bytes_to_read = 0x200
+                vollog.debug(
+                    f"ObpCaptureHandleInformationEx symbol located at {hex(func_addr_to_read)}"
+                )
+                data = self.context.layers.read(
+                    virtual_layer_name, func_addr_to_read, num_bytes_to_read
+                )
+            except exceptions.InvalidAddressException:
+                vollog.warning(
+                    f"Failed to read {hex(num_bytes_to_read)} bytes at symbol {hex(func_addr_to_read)}. Unable to decode SAR value. Failing back to a common value of {hex(DEFAULT_SAR_VALUE)}"
+                )
+                self._sar_value = DEFAULT_SAR_VALUE
+                return self._sar_value
 
             md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
 
+            instruction_count = 0
             for address, size, mnemonic, op_str in md.disasm_lite(
                 data, kvo + func_addr
             ):
                 # print("{} {} {} {}".format(address, size, mnemonic, op_str))
-
+                instruction_count += 1
                 if mnemonic.startswith("sar"):
                     # if we don't want to parse op strings, we can disasm the
                     # single sar instruction again, but we use disasm_lite for speed
                     self._sar_value = int(op_str.split(",")[1].strip(), 16)
+                    vollog.debug(
+                        f"SAR located at {hex(address)} with value of {hex(self._sar_value)}"
+                    )
                     break
+
+            if self._sar_value is None:
+                vollog.warning(
+                    f"Failed to to locate SAR value having parsed {instruction_count} instructions, failing back to a common value of {hex(DEFAULT_SAR_VALUE)}"
+                )
+                self._sar_value = DEFAULT_SAR_VALUE
 
         return self._sar_value
 
@@ -285,7 +320,7 @@ class Handles(interfaces.plugins.PluginInterface):
             count = 0x1000 / subtype.size
 
         if not self.context.layers[virtual].is_valid(offset):
-            return
+            return None
 
         table = ntkrnlmp.object(
             object_type="array",
@@ -335,7 +370,7 @@ class Handles(interfaces.plugins.PluginInterface):
                 constants.LOGLEVEL_VVV,
                 "Handle table parsing was aborted due to an invalid address exception",
             )
-            return
+            return None
 
         for handle_table_entry in self._make_handle_array(TableCode, table_levels):
             yield handle_table_entry
@@ -416,6 +451,25 @@ class Handles(interfaces.plugins.PluginInterface):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
         kernel = self.context.modules[self.config["kernel"]]
 
+        if self.config["offset"]:
+            procs = psscan.PsScan.scan_processes(
+                self.context,
+                kernel.layer_name,
+                kernel.symbol_table_name,
+                filter_func=psscan.PsScan.create_offset_filter(
+                    self.context,
+                    kernel.layer_name,
+                    self.config["offset"],
+                ),
+            )
+        else:
+            procs = pslist.PsList.list_processes(
+                context=self.context,
+                layer_name=kernel.layer_name,
+                symbol_table=kernel.symbol_table_name,
+                filter_func=filter_func,
+            )
+
         return renderers.TreeGrid(
             [
                 ("PID", int),
@@ -426,12 +480,5 @@ class Handles(interfaces.plugins.PluginInterface):
                 ("GrantedAccess", format_hints.Hex),
                 ("Name", str),
             ],
-            self._generator(
-                pslist.PsList.list_processes(
-                    self.context,
-                    kernel.layer_name,
-                    kernel.symbol_table_name,
-                    filter_func=filter_func,
-                )
-            ),
+            self._generator(procs=procs),
         )

@@ -76,7 +76,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         # ~ vollog.debug("Using pool size constraints: TcpL {}, TcpE {}, UdpA {}".format(tcpl_size, tcpe_size, udpa_size))
 
-        return [
+        constraints = [
             # TCP listener
             poolscanner.PoolConstraint(
                 b"TcpL",
@@ -99,6 +99,19 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 page_type=poolscanner.PoolType.NONPAGED | poolscanner.PoolType.FREE,
             ),
         ]
+
+        if symbol_table.startswith("netscan-win10-20348"):
+            vollog.debug("Adding additional pool constraint for `TTcb` tags")
+            constraints.append(
+                poolscanner.PoolConstraint(
+                    b"TTcb",
+                    type_name=symbol_table + constants.BANG + "_TCP_ENDPOINT",
+                    size=(tcpe_size, None),
+                    page_type=poolscanner.PoolType.NONPAGED | poolscanner.PoolType.FREE,
+                )
+            )
+
+        return constraints
 
     @classmethod
     def determine_tcpip_version(
@@ -218,6 +231,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 (10, 0, 18362, 0): "netscan-win10-18362-x64",
                 (10, 0, 18363, 0): "netscan-win10-18363-x64",
                 (10, 0, 19041, 0): "netscan-win10-19041-x64",
+                (10, 0, 20348, 0): "netscan-win10-20348-x64",
             }
 
         # we do not need to check for tcpip's specific FileVersion in every case
@@ -487,10 +501,12 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if not isinstance(row_data[9], datetime.datetime):
                 continue
             row_data = [
-                "N/A"
-                if isinstance(i, renderers.UnreadableValue)
-                or isinstance(i, renderers.UnparsableValue)
-                else i
+                (
+                    "N/A"
+                    if isinstance(i, renderers.UnreadableValue)
+                    or isinstance(i, renderers.UnparsableValue)
+                    else i
+                )
                 for i in row_data
             ]
             description = (

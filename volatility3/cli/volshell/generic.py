@@ -108,11 +108,11 @@ class Volshell(interfaces.plugins.PluginInterface):
         """Describes the available commands"""
         if args:
             help(*args)
-            return
+            return None
 
         variables = []
         print("\nMethods:")
-        for aliases, item in self.construct_locals():
+        for aliases, item in sorted(self.construct_locals()):
             name = ", ".join(aliases)
             if item.__doc__ and callable(item):
                 print(f"* {name}")
@@ -125,8 +125,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             print(f"  {var}")
 
     def construct_locals(self) -> List[Tuple[List[str], Any]]:
-        """Returns a dictionary listing the functions to be added to the
-        environment."""
+        """Returns a listing of the functions to be added to the environment."""
         return [
             (["dt", "display_type"], self.display_type),
             (["db", "display_bytes"], self.display_bytes),
@@ -325,7 +324,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             (str, interfaces.objects.ObjectInterface, interfaces.objects.Template),
         ):
             print("Cannot display information about non-type object")
-            return
+            return None
 
         if not isinstance(object, str):
             # Mypy requires us to order things this way
@@ -453,7 +452,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         """Prints an alphabetical list of symbols for a symbol table"""
         if symbol_table is None:
             print("No symbol table provided")
-            return
+            return None
         longest_offset = longest_name = 0
 
         table = self.context.symbol_space[symbol_table]
@@ -529,7 +528,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                 val, interfaces.configuration.BasicTypes
             ) and not isinstance(val, list):
                 if not isinstance(val, list) or all(
-                    [isinstance(x, interfaces.configuration.BasicTypes) for x in val]
+                    isinstance(x, interfaces.configuration.BasicTypes) for x in val
                 ):
                     raise TypeError(
                         "Configurable values must be simple types (int, bool, str, bytes)"

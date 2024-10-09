@@ -10,6 +10,7 @@ import string
 import sys
 from functools import wraps
 from typing import Any, Callable, Dict, List, Tuple
+from volatility3.cli import text_filter
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.renderers import format_hints
@@ -24,7 +25,7 @@ except ImportError:
     vollog.debug("Disassembly library capstone not found")
 
 
-def hex_bytes_as_text(value: bytes) -> str:
+def hex_bytes_as_text(value: bytes, width: int = 16) -> str:
     """Renders HexBytes as text.
 
     Args:
@@ -35,19 +36,24 @@ def hex_bytes_as_text(value: bytes) -> str:
     """
     if not isinstance(value, bytes):
         raise TypeError(f"hex_bytes_as_text takes bytes not: {type(value)}")
-    ascii = []
-    hex = []
-    count = 0
-    output = ""
-    for byte in value:
-        hex.append(f"{byte:02x}")
-        ascii.append(chr(byte) if 0x20 < byte <= 0x7E else ".")
-        if (count % 8) == 7:
-            output += "\n"
-            output += " ".join(hex[count - 7 : count + 1])
-            output += "\t"
-            output += "".join(ascii[count - 7 : count + 1])
-        count += 1
+
+    printables = ""
+    output = "\n"
+    for count, byte in enumerate(value):
+        output += f"{byte:02x} "
+        char = chr(byte)
+        printables += char if 0x20 <= byte <= 0x7E else "."
+        if count % width == width - 1:
+            output += printables
+            if count < len(value) - 1:
+                output += "\n"
+            printables = ""
+
+    # Handle leftovers when the lenght is not mutiple of width
+    if printables:
+        output += "   " * (width - len(printables))
+        output += printables
+
     return output
 
 
@@ -134,6 +140,7 @@ class CLIRenderer(interfaces.renderers.Renderer):
 
     name = "unnamed"
     structured_output = False
+    filter: text_filter.CLIFilter = None
 
 
 class QuickTextRenderer(CLIRenderer):
@@ -172,19 +179,22 @@ class QuickTextRenderer(CLIRenderer):
         outfd.write("\n{}\n".format("\t".join(line)))
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
+            line = []
+            for column_index, column in enumerate(grid.columns):
+                renderer = self._type_renderers.get(
+                    column.type, self._type_renderers["default"]
+                )
+                line.append(renderer(node.values[column_index]))
+
+            if self.filter and self.filter.filter(line):
+                return accumulator
+
             accumulator.write("\n")
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             accumulator.write(
                 "*" * max(0, node.path_depth - 1)
                 + ("" if (node.path_depth <= 1) else " ")
             )
-            line = []
-            for column_index in range(len(grid.columns)):
-                column = grid.columns[column_index]
-                renderer = self._type_renderers.get(
-                    column.type, self._type_renderers["default"]
-                )
-                line.append(renderer(node.values[column_index]))
             accumulator.write("{}".format("\t".join(line)))
             accumulator.flush()
             return accumulator
@@ -249,12 +259,17 @@ class CSVRenderer(CLIRenderer):
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             row = {"TreeDepth": str(max(0, node.path_depth - 1))}
-            for column_index in range(len(grid.columns)):
-                column = grid.columns[column_index]
+            line = []
+            for column_index, column in enumerate(grid.columns):
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
                 row[f"{column.name}"] = renderer(node.values[column_index])
+                line.append(row[f"{column.name}"])
+
+            if self.filter and self.filter.filter(line):
+                return accumulator
+
             accumulator.writerow(row)
             return accumulator
 
@@ -306,9 +321,10 @@ class PrettyTextRenderer(CLIRenderer):
             max_column_widths[tree_indent_column] = max(
                 max_column_widths.get(tree_indent_column, 0), node.path_depth
             )
+
             line = {}
-            for column_index in range(len(grid.columns)):
-                column = grid.columns[column_index]
+            rendered_line = []
+            for column_index, column in enumerate(grid.columns):
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
@@ -320,6 +336,11 @@ class PrettyTextRenderer(CLIRenderer):
                     max_column_widths.get(column.name, len(column.name)), field_width
                 )
                 line[column] = data.split("\n")
+                rendered_line.append(data)
+
+            if self.filter and self.filter.filter(rendered_line):
+                return accumulator
+
             accumulator.append((node.path_depth, line))
             return accumulator
 
@@ -333,8 +354,7 @@ class PrettyTextRenderer(CLIRenderer):
         format_string_list = [
             "{0:<" + str(max_column_widths.get(tree_indent_column, 0)) + "s}"
         ]
-        for column_index in range(len(grid.columns)):
-            column = grid.columns[column_index]
+        for column_index, column in enumerate(grid.columns):
             format_string_list.append(
                 "{"
                 + str(column_index + 1)
@@ -389,9 +409,11 @@ class JsonRenderer(CLIRenderer):
         interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
         format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
         bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
-        datetime.datetime: lambda x: x.isoformat()
-        if not isinstance(x, interfaces.renderers.BaseAbsentValue)
-        else None,
+        datetime.datetime: lambda x: (
+            x.isoformat()
+            if not isinstance(x, interfaces.renderers.BaseAbsentValue)
+            else None
+        ),
         "default": lambda x: x,
     }
 
@@ -421,8 +443,8 @@ class JsonRenderer(CLIRenderer):
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             acc_map, final_tree = accumulator
             node_dict: Dict[str, Any] = {"__children": []}
-            for column_index in range(len(grid.columns)):
-                column = grid.columns[column_index]
+            line = []
+            for column_index, column in enumerate(grid.columns):
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
@@ -430,6 +452,11 @@ class JsonRenderer(CLIRenderer):
                 if isinstance(data, interfaces.renderers.BaseAbsentValue):
                     data = None
                 node_dict[column.name] = data
+                line.append(data)
+
+            if self.filter and self.filter.filter(line):
+                return accumulator
+
             if node.parent:
                 acc_map[node.parent.path]["__children"].append(node_dict)
             else:

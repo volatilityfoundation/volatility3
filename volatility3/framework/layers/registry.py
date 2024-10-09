@@ -171,7 +171,15 @@ class RegistryHive(linear.LinearlyMappedLayer):
         node (default) or a list of nodes from root to the current node
         (if return_list is true).
         """
-        node_key = [self.get_node(self.root_cell_offset)]
+        root_node = self.get_node(self.root_cell_offset)
+        if not root_node.vol.type_name.endswith(constants.BANG + "_CM_KEY_NODE"):
+            raise RegistryFormatException(
+                self.name,
+                "Encountered {} instead of _CM_KEY_NODE".format(
+                    root_node.vol.type_name
+                ),
+            )
+        node_key = [root_node]
         if key.endswith("\\"):
             key = key[:-1]
         key_array = key.split("\\")
@@ -310,10 +318,8 @@ class RegistryHive(linear.LinearlyMappedLayer):
         with contextlib.suppress(exceptions.InvalidAddressException):
             # Pass this to the lower layers for now
             return all(
-                [
-                    self.context.layers[layer].is_valid(offset, length)
-                    for (_, _, offset, length, layer) in self.mapping(offset, length)
-                ]
+                self.context.layers[layer].is_valid(offset, length)
+                for (_, _, offset, length, layer) in self.mapping(offset, length)
             )
         return False
 
