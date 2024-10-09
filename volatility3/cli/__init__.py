@@ -19,6 +19,8 @@ import os
 import sys
 import tempfile
 import traceback
+import hashlib
+import lzma
 from typing import Any, Dict, List, Tuple, Type, Union
 from urllib import parse, request
 
@@ -45,6 +47,7 @@ from volatility3.framework import (
 )
 from volatility3.framework.automagic import stacker
 from volatility3.framework.configuration import requirements
+from volatility3.framework.interfaces.configuration import path_join
 
 # Make sure we log everything
 
@@ -256,7 +259,12 @@ class CommandLine:
             default=[],
             action="append",
         )
-
+        parser.add_argument(
+            "--virtmap-cache-path",
+            help="Path to the virtmap cache file, typically produced by the virtmapscanner plugin.",
+            default=None,
+            type=str,
+        )
         parser.set_defaults(**default_config)
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
@@ -409,6 +417,49 @@ class CommandLine:
                     plugin_config_path,
                     interfaces.configuration.HierarchicalDict(json_val),
                 )
+        if args.virtmap_cache_path:
+            with open(args.virtmap_cache_path, "rb") as f:
+                virtmap_cache_content = f.read()
+
+            virtmap_metadata_filename = os.path.join(
+                constants.CACHE_PATH,
+                "data_" + hashlib.sha512(virtmap_cache_content).hexdigest() + ".cache",
+            )
+            if os.path.exists(virtmap_metadata_filename):
+                with open(virtmap_metadata_filename, "r") as f:
+                    map_metadata = json.loads(f.read())
+                layers_identifiers = map_metadata["layers_identifiers"]
+                sections_per_layer = map_metadata["sections_per_layer"]
+            else:
+                vollog.debug("Saving virtmap cache file metadata to Volatility3 cache")
+                raw_json = lzma.decompress(virtmap_cache_content)
+                json_val: dict = json.loads(raw_json)
+                layers_identifiers = list(json_val.keys())
+
+                sections_per_layer = {}
+                for layer_identifier, sections in json_val.items():
+                    sections_per_layer[layer_identifier] = list(sections.keys())
+
+                # Save metadata in the Vol3 cache, to avoid the costly
+                # decompression and deserialization process on each run.
+                with open(virtmap_metadata_filename, "w+") as f:
+                    json.dump(
+                        {
+                            "layers_identifiers": list(json_val.keys()),
+                            "sections_per_layer": sections_per_layer,
+                        },
+                        f,
+                    )
+
+            ctx.config[path_join("virtmap_cache", "filepath")] = args.virtmap_cache_path
+            ctx.config[path_join("virtmap_cache", "layers_identifiers")] = (
+                layers_identifiers
+            )
+            ctx.config.splice(
+                path_join("virtmap_cache", "sections_per_layer"),
+                interfaces.configuration.HierarchicalDict(sections_per_layer),
+            )
+            vollog.log(constants.LOGLEVEL_VV, "Successfully loaded virtmap cache file")
 
         # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
         automagics = automagic.choose_automagic(automagics, plugin)
@@ -462,7 +513,7 @@ class CommandLine:
                 )
                 args.save_config = "config.json"
             if args.save_config:
-                vollog.debug("Writing out configuration data to {args.save_config}")
+                vollog.debug(f"Writing out configuration data to {args.save_config}")
                 if os.path.exists(os.path.abspath(args.save_config)):
                     parser.error(
                         f"Cannot write configuration: file {args.save_config} already exists"
