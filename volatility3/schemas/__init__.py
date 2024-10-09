@@ -86,7 +86,7 @@ def valid(
             int(x) for x in ".".split(producer.get("version"))
         ] < (0, 8, 0):
             vollog.warning(
-                "Dwarf2json < 0.8.0 is known to produce faulty symbols for kernels > 6.0.0"
+                "Dwarf2json < 0.9.0 is known to produce faulty symbols for kernels > 6.0.0"
             )
 
     if input_hash in cached_validations and use_cache:
