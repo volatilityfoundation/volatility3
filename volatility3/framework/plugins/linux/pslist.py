@@ -92,9 +92,9 @@ class PsList(interfaces.plugins.PluginInterface):
         Returns:
             A tuple with the fields to show in the plugin output.
         """
-        pid = task.tgid
-        tid = task.pid
-        ppid = task.parent.tgid if task.parent else 0
+        user_pid = task.get_pid()
+        user_tid = task.pid  # Note that pid is user_tid in Linux
+        user_ppid = task.get_parent_pid()
         name = utility.array_to_string(task.comm)
         if decorate_comm:
             if task.is_kernel_thread:
@@ -102,7 +102,7 @@ class PsList(interfaces.plugins.PluginInterface):
             elif task.is_user_thread:
                 name = f"{{{name}}}"
 
-        task_fields = (task.vol.offset, pid, tid, ppid, name)
+        task_fields = (task.vol.offset, user_pid, user_tid, user_ppid, name)
         return task_fields
 
     def _get_file_output(self, task: interfaces.objects.ObjectInterface) -> str:
