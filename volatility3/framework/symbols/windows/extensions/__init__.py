@@ -715,9 +715,13 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             preferred_name = self.vol.layer_name + f"_Process{self.UniqueProcessId}"
 
         # Add the constructed layer and return the name
-        return self._add_process_layer(
+        ret_layer = self._add_process_layer(
             self._context, dtb, config_prefix, preferred_name
         )
+        
+        self._context.layers[ret_layer]._vad_root = self.get_vad_root()
+        
+        return ret_layer
 
     def get_peb(self) -> interfaces.objects.ObjectInterface:
         """Constructs a PEB object"""
