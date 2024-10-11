@@ -714,7 +714,7 @@ class Netfilter(interfaces.plugins.PluginInterface):
             hook_name,
             priority,
             format_hints.Hex(hook_func),
-            module_name,
+            module_name or renderers.NotAvailableValue(),
             str(hooked),
         )
 
