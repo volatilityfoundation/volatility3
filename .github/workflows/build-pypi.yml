@@ -12,6 +12,12 @@ on:
       - stable
       - 'release/**'
 
+inputs:
+  pyinstaller_version:
+    description: 'Version of pyinstaller to target'
+    required: false
+    default: '6.4.0'
+
 jobs:
 
   build:
@@ -41,3 +47,33 @@ jobs:
         name: volatility3-pypi
         path: |
           dist/
+
+  exe:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller==${{pyinstaller_version}}
+        pip install -r requirements.txt
+
+    - name: Pyinstall executable
+      run: |
+        pyinstaller --clean -y vol.spec
+
+    - name: Archive dist
+      uses: actions/upload-artifact@v2
+      with:
+        name: volatility3-pypi-exe
+        path: |
+          dist/
+
