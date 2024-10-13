@@ -286,13 +286,9 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 yield (
                     0,
                     (
-                        proc.UniqueProcessId,
-                        proc.InheritedFromUniqueProcessId,
-                        proc.ImageFileName.cast(
-                            "string",
-                            max_length=proc.ImageFileName.vol.count,
-                            errors="replace",
-                        ),
+                        proc.get_pid(),
+                        proc.get_parent_pid(),
+                        proc.get_name(),
                         format_hints.Hex(offset),
                         proc.ActiveThreads,
                         proc.get_handle_count(),

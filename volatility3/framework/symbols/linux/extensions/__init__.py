@@ -383,6 +383,23 @@ class task_struct(generic.GenericIntelProcess):
                 threads_seen.add(task.vol.offset)
                 yield task
 
+    def get_pid(self) -> int:
+        """Returns the pid of this process"""
+        return self.tgid
+
+    def get_parent_pid(self) -> int:
+        """Returns the pid of parent of this process"""
+        # Uses real_parent rather than parent to match Linux kernel getppid
+        return (
+            self.real_parent.get_pid()
+            if self.real_parent and self.real_parent.is_readable()
+            else 0
+        )
+
+    def get_name(self) -> str:
+        """Returns the name of this process"""
+        return utility.array_to_string(self.comm)
+
 
 class fs_struct(objects.StructType):
     def get_root_dentry(self):
