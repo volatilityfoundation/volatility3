@@ -53,6 +53,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         # Might not exist in older kernels or the current symbols
         self.optional_set_type_class("mount", extensions.mount)
         self.optional_set_type_class("mnt_namespace", extensions.mnt_namespace)
+        self.optional_set_type_class("rb_root", extensions.rb_root)
 
         # Network
         self.set_type_class("net", extensions.net)
