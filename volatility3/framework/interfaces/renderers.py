@@ -102,6 +102,15 @@ class BaseAbsentValue(object):
     """Class that represents values which are not present for some reason."""
 
 
+class Data(object):
+    """Class that represents a view of data in a particular layer"""
+
+    def __init__(self, offset: int, layer_name: str, length: int):
+        self.layer_name = layer_name
+        self.offset = offset
+        self.length = length
+
+
 class Disassembly(object):
     """A class to indicate that the bytes provided should be disassembled
     (based on the architecture)"""
@@ -132,6 +141,7 @@ BaseTypes = Union[
     Type[datetime.datetime],
     Type[BaseAbsentValue],
     Type[Disassembly],
+    Type[Data],
 ]
 ColumnsType = List[Tuple[str, BaseTypes]]
 VisitorSignature = Callable[[TreeNode, _Type], _Type]
@@ -157,6 +167,7 @@ class TreeGrid(object, metaclass=ABCMeta):
         bytes,
         datetime.datetime,
         Disassembly,
+        Data,
     )
 
     def __init__(self, columns: ColumnsType, generator: Generator) -> None:
