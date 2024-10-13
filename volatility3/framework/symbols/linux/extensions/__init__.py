@@ -359,20 +359,29 @@ class task_struct(generic.GenericIntelProcess):
         """
         return not self.is_kernel_thread and self.tgid != self.pid
 
+    def _get_tasks_iterable(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns the respective iterable to obtain the threads in this process"""
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        task_struct_symname = f"{vmlinux.symbol_table_name}{constants.BANG}task_struct"
+        if vmlinux.get_type("task_struct").has_member("signal") and vmlinux.get_type(
+            "signal_struct"
+        ).has_member("thread_head"):
+            # kernels >= 6.7 - via signals
+            return self.signal.thread_head.to_list(task_struct_symname, "thread_node")
+        elif vmlinux.get_type("task_struct").has_member("thread_group"):
+            # kernels < 6.7 - via thread_group
+            return self.thread_group.to_list(task_struct_symname, "thread_group")
+
+        raise AttributeError("Unable to find the root dentry")
+
     def get_threads(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Returns a list of the task_struct based on the list_head
-        thread_node structure."""
-
-        task_symbol_table_name = self.get_symbol_table_name()
-
-        # iterating through the thread_list from thread_group
-        # this allows iterating through pointers to grab the
-        # threads and using the thread_group offset to get the
-        # corresponding task_struct
-        for task in self.thread_group.to_list(
-            f"{task_symbol_table_name}{constants.BANG}task_struct", "thread_group"
-        ):
-            yield task
+        """Returns each thread in this process"""
+        tasks_iterable = self._get_tasks_iterable()
+        threads_seen = set([self.vol.offset])
+        for task in tasks_iterable:
+            if task.vol.offset not in threads_seen:
+                threads_seen.add(task.vol.offset)
+                yield task
 
 
 class fs_struct(objects.StructType):
