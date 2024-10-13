@@ -37,10 +37,10 @@ except ImportError:
 
 
 class YaraScanner(interfaces.layers.ScannerInterface):
-    _version = (2, 1, 0)
+    _version = (3, 0, 0)
 
     # yara.Rules isn't exposed, so we can't type this properly
-    def __init__(self, rules) -> None:
+    def __init__(self, rules, context_before=0, context_after=32) -> None:
         super().__init__()
         if rules is None:
             raise ValueError("No rules provided to YaraScanner")
@@ -50,6 +50,8 @@ class YaraScanner(interfaces.layers.ScannerInterface):
             if USE_YARA_X
             else not tuple(int(x) for x in yara.__version__.split(".")) < (4, 3)
         )
+        self._context_before = context_before
+        self._context_after = context_after
 
     def __call__(
         self, data: bytes, data_offset: int
@@ -62,7 +64,12 @@ class YaraScanner(interfaces.layers.ScannerInterface):
                             instance.offset + data_offset,
                             f"{match.namespace}.{match.identifier}",
                             match_string.identifier,
-                            data[instance.offset : instance.offset + instance.length],
+                            data[
+                                max(instance.offset - self._context_before, 0) : max(
+                                    instance.offset + instance.length,
+                                    instance.offset + self._context_after,
+                                )
+                            ],
                         )
         else:
             for match in self._rules.match(data=data):
@@ -73,11 +80,27 @@ class YaraScanner(interfaces.layers.ScannerInterface):
                                 instance.offset + data_offset,
                                 match.rule,
                                 match_string.identifier,
-                                instance.matched_data,
+                                data[
+                                    max(
+                                        instance.offset - self._context_before, 0
+                                    ) : max(
+                                        instance.offset + len(instance.matched_data),
+                                        instance.offset + self._context_after,
+                                    )
+                                ],
                             )
                 else:
                     for offset, name, value in match.strings:
-                        yield (offset + data_offset, match.rule, name, value)
+                        yield (
+                            offset + data_offset,
+                            match.rule,
+                            name,
+                            data[
+                                max(offset - self._context_before, 0) : max(
+                                    offset + self._context_after, offset + len(value)
+                                )
+                            ],
+                        )
 
     @staticmethod
     def get_rule(rule):
@@ -106,8 +129,11 @@ class YaraScan(plugins.PluginInterface):
     """Scans kernel memory using yara rules (string or file)."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+    _version = (3, 0, 0)
     _yara_x = USE_YARA_X
+
+    CONTEXT_BEFORE_DEFAULT = 0
+    CONTEXT_AFTER_DEFAULT = 32
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -164,6 +190,19 @@ class YaraScan(plugins.PluginInterface):
                 description="Set the maximum size (default is 1GB)",
                 optional=True,
             ),
+            requirements.IntRequirement(
+                name="context_before",
+                description="Number of bytes of context to display before start of match",
+                default=cls.CONTEXT_BEFORE_DEFAULT,
+                optional=True,
+            ),
+            requirements.IntRequirement(
+                name="context_after",
+                description="Number of bytes of context to display after start of match. "
+                "If the size of the match exceeds this value, the full match is shown",
+                default=cls.CONTEXT_AFTER_DEFAULT,
+                optional=True,
+            ),
         ]
 
     @classmethod
@@ -199,9 +238,17 @@ class YaraScan(plugins.PluginInterface):
 
         layer = self.context.layers[self.config["primary"]]
         for offset, rule_name, name, value in layer.scan(
-            context=self.context, scanner=YaraScanner(rules=rules)
+            context=self.context,
+            scanner=YaraScanner(
+                rules, self.config["context_before"], self.config["context_after"]
+            ),
         ):
-            yield 0, (format_hints.Hex(offset), rule_name, name, value)
+            yield 0, (
+                format_hints.Hex(offset),
+                rule_name,
+                name,
+                format_hints.HexBytes(value),
+            )
 
     def run(self):
         return renderers.TreeGrid(
@@ -209,7 +256,7 @@ class YaraScan(plugins.PluginInterface):
                 ("Offset", format_hints.Hex),
                 ("Rule", str),
                 ("Component", str),
-                ("Value", bytes),
+                ("Value", format_hints.HexBytes),
             ],
             self._generator(),
         )
