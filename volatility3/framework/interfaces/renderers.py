@@ -105,9 +105,10 @@ class BaseAbsentValue(object):
 class Data(object):
     """Class that represents a view of data in a particular layer"""
 
-    def __init__(self, offset: int, layer_name: str):
+    def __init__(self, offset: int, layer_name: str, length: int):
         self.layer_name = layer_name
         self.offset = offset
+        self.length = length
 
 
 class Disassembly(object):
