@@ -7,7 +7,7 @@ import datetime
 from typing import List, Iterable
 
 from volatility3.framework import constants
-from volatility3.framework import interfaces, symbols
+from volatility3.framework import interfaces, symbols, exceptions
 from volatility3.framework import renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import configuration
@@ -132,10 +132,15 @@ class UnloadedModules(interfaces.plugins.PluginInterface, timeliner.TimeLinerInt
             kernel.symbol_table_name,
             unloadedmodule_table_name,
         ):
+            try:
+                name = mod.Name.String
+            except exceptions.InvalidAddressException:
+                name = renderers.UnreadableValue()
+
             yield (
                 0,
                 (
-                    mod.Name.String,
+                    name,
                     format_hints.Hex(mod.StartAddress),
                     format_hints.Hex(mod.EndAddress),
                     conversion.wintime_to_datetime(mod.CurrentTime),
