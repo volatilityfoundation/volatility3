@@ -5,7 +5,7 @@
 
 Linux-specific values that aren't found in debug symbols
 """
-from enum import IntEnum
+from enum import IntEnum, Flag
 
 KERNEL_NAME = "__kernel__"
 
@@ -302,3 +302,40 @@ class ELF_CLASS(IntEnum):
     ELFCLASSNONE = 0
     ELFCLASS32 = 1
     ELFCLASS64 = 2
+
+
+PT_OPT_FLAG_SHIFT = 3
+
+PTRACE_EVENT_FORK = 1
+PTRACE_EVENT_VFORK = 2
+PTRACE_EVENT_CLONE = 3
+PTRACE_EVENT_EXEC = 4
+PTRACE_EVENT_VFORK_DONE = 5
+PTRACE_EVENT_EXIT = 6
+PTRACE_EVENT_SECCOMP = 7
+
+PTRACE_O_EXITKILL = 1 << 20
+PTRACE_O_SUSPEND_SECCOMP = 1 << 21
+
+
+class PT_FLAGS(Flag):
+    "PTrace flags"
+    PT_PTRACED = 0x00001
+    PT_SEIZED = 0x10000
+
+    PT_TRACESYSGOOD = 1 << (PT_OPT_FLAG_SHIFT + 0)
+    PT_TRACE_FORK = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_FORK)
+    PT_TRACE_VFORK = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_VFORK)
+    PT_TRACE_CLONE = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_CLONE)
+    PT_TRACE_EXEC = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_EXEC)
+    PT_TRACE_VFORK_DONE = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_VFORK_DONE)
+    PT_TRACE_EXIT = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_EXIT)
+    PT_TRACE_SECCOMP = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_SECCOMP)
+
+    PT_EXITKILL = PTRACE_O_EXITKILL << PT_OPT_FLAG_SHIFT
+    PT_SUSPEND_SECCOMP = PTRACE_O_SUSPEND_SECCOMP << PT_OPT_FLAG_SHIFT
+
+    @property
+    def flags(self) -> str:
+        """Returns the ptrace flags string"""
+        return str(self).replace(self.__class__.__name__ + ".", "")
