@@ -245,7 +245,7 @@ class Module(interfaces.context.ModuleInterface):
         """
         if constants.BANG not in object_type:
             object_type = self.symbol_table_name + constants.BANG + object_type
-        else:
+        elif not object_type.startswith(self.symbol_table_name + constants.BANG):
             raise ValueError(
                 "Cannot reference another module when constructing an object"
             )

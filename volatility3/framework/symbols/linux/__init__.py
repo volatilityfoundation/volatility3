@@ -22,6 +22,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         # Set-up Linux specific types
         self.set_type_class("file", extensions.struct_file)
         self.set_type_class("list_head", extensions.list_head)
+        self.set_type_class("hlist_head", extensions.hlist_head)
         self.set_type_class("mm_struct", extensions.mm_struct)
         self.set_type_class("super_block", extensions.super_block)
         self.set_type_class("task_struct", extensions.task_struct)
