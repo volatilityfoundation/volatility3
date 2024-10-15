@@ -40,12 +40,12 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     @staticmethod
     def enumerate_mft_records(
         context: interfaces.context.ContextInterface,
-        config: interfaces.configuration.HierarchicalDict,
         config_path: str,
+        primary_layer_name: str,
         attr_callback,
     ) -> interfaces.objects.ObjectInterface:
         try:
-            primary = context.layers[config["primary"]]
+            primary = context.layers[primary_layer_name]
         except KeyError:
             vollog.error(
                 "Unable to obtain primary layer for scanning. Please file a bug on GitHub about this issue."
@@ -105,10 +105,9 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 # There is no field that has a count of Attributes
                 # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
                 while attr.Attr_Header.AttrType.is_valid_choice:
-                    for record in attr_callback(
+                    yield from attr_callback(
                         record_map, mft_record, attr, symbol_table
-                    ):
-                        yield record
+                    )
 
                     # If there's no advancement the loop will never end, so break it now
                     if attr.Attr_Header.Length == 0:
@@ -225,12 +224,12 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         )
 
     @classmethod
-    def _do_parse_data_records(
+    def parse_data_records(
         cls,
+        record_map: Dict[int, Tuple[str, int, int]],
         mft_record: interfaces.objects.ObjectInterface,
         attr: interfaces.objects.ObjectInterface,
         symbol_table,
-        record_map: Dict[int, Tuple[str, int, int]],
         return_first_record: bool,
     ) -> Generator[Iterable, None, None]:
         """
@@ -262,7 +261,6 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             # at the second DATA attribute of this record
             elif record_map[mft_record.vol.offset][1] == 1 and not return_first_record:
-                print("at second record")
                 display_data = True
 
             if display_data:
@@ -271,26 +269,9 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 ):
                     yield record
 
-    @classmethod
-    def parse_data_records(
-        cls,
-        record_map: Dict[int, Tuple[str, int, int]],
-        mft_record: interfaces.objects.ObjectInterface,
-        attr: interfaces.objects.ObjectInterface,
-        symbol_table,
-        return_first_record: bool,
-    ):
-        """
-        Callback for parsing data records through enumerate_mft_records
-        """
-        for record in cls._do_parse_data_records(
-            mft_record, attr, symbol_table, record_map, return_first_record
-        ):
-            yield record
-
     def _generator(self):
         for record in self.enumerate_mft_records(
-            self.context, self.config, self.config_path, self.parse_mft_records
+            self.context, self.config_path, self.config["primary"], self.parse_mft_records
         ):
             yield record
 
@@ -371,7 +352,7 @@ class ADS(interfaces.plugins.PluginInterface):
             ads_name,
             content,
         ) in MFTScan.enumerate_mft_records(
-            self.context, self.config, self.config_path, self.parse_ads_data_records
+            self.context, self.config_path, self.config["primary"], self.parse_ads_data_records
         ):
             yield (
                 0,
@@ -437,7 +418,7 @@ class ResidentData(interfaces.plugins.PluginInterface):
             _,
             content,
         ) in MFTScan.enumerate_mft_records(
-            self.context, self.config, self.config_path, self.parse_first_data_records
+            self.context, self.config_path, self.config["primary"], self.parse_first_data_records
         ):
             yield (0, (offset, rec_type, rec_num, attr_type, file_name, content))
 
