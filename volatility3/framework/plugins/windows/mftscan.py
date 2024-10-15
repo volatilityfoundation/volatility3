@@ -105,9 +105,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 # There is no field that has a count of Attributes
                 # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
                 while attr.Attr_Header.AttrType.is_valid_choice:
-                    yield from attr_callback(
-                        record_map, mft_record, attr, symbol_table
-                    )
+                    yield from attr_callback(record_map, mft_record, attr, symbol_table)
 
                     # If there's no advancement the loop will never end, so break it now
                     if attr.Attr_Header.Length == 0:
@@ -271,7 +269,10 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     def _generator(self):
         for record in self.enumerate_mft_records(
-            self.context, self.config_path, self.config["primary"], self.parse_mft_records
+            self.context,
+            self.config_path,
+            self.config["primary"],
+            self.parse_mft_records,
         ):
             yield record
 
@@ -352,7 +353,10 @@ class ADS(interfaces.plugins.PluginInterface):
             ads_name,
             content,
         ) in MFTScan.enumerate_mft_records(
-            self.context, self.config_path, self.config["primary"], self.parse_ads_data_records
+            self.context,
+            self.config_path,
+            self.config["primary"],
+            self.parse_ads_data_records,
         ):
             yield (
                 0,
@@ -418,7 +422,10 @@ class ResidentData(interfaces.plugins.PluginInterface):
             _,
             content,
         ) in MFTScan.enumerate_mft_records(
-            self.context, self.config_path, self.config["primary"], self.parse_first_data_records
+            self.context,
+            self.config_path,
+            self.config["primary"],
+            self.parse_first_data_records,
         ):
             yield (0, (offset, rec_type, rec_num, attr_type, file_name, content))
 
