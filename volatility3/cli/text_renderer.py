@@ -525,3 +525,82 @@ class JsonLinesRenderer(JsonRenderer):
         for line in result:
             outfd.write(json.dumps(line, sort_keys=True))
             outfd.write("\n")
+
+class MermaidRenderer(CLIRenderer):
+    _type_renderers = {
+        format_hints.Bin: optional(lambda x: f"0b{x:b}"),
+        format_hints.Hex: optional(lambda x: f"0x{x:x}"),
+        format_hints.HexBytes: optional(hex_bytes_as_text),
+        format_hints.MultiTypeData: optional(multitypedata_as_text),
+        interfaces.renderers.Disassembly: optional(display_disassembly),
+        bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
+        datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
+        'default': optional(lambda x: f"{x}")
+    }
+
+    name = "mermaid"
+    structured_output = True
+
+    def get_render_options(self):
+        pass
+
+    def render(self, grid: interfaces.renderers.TreeGrid) -> None:
+        """Renders each column immediately to stdout.
+
+        This does not format each line's width appropriately, it merely tab separates each field
+
+        Args:
+            grid: The TreeGrid object to render
+        """
+        outfd = sys.stdout
+
+        sys.stderr.write("Formatting...\n")
+
+        tree_indent_column = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20)) # Tree Signature
+        
+        def visitor(
+                node: interfaces.renderers.TreeNode,
+                accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
+        ) -> List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]:
+            # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
+            line = {}
+            for column_index in range(len(grid.columns)):
+                column = grid.columns[column_index]
+                renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
+                data = renderer(node.values[column_index])
+                line[column] = data.split("\n")
+            accumulator.append((node.path_depth, line))
+            return accumulator
+
+        final_output: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]] = []
+
+        if not grid.populated:
+            grid.populate(visitor, final_output)
+        else:
+            grid.visit(node = None, function = visitor, initial_accumulator = final_output)
+
+        column_titles = [""] + [column.name for column in grid.columns]
+
+        own_column = ["PID"]
+        parent_column = ["PPID"]
+
+        if not((set(own_column).issubset(column_titles)) and (set(parent_column).issubset(column_titles))):
+            raise Exception("Plugin cannot be rendered as mermaid because there is no tree relationship.")
+        
+        tree_header = "graph TD\n"
+        branch_data = f"{tree_header}"
+
+        for (_depth, line) in final_output:
+            nums_line = max([len(line[column]) for column in line])
+            for column in line:
+                line[column] = line[column] + ([""] * (nums_line - len(line[column])))
+            for index in range(nums_line):
+                node_data = ""
+                for column in grid.columns:
+                    node_data += f"{column.name}:{line[column][index]}<br>"
+                    if(column.name in own_column):
+                        own = line[column][index]
+                    if(column.name in parent_column):
+                        parent = line[column][index]
+            branch_data += f"\t{parent} --> {own}[{node_data}]\n".replace("(", "").replace(")", "")
+        outfd.write("{}\n".format(branch_data))
