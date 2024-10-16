@@ -35,7 +35,7 @@ jobs:
     - name: Testing...
       run: |
         pytest ./test/test_volatility.py --volatility=vol.py --image win-xp-laptop-2005-06-25.img -k test_windows -v
-        pytest ./test/test_volatility.py --volatility=vol.py --image linux-sample-1.bin --remote-isf-url=https://github.com/Abyss-W4tcher/volatility3-symbols/raw/master/banners/banners.json" -k test_linux -v
+        pytest ./test/test_volatility.py --volatility=vol.py --image linux-sample-1.bin --remote-isf-url="https://github.com/Abyss-W4tcher/volatility3-symbols/raw/master/banners/banners.json" -k test_linux -v
 
     - name: Clean up post-test
       run: |
