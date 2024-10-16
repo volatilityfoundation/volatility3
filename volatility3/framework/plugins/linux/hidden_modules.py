@@ -32,12 +32,6 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             requirements.PluginRequirement(
                 name="lsmod", plugin=lsmod.Lsmod, version=(2, 0, 0)
             ),
-            requirements.BooleanRequirement(
-                name="fast",
-                description="Fast scan method. Recommended only for kernels 4.2 and above",
-                optional=True,
-                default=False,
-            ),
         ]
 
     @staticmethod
@@ -86,134 +80,13 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
 
         return modules_addr_min, modules_addr_max
 
-    @staticmethod
-    def _get_module_state_values_bytes(
-        context: interfaces.context.ContextInterface,
-        vmlinux_module_name: str,
-    ) -> List[bytes]:
-        """Retrieve the module state values bytes by introspecting its enum type
-
-        Args:
-            context: The context to retrieve required elements (layers, symbol tables) from
-            vmlinux_module_name: The name of the kernel module on which to operate
-
-        Returns:
-            A list with the module state values bytes
-        """
-        vmlinux = context.modules[vmlinux_module_name]
-        module_state_type_template = vmlinux.get_type("module").vol.members["state"][1]
-        data_format = module_state_type_template.base_type.vol.data_format
-        values = module_state_type_template.choices.values()
-        values_bytes = [
-            objects.convert_value_to_data(value, int, data_format)
-            for value in sorted(values)
-        ]
-        return values_bytes
-
-    @classmethod
-    def _get_hidden_modules_vol2(
-        cls,
-        context: interfaces.context.ContextInterface,
-        vmlinux_module_name: str,
-        known_module_addresses: Set[int],
-        modules_memory_boundaries: Tuple,
-    ) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Enumerate hidden modules using the traditional implementation.
-
-        This is a port of the Volatility2 plugin, with minor code improvements.
-
-        Args:
-            context: The context to retrieve required elements (layers, symbol tables) from
-            vmlinux_module_name: The name of the kernel module on which to operate
-            known_module_addresses: Set with known module addresses
-            modules_memory_boundaries: Minimum and maximum address boundaries for module allocation.
-
-        Yields:
-            module objects
-        """
-        vmlinux = context.modules[vmlinux_module_name]
-        vmlinux_layer = context.layers[vmlinux.layer_name]
-
-        check_nums = (
-            3000,
-            2800,
-            2700,
-            2500,
-            2300,
-            2100,
-            2000,
-            1500,
-            1300,
-            1200,
-            1024,
-            512,
-            256,
-            128,
-            96,
-            64,
-            48,
-            32,
-            24,
-        )
-        modules_addr_min, modules_addr_max = modules_memory_boundaries
-        modules_addr_min = modules_addr_min & ~0xFFF
-        modules_addr_max = (modules_addr_max & ~0xFFF) + vmlinux_layer.page_size
-
-        check_bufs = []
-        replace_bufs = []
-        minus_size = vmlinux.get_type("pointer").size
-        null_pointer_bytes = b"\x00" * minus_size
-        for num in check_nums:
-            check_bufs.append(b"\x00" * num)
-            replace_bufs.append((b"\xff" * (num - minus_size)) + null_pointer_bytes)
-
-        all_ffs = b"\xff" * 4096
-        scan_list = []
-        for page_addr in range(
-            modules_addr_min, modules_addr_max, vmlinux_layer.page_size
-        ):
-            content_fixed = all_ffs
-            with contextlib.suppress(
-                exceptions.InvalidAddressException,
-                exceptions.PagedInvalidAddressException,
-            ):
-                content = vmlinux_layer.read(page_addr, vmlinux_layer.page_size)
-
-                all_nulls = all(x == 0 for x in content)
-                if content and not all_nulls:
-                    content_fixed = content
-                    for check_bytes, replace_bytes in zip(check_bufs, replace_bufs):
-                        content_fixed = content_fixed.replace(
-                            check_bytes, replace_bytes
-                        )
-
-            scan_list.append(content_fixed)
-
-        scan_buf = b"".join(scan_list)
-        del scan_list
-
-        module_state_values_bytes = cls._get_module_state_values_bytes(
-            context, vmlinux_module_name
-        )
-        values_bytes_pattern = b"|".join(module_state_values_bytes)
-        # f'strings cannot be combined with bytes literals
-        for cur_addr in re.finditer(b"(?=(%s))" % values_bytes_pattern, scan_buf):
-            module_addr = modules_addr_min + cur_addr.start()
-
-            if module_addr in known_module_addresses:
-                continue
-
-            module = vmlinux.object("module", offset=module_addr, absolute=True)
-            if module and module.is_valid():
-                yield module
-
     @classmethod
     def _get_module_address_alignment(
         cls,
         context: interfaces.context.ContextInterface,
         vmlinux_module_name: str,
     ) -> int:
-        """Obtain the module memory address alignment. This is only used with the fast scan method.
+        """Obtain the module memory address alignment.
 
         struct module is aligned to the L1 cache line, which is typically 64 bytes for most
         common i386/AMD64/ARM64 configurations. In some cases, it can be 128 bytes, but this
@@ -231,8 +104,24 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         # essential for retrieving type metadata in the future.
         return 64
 
+    @staticmethod
+    def _validate_alignment_patterns(
+        addresses: Iterable[int],
+        address_alignment: int,
+    ) -> bool:
+        """Check if the memory addresses meet our alignments patterns
+
+        Args:
+            addresses: Iterable with the address values
+            address_alignment: Number of bytes for alignment validation
+
+        Returns:
+            True if all the addresses meet the alignment
+        """
+        return all(addr % address_alignment == 0 for addr in addresses)
+
     @classmethod
-    def _get_hidden_modules_fast(
+    def get_hidden_modules(
         cls,
         context: interfaces.context.ContextInterface,
         vmlinux_module_name: str,
@@ -268,6 +157,14 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
         module_address_alignment = cls._get_module_address_alignment(
             context, vmlinux_module_name
         )
+        if not cls._validate_alignment_patterns(
+            known_module_addresses, module_address_alignment
+        ):
+            vollog.warning(
+                f"Module addresses aren't aligned to {module_address_alignment} bytes. "
+                "Switching to 1 byte aligment scan method."
+            )
+            module_address_alignment = 1
 
         mkobj_offset = vmlinux.get_type("module").relative_child_offset("mkobj")
         mod_offset = vmlinux.get_type("module_kobject").relative_child_offset("mod")
@@ -301,66 +198,6 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             module = vmlinux.object("module", offset=module_addr, absolute=True)
             if module and module.is_valid():
                 yield module
-
-    @staticmethod
-    def _validate_alignment_patterns(
-        addresses: Iterable[int],
-        address_alignment: int,
-    ) -> bool:
-        """Check if the memory addresses meet our alignments patterns
-
-        Args:
-            addresses: Iterable with the address values
-            address_alignment: Number of bytes for alignment validation
-
-        Returns:
-            True if all the addresses meet the alignment
-        """
-        return all(addr % address_alignment == 0 for addr in addresses)
-
-    @classmethod
-    def get_hidden_modules(
-        cls,
-        context: interfaces.context.ContextInterface,
-        vmlinux_module_name: str,
-        known_module_addresses: Set[int],
-        modules_memory_boundaries: Tuple,
-        fast_method: bool = False,
-    ) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Enumerate hidden modules
-
-        Args:
-            context: The context to retrieve required elements (layers, symbol tables) from
-            vmlinux_module_name: The name of the kernel module on which to operate
-            known_module_addresses: Set with known module addresses
-            modules_memory_boundaries: Minimum and maximum address boundaries for module allocation.
-            fast_method: If True, it uses the fast method. Otherwise, it uses the traditional one.
-        Yields:
-            module objects
-        """
-        if fast_method:
-            module_address_alignment = cls._get_module_address_alignment(
-                context, vmlinux_module_name
-            )
-            if cls._validate_alignment_patterns(
-                known_module_addresses, module_address_alignment
-            ):
-                scan_method = cls._get_hidden_modules_fast
-            else:
-                vollog.warning(
-                    f"Module addresses aren't aligned to {module_address_alignment} bytes. "
-                    "Switching to the traditional scan method."
-                )
-                scan_method = cls._get_hidden_modules_vol2
-        else:
-            scan_method = cls._get_hidden_modules_vol2
-
-        yield from scan_method(
-            context,
-            vmlinux_module_name,
-            known_module_addresses,
-            modules_memory_boundaries,
-        )
 
     @classmethod
     def get_lsmod_module_addresses(
@@ -399,7 +236,6 @@ class Hidden_modules(interfaces.plugins.PluginInterface):
             vmlinux_module_name,
             known_module_addresses,
             modules_memory_boundaries,
-            fast_method=self.config.get("fast"),
         ):
             module_addr = module.vol.offset
             module_name = module.get_name() or renderers.NotAvailableValue()
