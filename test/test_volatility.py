@@ -38,19 +38,30 @@ def runvol(args, volatility, python):
     return p.returncode, stdout, stderr
 
 
-def runvol_plugin(plugin, img, volatility, python, pluginargs=[], globalargs=[]):
-    args = (
-        globalargs
-        + [
-            "--single-location",
-            img,
-            "-q",
-            plugin,
-        ]
-        + pluginargs
-    )
+def runvol_plugin(
+    plugin,
+    img,
+    volatility,
+    python,
+    remote_isf_url=None,
+    pluginargs=None,
+    globalargs=None,
+):
+    plugin_args = [plugin]
+    plugin_args += pluginargs if pluginargs else []
+    global_args = globalargs or []
 
-    return runvol(args, volatility, python)
+    common_args = [
+        "--single-location",
+        img,
+        "-q",
+    ]
+    if remote_isf_url:
+        common_args += ["--remote-isf-url", remote_isf_url]
+
+    final_args = global_args + common_args + plugin_args
+
+    return runvol(final_args, volatility, python)
 
 
 #
