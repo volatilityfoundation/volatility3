@@ -32,23 +32,13 @@ jobs:
         curl -sLO "https://downloads.volatilityfoundation.org/volatility3/images/win-xp-laptop-2005-06-25.img.gz"
         gunzip win-xp-laptop-2005-06-25.img.gz
 
-    - name: Download and Extract symbols
-      run: |
-        cd ./volatility3/symbols
-        curl -sLO https://downloads.volatilityfoundation.org/volatility3/symbols/linux.zip
-        unzip linux.zip
-        cd -
-
     - name: Testing...
       run: |
-        py.test ./test/test_volatility.py --volatility=vol.py --image win-xp-laptop-2005-06-25.img -k test_windows -v
-        py.test ./test/test_volatility.py --volatility=vol.py --image linux-sample-1.bin -k test_linux -v
+        pytest ./test/test_volatility.py --volatility=vol.py --image win-xp-laptop-2005-06-25.img -k test_windows -v
+        pytest ./test/test_volatility.py --volatility=vol.py --image linux-sample-1.bin --remote-isf-url=https://github.com/Abyss-W4tcher/volatility3-symbols/raw/master/banners/banners.json" -k test_linux -v
 
     - name: Clean up post-test
       run: |
         rm -rf *.bin
         rm -rf *.img
-        cd volatility3/symbols
-        rm -rf linux
-        rm -rf linux.zip
         cd -

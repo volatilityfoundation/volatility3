@@ -287,8 +287,10 @@ def test_windows_devicetree(image, volatility, python):
 # LINUX
 
 
-def test_linux_pslist(image, volatility, python):
-    rc, out, err = runvol_plugin("linux.pslist.PsList", image, volatility, python)
+def test_linux_pslist(image, volatility, python, remote_isf_url):
+    rc, out, err = runvol_plugin(
+        "linux.pslist.PsList", image, volatility, python, remote_isf_url
+    )
     out = out.lower()
 
     assert (out.find(b"init") != -1) or (out.find(b"systemd") != -1)
@@ -297,8 +299,10 @@ def test_linux_pslist(image, volatility, python):
     assert rc == 0
 
 
-def test_linux_check_idt(image, volatility, python):
-    rc, out, err = runvol_plugin("linux.check_idt.Check_idt", image, volatility, python)
+def test_linux_check_idt(image, volatility, python, remote_isf_url):
+    rc, out, err = runvol_plugin(
+        "linux.check_idt.Check_idt", image, volatility, python, remote_isf_url
+    )
     out = out.lower()
 
     assert out.count(b"__kernel__") >= 10
@@ -306,9 +310,9 @@ def test_linux_check_idt(image, volatility, python):
     assert rc == 0
 
 
-def test_linux_check_syscall(image, volatility, python):
+def test_linux_check_syscall(image, volatility, python, remote_isf_url):
     rc, out, err = runvol_plugin(
-        "linux.check_syscall.Check_syscall", image, volatility, python
+        "linux.check_syscall.Check_syscall", image, volatility, python, remote_isf_url
     )
     out = out.lower()
 
@@ -318,16 +322,20 @@ def test_linux_check_syscall(image, volatility, python):
     assert rc == 0
 
 
-def test_linux_lsmod(image, volatility, python):
-    rc, out, err = runvol_plugin("linux.lsmod.Lsmod", image, volatility, python)
+def test_linux_lsmod(image, volatility, python, remote_isf_url):
+    rc, out, err = runvol_plugin(
+        "linux.lsmod.Lsmod", image, volatility, python, remote_isf_url
+    )
     out = out.lower()
 
     assert out.count(b"\n") > 10
     assert rc == 0
 
 
-def test_linux_lsof(image, volatility, python):
-    rc, out, err = runvol_plugin("linux.lsof.Lsof", image, volatility, python)
+def test_linux_lsof(image, volatility, python, remote_isf_url):
+    rc, out, err = runvol_plugin(
+        "linux.lsof.Lsof", image, volatility, python, remote_isf_url
+    )
     out = out.lower()
 
     assert out.count(b"socket:") >= 10
@@ -335,8 +343,10 @@ def test_linux_lsof(image, volatility, python):
     assert rc == 0
 
 
-def test_linux_proc_maps(image, volatility, python):
-    rc, out, err = runvol_plugin("linux.proc.Maps", image, volatility, python)
+def test_linux_proc_maps(image, volatility, python, remote_isf_url):
+    rc, out, err = runvol_plugin(
+        "linux.proc.Maps", image, volatility, python, remote_isf_url
+    )
     out = out.lower()
 
     assert out.count(b"anonymous mapping") >= 10
@@ -344,16 +354,21 @@ def test_linux_proc_maps(image, volatility, python):
     assert rc == 0
 
 
-def test_linux_tty_check(image, volatility, python):
-    rc, out, err = runvol_plugin("linux.tty_check.tty_check", image, volatility, python)
+def test_linux_tty_check(image, volatility, python, remote_isf_url):
+    rc, out, err = runvol_plugin(
+        "linux.tty_check.tty_check", image, volatility, python, remote_isf_url
+    )
     out = out.lower()
 
     assert out.find(b"__kernel__") != -1
     assert out.count(b"\n") >= 5
     assert rc == 0
 
-def test_linux_sockstat(image, volatility, python):
-    rc, out, err = runvol_plugin("linux.sockstat.Sockstat", image, volatility, python)
+
+def test_linux_sockstat(image, volatility, python, remote_isf_url):
+    rc, out, err = runvol_plugin(
+        "linux.sockstat.Sockstat", image, volatility, python, remote_isf_url
+    )
 
     assert out.count(b"AF_UNIX") >= 354
     assert out.count(b"AF_BLUETOOTH") >= 5
@@ -364,9 +379,9 @@ def test_linux_sockstat(image, volatility, python):
     assert rc == 0
 
 
-def test_linux_library_list(image, volatility, python):
+def test_linux_library_list(image, volatility, python, remote_isf_url):
     rc, out, err = runvol_plugin(
-        "linux.library_list.LibraryList", image, volatility, python
+        "linux.library_list.LibraryList", image, volatility, python, remote_isf_url
     )
 
     assert re.search(
