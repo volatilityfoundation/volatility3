@@ -12,7 +12,6 @@ import sys
 import shutil
 import tempfile
 import hashlib
-import ntpath
 import json
 
 #
@@ -137,10 +136,7 @@ def test_windows_dumpfiles(image, volatility, python):
 
     failed_chksms = 0
 
-    if sys.platform == "win32":
-        file_name = ntpath.basename(image)
-    else:
-        file_name = os.path.basename(image)
+    file_name = os.path.basename(image)
 
     try:
         for addr in known_files["windows_dumpfiles"][file_name]:
