@@ -203,7 +203,6 @@ def test_windows_thrdscan(image, volatility, python):
     assert out.find(b"\t4\t8") != -1
     assert out.find(b"\t4\t12") != -1
     assert out.find(b"\t4\t16") != -1
-    #assert out.find(b"this raieses AssertionError") != -1
     assert rc == 0
 
 
