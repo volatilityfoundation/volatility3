@@ -7,13 +7,12 @@ import logging
 import functools
 import binascii
 import stat
-from datetime import datetime
+import datetime
 import socket as socket_module
 from typing import Generator, Iterable, Iterator, Optional, Tuple, List, Union, Dict
 
 from volatility3.framework import constants, exceptions, objects, interfaces, symbols
 from volatility3.framework.renderers import conversion
-from volatility3.framework.configuration import requirements
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
 from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
@@ -1882,7 +1881,7 @@ class kernel_cap_t(kernel_cap_struct):
 
 
 class timespec64(objects.StructType):
-    def to_datetime(self) -> datetime:
+    def to_datetime(self) -> datetime.datetime:
         """Returns the respective aware datetime"""
 
         dt = conversion.unixtime_to_datetime(self.tv_sec + self.tv_nsec / 1e9)
@@ -1958,7 +1957,7 @@ class inode(objects.StructType):
         else:
             return None
 
-    def _time_member_to_datetime(self, member) -> datetime:
+    def _time_member_to_datetime(self, member) -> datetime.datetime:
         if self.has_member(f"{member}_sec") and self.has_member(f"{member}_nsec"):
             # kernels >= 6.11 it's i_*_sec -> time64_t and i_*_nsec -> u32
             # Ref Linux commit 3aa63a569c64e708df547a8913c84e64a06e7853
@@ -1977,7 +1976,7 @@ class inode(objects.StructType):
                 "Unsupported kernel inode type implementation"
             )
 
-    def get_access_time(self) -> datetime:
+    def get_access_time(self) -> datetime.datetime:
         """Returns the inode's last access time
         This is updated when inode contents are read
 
@@ -1986,7 +1985,7 @@ class inode(objects.StructType):
         """
         return self._time_member_to_datetime("i_atime")
 
-    def get_modification_time(self) -> datetime:
+    def get_modification_time(self) -> datetime.datetime:
         """Returns the inode's last modification time
         This is updated when the inode contents change
 
@@ -1996,7 +1995,7 @@ class inode(objects.StructType):
 
         return self._time_member_to_datetime("i_mtime")
 
-    def get_change_time(self) -> datetime:
+    def get_change_time(self) -> datetime.datetime:
         """Returns the inode's last change time
         This is updated when the inode metadata changes
 
