@@ -1,6 +1,7 @@
 # This file is Copyright 2021 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import datetime
 from typing import Any, Callable, Iterable, List, Tuple
 
 from volatility3.framework import interfaces, renderers
@@ -9,15 +10,16 @@ from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux.extensions import elf
+from volatility3.plugins import timeliner
 from volatility3.plugins.linux import elfs
 
 
-class PsList(interfaces.plugins.PluginInterface):
+class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the processes present in a particular linux memory image."""
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (2, 2, 1)
+    _version = (2, 3, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -81,7 +83,7 @@ class PsList(interfaces.plugins.PluginInterface):
     @classmethod
     def get_task_fields(
         cls, task: interfaces.objects.ObjectInterface, decorate_comm: bool = False
-    ) -> Tuple[int, int, int, str]:
+    ) -> Tuple[int, int, int, int, str, datetime.datetime]:
         """Extract the fields needed for the final output
 
         Args:
@@ -96,13 +98,14 @@ class PsList(interfaces.plugins.PluginInterface):
         tid = task.pid
         ppid = task.parent.tgid if task.parent else 0
         name = utility.array_to_string(task.comm)
+        start_time = task.get_create_time()
         if decorate_comm:
             if task.is_kernel_thread:
                 name = f"[{name}]"
             elif task.is_user_thread:
                 name = f"{{{name}}}"
 
-        task_fields = (task.vol.offset, pid, tid, ppid, name)
+        task_fields = (task.vol.offset, pid, tid, ppid, name, start_time)
         return task_fields
 
     def _get_file_output(self, task: interfaces.objects.ObjectInterface) -> str:
@@ -177,7 +180,9 @@ class PsList(interfaces.plugins.PluginInterface):
             else:
                 file_output = "Disabled"
 
-            offset, pid, tid, ppid, name = self.get_task_fields(task, decorate_comm)
+            offset, pid, tid, ppid, name, creation_time = self.get_task_fields(
+                task, decorate_comm
+            )
 
             yield 0, (
                 format_hints.Hex(offset),
@@ -185,6 +190,7 @@ class PsList(interfaces.plugins.PluginInterface):
                 tid,
                 ppid,
                 name,
+                creation_time or renderers.NotAvailableValue(),
                 file_output,
             )
 
@@ -233,8 +239,23 @@ class PsList(interfaces.plugins.PluginInterface):
             ("TID", int),
             ("PPID", int),
             ("COMM", str),
+            ("CREATION TIME", datetime.datetime),
             ("File output", str),
         ]
         return renderers.TreeGrid(
             columns, self._generator(filter_func, include_threads, decorate_comm, dump)
         )
+
+    def generate_timeline(self):
+        pids = self.config.get("pid")
+        filter_func = self.create_pid_filter(pids)
+        for task in self.list_tasks(
+            self.context, self.config["kernel"], filter_func, include_threads=True
+        ):
+            offset, user_pid, user_tid, _user_ppid, name, creation_time = (
+                self.get_task_fields(task)
+            )
+
+            description = f"Process {user_pid}/{user_tid} {name} ({offset})"
+
+            yield (description, timeliner.TimeLinerType.CREATED, creation_time)
