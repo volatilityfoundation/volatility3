@@ -424,7 +424,7 @@ class task_struct(generic.GenericIntelProcess):
         time_ns = self.get_time_namespace()
         if not time_ns:
             # kernels < 5.6
-            return
+            return None
 
         # We are good. ns_common (ns) was introduced in kernels 3.19. So by the time the
         # time namespace was added in kernels 5.6, it already included the ns member.
@@ -437,7 +437,7 @@ class task_struct(generic.GenericIntelProcess):
         time_ns = self.get_time_namespace()
         if not time_ns:
             # kernels < 5.6
-            return
+            return None
 
         if not time_ns.has_member("offsets"):
             # kernels < 5.6 af993f58d69ee9c1f421dfc87c3ed231c113989c
