@@ -302,3 +302,6 @@ class ELF_CLASS(IntEnum):
     ELFCLASSNONE = 0
     ELFCLASS32 = 1
     ELFCLASS64 = 2
+
+
+NSEC_PER_SEC = 1e9
