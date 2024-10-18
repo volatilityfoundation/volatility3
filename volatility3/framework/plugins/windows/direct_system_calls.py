@@ -3,7 +3,7 @@
 #
 
 import logging
-import capstone
+
 from collections import namedtuple
 from typing import List, Tuple, Optional, Generator, Callable
 
@@ -16,6 +16,12 @@ from volatility3.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
 
+try:
+    import capstone
+
+    has_capstone = True
+except ImportError:
+    has_capstone = False
 
 # Full details on the techniques used in these plugins to detect EDR-evading malware
 # can be found in our 20 page whitepaper submitted to DEFCON along with the presentation
@@ -114,7 +120,7 @@ class DirectSystemCalls(interfaces.plugins.PluginInterface):
 
         1) update RAX to the system call number
         2) update R10 to the first parameter
-        3) hit the 'termination' instrunction set in `syscall_finder_type`
+        3) hit the 'termination' instruction set in `syscall_finder_type`
 
         We also track whether the 'syscall' instruction was encountered while parsing
 
@@ -413,6 +419,12 @@ class DirectSystemCalls(interfaces.plugins.PluginInterface):
     def _generator(
         self,
     ) -> Generator[Tuple[int, Tuple[str, int, Optional[str], int, str]], None, None]:
+        if not has_capstone:
+            vollog.warning(
+                "capstone is not installed. This plugin requires capstone to operate."
+            )
+            return
+
         kernel = self.context.modules[self.config["kernel"]]
 
         for proc, proc_name, proc_layer_name, architecture in self.get_tasks_to_scan(

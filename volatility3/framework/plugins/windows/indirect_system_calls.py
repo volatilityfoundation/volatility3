@@ -6,14 +6,18 @@ import struct
 import logging
 from typing import List, Optional
 
-import capstone
-
 from volatility3.framework import interfaces, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.plugins import yarascan
 from volatility3.plugins.windows import pslist, direct_system_calls
 
 vollog = logging.getLogger(__name__)
+
+# The generator of DirectSystemCalls will bail with a warning if capstone is not installed
+try:
+    import capstone
+except ImportError:
+    pass
 
 
 class IndirectSystemCalls(direct_system_calls.DirectSystemCalls):
@@ -98,7 +102,7 @@ class IndirectSystemCalls(direct_system_calls.DirectSystemCalls):
         if jmp_address_str[0:2] != b"\xff\x25":
             return None
 
-        # get the address of the 'jmp [address]' instrunction
+        # get the address of the 'jmp [address]' instruction
         relative_offset = struct.unpack("<I", jmp_address_str[2:])[0]
         if not relative_offset or relative_offset == -1:
             return None
