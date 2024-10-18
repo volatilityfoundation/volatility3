@@ -7,13 +7,12 @@ import logging
 import functools
 import binascii
 import stat
-from datetime import datetime
+import datetime
 import socket as socket_module
 from typing import Generator, Iterable, Iterator, Optional, Tuple, List, Union, Dict
 
 from volatility3.framework import constants, exceptions, objects, interfaces, symbols
 from volatility3.framework.renderers import conversion
-from volatility3.framework.configuration import requirements
 from volatility3.framework.constants.linux import SOCK_TYPES, SOCK_FAMILY
 from volatility3.framework.constants.linux import IP_PROTOCOLS, IPV6_PROTOCOLS
 from volatility3.framework.constants.linux import TCP_STATES, NETLINK_PROTOCOLS
@@ -382,6 +381,203 @@ class task_struct(generic.GenericIntelProcess):
             if task.vol.offset not in threads_seen:
                 threads_seen.add(task.vol.offset)
                 yield task
+
+    def _get_task_start_time(self) -> datetime.timedelta:
+        """Returns the task's monotonic start_time as a timedelta.
+
+        Returns:
+            The task's start time as a timedelta object.
+        """
+        for member_name in ("start_boottime", "real_start_time", "start_time"):
+            if self.has_member(member_name):
+                start_time_obj = self.member(member_name)
+                start_time_obj_type = start_time_obj.vol.type_name
+                start_time_obj_type_name = start_time_obj_type.split(constants.BANG)[1]
+                if start_time_obj_type_name != "timespec":
+                    # kernels >= 3.17 real_start_time and start_time are u64
+                    # kernels >= 5.5 uses start_boottime which is also a u64
+                    start_time = linux.TimespecVol3.new_from_nsec(start_time_obj)
+                else:
+                    # kernels < 3.17 real_start_time and start_time are timespec
+                    start_time = linux.TimespecVol3.new_from_timespec(start_time_obj)
+
+                # This is relative to the boot time so it makes sense to be a timedelta.
+                return start_time.to_timedelta()
+
+        raise AttributeError("Unsupported task_struct start_time member")
+
+    def get_time_namespace(self) -> Optional[interfaces.objects.ObjectInterface]:
+        """Returns the task's time namespace"""
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        if not self.has_member("nsproxy"):
+            # kernels < 2.6.19: ab516013ad9ca47f1d3a936fa81303bfbf734d52
+            return None
+
+        if not vmlinux.get_type("nsproxy").has_member("time_ns"):
+            # kernels < 5.6 769071ac9f20b6a447410c7eaa55d1a5233ef40c
+            return None
+
+        return self.nsproxy.time_ns
+
+    def get_time_namespace_id(self) -> int:
+        """Returns the task's time namespace ID."""
+        time_ns = self.get_time_namespace()
+        if not time_ns:
+            # kernels < 5.6
+            return None
+
+        # We are good. ns_common (ns) was introduced in kernels 3.19. So by the time the
+        # time namespace was added in kernels 5.6, it already included the ns member.
+        return time_ns.ns.inum
+
+    def _get_time_namespace_offsets(
+        self,
+    ) -> Optional[interfaces.objects.ObjectInterface]:
+        """Returns the time offsets from the task's time namespace."""
+        time_ns = self.get_time_namespace()
+        if not time_ns:
+            # kernels < 5.6
+            return None
+
+        if not time_ns.has_member("offsets"):
+            # kernels < 5.6 af993f58d69ee9c1f421dfc87c3ed231c113989c
+            return None
+
+        return time_ns.offsets
+
+    def get_time_namespace_monotonic_offset(
+        self,
+    ) -> Optional[interfaces.objects.ObjectInterface]:
+        """Gets task's time namespace monotonic offset
+
+        Returns:
+            a kernel's timespec64 object with the monotonic offset
+        """
+        time_namespace_offsets = self._get_time_namespace_offsets()
+        if not time_namespace_offsets:
+            return None
+
+        return time_namespace_offsets.monotonic
+
+    def _get_time_namespace_boottime_offset(
+        self,
+    ) -> Optional[interfaces.objects.ObjectInterface]:
+        """Gets task's time namespace boottime offset
+
+        Returns:
+            a kernel's timespec64 object with the boottime offset
+        """
+        time_namespace_offsets = self._get_time_namespace_offsets()
+        if not time_namespace_offsets:
+            return None
+
+        return time_namespace_offsets.boottime
+
+    def _get_boottime_raw(self) -> "linux.TimespecVol3":
+        """Returns the boot time in a TimespecVol3."""
+
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        if vmlinux.has_symbol("tk_core"):
+            # kernels >= 3.17 | tk_core | 3fdb14fd1df70325e1e91e1203a699a4803ed741
+            tk_core = vmlinux.object_from_symbol("tk_core")
+            timekeeper = tk_core.timekeeper
+            if not timekeeper.offs_real.has_member("tv64"):
+                # kernels >= 4.10 - Tested on Ubuntu 6.8.0-41
+                boottime_nsec = timekeeper.offs_real - timekeeper.offs_boot
+            else:
+                # 3.17 <= kernels < 4.10 - Tested on Ubuntu 4.4.0-142
+                boottime_nsec = timekeeper.offs_real.tv64 - timekeeper.offs_boot.tv64
+            return linux.TimespecVol3.new_from_nsec(boottime_nsec)
+
+        elif vmlinux.has_symbol("timekeeper") and vmlinux.get_type(
+            "timekeeper"
+        ).has_member("wall_to_monotonic"):
+            # 3.4 <= kernels < 3.17 - Tested on Ubuntu 3.13.0-185
+            timekeeper = vmlinux.object_from_symbol("timekeeper")
+
+            # timekeeper.wall_to_monotonic is timespec
+            boottime = linux.TimespecVol3.new_from_timespec(
+                timekeeper.wall_to_monotonic
+            )
+
+            boottime += timekeeper.total_sleep_time
+
+            boottime.negate()
+            boottime.normalize()
+
+            return boottime
+
+        elif vmlinux.has_symbol("wall_to_monotonic"):
+            # kernels < 3.4 - Tested on Debian7 3.2.0-4 (3.2.57-3+deb7u2)
+            wall_to_monotonic = vmlinux.object_from_symbol("wall_to_monotonic")
+            boottime = linux.TimespecVol3.new_from_timespec(wall_to_monotonic)
+            if vmlinux.has_symbol("total_sleep_time"):
+                # 2.6.23 <= kernels < 3.4 7c3f1a573237b90ef331267260358a0ec4ac9079
+                total_sleep_time = vmlinux.object_from_symbol("total_sleep_time")
+                full_type_name = total_sleep_time.vol.type_name
+                type_name = full_type_name.split(constants.BANG)[1]
+                if type_name == "timespec":
+                    # kernels >= 2.6.32 total_sleep_time is a timespec
+                    boottime += total_sleep_time
+                else:
+                    # kernels < 2.6.32 total_sleep_time is an unsigned long as seconds
+                    boottime.tv_sec += total_sleep_time
+
+            boottime.negate()
+            boottime.normalize()
+
+            return boottime
+
+        raise exceptions.VolatilityException("Unsupported")
+
+    def get_boottime(self, root_time_namespace: bool = True) -> datetime.datetime:
+        """Returns the boot time in UTC as a datetime.
+
+        Args:
+            root_time_namespace: If True, it returns the boot time as seen from the root
+                time namespace. Otherwise, it returns the boot time relative to the
+                task's time namespace.
+
+        Returns:
+            A datetime with the UTC boot time.
+        """
+        boottime = self._get_boottime_raw()
+        if not boottime:
+            return None
+
+        if not root_time_namespace:
+            # Shift boot timestamp according to the task's time namespace offset
+            boottime_offset_timespec = self._get_time_namespace_boottime_offset()
+            if boottime_offset_timespec:
+                # Time namespace support is from kernels 5.6
+                boottime -= boottime_offset_timespec
+
+        return boottime.to_datetime()
+
+    def get_create_time(self) -> datetime.datetime:
+        """Retrieves the task's start time from its time namespace.
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            vmlinux_module_name: The name of the kernel module on which to operate
+            task: A reference task
+
+        Returns:
+            A datetime with task's start time
+        """
+        # Typically, we want to see the creation time seen from the root time namespace
+        boottime = self.get_boottime(root_time_namespace=True)
+
+        # The kernel exports only tv_sec to procfs, see kernel's show_stat().
+        # This means user-space tools, like those in the procps package (e.g., ps, top, etc.),
+        # only use the boot time seconds to compute dates relatives to this.
+        boottime = boottime.replace(microsecond=0)
+
+        task_start_time_timedelta = self._get_task_start_time()
+
+        # NOTE: Do NOT apply the task's time namespace offsets here. While the kernel uses
+        # timens_add_boottime_ns(), it's not needed here since we're seeing it from the
+        # root time namespace, not within the task's own time namespace
+        return boottime + task_start_time_timedelta
 
 
 class fs_struct(objects.StructType):
@@ -1882,7 +2078,7 @@ class kernel_cap_t(kernel_cap_struct):
 
 
 class timespec64(objects.StructType):
-    def to_datetime(self) -> datetime:
+    def to_datetime(self) -> datetime.datetime:
         """Returns the respective aware datetime"""
 
         dt = conversion.unixtime_to_datetime(self.tv_sec + self.tv_nsec / 1e9)
@@ -1958,7 +2154,7 @@ class inode(objects.StructType):
         else:
             return None
 
-    def _time_member_to_datetime(self, member) -> datetime:
+    def _time_member_to_datetime(self, member) -> datetime.datetime:
         if self.has_member(f"{member}_sec") and self.has_member(f"{member}_nsec"):
             # kernels >= 6.11 it's i_*_sec -> time64_t and i_*_nsec -> u32
             # Ref Linux commit 3aa63a569c64e708df547a8913c84e64a06e7853
@@ -1977,7 +2173,7 @@ class inode(objects.StructType):
                 "Unsupported kernel inode type implementation"
             )
 
-    def get_access_time(self) -> datetime:
+    def get_access_time(self) -> datetime.datetime:
         """Returns the inode's last access time
         This is updated when inode contents are read
 
@@ -1986,7 +2182,7 @@ class inode(objects.StructType):
         """
         return self._time_member_to_datetime("i_atime")
 
-    def get_modification_time(self) -> datetime:
+    def get_modification_time(self) -> datetime.datetime:
         """Returns the inode's last modification time
         This is updated when the inode contents change
 
@@ -1996,7 +2192,7 @@ class inode(objects.StructType):
 
         return self._time_member_to_datetime("i_mtime")
 
-    def get_change_time(self) -> datetime:
+    def get_change_time(self) -> datetime.datetime:
         """Returns the inode's last change time
         This is updated when the inode metadata changes
 
