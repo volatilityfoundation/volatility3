@@ -155,6 +155,7 @@ class AArch64(linear.LinearlyMappedLayer):
             (1 << self._bits_per_register) - 1,
             self._bits_per_register,
             self._ttb_bitsize,
+            0,
         )
 
         self._entry_size = struct.calcsize(self._entry_format)
@@ -606,7 +607,7 @@ class AArch64(linear.LinearlyMappedLayer):
             return addr & self.address_mask
         elif addr < (1 << self._ttb_bitsize - 1):
             return addr
-        return self._mask(addr, self._ttb_bitsize, 0) + self._canonical_prefix
+        return self._mask(addr, self._ttb_bitsize, 0) | self._canonical_prefix
 
     def decanonicalize(self, addr: int) -> int:
         """Removes canonicalization to ensure an adress fits within the correct range if it has been canonicalized
