@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Iterable, List, Tuple
+from typing import Iterable, Iterator, List, NamedTuple, Tuple
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
@@ -12,6 +12,14 @@ from volatility3.plugins import yarascan
 from volatility3.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
+
+
+class YaraMatch(NamedTuple):
+    offset: int
+    pid: int
+    rule: str
+    match_string_identifier: str
+    matched_data: bytes
 
 
 class VadYaraScan(interfaces.plugins.PluginInterface):
@@ -33,7 +41,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
             requirements.PluginRequirement(
-                name="yarascan", plugin=yarascan.YaraScan, version=(2, 0, 0)
+                name="yarascan", plugin=yarascan.YaraScan, version=(3, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -49,7 +57,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
         # return the combined requirements
         return yarascan_requirements + vadyarascan_requirements
 
-    def _generator(self):
+    def enumerate_matches(self) -> Iterator[YaraMatch]:
         kernel = self.context.modules[self.config["kernel"]]
 
         rules = yarascan.YaraScan.process_yara_options(dict(self.config))
@@ -79,36 +87,60 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                         if yarascan.YaraScan.yara_returns_instances():
                             for match_string in match.strings:
                                 for instance in match_string.instances:
-                                    yield 0, (
-                                        format_hints.Hex(instance.offset + start),
+                                    yield YaraMatch(
+                                        instance.offset + start,
                                         task.UniqueProcessId,
                                         match.rule,
                                         match_string.identifier,
-                                        instance.matched_data,
+                                        data[
+                                            max(
+                                                instance.offset
+                                                - self.config["context_before"],
+                                                0,
+                                            ) : instance.offset
+                                            + self.config["context_after"]
+                                        ],
                                     )
                         else:
                             for offset, name, value in match.strings:
-                                yield 0, (
-                                    format_hints.Hex(offset + start),
+                                yield YaraMatch(
+                                    offset + start,
                                     task.UniqueProcessId,
                                     match.rule,
                                     name,
-                                    value,
+                                    data[
+                                        max(
+                                            offset - self.config["context_before"], 0
+                                        ) : offset
+                                        + self.config["context_after"]
+                                    ],
                                 )
                 else:
                     for match in rules.scan(data).matching_rules:
                         for match_string in match.patterns:
                             for instance in match_string.matches:
-                                yield 0, (
-                                    format_hints.Hex(instance.offset + start),
+                                yield YaraMatch(
+                                    instance.offset + start,
                                     task.UniqueProcessId,
                                     f"{match.namespace}.{match.identifier}",
                                     match_string.identifier,
                                     data[
-                                        instance.offset : instance.offset
-                                        + instance.length
+                                        max(
+                                            instance.offset
+                                            - self.config["context_before"],
+                                            0,
+                                        ) : instance.offset
+                                        + self.config["context_after"]
                                     ],
                                 )
+
+    def _generator(self):
+        for match in self.enumerate_matches():
+            yield 0, (
+                format_hints.Hex(match[0]),
+                *(match[1:-1]),
+                format_hints.HexBytes(match[-1]),
+            )
 
     @staticmethod
     def get_vad_maps(
@@ -134,7 +166,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 ("PID", int),
                 ("Rule", str),
                 ("Component", str),
-                ("Value", bytes),
+                ("Value", format_hints.HexBytes),
             ],
             self._generator(),
         )
