@@ -18,7 +18,7 @@ vollog = logging.getLogger(__name__)
 
 class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 35
-    exclusion_list = ["windows", "linux"]
+    exclusion_list = ["freebsd", "linux", "windows"]
 
     @classmethod
     def stack(
@@ -267,4 +267,4 @@ class MacSymbolFinder(symbol_finder.SymbolFinder):
     operating_system = "mac"
     find_aslr = MacIntelStacker.find_aslr
     symbol_class = "volatility3.framework.symbols.mac.MacKernelIntermedSymbols"
-    exclusion_list = ["windows", "linux"]
+    exclusion_list = ["freebsd", "linux", "windows"]

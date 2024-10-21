@@ -192,7 +192,7 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
 
 class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 40
-    exclusion_list = ["mac", "linux"]
+    exclusion_list = ["freebsd", "linux", "mac"]
 
     # Group these by region so we only run over the data once
     test_sets = [
@@ -357,7 +357,7 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
     """Class to read swap_layers filenames from single-swap-layers, create the
     layers and populate the single-layers swap_layers."""
 
-    exclusion_list = ["linux", "mac"]
+    exclusion_list = ["freebsd", "linux", "mac"]
 
     def __call__(
         self,
