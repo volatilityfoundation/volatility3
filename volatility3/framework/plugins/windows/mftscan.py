@@ -33,7 +33,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="yarascanner", component=yarascan.YaraScanner, version=(2, 1, 0)
+                name="yarascanner", component=yarascan.YaraScanner, version=(3, 0, 0)
             ),
         ]
 
@@ -328,7 +328,7 @@ class ADS(interfaces.plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="yarascanner", component=yarascan.YaraScanner, version=(2, 0, 0)
+                name="yarascanner", component=yarascan.YaraScanner, version=(3, 0, 0)
             ),
         ]
 
@@ -397,7 +397,7 @@ class ResidentData(interfaces.plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="yarascanner", component=yarascan.YaraScanner, version=(2, 0, 0)
+                name="yarascanner", component=yarascan.YaraScanner, version=(3, 0, 0)
             ),
         ]
 
