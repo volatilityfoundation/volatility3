@@ -6,7 +6,7 @@ import logging
 from typing import List, Iterator
 
 from volatility3.framework import renderers, interfaces
-from volatility3.framework.constants.architectures import LINUX_ARCHS
+from volatility3.framework.constants import architectures
 from volatility3.framework.objects import utility
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
@@ -27,7 +27,7 @@ class Ptrace(plugins.PluginInterface):
             requirements.ModuleRequirement(
                 name="kernel",
                 description="Linux kernel",
-                architectures=LINUX_ARCHS,
+                architectures=architectures.LINUX_ARCHS,
             ),
             requirements.PluginRequirement(
                 name="pslist", plugin=pslist.PsList, version=(2, 2, 0)
