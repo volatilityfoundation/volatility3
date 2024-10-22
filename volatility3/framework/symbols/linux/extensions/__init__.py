@@ -1409,14 +1409,42 @@ class mnt_namespace(objects.StructType):
         else:
             raise AttributeError("Unable to find mnt_namespace inode")
 
-    def get_mount_points(self):
+    def get_mount_points(
+        self,
+    ) -> Iterator[interfaces.objects.ObjectInterface]:
+        """Yields the mount points for this mount namespace.
+
+        Yields:
+            mount struct instances
+        """
         table_name = self.vol.type_name.split(constants.BANG)[0]
-        mnt_type = table_name + constants.BANG + "mount"
-        if not self._context.symbol_space.has_type(mnt_type):
-            # Old kernels ~ 2.6
-            mnt_type = table_name + constants.BANG + "vfsmount"
-        for mount in self.list.to_list(mnt_type, "mnt_list"):
-            yield mount
+
+        if self.has_member("list"):
+            # kernels < 6.8
+            mnt_type = table_name + constants.BANG + "mount"
+            if not self._context.symbol_space.has_type(mnt_type):
+                # In kernels < 3.3, the 'mount' struct didn't exist, and the 'mnt_list'
+                # member was part of the 'vfsmount' struct.
+                mnt_type = table_name + constants.BANG + "vfsmount"
+
+            yield from self.list.to_list(mnt_type, "mnt_list")
+        elif (
+            self.has_member("mounts")
+            and self.mounts.vol.type_name == table_name + constants.BANG + "rb_root"
+        ):
+            # kernels >= 6.8
+            vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(
+                self._context, self
+            )
+            for node in self.mounts.get_nodes():
+                mnt = linux.LinuxUtilities.container_of(
+                    node, "mount", "mnt_list", vmlinux
+                )
+                yield mnt
+        else:
+            raise exceptions.VolatilityException(
+                "Unsupported kernel mount namespace implementation"
+            )
 
 
 class net(objects.StructType):
@@ -2293,3 +2321,31 @@ class IDR(objects.StructType):
 
         for page_addr in get_entries_func():
             yield page_addr
+
+
+class rb_root(objects.StructType):
+    def _walk_nodes(self, root_node) -> Iterator[int]:
+        """Traverses the Red-Black tree from the root node and yields a pointer to each
+        node in this tree.
+
+        Args:
+            root_node: A Red-Black tree node from which to start descending
+
+        Yields:
+            A pointer to every node descending from the specified root node
+        """
+        if not root_node:
+            return
+
+        yield root_node
+        yield from self._walk_nodes(root_node.rb_left)
+        yield from self._walk_nodes(root_node.rb_right)
+
+    def get_nodes(self) -> Iterator[int]:
+        """Yields a pointer to each node in the Red-Black tree
+
+        Yields:
+            A pointer to every node in the Red-Black tree
+        """
+
+        yield from self._walk_nodes(root_node=self.rb_node)
