@@ -887,7 +887,7 @@ class dentry(objects.StructType):
         if self.has_member("d_sib") and self.has_member("d_children"):
             # kernels >= 6.8
             walk_member = "d_sib"
-            list_head_member = self.d_children.first
+            list_head_member = self.d_children
         elif self.has_member("d_child") and self.has_member("d_subdirs"):
             # 2.5.0 <= kernels < 6.8
             walk_member = "d_child"
@@ -1002,6 +1002,40 @@ class list_head(objects.StructType, collections.abc.Iterable):
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
+
+
+class hlist_head(objects.StructType, collections.abc.Iterable):
+    def to_list(
+        self,
+        symbol_type: str,
+        member: str,
+    ) -> Iterator[interfaces.objects.ObjectInterface]:
+        """Returns an iterator of the entries in the list.
+
+        This is a doubly linked list; however, it is not circular, so the 'forward' field
+        doesn't make sense. Also, the sentinel concept doesn't make sense here either;
+        unlike list_head, the head and nodes each have their own distinct types. A list_head
+        cannot be a node by itself.
+        - The 'pprev' of the first 'hlist_node' points to the 'hlist_head', not to the last node.
+        - The last element 'next' member is NULL
+
+        Args:
+            symbol_type: Type of the list elements
+            member: Name of the list_head member in the list elements
+
+        Yields:
+            Objects of the type specified via the "symbol_type" argument.
+
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+
+        current = self.first
+        while current and current.is_readable():
+            yield linux.LinuxUtilities.container_of(
+                current, symbol_type, member, vmlinux
+            )
+
+            current = current.next
 
 
 class files_struct(objects.StructType):
