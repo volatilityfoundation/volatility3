@@ -95,8 +95,8 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         sys.ps1 = f"({self.current_layer}) >>> "
         # Dict self._construct_locals_dict() will have priority on keys
-        combined_locals = self._construct_locals_dict().copy()
-        combined_locals.update(additional_locals)
+        combined_locals = additional_locals.copy()
+        combined_locals.update(self._construct_locals_dict())
         self.__console = code.InteractiveConsole(locals=combined_locals)
         # Since we have to do work to add the option only once for all different modes of volshell, we can't
         # rely on the default having been set
