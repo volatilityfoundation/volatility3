@@ -58,7 +58,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         ]
 
     def run(
-        self, additional_locals: Dict[str, Any] = None
+        self, additional_locals: Dict[str, Any] = {}
     ) -> interfaces.renderers.TreeGrid:
         """Runs the interactive volshell plugin.
 
@@ -94,7 +94,10 @@ class Volshell(interfaces.plugins.PluginInterface):
 """
 
         sys.ps1 = f"({self.current_layer}) >>> "
-        self.__console = code.InteractiveConsole(locals=self._construct_locals_dict())
+        # Dict self._construct_locals_dict() will have priority on keys
+        combined_locals = self._construct_locals_dict().copy()
+        combined_locals.update(additional_locals)
+        self.__console = code.InteractiveConsole(locals=combined_locals)
         # Since we have to do work to add the option only once for all different modes of volshell, we can't
         # rely on the default having been set
         if self.config.get("script", None) is not None:
