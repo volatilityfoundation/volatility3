@@ -196,7 +196,7 @@ def test_windows_thrdscan(image, volatility, python):
     assert out.find(b"\t4\t8") != -1
     assert out.find(b"\t4\t12") != -1
     assert out.find(b"\t4\t16") != -1
-    #assert out.find(b"this raieses AssertionError") != -1
+    # assert out.find(b"this raieses AssertionError") != -1
     assert rc == 0
 
 
@@ -376,6 +376,36 @@ def test_linux_library_list(image, volatility, python):
     )
 
     assert out.count(b"\n") >= 2677
+    assert rc == 0
+
+
+def test_linux_sockscan(image, volatility, python):
+    # designed for linux-sample-1.dmp SHA1:1C3A4627EDCA94A7ADE3414592BEF0E62D7D3BB6
+    rc, out, err = runvol_plugin("linux.sockscan.Sockscan", image, volatility, python)
+
+    # ensure that multiple unix paths for sockets have been found
+    assert (
+        len(
+            re.findall(
+                rb"(/[ -~]+?){1,8}",
+                out,
+            )
+        )
+        >= 10
+    )
+
+    # ensure that multiple IPv4 addresses have been found
+    assert (
+        len(
+            re.findall(
+                rb"((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}",
+                out,
+            )
+        )
+        >= 10
+    )
+
+    assert out.count(b"\n") >= 50
     assert rc == 0
 
 
