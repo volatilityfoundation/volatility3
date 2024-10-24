@@ -3,11 +3,15 @@
 #
 import math
 import contextlib
+import datetime
+import dataclasses
 from abc import ABC, abstractmethod
 from typing import Iterator, List, Tuple, Optional, Union
 
 from volatility3 import framework
 from volatility3.framework import constants, exceptions, interfaces, objects
+from volatility3.framework.renderers import conversion
+from volatility3.framework.constants.linux import NSEC_PER_SEC
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux import extensions
@@ -832,3 +836,97 @@ class PageCache(object):
             page = self.vmlinux.object("page", offset=page_addr, absolute=True)
             if page:
                 yield page
+
+
+@dataclasses.dataclass
+class TimespecVol3(object):
+    """Internal helper class to handle all required timespec operations, convertions and
+    adjustments.
+
+    NOTE: This is intended for exclusive use with get_boottime() and its related functions.
+    """
+
+    tv_sec: int = 0
+    tv_nsec: int = 0
+
+    @classmethod
+    def new_from_timespec(cls, timespec) -> "TimespecVol3":
+        """Creates a new instance from a TimespecVol3 or timespec64 object"""
+        if not isinstance(timespec, (TimespecVol3, extensions.timespec64)):
+            raise TypeError("It requires either a TimespecVol3 or timespec64 type")
+
+        tv_sec = int(timespec.tv_sec)
+        tv_nsec = int(timespec.tv_nsec)
+        return cls(tv_sec=tv_sec, tv_nsec=tv_nsec)
+
+    @classmethod
+    def new_from_nsec(cls, nsec) -> "TimespecVol3":
+        """Creates a new instance from an integer in nanoseconds"""
+
+        # Based on ns_to_timespec64()
+        if nsec > 0:
+            tv_sec = nsec // NSEC_PER_SEC
+            tv_nsec = nsec % NSEC_PER_SEC
+        elif nsec < 0:
+            tv_sec = -((-nsec - 1) // NSEC_PER_SEC) - 1
+            rem = (-nsec - 1) % NSEC_PER_SEC
+            tv_nsec = NSEC_PER_SEC - rem - 1
+        else:
+            tv_sec = tv_nsec = 0
+
+        return cls(tv_sec=tv_sec, tv_nsec=tv_nsec)
+
+    def to_datetime(self) -> datetime.datetime:
+        """Converts this TimespecVol3 to a UTC aware datetime"""
+        return conversion.unixtime_to_datetime(
+            self.tv_sec + self.tv_nsec / NSEC_PER_SEC
+        )
+
+    def to_timedelta(self) -> datetime.timedelta:
+        """Converts this TimespecVol3 to timedelta"""
+        return datetime.timedelta(seconds=self.tv_sec + self.tv_nsec / NSEC_PER_SEC)
+
+    def __add__(self, timespec) -> "TimespecVol3":
+        """Returns a new TimespecVol3 object that sums the current values with those
+        in the timespec argument"""
+        if not isinstance(timespec, (TimespecVol3, extensions.timespec64)):
+            raise TypeError("Cannot add a TimespecVol3 to this object")
+
+        result = TimespecVol3(
+            tv_sec=self.tv_sec + timespec.tv_sec,
+            tv_nsec=self.tv_nsec + timespec.tv_nsec,
+        )
+
+        result.normalize()
+
+        return result
+
+    def __sub__(self, timespec) -> "TimespecVol3":
+        """Returns a new TimespecVol3 object that subtracts the values in the timespec
+        argument from the current object's values"""
+        if not isinstance(timespec, (TimespecVol3, extensions.timespec64)):
+            raise TypeError("Cannot add a TimespecVol3 to this object")
+
+        result = TimespecVol3(
+            tv_sec=self.tv_sec - timespec.tv_sec,
+            tv_nsec=self.tv_nsec - timespec.tv_nsec,
+        )
+        result.normalize()
+
+        return result
+
+    def normalize(self):
+        """Normalize any overflow in tv_sec and tv_nsec after previous addition or subtractions"""
+        # Based on kernel's set_normalized_timespec64()
+        while self.tv_nsec >= NSEC_PER_SEC:
+            self.tv_nsec -= NSEC_PER_SEC
+            self.tv_sec += 1
+
+        while self.tv_nsec < 0:
+            self.tv_nsec += NSEC_PER_SEC
+            self.tv_sec -= 1
+
+    def negate(self):
+        """Negates the sign of both tv_sec and tv_nsec"""
+        self.tv_sec = -self.tv_sec
+        self.tv_nsec = -self.tv_nsec
