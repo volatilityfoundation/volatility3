@@ -31,7 +31,7 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                 name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
             ),
             requirements.PluginRequirement(
-                name="yarascan", plugin=yarascan.YaraScan, version=(2, 0, 0)
+                name="yarascan", plugin=yarascan.YaraScan, version=(3, 0, 0)
             ),
             requirements.ModuleRequirement(
                 name="kernel",
@@ -67,28 +67,58 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
             proc_layer = self.context.layers[proc_layer_name]
 
             for start, end in self.get_vma_maps(task):
-                for match in rules.match(
-                    data=proc_layer.read(start, end - start, True)
-                ):
-                    if yarascan.YaraScan.yara_returns_instances():
-                        for match_string in match.strings:
-                            for instance in match_string.instances:
+                data = proc_layer.read(start, end - start, True)
+                if not yarascan.YaraScan._yara_x:
+                    for match in rules.match(data=data):
+                        if yarascan.YaraScan.yara_returns_instances():
+                            for match_string in match.strings:
+                                for instance in match_string.instances:
+                                    yield 0, (
+                                        format_hints.Hex(instance.offset + start),
+                                        task.tgid,
+                                        match.rule,
+                                        match_string.identifier,
+                                        format_hints.HexBytes(data[
+                                            max(
+                                                instance.offset
+                                                - self.config["context_before"],
+                                                0,
+                                            ) : instance.offset
+                                            + self.config["context_after"]
+                                        ]),
+                                    )
+                        else:
+                            for offset, name, value in match.strings:
+                                yield 0, (
+                                    format_hints.Hex(offset + start),
+                                    task.tgid,
+                                    match.rule,
+                                    name,
+                                    format_hints.HexBytes(data[
+                                        max(
+                                            offset - self.config["context_before"], 0
+                                        ) : offset
+                                        + self.config["context_after"]
+                                    ]),
+                                )
+                else:
+                    for match in rules.scan(data).matching_rules:
+                        for match_string in match.patterns:
+                            for instance in match_string.matches:
                                 yield 0, (
                                     format_hints.Hex(instance.offset + start),
-                                    task.UniqueProcessId,
-                                    match.rule,
+                                    task.tgid,
+                                    f"{match.namespace}.{match.identifier}",
                                     match_string.identifier,
-                                    instance.matched_data,
+                                    format_hints.HexBytes(data[
+                                        max(
+                                            instance.offset
+                                            - self.config["context_before"],
+                                            0,
+                                        ) : instance.offset
+                                        + self.config["context_after"]
+                                    ]),
                                 )
-                    else:
-                        for offset, name, value in match.strings:
-                            yield 0, (
-                                format_hints.Hex(offset + start),
-                                task.tgid,
-                                match.rule,
-                                name,
-                                value,
-                            )
 
     @staticmethod
     def get_vma_maps(
@@ -114,7 +144,7 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                 ("PID", int),
                 ("Rule", str),
                 ("Component", str),
-                ("Value", bytes),
+                ("Value", format_hints.HexBytes),
             ],
             self._generator(),
         )
