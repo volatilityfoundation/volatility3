@@ -31,6 +31,13 @@ def pytest_addoption(parser):
         help="path to a directory containing images to test",
     )
 
+    parser.addoption(
+        "--remote-isf-url",
+        action="store",
+        default=None,
+        help="Search online for ISF json files",
+    )
+
 
 def pytest_generate_tests(metafunc):
     """Parameterize tests based on image names"""
@@ -57,3 +64,8 @@ def volatility(request):
 @pytest.fixture
 def python(request):
     return request.config.getoption("--python")
+
+
+@pytest.fixture
+def remote_isf_url(request):
+    return request.config.getoption("--remote-isf-url")
