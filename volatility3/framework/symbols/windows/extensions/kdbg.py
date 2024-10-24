@@ -11,6 +11,8 @@ class KDDEBUGGER_DATA64(objects.StructType):
         """Returns the NT build lab string from the KDBG."""
 
         layer_name = self.vol.layer_name
+        if self.vol.native_layer_name:
+            layer_name = self.vol.native_layer_name
         symbol_table_name = self.get_symbol_table_name()
 
         return self._context.object(
@@ -25,6 +27,8 @@ class KDDEBUGGER_DATA64(objects.StructType):
         """Returns the CSDVersion as an integer (i.e. Service Pack number)"""
 
         layer_name = self.vol.layer_name
+        if self.vol.native_layer_name:
+            layer_name = self.vol.native_layer_name
         symbol_table_name = self.get_symbol_table_name()
 
         csdresult = self._context.object(
