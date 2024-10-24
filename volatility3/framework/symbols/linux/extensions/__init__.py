@@ -1260,6 +1260,8 @@ class hlist_head(objects.StructType):
 
             current = current.next
 
+    def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
+        return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
 
 class files_struct(objects.StructType):
     def get_fds(self) -> interfaces.objects.ObjectInterface:
