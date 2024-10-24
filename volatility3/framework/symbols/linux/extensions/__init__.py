@@ -1004,7 +1004,7 @@ class list_head(objects.StructType, collections.abc.Iterable):
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
 
 
-class hlist_head(objects.StructType, collections.abc.Iterable):
+class hlist_head(objects.StructType):
     def to_list(
         self,
         symbol_type: str,
