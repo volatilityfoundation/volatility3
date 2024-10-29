@@ -2075,6 +2075,23 @@ class cred(objects.StructType):
         """
         return self._get_cred_int_value("euid")
 
+    @property
+    def uid(self):
+        """Returns the effective user ID
+
+        Returns:
+            int: the effective user ID value
+        """
+        return self._get_cred_int_value("uid")
+
+    @property
+    def gid(self):
+        """Returns the effective user ID
+
+        Returns:
+            int: the effective user ID value
+        """
+        return self._get_cred_int_value("gid")
 
 class kernel_cap_struct(objects.StructType):
     # struct kernel_cap_struct exists from 2.1.92 <= kernels < 6.3
