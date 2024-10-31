@@ -67,7 +67,11 @@ class PerfEvents(plugins.PluginInterface):
                 # if the names are smeared then bail
                 try:
                     event_name = utility.pointer_to_string(event.pmu.name, count=64)
-                    full_name = utility.array_to_string(event.prog.aux.ksym.name, count=512)
+                    try:
+                        full_name = utility.array_to_string(event.prog.aux.ksym.name, count=512)
+                    except AttributeError:
+                        full_name = renderers.NotApplicableValue()
+
                     program_name = utility.array_to_string(event.prog.aux.name)
                 except exceptions.InvalidAddressException:
                     continue
