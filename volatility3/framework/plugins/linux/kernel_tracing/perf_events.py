@@ -67,6 +67,7 @@ class PerfEvents(plugins.PluginInterface):
                 # if the names are smeared then bail
                 try:
                     event_name = utility.pointer_to_string(event.pmu.name, count=64)
+                    full_name = utility.array_to_string(event.prog.aux.ksym.name, count=512)
                     program_name = utility.array_to_string(event.prog.aux.name)
                 except exceptions.InvalidAddressException:
                     continue
@@ -84,7 +85,7 @@ class PerfEvents(plugins.PluginInterface):
 
                 yield (
                     0,
-                    (task.pid, task_name, event_name, program_name, program_address),
+                    (event.vol.offset, task_name, event_name, program_name, full_name, program_address),
                 )
 
     def run(self) -> renderers.TreeGrid:
@@ -93,6 +94,7 @@ class PerfEvents(plugins.PluginInterface):
                 ("PID", int),
                 ("Process", str),
                 ("Event Name", str),
+                ("Full Name", str),
                 ("Program Name", str),
                 ("Address", format_hints.Hex),
             ],
