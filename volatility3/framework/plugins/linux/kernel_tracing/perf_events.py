@@ -89,7 +89,7 @@ class PerfEvents(plugins.PluginInterface):
 
                 yield (
                     0,
-                    (event.vol.offset, task_name, event_name, program_name, full_name, program_address),
+                    (task.pid, task_name, event_name, program_name, full_name, program_address),
                 )
 
     def run(self) -> renderers.TreeGrid:
@@ -97,9 +97,9 @@ class PerfEvents(plugins.PluginInterface):
             [
                 ("PID", int),
                 ("Process", str),
-                ("Event Name", str),
+                ("Event", str),
+                ("Short Program Name", str),
                 ("Full Name", str),
-                ("Program Name", str),
                 ("Address", format_hints.Hex),
             ],
             self._generator(),
