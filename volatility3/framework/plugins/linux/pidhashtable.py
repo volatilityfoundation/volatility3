@@ -236,7 +236,7 @@ class PIDHashTable(plugins.PluginInterface):
         self, decorate_comm: bool = False
     ) -> interfaces.objects.ObjectInterface:
         for task in self.get_tasks():
-            offset, pid, tid, ppid, name = pslist.PsList.get_task_fields(
+            offset, pid, tid, ppid, name, _ = pslist.PsList.get_task_fields(
                 task, decorate_comm
             )
             fields = format_hints.Hex(offset), pid, tid, ppid, name

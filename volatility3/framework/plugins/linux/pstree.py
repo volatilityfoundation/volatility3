@@ -103,7 +103,7 @@ class PsTree(interfaces.plugins.PluginInterface):
             row = pslist.PsList.get_task_fields(task, decorate_comm)
             # update the first element, the offset, in the row tuple to use format_hints.Hex
             # as a simple int is returned from get_task_fields.
-            row = (format_hints.Hex(row[0]),) + row[1:]
+            row = (format_hints.Hex(row[0]),) + row[1:-1]
 
             tid = task.pid
             yield (self._levels[tid] - 1, row)
