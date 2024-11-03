@@ -343,7 +343,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         context: interfaces.context.ContextInterface,
         layer_name: str,
         mods: Iterator[interfaces.objects.ObjectInterface],
-    ) -> List[Tuple[str, int, int]]:
+    ) -> List[Tuple[str, interfaces.objects.ObjectInterface, int, int]]:
         """
         A helper function to mask the starting and end address of kernel modules
         """
@@ -352,6 +352,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         return [
             (
                 utility.array_to_string(mod.name),
+                mod,
                 mod.get_module_base() & mask,
                 (mod.get_module_base() & mask) + mod.get_core_size(),
             )
@@ -380,7 +381,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         end_addr = end_addr.vol.offset & mask
 
         return [
-            (constants.linux.KERNEL_NAME, start_addr, end_addr)
+            (constants.linux.KERNEL_NAME, kernel, start_addr, end_addr)
         ] + LinuxUtilities.mask_mods_list(context, kernel.layer_name, mods_list)
 
     @classmethod
@@ -398,7 +399,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         mod_name = "UNKNOWN"
         symbol_name = "N/A"
 
-        for name, start, end in handlers:
+        for name, mod, start, end in handlers:
             if start <= target_address <= end:
                 mod_name = name
                 if name == constants.linux.KERNEL_NAME:
@@ -413,8 +414,11 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
                             else symbols[0]
                         )
 
-                break
+                else:
+                   symbol_name = mod.get_symbol_by_address(target_address)
 
+                break
+            
         return mod_name, symbol_name
 
     @classmethod
