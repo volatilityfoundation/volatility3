@@ -38,6 +38,47 @@ class Envars(plugins.PluginInterface):
             ),
         ]
 
+
+    @staticmethod
+    def variables_for_task(context, task):
+        """
+        Yields (key, value) tuples for each of the task's env vars
+        """
+
+        # get process layer to read envars from
+        proc_layer_name = task.add_process_layer()
+        if proc_layer_name is None:
+            return
+
+        proc_layer = context.layers[proc_layer_name]
+
+        # get the size of the envars with sanity checking
+        envars_size = task.mm.env_end - task.mm.env_start
+        if not (0 < envars_size <= 8192):
+            vollog.debug(
+                f"Task {pid} {name} appears to have envars of size {envars_size} bytes which fails the sanity checking, will not extract any envars."
+            )
+            return
+
+        # attempt to read all envars data
+        try:
+            envar_data = proc_layer.read(task.mm.env_start, envars_size)
+        except exceptions.InvalidAddressException:
+            vollog.debug(
+                f"Unable to read full envars for {pid} {name} starting at virtual offset {hex(task.mm.env_start)} for {envars_size} bytes, will not extract any envars."
+            )
+            return
+
+        # parse envar data, envars are null terminated, keys and values are separated by '='
+        envar_data = envar_data.rstrip(b"\x00")
+        for envar_pair in envar_data.split(b"\x00"):
+            try:
+                key, value = envar_pair.decode().split("=", 1)
+            except ValueError:
+                continue
+
+            yield key, value
+
     def _generator(self, tasks):
         """Generates a listing of processes along with environment variables"""
 
@@ -57,56 +98,8 @@ class Envars(plugins.PluginInterface):
                 )
                 ppid = 0
 
-            # kernel threads never have an mm as they do not have userland mappings
-            try:
-                mm = task.mm
-            except exceptions.InvalidAddressException:
-                # no mm so cannot get envars
-                vollog.debug(
-                    f"Unable to access mm for task {pid} {name} it is likely a kernel thread, will not extract any envars."
-                )
-                mm = None
-                continue
-
-            # if mm exists attempt to get envars
-            if mm:
-                # get process layer to read envars from
-                proc_layer_name = task.add_process_layer()
-                if proc_layer_name is None:
-                    vollog.debug(
-                        f"Unable to construct process layer for task {pid} {name}, will not extract any envars."
-                    )
-                    continue
-                proc_layer = self.context.layers[proc_layer_name]
-
-                # get the size of the envars with sanity checking
-                envars_size = task.mm.env_end - task.mm.env_start
-                if not (0 < envars_size <= 8192):
-                    vollog.debug(
-                        f"Task {pid} {name} appears to have envars of size {envars_size} bytes which fails the sanity checking, will not extract any envars."
-                    )
-                    continue
-
-                # attempt to read all envars data
-                try:
-                    envar_data = proc_layer.read(task.mm.env_start, envars_size)
-                except exceptions.InvalidAddressException:
-                    vollog.debug(
-                        f"Unable to read full envars for {pid} {name} starting at virtual offset {hex(task.mm.env_start)} for {envars_size} bytes, will not extract any envars."
-                    )
-                    continue
-
-                # parse envar data, envars are null terminated, keys and values are separated by '='
-                envar_data = envar_data.rstrip(b"\x00")
-                for envar_pair in envar_data.split(b"\x00"):
-                    try:
-                        key, value = envar_pair.decode().split("=", 1)
-                    except ValueError:
-                        vollog.debug(
-                            f"Unable to extract envars for {pid} {name} starting at virtual offset {hex(task.mm.env_start)}, they don't appear to be '=' separated"
-                        )
-                        continue
-                    yield (0, (pid, ppid, name, key, value))
+            for key, value in self.variables_for_task(self.context, task):
+                yield (0, (pid, ppid, name, key, value))
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
