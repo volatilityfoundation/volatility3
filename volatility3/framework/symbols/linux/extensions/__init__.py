@@ -295,7 +295,7 @@ class module(generic.GenericIntelProcess):
         if self.has_member("kallsyms"):
             return int(self.kallsyms.num_symtab)
         elif self.has_member("num_symtab"):
-            return int(self.num_symtab)
+            return int(self.member("num_symtab"))
         raise AttributeError(
             "module -> num_symtab: Unable to determine number of symbols"
         )
