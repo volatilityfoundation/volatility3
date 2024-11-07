@@ -144,8 +144,13 @@ class Check_ftrace(interfaces.plugins.PluginInterface):
 
         for ftrace_func_entry in ftrace_func_entries:
             callback = int(ftrace_ops.func)
+            try:
+                func = ftrace_func_entry.ip.cast("pointer")
+            except exceptions.InvalidAddressException:
+                continue
+
             hook_symbols = wrapper_get_symbols_by_absolute_location(
-                self.vmlinux, ftrace_func_entry.ip.cast("pointer")
+                self.vmlinux, func
             )
 
             # Avoid running the aggressive module finder twice for an address, if it wasn't found previously
@@ -226,9 +231,9 @@ class Check_ftrace(interfaces.plugins.PluginInterface):
 
         while True:
             yield bucket_head.cast("ftrace_func_entry")
-            if bucket_head.next.is_readable():
+            try:
                 bucket_head = bucket_head.next.dereference()
-            else:
+            except exceptions.InvalidAddressException:
                 break
 
     def set_compiled_kernel_space_boundaries(self):

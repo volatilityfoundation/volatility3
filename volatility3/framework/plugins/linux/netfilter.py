@@ -190,7 +190,7 @@ class AbstractNetfilter(ABC):
                         priority = int(hook_ops.priority)
                         hook_ops_hook = hook_ops.hook
                         module_name = self.get_module_name_for_address(hook_ops_hook)
-                        hooked = module_name is not None
+                        hooked = module_name is None
 
                         yield netns, proto_name, hook_name, priority, hook_ops_hook, module_name, hooked
 

@@ -397,7 +397,7 @@ def flatten_modules_handlers(
     """Flatten a list of previously calculated modules handlers boundaries (extract all "start" and "end")"""
     return list(
         sum(
-            [(h[1], h[2]) for h in set(handlers)],
+            [(h[2], h[3]) for h in set(handlers)],
             (),
         )
     )

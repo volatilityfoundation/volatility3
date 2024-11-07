@@ -132,7 +132,8 @@ class Check_tracepoints(interfaces.plugins.PluginInterface):
 
             try:
                 parse_result = self.parse_tracepoint(tracepoint)
-                results.append((0, parse_result))
+                if parse_result:
+                    results.append((0, parse_result))
             except Exception as e:
                 vollog.exception(f"Unhandled exception : {e}")
 
@@ -163,6 +164,9 @@ class Check_tracepoints(interfaces.plugins.PluginInterface):
         # Fetch more informations about the module
         if module_name != UNKNOWN:
             module_obj = get_module_object_from_name(module_name, self.modules)
+            if not module_obj:
+                return None
+
             module_address = module_obj.vol.offset
             f_module = f"{hex(module_address)} [{module_name}]"
             probe_handler_address_symbol = (
