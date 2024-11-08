@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 """Volatility 3 framework."""
+
 # Check the python version to ensure it's suitable
 import glob
 import sys
@@ -216,9 +217,20 @@ def _zipwalk(path: str):
 def list_plugins() -> Dict[str, Type[interfaces.plugins.PluginInterface]]:
     plugin_list = {}
     for plugin in class_subclasses(interfaces.plugins.PluginInterface):
-        plugin_name = plugin.__module__ # omit plugin.__name__ for brevity
+        # If the name of the plugin equals the last part of the module path, we omit the name of the
+        # plugin for a simpler output.
+
+        if plugin.__name__.lower().replace("_", "") == plugin.__module__.split(".")[-1].replace("_", ""):
+            plugin_name = plugin.__module__
+
+        # Some plugins have overlapping module paths, so we append the plugin name.
+        else:
+            plugin_name = f"{plugin.__module__}.{plugin.__name__.lower()}"
+
+        # Strip the begin of the module name.
         if plugin_name.startswith("volatility3.plugins."):
             plugin_name = plugin_name[len("volatility3.plugins.") :]
+
         plugin_list[plugin_name] = plugin
     return plugin_list
 
