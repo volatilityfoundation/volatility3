@@ -216,7 +216,7 @@ def _zipwalk(path: str):
 def list_plugins() -> Dict[str, Type[interfaces.plugins.PluginInterface]]:
     plugin_list = {}
     for plugin in class_subclasses(interfaces.plugins.PluginInterface):
-        plugin_name = plugin.__module__ + "." + plugin.__name__
+        plugin_name = plugin.__module__ # omit plugin.__name__ for brevity
         if plugin_name.startswith("volatility3.plugins."):
             plugin_name = plugin_name[len("volatility3.plugins.") :]
         plugin_list[plugin_name] = plugin

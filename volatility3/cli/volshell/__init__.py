@@ -49,7 +49,7 @@ class VolShell(cli.CommandLine):
     python terminal with all the volatility support calls available.
     """
 
-    CLI_NAME = "volshell"
+    CLI_NAME = os.path.basename(sys.argv[0])  # volshell
 
     def __init__(self):
         super().__init__()

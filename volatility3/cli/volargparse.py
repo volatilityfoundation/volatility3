@@ -47,7 +47,10 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
         ]
 
         if len(matched_parsers) < 1:
-            msg = f"invalid choice {parser_name} (choose from {', '.join(self._name_parser_map)})"
+            if len(self._name_parser_map) < 10:
+                msg = f"invalid choice {parser_name} (choose from {', '.join(self._name_parser_map)})"
+            else:
+                msg = f"invalid choice {parser_name} (see --help for all options)"
             raise argparse.ArgumentError(self, msg)
         if len(matched_parsers) > 1:
             msg = f"plugin {parser_name} matches multiple plugins ({', '.join(matched_parsers)})"
