@@ -1,12 +1,12 @@
 # This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import io
 import math
 import logging
 import datetime
 from dataclasses import dataclass, astuple
-from typing import List, Set, Type, Iterable
+from typing import List, Set, Type, Iterable, Optional
 
 from volatility3.framework import renderers, interfaces
 from volatility3.framework.renderers import format_hints
@@ -420,7 +420,53 @@ class InodePages(plugins.PluginInterface):
         ]
 
     @staticmethod
+    def read_inode_content(
+        inode: interfaces.objects.ObjectInterface,
+        page_size: int,
+    ) -> Optional[bytes]:
+        """
+        Read the contents of an inode into memory.
+
+        As the page indices might be out of order, we use seek and write to
+        make sure each page is written to the correct position.
+
+        Args:
+            inode: The inode to read
+            page_size: The pages size of the memory layer to read the inode data from
+        """
+
+        if not inode.is_reg:
+            vollog.error("The inode is not a regular file")
+            return None
+
+        inode_size = inode.i_size
+
+        with io.BytesIO() as buffer:
+            try:
+                for page_idx, page_content in inode.get_contents():
+                    current_fp = page_idx * page_size
+                    max_length = inode_size - current_fp
+                    page_bytes = page_content[:max_length]
+                    if current_fp + len(page_bytes) > inode_size:
+                        vollog.error(
+                            "Page out of file bounds: inode 0x%x, inode size %d, page index %d",
+                            inode.vol.object,
+                            inode_size,
+                            page_idx,
+                        )
+                    buffer.seek(current_fp)
+                    buffer.write(page_bytes)
+
+            except IOError as e:
+                vollog.error(f"Unable to read inode: {e!s}")
+                return None
+
+            buffer.seek(0)
+            return buffer.read()
+
+    @classmethod
     def write_inode_content_to_file(
+        cls,
         inode: interfaces.objects.ObjectInterface,
         filename: str,
         open_method: Type[interfaces.plugins.FileHandlerInterface],
@@ -434,35 +480,11 @@ class InodePages(plugins.PluginInterface):
             open_method: class for constructing output files
             vmlinux_layer: The kernel layer to obtain the page size
         """
-        if not inode.is_reg:
-            vollog.error("The inode is not a regular file")
-            return
-
-        # By using truncate/seek, provided the filesystem supports it, a sparse file will be
-        # created, saving both disk space and I/O time.
-        # Additionally, using the page index will guarantee that each page is written at the
-        # appropriate file position.
-        try:
-            with open_method(filename) as f:
-                inode_size = inode.i_size
-                f.truncate(inode_size)
-
-                for page_idx, page_content in inode.get_contents():
-                    current_fp = page_idx * vmlinux_layer.page_size
-                    max_length = inode_size - current_fp
-                    page_bytes = page_content[:max_length]
-                    if current_fp + len(page_bytes) > inode_size:
-                        vollog.error(
-                            "Page out of file bounds: inode 0x%x, inode size %d, page index %d",
-                            inode.vol.object,
-                            inode_size,
-                            page_idx,
-                        )
-                    f.seek(current_fp)
-                    f.write(page_bytes)
-
-        except IOError as e:
-            vollog.error("Unable to write to file (%s): %s", filename, e)
+        buffer = cls.read_inode_content(inode=inode, page_size=vmlinux_layer.page_size)
+        if buffer:
+            with open_method(filename) as h_file:
+                h_file.write(buffer)
+        return None
 
     def _generator(self):
         vmlinux_module_name = self.config["kernel"]
