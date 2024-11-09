@@ -26,7 +26,7 @@ class PDBRetreiver:
     def retreive_pdb(self, guid: str, file_name: str) -> Optional[str]:
         logger.info("Download PDB file...")
         file_name = ".".join(file_name.split(".")[:-1] + ['pdb'])
-        for sym_url in ['http://msdl.microsoft.com/download/symbols']:
+        for sym_url in [os.environ.get("VOL3_MSSYMBOLSERVER", "http://msdl.microsoft.com/download/symbols")]:
             url = sym_url + f"/{file_name}/{guid}/"
 
             result = None
