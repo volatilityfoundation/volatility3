@@ -6,12 +6,13 @@ import math
 import logging
 import datetime
 from dataclasses import dataclass, astuple
-from typing import List, Set, Type, Iterable, Optional
+from typing import List, Set, Type, Iterable, Optional, IO
 
 from volatility3.framework import renderers, interfaces
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.configuration import requirements
+from volatility3.framework.symbols.linux.extensions import inode as inodeClass
 from volatility3.plugins import timeliner
 from volatility3.plugins.linux import mountinfo
 
@@ -389,7 +390,7 @@ class InodePages(plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 1)
+    _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -421,7 +422,8 @@ class InodePages(plugins.PluginInterface):
 
     @staticmethod
     def read_inode_content(
-        inode: interfaces.objects.ObjectInterface,
+        inode: inodeClass,
+        buffer: IO,
         page_size: int,
     ) -> Optional[bytes]:
         """
@@ -430,44 +432,43 @@ class InodePages(plugins.PluginInterface):
         As the page indices might be out of order, we use seek and write to
         make sure each page is written to the correct position.
 
+        By using truncate/seek, provided the filesystem supports it, a sparse file will be
+        created, saving both disk space and I/O time.
+
         Args:
             inode: The inode to read
+            buffer: the file-like object to write the inode contents too
             page_size: The pages size of the memory layer to read the inode data from
         """
-
         if not inode.is_reg:
             vollog.error("The inode is not a regular file")
             return None
 
-        inode_size = inode.i_size
+        try:
+            buffer.truncate(inode.i_size)
 
-        with io.BytesIO() as buffer:
-            try:
-                for page_idx, page_content in inode.get_contents():
-                    current_fp = page_idx * page_size
-                    max_length = inode_size - current_fp
-                    page_bytes = page_content[:max_length]
-                    if current_fp + len(page_bytes) > inode_size:
-                        vollog.error(
-                            "Page out of file bounds: inode 0x%x, inode size %d, page index %d",
-                            inode.vol.object,
-                            inode_size,
-                            page_idx,
-                        )
-                    buffer.seek(current_fp)
-                    buffer.write(page_bytes)
-
-            except IOError as e:
-                vollog.error(f"Unable to read inode: {e!s}")
-                return None
-
+            for page_idx, page_content in inode.get_contents():
+                current_fp = page_idx * page_size
+                max_length = inode.i_size - current_fp
+                page_bytes = page_content[:max_length]
+                if current_fp + len(page_bytes) > inode.i_size:
+                    vollog.error(
+                        "Page out of file bounds: inode 0x%x, inode size %d, page index %d",
+                        inode.vol.object,
+                        inode.i_size,
+                        page_idx,
+                    )
+                buffer.seek(current_fp)
+                buffer.write(page_bytes)
             buffer.seek(0)
-            return buffer.read()
+        except IOError as e:
+            vollog.error(f"Unable to read inode: {e!s}")
+            return None
 
     @classmethod
     def write_inode_content_to_file(
         cls,
-        inode: interfaces.objects.ObjectInterface,
+        inode: inodeClass,
         filename: str,
         open_method: Type[interfaces.plugins.FileHandlerInterface],
         vmlinux_layer: interfaces.layers.TranslationLayerInterface,
@@ -480,11 +481,10 @@ class InodePages(plugins.PluginInterface):
             open_method: class for constructing output files
             vmlinux_layer: The kernel layer to obtain the page size
         """
-        buffer = cls.read_inode_content(inode=inode, page_size=vmlinux_layer.page_size)
-        if buffer:
-            with open_method(filename) as h_file:
-                h_file.write(buffer)
-        return None
+        with open_method(filename) as h_file:
+            cls.read_inode_content(
+                inode=inode, buffer=h_file, page_size=vmlinux_layer.page_size
+            )
 
     def _generator(self):
         vmlinux_module_name = self.config["kernel"]
