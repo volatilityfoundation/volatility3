@@ -5,8 +5,9 @@
 import argparse
 import gettext
 import re
-from typing import List, Optional, Sequence, Any, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
+from volatility3.framework.interfaces.plugins import PluginInterface
 
 # This effectively overrides/monkeypatches the core argparse module to provide more helpful output around choices
 # We shouldn't really steal a private member from argparse, but otherwise we're just duplicating code
@@ -42,9 +43,7 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
         if self.dest != argparse.SUPPRESS:
             setattr(namespace, self.dest, parser_name)
 
-        matched_parsers = [
-            name for name in self._name_parser_map if parser_name in name
-        ]
+        matched_parsers = find_parser(parser_name, self._name_parser_map)
 
         if len(matched_parsers) < 1:
             if len(self._name_parser_map) < 10:
@@ -52,9 +51,11 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
             else:
                 msg = f"invalid choice {parser_name} (see --help for all options)"
             raise argparse.ArgumentError(self, msg)
+
         if len(matched_parsers) > 1:
             msg = f"plugin {parser_name} matches multiple plugins ({', '.join(matched_parsers)})"
             raise argparse.ArgumentError(self, msg)
+
         parser = self._name_parser_map[matched_parsers[0]]
         setattr(namespace, "plugin", matched_parsers[0])
 
@@ -72,6 +73,24 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
         if arg_strings:
             vars(namespace).setdefault(argparse._UNRECOGNIZED_ARGS_ATTR, [])
             getattr(namespace, argparse._UNRECOGNIZED_ARGS_ATTR).extend(arg_strings)
+
+
+def find_parser(parser_name: str, parsers: Dict[str, PluginInterface]) -> List[str]:
+    """Attempt to find parsers for the given parser name."""
+
+    # If the last part of the provided module path is the same as the part before it, this is likely a legacy
+    # plugin name invocation. For example 'windows.devicetree.Devicetree' is translated to 'windows.devicetree'.
+
+    parser_name = parser_name.lower()
+    parts = parser_name.split(".")
+
+    if len(parts) >= 2 and parts[-1].replace("_", "") == parts[-2].replace("_", ""):
+        parser_name = parser_name.rpartition(".")[0]
+
+    partial_matches = [name for name in parsers if parser_name in name.lower()]
+    exact_matches = [name for name in parsers if parser_name == name.lower()]
+
+    return exact_matches if exact_matches else partial_matches
 
 
 class HelpfulArgParser(argparse.ArgumentParser):
