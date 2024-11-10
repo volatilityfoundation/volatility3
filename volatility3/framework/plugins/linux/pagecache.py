@@ -426,7 +426,7 @@ class InodePages(plugins.PluginInterface):
         page_size: int,
     ) -> Optional[bytes]:
         """
-        Read the contents of an inode into memory.
+        Read the contents of an inode into an IO buffer (e.g. a file).
 
         As the page indices might be out of order, we use seek and write to
         make sure each page is written to the correct position.
