@@ -10,7 +10,7 @@ import json
 import math
 import struct
 import hashlib
-from typing import Type, Optional, List
+from typing import Type, Optional, List, Tuple
 
 
 from volatility3.framework import interfaces, renderers
@@ -161,7 +161,12 @@ class PGDScan(plugins.PluginInterface):
     This plugin can allow analysis of virtual memeory when an ISF is unaviabale."""
 
     _required_framework_version = (2, 2, 0)
-    MAXSIZE_DEFAULT = 1024 * 1024 * 1024  # 1 Gb
+    MAXSIZE_DEFAULT = (
+        1024 * 1024 * 1024
+    )  # 1 Gb, the largest region to be saved when using --dump
+    MAX_GAP = (
+        4096 * 8
+    )  # the max gap between mapped pages for them to be considered as one contagious block
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -223,7 +228,7 @@ class PGDScan(plugins.PluginInterface):
 
         layer = context.layers[layer_name]
 
-        # check if vm_size is larger than the maxsize limit, and therefore is not saved out.
+        # check if size is larger than the maxsize limit, and therefore is not saved out.
         if maxsize <= size:
             vollog.warning(
                 f"Skip virtual memory dump for {start:#x} as {size} is larger than maxsize limit of {maxsize}"
@@ -244,6 +249,47 @@ class PGDScan(plugins.PluginInterface):
             vollog.debug(f"Unable to dump virtual memory {file_name}: {excp}")
             return None
         return file_handle
+
+    def _merge_mappings_with_gap(self, mappings: List[Tuple[int, int]], gap: int):
+        """
+        Merge overlapping or consecutive ranges based on a specified gap.
+
+        Args:
+            mappings (list of tuples): List of tuples where each tuple is (start, length).
+            gap (int): The gap that determines if two ranges should be merged.
+
+        Returns:
+            list of tuples: The merged mappings, where each tuple is (start, length)
+        """
+
+        # Sort ranges by the start value, mappings should already be in order
+        # but for this to work they MUST be in order so sorting
+        sorted_mappings = sorted(mappings, key=lambda x: x[0])
+
+        merged_mappings = []
+
+        # Start with the first range
+        current_start, current_length = sorted_mappings[0]
+        current_end = current_start + current_length
+
+        for start, length in sorted_mappings[1:]:
+            next_end = start + length
+
+            # If the current range and the next range are within the gap, merge them
+            if start <= current_end + gap:
+                # Extend the current range to include the next one
+                current_end = max(current_end, next_end)
+            else:
+                # If not, add the current range and start a new one
+                merged_mappings.append((current_start, current_end - current_start))
+                current_start, current_length = start, length
+                current_end = next_end
+
+        # Add the last range
+        merged_mappings.append((current_start, current_end - current_start))
+
+        # Return the merged ranges with the gap considered
+        return merged_mappings
 
     def _generator(self):
         # get primary layer
@@ -358,10 +404,13 @@ class PGDScan(plugins.PluginInterface):
             yield (0, (format_hints.Hex(pgd_offset), total_user_size, config_fname))
 
             # dump put memory if requested
-            # TODO: perhaps merge regions that are quite close together, if might be more useful to
-            # have fewer files with a few extra blank pages than to have the highly accurate result
-            # of 100s of tiny regions saved to there own files.
             if self.config.get("dump"):
+
+                # merge mappings for this temp layer so that contagious blocks are saved to a single file
+                temp_layer_mapping = self._merge_mappings_with_gap(
+                    temp_layer_mapping, self.MAX_GAP
+                )
+
                 for offset, sublength in temp_layer_mapping:
                     self._dump(
                         temp_context, temp_layer.name, offset, sublength, self.open
