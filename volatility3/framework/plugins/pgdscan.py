@@ -2,13 +2,10 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import enum
 import logging
 import struct
-import os
 import json
 import math
-import struct
 import hashlib
 from typing import Type, Optional, List, Tuple
 
