@@ -1,5 +1,11 @@
 name: Test Volatility3
+
 on: [push, pull_request]
+
+env:
+  REMOTE_ISF_URL: https://github.com/Abyss-W4tcher/volatility3-symbols/raw/master/banners/banners.json
+  IMAGES_URL: https://downloads.volatilityfoundation.org/volatility3/images
+
 jobs:
 
   build:
@@ -27,15 +33,15 @@ jobs:
 
     - name: Download images
       run: |
-        curl -sLO "https://downloads.volatilityfoundation.org/volatility3/images/linux-sample-1.bin.gz"
+        curl -sLO "${{env.IMAGES_URL}}/linux-sample-1.bin.gz"
         gunzip linux-sample-1.bin.gz
-        curl -sLO "https://downloads.volatilityfoundation.org/volatility3/images/win-xp-laptop-2005-06-25.img.gz"
+        curl -sLO "${{env.IMAGES_URL}}/win-xp-laptop-2005-06-25.img.gz"
         gunzip win-xp-laptop-2005-06-25.img.gz
 
     - name: Testing...
       run: |
         pytest ./test/test_volatility.py --volatility=vol.py --image win-xp-laptop-2005-06-25.img -k test_windows -v
-        pytest ./test/test_volatility.py --volatility=vol.py --image linux-sample-1.bin --remote-isf-url="https://github.com/Abyss-W4tcher/volatility3-symbols/raw/master/banners/banners.json" -k test_linux -v
+        pytest ./test/test_volatility.py --volatility=vol.py --image linux-sample-1.bin --remote-isf-url="${{env.REMOTE_ISF_URL}}" -k test_linux -v
 
     - name: Clean up post-test
       run: |
