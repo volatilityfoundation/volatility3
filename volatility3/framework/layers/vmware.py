@@ -238,7 +238,6 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
                 vollog.warning(
                     f"No metadata file found alongside VMEM file. A VMSS or VMSN file may be required to correctly process a VMEM file. These should be placed in the same directory with the same file name, e.g. {vmem_file_basename} and {example_vmss_file_basename}.",
                 )
-                return None
             new_layer_name = context.layers.free_layer_name("VmwareLayer")
             context.config[
                 interfaces.configuration.path_join(current_config_path, "base_layer")
