@@ -9,10 +9,11 @@ import random
 import string
 import sys
 from functools import wraps
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from volatility3.cli import text_filter
 
 from volatility3.framework import exceptions, interfaces, renderers
+from volatility3.framework.interfaces.plugins import PluginInterface
 from volatility3.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
@@ -138,10 +139,13 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
 class CLIRenderer(interfaces.renderers.Renderer):
     """Class to add specific requirements for CLI renderers."""
 
-    name = "unnamed"
-    structured_output = False
+    name: str = "unnamed"
+    structured_output: bool = False
+    metadata_output: bool = False
     filter: text_filter.CLIFilter = None
     column_hide_list: list = None
+    plugin: PluginInterface = None
+    image_path: Optional[str] = None
 
     def ignored_columns(
         self,
@@ -165,6 +169,12 @@ class CLIRenderer(interfaces.renderers.Renderer):
             f"Hiding columns: {[column.name for column in ignored_column_list]}"
         )
         return ignored_column_list
+
+    @property
+    def plugin_name(self) -> Optional[str]:
+        """Return the name of the plugin the rendered output originates from."""
+        if self.plugin and hasattr(self.plugin, "__module__"):
+            return self.plugin.__module__.replace("volatility3.plugins.", "", 1)
 
 
 class QuickTextRenderer(CLIRenderer):
@@ -275,6 +285,11 @@ class CSVRenderer(CLIRenderer):
         ignore_columns = self.ignored_columns(grid)
 
         header_list = ["TreeDepth"]
+
+        if self.metadata_output:
+            header_list.append("__image_path")
+            header_list.append("__plugin")
+
         for column in grid.columns:
             # Ignore the type because namedtuples don't realize they have accessible attributes
             if column not in ignore_columns:
@@ -298,6 +313,10 @@ class CSVRenderer(CLIRenderer):
                     line.append(row[f"{column.name}"])
                 else:
                     del row[f"{column.name}"]
+
+            if self.metadata_output:
+                row["__image_path"] = self.image_path
+                row["__plugin"] = self.plugin_name
 
             if self.filter and self.filter.filter(line):
                 return accumulator
@@ -497,6 +516,10 @@ class JsonRenderer(CLIRenderer):
                     data = None
                 node_dict[column.name] = data
                 line.append(data)
+
+            if self.metadata_output:
+                node_dict["__image_path"] = self.image_path
+                node_dict["__plugin"] = self.plugin_name
 
             if self.filter and self.filter.filter(line):
                 return accumulator

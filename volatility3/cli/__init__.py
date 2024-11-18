@@ -204,6 +204,13 @@ class CommandLine:
             choices=list(renderers),
         )
         parser.add_argument(
+            "-m",
+            "--metadata-output",
+            help="Add metadata to the output if the renderer is structured (JSON, JSONL, CSV)",
+            default=False,
+            action="store_true",
+        )
+        parser.add_argument(
             "-f",
             "--file",
             metavar="FILE",
@@ -499,9 +506,33 @@ class CommandLine:
                 renderer = renderers[args.renderer]()
                 renderer.filter = text_filter.CLIFilter(grid, args.filters)
                 renderer.column_hide_list = args.hide_columns
+                renderer.metadata_output = args.metadata_output
+                renderer.plugin = plugin
+                renderer.image_path = self.layer_location(ctx)
                 renderer.render(grid)
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
+
+    @classmethod
+    def layer_location(cls, ctx: contexts.Context) -> str:
+        """
+        Returns the path of the primary layer (the actual memory image file) that Volatility is run on
+        """
+        config: dict = ctx.config
+        # Check if Volatility is started by specifying a filepath
+        if config.get("automagic.LayerStacker.single_location"):
+            return ctx.config.get("automagic.LayerStacker.single_location")
+
+        # Check if Volatility is started by specifying a configuration
+        config_keys = list(config.keys())
+        if any([key for key in config_keys if "base_layer.location" in key]):
+            key = next(
+                (key for key in list(config.keys()) if "base_layer.location" in key)
+            )
+            return config[key]
+
+        # Return nothing if we can't find a filepath
+        return ""
 
     @classmethod
     def location_from_file(cls, filename: str) -> str:
