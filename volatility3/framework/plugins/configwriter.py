@@ -33,6 +33,12 @@ class ConfigWriter(plugins.PluginInterface):
                 default=False,
                 optional=True,
             ),
+            requirements.BooleanRequirement(
+                name="nofile",
+                description="Do not write file to output directory, only print to stdout",
+                default=False,
+                optional=True,
+            ),
         ]
 
     def _generator(self):
@@ -45,13 +51,14 @@ class ConfigWriter(plugins.PluginInterface):
             config = dict(self.context.config)
             filename = "config.extra"
         try:
-            with self.open(filename) as file_data:
-                file_data.write(
-                    bytes(
-                        json.dumps(config, sort_keys=True, indent=2),
-                        "raw_unicode_escape",
+            if not self.config.get("nofile"):
+                with self.open(filename) as file_data:
+                    file_data.write(
+                        bytes(
+                            json.dumps(config, sort_keys=True, indent=2),
+                            "raw_unicode_escape",
+                        )
                     )
-                )
         except Exception as excp:
             vollog.warning(f"Unable to JSON encode configuration: {excp}")
 
