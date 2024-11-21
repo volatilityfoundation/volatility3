@@ -313,7 +313,12 @@ class SqliteCache(CacheManagerInterface):
         # Missing entries
         if missing_locations:
             for missing_location in missing_locations:
-                if not os.path.exists(missing_location):
+                parsed_url = urllib.parse(missing_location)
+                if (
+                    parsed_url.scheme == "file"
+                    and parsed_url.host == ""
+                    and not os.path.exists(parsed_url.path)
+                ):
                     self._database.cursor().execute(
                         f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})",
                         [x for x in missing_locations],
