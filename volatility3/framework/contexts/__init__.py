@@ -463,3 +463,145 @@ class ConfigurableModule(Module, interfaces.configuration.ConfigurableInterface)
         Module.__init__(
             self, context, name, layer_name, offset, symbol_table_name, layer_name
         )
+
+
+class MacOSKernelCacheSupportModule(Module):
+    """
+    If the MH_FILESET KernelCache support is ON, header addresses in all mach-o segments and sections
+    of the MH_FILESET are slid by a specific offset. This is problematic, as some kernel symbols, typically
+    contained in an external ISF file, won't be correctly readable with a sole KASLR shift.
+    The original "kernel" module is the "KernelCache" module, but for compatibility reasons
+    it is still named "kernel".
+    To circumvent this, we create an additional module object, in this context, with the
+    "vm_kernel_slide" shift as offset. Doing so, we are able to detect which slide to use,
+    depending on a provided symbol address.
+
+    Additional reference, on the stage where the KernelCache is given an additional slide :
+     - https://github.com/apple-open-source/macos/blob/14.3/xnu/osfmk/i386/i386_init.c#L621
+    """
+
+    def __init__(
+        self, context: interfaces.context.ContextInterface, config_path: str, name: str
+    ) -> None:
+        super().__init__(context, config_path, name)
+
+        pathjoin = interfaces.configuration.path_join
+        context.config[pathjoin(config_path, "vm_kernel_slide")] = context.config[
+            pathjoin(config_path, self.layer_name, "vm_kernel_slide")
+        ]
+        context.config[pathjoin(config_path, "kernel_start")] = (
+            context.config[pathjoin(config_path, self.layer_name, "kernel_start")]
+            & self.context.layers[self.layer_name].address_mask
+        )
+        context.config[pathjoin(config_path, "kernel_end")] = (
+            context.config[pathjoin(config_path, self.layer_name, "kernel_end")]
+            & self.context.layers[self.layer_name].address_mask
+        )
+        # Instantiate generic Kernel module, with "vm_kernel_slide" as offset
+        not_kernelcache_module_name = interfaces.configuration.path_join(
+            self.name, "not_kernelcache"
+        )
+        self._not_kernelcache_module = Module.create(
+            context=context,
+            module_name=not_kernelcache_module_name,
+            layer_name=self.layer_name,
+            offset=self._vm_kernel_slide,
+            symbol_table_name=self.symbol_table_name,
+        )
+
+    def _is_offset_in_kernel_boundaries(self, offset: int, absolute: bool) -> bool:
+        """Determine if an offset, typically a symbol address, locates in kernel __TEXT
+        boundaries, by adding "vm_kernel_slide" shift to it."""
+        slide = self._vm_kernel_slide if not absolute else 0
+        return self._kernel_start <= offset + slide <= self._kernel_end
+
+    def object(
+        self,
+        object_type: str,
+        offset: int = None,
+        native_layer_name: Optional[str] = None,
+        absolute: bool = False,
+        **kwargs,
+    ) -> "interfaces.objects.ObjectInterface":
+
+        # Construct the object on the appropriate module
+        if self._is_offset_in_kernel_boundaries(offset=offset, absolute=absolute):
+            module = self.not_kernelcache_module
+        else:
+            module = super()
+
+        return module.object(
+            object_type=object_type,
+            offset=offset,
+            native_layer_name=native_layer_name,
+            absolute=absolute,
+            **kwargs,
+        )
+
+    def object_from_symbol(
+        self,
+        symbol_name: str,
+        native_layer_name: Optional[str] = None,
+        absolute: bool = False,
+        object_type: Optional[Union[str, "interfaces.objects.ObjectInterface"]] = None,
+        **kwargs,
+    ) -> "interfaces.objects.ObjectInterface":
+        if constants.BANG not in symbol_name:
+            tmp_symbol_name = self.symbol_table_name + constants.BANG + symbol_name
+        else:
+            raise ValueError(
+                "Cannot reference another module when constructing an object"
+            )
+
+        # Only set the offset if type is Symbol and we were given a name, not a template
+        tmp_symbol_val = self._context.symbol_space.get_symbol(tmp_symbol_name)
+        offset = tmp_symbol_val.address
+
+        # Construct the object on the appropriate module
+        if self._is_offset_in_kernel_boundaries(offset=offset, absolute=absolute):
+            module = self.not_kernelcache_module
+        else:
+            module = super()
+
+        return module.object_from_symbol(
+            symbol_name=symbol_name,
+            native_layer_name=native_layer_name,
+            absolute=absolute,
+            object_type=object_type,
+            **kwargs,
+        )
+
+    def get_symbols_by_absolute_location(self, offset: int, size: int = 0) -> List[str]:
+        """Returns the symbols within this module that live at the specified
+        absolute offset provided."""
+        if size < 0:
+            raise ValueError("Size must be strictly non-negative")
+
+        if self._is_offset_in_kernel_boundaries(offset=offset, absolute=True):
+            slide_offset = self._vm_kernel_slide
+        else:
+            slide_offset = self._offset
+
+        return list(
+            self._context.symbol_space.get_symbols_by_location(
+                offset=offset - slide_offset,
+                size=size,
+                table_name=self.symbol_table_name,
+            )
+        )
+
+    @property
+    def not_kernelcache_module(self) -> Module:
+        return self._not_kernelcache_module
+
+    @property
+    def _vm_kernel_slide(self) -> int:
+        return self.config["vm_kernel_slide"]
+
+    @property
+    def _kernel_start(self) -> int:
+        return self.config["kernel_start"]
+
+    @property
+    def _kernel_end(self) -> int:
+        return self.config["kernel_end"]
