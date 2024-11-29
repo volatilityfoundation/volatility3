@@ -564,55 +564,18 @@ class TranslationLayerInterface(DataLayerInterface, metaclass=ABCMeta):
             ):
                 offset, sublength, mapped_offset, mapped_length, layer_name = mapped
 
-                # Setup the variables for this block
-                block_start = offset
-                block_end = offset + sublength
-
-                # Setup the necessary bits for non-linear mappings
-                # For linear we give one layer down and mapped offsets (therefore the conversion)
-                # This saves an tiny amount of time not have to redo lookups we've already done
-                # For non-linear layers, we give the layer name and the offset in the layer name
-                # so that the read/conversion occurs properly
-                conversion = mapped_offset - offset if linear else 0
-                return_name = layer_name if linear else self.name
-
-                # If this isn't contiguous, start a new chunk
-                if chunk_position < block_start:
-                    yield output, chunk_position
-                    output = []
-                    chunk_start = chunk_position = block_start
-
-                # Halfway through a chunk, finish the chunk, then take more
-                if chunk_position != chunk_start:
-                    chunk_size = min(
-                        chunk_position - chunk_start,
-                        scanner.chunk_size + scanner.overlap,
+                for block_start in range(
+                    mapped_offset, mapped_offset + mapped_length, scanner.chunk_size
+                ):
+                    block_end = min(
+                        mapped_offset + mapped_length,
+                        block_start + scanner.chunk_size + scanner.overlap,
                     )
-                    output += [(return_name, chunk_position + conversion, chunk_size)]
-                    chunk_start = chunk_position + chunk_size
-                    chunk_position = chunk_start
+                    output += [(self.name, block_start, block_end)]
 
-                # Pack chunks, if we're enter the loop (starting a new chunk) and there's already chunk there, ship it
-                for chunk_start in range(chunk_position, block_end, scanner.chunk_size):
-                    if output:
-                        yield output, chunk_position
-                        output = []
-                        chunk_position = chunk_start
-                    # Take from chunk_position as far as the block can go,
-                    # or as much left of a scanner chunk as we can
-                    chunk_size = min(
-                        block_end - chunk_position,
-                        scanner.chunk_size
-                        + scanner.overlap
-                        - (chunk_position - chunk_start),
-                    )
-                    output += [(return_name, chunk_position + conversion, chunk_size)]
-                    chunk_start = chunk_position + chunk_size
-                    chunk_position = chunk_start
-
-            # Ship anything that might be left
-            if output:
-                yield output, chunk_position
+                # Ship anything that might be left
+                if output:
+                    yield output, mapped_offset
 
 
 class LayerContainer(collections.abc.Mapping):
