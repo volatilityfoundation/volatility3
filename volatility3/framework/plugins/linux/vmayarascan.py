@@ -66,8 +66,8 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
             # get the proc_layer object from the context
             proc_layer = self.context.layers[proc_layer_name]
 
-            for start, end in self.get_vma_maps(task):
-                data = proc_layer.read(start, end - start, True)
+            for start, size in self.get_vma_maps(task):
+                data = proc_layer.read(start, size, True)
                 if not yarascan.YaraScan._yara_x:
                     for match in rules.match(data=data):
                         if yarascan.YaraScan.yara_returns_instances():
@@ -75,7 +75,7 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                                 for instance in match_string.instances:
                                     yield 0, (
                                         format_hints.Hex(instance.offset + start),
-                                        task.UniqueProcessId,
+                                        task.tgid,
                                         match.rule,
                                         match_string.identifier,
                                         instance.matched_data,
@@ -95,10 +95,13 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                             for instance in match_string.matches:
                                 yield 0, (
                                     format_hints.Hex(instance.offset + start),
-                                    task.UniqueProcessId,
-                                    match.rule,
+                                    task.tgid,
+                                    match.identifier,
                                     match_string.identifier,
-                                    instance.matched_data,
+                                    data[
+                                        instance.offset : instance.offset
+                                        + instance.length
+                                    ],
                                 )
 
     @staticmethod
