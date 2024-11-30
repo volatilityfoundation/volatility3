@@ -570,7 +570,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass=ABCMeta):
                     # New chunk, output the old chunk
                     yield [
                         (self.name, chunk_start, chunk_position - chunk_start)
-                    ], chunk_start
+                    ], chunk_position
                     chunk_start = offset
 
                 if offset + sublength - chunk_start > scanner.chunk_size:
@@ -579,13 +579,15 @@ class TranslationLayerInterface(DataLayerInterface, metaclass=ABCMeta):
                     ):
                         yield [
                             (self.name, chunk_start, chunk_position - chunk_start)
-                        ], chunk_start
+                        ], chunk_position
                         chunk_start = chunk_position = block_start
 
                 chunk_position = offset + sublength
 
             # Ship anything that might be left
-            yield [(self.name, chunk_start, chunk_position - chunk_start)], chunk_start
+            yield [
+                (self.name, chunk_start, chunk_position - chunk_start)
+            ], chunk_position
 
 
 class LayerContainer(collections.abc.Mapping):
