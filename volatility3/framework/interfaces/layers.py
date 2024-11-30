@@ -553,29 +553,27 @@ class TranslationLayerInterface(DataLayerInterface, metaclass=ABCMeta):
         for section_start, section_length in sections:
             output: List[Tuple[str, int, int]] = []
 
-            # Hold the offsets of each chunk (including how much has been filled)
-            chunk_start = chunk_position = 0
-
             # For each section, find out which bits of its exists and where they map to
             # This is faster than cutting the entire space into scan_chunk sized blocks and then
             # finding out what exists (particularly if most of the space isn't mapped)
+
             for mapped in self.mapping(
                 section_start, section_length, ignore_errors=True
             ):
                 offset, sublength, mapped_offset, mapped_length, layer_name = mapped
 
                 for block_start in range(
-                    mapped_offset, mapped_offset + mapped_length, scanner.chunk_size
+                    offset, offset + sublength, scanner.chunk_size
                 ):
                     block_end = min(
-                        mapped_offset + mapped_length,
+                        offset + sublength,
                         block_start + scanner.chunk_size + scanner.overlap,
                     )
-                    output += [(self.name, block_start, block_end)]
+                    output += [(self.name, block_start, block_end - block_start)]
 
                 # Ship anything that might be left
                 if output:
-                    yield output, mapped_offset
+                    yield output, offset
 
 
 class LayerContainer(collections.abc.Mapping):
