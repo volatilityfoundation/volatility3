@@ -551,29 +551,41 @@ class TranslationLayerInterface(DataLayerInterface, metaclass=ABCMeta):
         assumed to have no holes
         """
         for section_start, section_length in sections:
-            output: List[Tuple[str, int, int]] = []
-
             # For each section, find out which bits of its exists and where they map to
             # This is faster than cutting the entire space into scan_chunk sized blocks and then
             # finding out what exists (particularly if most of the space isn't mapped)
 
+            chunk_start = chunk_position = section_start
+
             for mapped in self.mapping(
                 section_start, section_length, ignore_errors=True
             ):
+                # coallesce adjacent sections
                 offset, sublength, mapped_offset, mapped_length, layer_name = mapped
 
-                for block_start in range(
-                    offset, offset + sublength, scanner.chunk_size
-                ):
-                    block_end = min(
-                        offset + sublength,
-                        block_start + scanner.chunk_size + scanner.overlap,
-                    )
-                    output += [(self.name, block_start, block_end - block_start)]
+                if chunk_start == chunk_position and chunk_start != offset:
+                    chunk_start = chunk_position = offset
 
-                # Ship anything that might be left
-                if output:
-                    yield output, offset
+                if chunk_position < offset:
+                    # New chunk, output the old chunk
+                    yield [
+                        (self.name, chunk_start, chunk_position - chunk_start)
+                    ], chunk_start
+                    chunk_start = offset
+
+                if offset + sublength - chunk_start > scanner.chunk_size:
+                    for block_start in range(
+                        offset, offset + sublength, scanner.chunk_size
+                    ):
+                        yield [
+                            (self.name, chunk_start, chunk_position - chunk_start)
+                        ], chunk_start
+                        chunk_start = chunk_position = block_start
+
+                chunk_position = offset + sublength
+
+            # Ship anything that might be left
+            yield [(self.name, chunk_start, chunk_position - chunk_start)], chunk_start
 
 
 class LayerContainer(collections.abc.Mapping):
