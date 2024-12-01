@@ -38,6 +38,7 @@ test = [
     "volatility3[dev]",
     "pytest>=8.3.3,<9",
     "yara-x>=0.10.0,<1",
+    "pytest-xdist",
 ]
 
 docs = [
@@ -73,3 +74,6 @@ ignore_missing_imports = true
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+addopts="-n auto"
