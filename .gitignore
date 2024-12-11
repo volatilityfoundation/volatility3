@@ -14,6 +14,7 @@ workspace.xml
 # Manually generated files
 .mypy_cache
 stubs
+volatility3/symbols/freebsd*
 volatility3/symbols/linux*
 volatility3/symbols/windows*
 volatility3/symbols/mac*
