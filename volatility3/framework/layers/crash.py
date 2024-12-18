@@ -129,6 +129,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
         elif self.dump_type == 0x05:
             summary_header = self.get_summary_header()
+            last_bit_seen = 0  # Most recent bit processed
             seg_first_bit = None  # First bit in a run
             seg_first_offset = 0  # File offset of first bit
             offset = (
