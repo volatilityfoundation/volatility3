@@ -84,8 +84,6 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 def deprecation_warning(method):
     """Warning to prevent people using old methods"""
 
-    _warn_skips = (os.path.dirname(__file__),)
-
     @functools.wraps(method)
     def deprecated_method(*args, **kwargs):
         warnings.warn(
@@ -93,7 +91,6 @@ def deprecation_warning(method):
             f"{'LinuxUtilities.' + method.__name__}, please report a bug to the plugin author asking them to use {method.__qualname__}",
             FutureWarning,
             stacklevel=2,
-            skip_file_prefixes=_warn_skips,
         )
         return method(*args, **kwargs)
 
