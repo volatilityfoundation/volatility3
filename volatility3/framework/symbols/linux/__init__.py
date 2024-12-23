@@ -81,6 +81,25 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.optional_set_type_class("maple_tree", extensions.maple_tree)
 
 
+def deprecation_warning(method):
+    """Warning to prevent people using old methods"""
+
+    _warn_skips = (os.path.dirname(__file__),)
+
+    @functools.wraps(method)
+    def deprecated_method(*args, **kwargs):
+        warnings.warn(
+            "Plugin is using "
+            f"{'LinuxUtilities.' + method.__name__}, please report a bug to the plugin author asking them to use {method.__qualname__}",
+            FutureWarning,
+            stacklevel=2,
+            skip_file_prefixes=_warn_skips,
+        )
+        return method(*args, **kwargs)
+
+    return deprecated_method
+
+
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""
 
@@ -88,25 +107,6 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
     _required_framework_version = (2, 0, 0)
 
     framework.require_interface_version(*_required_framework_version)
-
-    @staticmethod
-    def deprecation_warning(method):
-        """Warning to prevent people using old methods"""
-
-        _warn_skips = (os.path.dirname(__file__),)
-
-        @functools.wraps(method)
-        def deprecated_method(*args, **kwargs):
-            warnings.warn(
-                "Plugin is using "
-                f"{'LinuxUtilities.' + method.__name__}, please report a bug to the plugin author asking them to use {method.__qualname__}",
-                FutureWarning,
-                stacklevel=2,
-                skip_file_prefixes=_warn_skips,
-            )
-            return method(*args, **kwargs)
-
-        return deprecated_method
 
     do_get_path = deprecation_warning(paths.Paths.do_get_path)
     get_path_mnt = deprecation_warning(paths.Paths.get_path_mnt)

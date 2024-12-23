@@ -10,7 +10,7 @@ from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.symbols import linux
-from volatility3.framework.symbols.linux.utilities import linux_paths
+from volatility3.framework.symbols.linux.utilities import paths as linux_paths
 from volatility3.plugins.linux import pslist
 
 
