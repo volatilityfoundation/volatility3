@@ -10,6 +10,7 @@ from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.symbols import linux
+from volatility3.framework.symbols.linux.utilities import linux_paths
 from volatility3.plugins.linux import pslist
 
 
@@ -50,7 +51,10 @@ class MountInfo(plugins.PluginInterface):
                 name="pslist", plugin=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="linuxutils", component=linux.LinuxUtilities, version=(2, 1, 0)
+                name="LinuxUtilities", component=linux.LinuxUtilities, version=(2, 1, 0)
+            ),
+            requirements.VersionRequirement(
+                name="linux-paths", component=linux_paths.Paths, version=(2, 1, 0)
             ),
             requirements.ListRequirement(
                 name="pids",
@@ -88,7 +92,7 @@ class MountInfo(plugins.PluginInterface):
         if not mnt_root:
             return None
 
-        path_root = linux.LinuxUtilities.get_path_mnt(task, mnt)
+        path_root = linux_paths.Paths.get_path_mnt(task, mnt)
         if not path_root:
             return None
 
