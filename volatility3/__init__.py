@@ -8,7 +8,7 @@ from importlib import abc
 from typing import List, TypeVar, Callable, Any, Optional
 
 _T = TypeVar("_T")
-_S = TypeVar("_S")
+_U = TypeVar("_U")
 
 
 class classproperty(property):
@@ -17,11 +17,11 @@ class classproperty(property):
     Note this will change the return type
     """
 
-    def __init__(self, func: Callable[[_S], _T]) -> None:
+    def __init__(self, func: Callable[[_T], _U]) -> None:
         self._func = func
         super().__init__()
 
-    def __get__(self, obj: Any, type: Optional[_S] = None) -> _T:
+    def __get__(self, obj: Any, type: Optional[_T] = None) -> _U:
         if type is not None:
             return self._func(type)
         raise TypeError("Classproperty was not applied properly")
