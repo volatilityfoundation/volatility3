@@ -55,6 +55,18 @@ class DriverScan(interfaces.plugins.PluginInterface):
             context, layer_name, symbol_table, constraints
         ):
             _constraint, mem_object, _header = result
+
+            # *Many* _DRIVER_OBJECT instances were found at the end of a page
+            # leading to member access causing backtraces across several plugins
+            # when members were accessed as the next page was paged out.
+            # `DriverStart` is the first member from the beginning of the structure
+            #  of interest to plugins, so if it is not accessible then this instance
+            # is not useful or usable during analysis
+            try:
+                mem_object.DriverStart
+            except exceptions.InvalidAddressException:
+                continue
+
             yield mem_object
 
     @classmethod
