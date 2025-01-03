@@ -1171,6 +1171,7 @@ class dentry(objects.StructType):
         except exceptions.InvalidAddressException:
             return None
 
+
 class struct_file(objects.StructType):
     def get_dentry(self) -> interfaces.objects.ObjectInterface:
         """Returns a pointer to the dentry associated with this file"""
