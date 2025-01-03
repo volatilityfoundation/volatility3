@@ -872,9 +872,10 @@ class mm_struct(objects.StructType):
 
         with contextlib.suppress(exceptions.InvalidAddressException):
             for vma in self._do_get_vma_iter():
-                    # this catches invalid instances returned by the internal interator functions
-                    vma.vm_start
-                    yield vma
+                # this catches invalid instances returned by the internal interator functions
+                vma.vm_start
+                yield vma
+
 
 class super_block(objects.StructType):
     # include/linux/kdev_t.h
