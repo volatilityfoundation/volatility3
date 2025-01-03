@@ -6,7 +6,7 @@ import logging
 from collections import namedtuple
 from typing import Tuple, List, Iterable, Union
 
-from volatility3.framework import renderers, interfaces
+from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.symbols import linux
@@ -96,9 +96,16 @@ class MountInfo(plugins.PluginInterface):
         superblock = mnt.get_mnt_sb()
 
         mnt_id: int = mnt.mnt_id
-        parent_id: int = mnt.mnt_parent.mnt_id
 
-        st_dev = f"{superblock.major}:{superblock.minor}"
+        # Many samples in mass testing backtraced from
+        # invalid superblocks being return
+        # mnt_parent can also smear so we check both
+        try:
+            parent_id: int = mnt.mnt_parent.mnt_id
+
+            st_dev = f"{superblock.major}:{superblock.minor}"
+        except exceptions.InvalidAddressException:
+            return None
 
         mnt_opts: List[str] = []
         mnt_opts.append(mnt.get_flags_access())
