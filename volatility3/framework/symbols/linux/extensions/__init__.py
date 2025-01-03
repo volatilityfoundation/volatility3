@@ -3,6 +3,7 @@
 #
 
 import abc
+import contextlib
 import collections.abc
 import logging
 import functools
@@ -856,7 +857,7 @@ class mm_struct(objects.StructType):
             )
             yield vma
 
-    def get_vma_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+    def _do_get_vma_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the VMAs in an mm_struct. Automatically choosing the mmap or mm_mt as required."""
 
         if self.has_member("mmap"):
@@ -866,6 +867,14 @@ class mm_struct(objects.StructType):
         else:
             raise AttributeError("Unable to find mmap or mm_mt in mm_struct")
 
+    def get_vma_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Returns an iterator for the VMAs in an mm_struct. Automatically choosing the mmap or mm_mt as required."""
+
+        with contextlib.suppress(exceptions.InvalidAddressException):
+            for vma in self._do_get_vma_iter():
+                    # this catches invalid instances returned by the internal interator functions
+                    vma.vm_start
+                    yield vma
 
 class super_block(objects.StructType):
     # include/linux/kdev_t.h
