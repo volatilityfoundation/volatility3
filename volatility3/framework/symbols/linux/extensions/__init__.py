@@ -1070,14 +1070,28 @@ class dentry(objects.StructType):
             not current_dentry.is_root()
             and current_dentry.vol.offset not in dentry_seen
         ):
-            parent = current_dentry.d_parent
-            reversed_path.append(current_dentry.d_name.name_as_str())
+            try:
+                parent = current_dentry.d_parent
+            except exceptions.InvalidAddressException:
+                # Gus - is this right?
+                break
+
+            try:
+                reversed_path.append(current_dentry.d_name.name_as_str())
+            except exceptions.InvalidAddressException:
+                break
+
             dentry_seen.add(current_dentry.vol.offset)
             current_dentry = parent
+
         return "/" + "/".join(reversed(reversed_path))
 
     def is_root(self) -> bool:
-        return self.vol.offset == self.d_parent
+        try:
+            return self.vol.offset == self.d_parent
+        except exceptions.InvalidAddressException:
+            # Gus - I assume False is correct here since d_parent is smeared?
+            return False
 
     def is_subdir(self, old_dentry):
         """Is this dentry a subdirectory of old_dentry?
@@ -1102,10 +1116,24 @@ class dentry(objects.StructType):
             not current_dentry.is_root()
             and current_dentry.vol.offset not in dentry_seen
         ):
-            if current_dentry.d_parent == ancestor_dentry.vol.offset:
+            try:
+                parent = current_dentry.d_parent
+            except exceptions.InvalidAddressException:
+                # Gus - is None here correct? Should something else be done?
+                return None
+
+            if parent == ancestor_dentry.vol.offset:
                 return current_dentry
             dentry_seen.add(current_dentry.vol.offset)
-            current_dentry = current_dentry.d_parent
+
+            try:
+                parent = current_dentry.d_parent
+            except exceptions.InvalidAddressException:
+                # Gus - is None here correct? Should something else be done?
+                return None
+
+            current_dentry = parent
+
         return None
 
     def get_subdirs(self) -> Iterable[interfaces.objects.ObjectInterface]:
@@ -1138,12 +1166,10 @@ class dentry(objects.StructType):
     def get_inode(self) -> interfaces.objects.ObjectInterface:
         """Returns the inode associated with this dentry"""
 
-        inode_ptr = self.d_inode
-        if not (inode_ptr and inode_ptr.is_readable() and inode_ptr.is_valid()):
+        try:
+            return self.d_inode.dereference()
+        except exceptions.InvalidAddressException:
             return None
-
-        return inode_ptr.dereference()
-
 
 class struct_file(objects.StructType):
     def get_dentry(self) -> interfaces.objects.ObjectInterface:
@@ -2487,7 +2513,13 @@ class inode(objects.StructType):
         """
         if not self.i_size:
             return
-        elif not (self.i_mapping and self.i_mapping.nrpages > 0):
+
+        try:
+            nrpages = self.i_mapping.nrpages
+        except exceptions.InvalidAddressException:
+            return
+
+        if nrpages <= 0:
             return
 
         page_cache = linux.PageCache(
@@ -2495,6 +2527,7 @@ class inode(objects.StructType):
             kernel_module_name="kernel",
             page_cache=self.i_mapping.dereference(),
         )
+
         yield from page_cache.get_cached_pages()
 
     def get_contents(self):
