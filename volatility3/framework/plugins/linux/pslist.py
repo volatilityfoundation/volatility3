@@ -1,6 +1,7 @@
 # This file is Copyright 2021 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import logging
 import datetime
 import dataclasses
 import contextlib
@@ -14,6 +15,8 @@ from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux.extensions import elf
 from volatility3.plugins import timeliner
 from volatility3.plugins.linux import elfs
+
+vollog = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
@@ -112,6 +115,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             A TaskFields object with the fields to show in the plugin output.
         """
         name = utility.array_to_string(task.comm)
+
         if decorate_comm:
             if task.is_kernel_thread:
                 name = f"[{name}]"
@@ -250,6 +254,14 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         # Note that the init_task itself is not yielded, since "ps" also never shows it.
         for task in init_task.tasks:
+            # the task list is often smeared in samples, espeically towards the end
+            # this stops the processing
+            if not task.has_valid_name_and_pid():
+                vollog.debug(
+                    f"Found an smeared/invalid task at offset {task.vol.offset:#x}"
+                )
+                break
+
             if filter_func(task):
                 continue
 

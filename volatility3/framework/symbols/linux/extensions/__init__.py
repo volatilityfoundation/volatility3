@@ -307,6 +307,22 @@ class module(generic.GenericIntelProcess):
 
 
 class task_struct(generic.GenericIntelProcess):
+    def has_valid_name_and_pid(self) -> bool:
+        """
+        Ensures the pid and name for this process are sane
+        When these are broken it is a sure sign of smear
+        during process enumeration
+        """
+        try:
+            pid = self.pid
+            name = utility.array_to_string(self.comm)
+        except exceptions.InvalidAddressException:
+            return False
+
+        # ensure the pid within the bounds of a signed int
+        # and that we have something of a name
+        return (0 < pid < 2147483647) and len(name) > 0
+
     def add_process_layer(
         self, config_prefix: Optional[str] = None, preferred_name: Optional[str] = None
     ) -> Optional[str]:
