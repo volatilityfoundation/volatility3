@@ -2525,7 +2525,28 @@ class address_space(objects.StructType):
 
 
 class page(objects.StructType):
-    @functools.cached_property
+    def __eq__(self, other):
+        """Share @property's in a "vmlinux->[*pages]" lru_cache,
+        as thousands of page objects can be instantiated in
+        a single plugin run. Observed benchmarks noted
+        30x faster _intel_vmemmap_start accesses after first call.
+        The properties are in fact kernel-wide constants, and do not need
+        to be re-calculated on each instantiation.
+        Doc: https://stackoverflow.com/a/69780424
+
+        Use functools.cached_property to ignore this behaviour, as it was
+        observed to not call __hash__ and __eq__.
+        """
+        return isinstance(other, page) and self.__hash__() == other.__hash__()
+
+    # Use the vmlinux to identify cache pools.
+    def __hash__(self):
+        return linux.LinuxUtilities.get_module_from_volobj_type(
+            self._context, self
+        ).__hash__()
+
+    @property
+    @functools.lru_cache
     def pageflags_enum(self) -> Dict:
         """Returns 'pageflags' enumeration key/values
 
@@ -2545,7 +2566,8 @@ class page(objects.StructType):
 
         return pageflags_enum
 
-    @functools.cached_property
+    @property
+    @functools.lru_cache
     def _intel_vmemmap_start(self) -> int:
         """Determine the start of the struct page array, for Intel systems.
 
