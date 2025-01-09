@@ -186,6 +186,31 @@ class Intel(linear.LinearlyMappedLayer):
 
         Returns the translated entry value
         """
+        offset &= self.address_mask
+
+        if not (self.minimum_address <= offset <= self.maximum_address):
+            raise exceptions.InvalidAddressException(
+                offset, f"Address {offset:#x} outside virtual address range"
+            )
+
+        page_address = offset & self.page_mask
+        return self._translate_page(page_address)
+
+    @functools.lru_cache(maxsize=1024)
+    def _translate_page(self, page_address: int) -> int:
+        """Translates a page address based on paging tables.
+
+        Args:
+            page_address: The page base address
+
+        Returns:
+            the translated entry value
+        """
+        if page_address & ~self.page_mask != 0:
+            raise exceptions.InvalidAddressException(
+                page_address,
+                f"Invalid page address {page_address:#x}. The address must be aligned to the page size",
+            )
         # Setup the entry and how far we are through the offset
         # Position maintains the number of bits left to process
         # We or with 0x1 to ensure our page_map_offset is always valid
@@ -193,11 +218,13 @@ class Intel(linear.LinearlyMappedLayer):
         entry = self._initial_entry
 
         if not (
-            self.minimum_address <= (offset & self.address_mask) <= self.maximum_address
+            self.minimum_address
+            <= (page_address & self.address_mask)
+            <= self.maximum_address
         ):
             raise exceptions.PagedInvalidAddressException(
                 self.name,
-                offset,
+                page_address,
                 position + 1,
                 entry,
                 "Entry outside virtual address range: " + hex(entry),
@@ -209,7 +236,7 @@ class Intel(linear.LinearlyMappedLayer):
             if not self._page_is_valid(entry):
                 raise exceptions.PagedInvalidAddressException(
                     self.name,
-                    offset,
+                    page_address,
                     position + 1,
                     entry,
                     "Page Fault at entry " + hex(entry) + " in table " + name,
@@ -225,7 +252,7 @@ class Intel(linear.LinearlyMappedLayer):
             # Figure out how much of the offset we should be using
             start = position
             position -= size
-            index = self._mask(offset, start, position + 1) >> (position + 1)
+            index = self._mask(page_address, start, position + 1) >> (position + 1)
 
             # Grab the base address of the table we'll be getting the next entry from
             base_address = self._mask(
@@ -236,17 +263,15 @@ class Intel(linear.LinearlyMappedLayer):
             if table is None:
                 raise exceptions.PagedInvalidAddressException(
                     self.name,
-                    offset,
+                    page_address,
                     position + 1,
                     entry,
                     "Page Fault at entry " + hex(entry) + " in table " + name,
                 )
 
             # Read the data for the next entry
-            entry_data = table[
-                (index << self._index_shift) : (index << self._index_shift)
-                + self._entry_size
-            ]
+            entry_data_start = index << self._index_shift
+            entry_data = table[entry_data_start : entry_data_start + self._entry_size]
 
             if INTEL_TRANSLATION_DEBUGGING:
                 vollog.log(
