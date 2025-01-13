@@ -6,12 +6,12 @@ readme = "README.md"
 authors = [
     { name = "Volatility Foundation", email = "volatility@volatilityfoundation.org" },
 ]
-requires-python = ">=3.8.0"
+requires-python = ">=3.10.0"
 license = { text = "VSL" }
 dynamic = ["version"]
 
 dependencies = [
-    "pefile>=2024.8.26",
+    "pefile>=2023.2.7",
 ]
 
 [project.optional-dependencies]
@@ -48,7 +48,7 @@ test = [
 
 docs = [
     "volatility3[dev]",
-    "sphinx>=8.0.0,<7",
+    "sphinx==8.0.2",
     "sphinx-autodoc-typehints>=2.5.0,<3",
     "sphinx-rtd-theme>=3.0.1,<4",
 ]
