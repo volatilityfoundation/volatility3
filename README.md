@@ -20,7 +20,7 @@ more details.
 
 ## Installing
 
-Volatility 3 requires Python 3.10.0 or later and is published on the [PyPi registry](https://pypi.org/project/volatility3).
+Volatility 3 requires Python 3.8.0 or later and is published on the [PyPi registry](https://pypi.org/project/volatility3).
 
 ```shell
 pip install volatility3
