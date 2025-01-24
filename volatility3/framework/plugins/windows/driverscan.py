@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from typing import Iterable
+from typing import Iterable, Optional, Tuple
 
 from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
@@ -51,6 +51,10 @@ class DriverScan(interfaces.plugins.PluginInterface):
             symbol_table, [b"Dri\xf6", b"Driv"]
         )
 
+        layer = context.layers[layer_name]
+        module = context.module(symbol_table, layer_name, 0)
+        driver_start_offset = module.get_type("_DRIVER_OBJECT").relative_child_offset("DriverStart")
+
         for result in poolscanner.PoolScanner.generate_pool_scan(
             context, layer_name, symbol_table, constraints
         ):
@@ -62,15 +66,16 @@ class DriverScan(interfaces.plugins.PluginInterface):
             # `DriverStart` is the first member from the beginning of the structure
             #  of interest to plugins, so if it is not accessible then this instance
             # is not useful or usable during analysis
-            try:
-                mem_object.DriverStart
-            except exceptions.InvalidAddressException:
-                continue
+            # 8 covers this value 32 and 64 bit systems
+            if layer.is_valid(mem_object.vol.offset + driver_start_offset, 8):
 
-            yield mem_object
+                # Many/most rootkits zero out their DriverStart member for anti-forensics
+                # so we accept a driver start that is either 0 or is mapped in kernel memory (the current layer)
+                if mem_object.DriverStart == 0 or layer.is_valid(mem_object.DriverStart, 8):
+                    yield mem_object
 
     @classmethod
-    def get_names_for_driver(cls, driver):
+    def get_names_for_driver(cls, driver) -> Tuple[Optional[str], Optional[str], Optional[str]]:
         """
         Convenience method for getting the commonly used
         names associated with a driver
@@ -84,17 +89,17 @@ class DriverScan(interfaces.plugins.PluginInterface):
         try:
             driver_name = driver.get_driver_name()
         except (ValueError, exceptions.InvalidAddressException):
-            driver_name = renderers.NotApplicableValue()
+            driver_name = None
 
         try:
             service_key = driver.DriverExtension.ServiceKeyName.String
         except exceptions.InvalidAddressException:
-            service_key = renderers.NotApplicableValue()
+            service_key = None
 
         try:
             name = driver.DriverName.String
         except exceptions.InvalidAddressException:
-            name = renderers.NotApplicableValue()
+            name = None
 
         return driver_name, service_key, name
 
@@ -106,15 +111,19 @@ class DriverScan(interfaces.plugins.PluginInterface):
         ):
             driver_name, service_key, name = self.get_names_for_driver(driver)
 
+            # Prior to #1481, this plugin reported dozens to hundreds of junk drivers per sample
+            if driver.DriverStart == 0 and not driver_name and not service_key and not name:
+                continue
+
             yield (
                 0,
                 (
                     format_hints.Hex(driver.vol.offset),
                     format_hints.Hex(driver.DriverStart),
                     format_hints.Hex(driver.DriverSize),
-                    service_key,
-                    driver_name,
-                    name,
+                    service_key or renderers.NotAvailableValue(),
+                    driver_name or renderers.NotAvailableValue(),
+                    name or renderers.NotAvailableValue(),
                 ),
             )
 
