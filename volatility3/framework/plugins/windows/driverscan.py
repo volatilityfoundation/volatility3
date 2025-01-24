@@ -53,7 +53,9 @@ class DriverScan(interfaces.plugins.PluginInterface):
 
         layer = context.layers[layer_name]
         module = context.module(symbol_table, layer_name, 0)
-        driver_start_offset = module.get_type("_DRIVER_OBJECT").relative_child_offset("DriverStart")
+        driver_start_offset = module.get_type("_DRIVER_OBJECT").relative_child_offset(
+            "DriverStart"
+        )
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
             context, layer_name, symbol_table, constraints
@@ -71,11 +73,15 @@ class DriverScan(interfaces.plugins.PluginInterface):
 
                 # Many/most rootkits zero out their DriverStart member for anti-forensics
                 # so we accept a driver start that is either 0 or is mapped in kernel memory (the current layer)
-                if mem_object.DriverStart == 0 or layer.is_valid(mem_object.DriverStart, 8):
+                if mem_object.DriverStart == 0 or layer.is_valid(
+                    mem_object.DriverStart, 8
+                ):
                     yield mem_object
 
     @classmethod
-    def get_names_for_driver(cls, driver) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    def get_names_for_driver(
+        cls, driver
+    ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
         """
         Convenience method for getting the commonly used
         names associated with a driver
@@ -112,7 +118,12 @@ class DriverScan(interfaces.plugins.PluginInterface):
             driver_name, service_key, name = self.get_names_for_driver(driver)
 
             # Prior to #1481, this plugin reported dozens to hundreds of junk drivers per sample
-            if driver.DriverStart == 0 and not driver_name and not service_key and not name:
+            if (
+                driver.DriverStart == 0
+                and not driver_name
+                and not service_key
+                and not name
+            ):
                 continue
 
             yield (
