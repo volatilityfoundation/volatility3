@@ -13,3 +13,4 @@ jobs:
         with:
           args: check
           src: "."
+          version: 0.9.3
