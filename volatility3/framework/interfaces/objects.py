@@ -374,6 +374,7 @@ class Template:
             f"{self.__class__.__name__} object has no attribute {attr}"
         )
 
+    @abc.abstractmethod
     def __call__(
         self,
         context: "interfaces.context.ContextInterface",

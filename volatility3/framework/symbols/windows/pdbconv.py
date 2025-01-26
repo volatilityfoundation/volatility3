@@ -128,7 +128,10 @@ class PdbReader:
         self._layer_name, self._context = self.load_pdb_layer(context, location)
         self._dbiheader: Optional[interfaces.objects.ObjectInterface] = None
         if not progress_callback:
-            progress_callback = lambda x, y: None
+
+            def progress_callback(x, y):
+                return None
+
         self._progress_callback = progress_callback
         self.types: List[
             Tuple[
@@ -263,9 +266,7 @@ class PdbReader:
             )
         if header.index_max < header.index_min:
             raise ValueError(
-                "Maximum {} index is smaller than minimum TPI index, found: {} < {} ".format(
-                    stream_name, header.index_max, header.index_min
-                )
+                f"Maximum {stream_name} index is smaller than minimum TPI index, found: {header.index_max} < {header.index_min} "
             )
         # Reset the state
         info_references: Dict[str, int] = {}
@@ -976,14 +977,16 @@ class PdbRetreiver:
 if __name__ == "__main__":
     import argparse
 
-    class PrintedProgress(object):
+    class PrintedProgress:
         """A progress handler that prints the progress value and the
         description onto the command line."""
 
         def __init__(self):
             self._max_message_len = 0
 
-        def __call__(self, progress: Union[int, float], description: str = None):
+        def __call__(
+            self, progress: Union[int, float], description: Optional[str] = None
+        ):
             """A simple function for providing text-based feedback.
 
             .. warning:: Only for development use.

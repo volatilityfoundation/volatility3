@@ -73,18 +73,16 @@ class Intel(linear.LinearlyMappedLayer):
         )
 
         # These can vary depending on the type of space
-        self._index_shift = int(
-            math.ceil(math.log2(struct.calcsize(self._entry_format)))
-        )
+        self._index_shift = math.ceil(math.log2(struct.calcsize(self._entry_format)))
 
     @classproperty
-    @functools.lru_cache()
+    @functools.lru_cache
     def page_shift(cls) -> int:
         """Page shift for the intel memory layers."""
         return cls._page_size_in_bits
 
     @classproperty
-    @functools.lru_cache()
+    @functools.lru_cache
     def page_size(cls) -> int:
         """Page size for the intel memory layers.
 
@@ -93,25 +91,25 @@ class Intel(linear.LinearlyMappedLayer):
         return 1 << cls._page_size_in_bits
 
     @classproperty
-    @functools.lru_cache()
+    @functools.lru_cache
     def page_mask(cls) -> int:
         """Page mask for the intel memory layers."""
         return ~(cls.page_size - 1)
 
     @classproperty
-    @functools.lru_cache()
+    @functools.lru_cache
     def bits_per_register(cls) -> int:
         """Returns the bits_per_register to determine the range of an
         IntelTranslationLayer."""
         return cls._bits_per_register
 
     @classproperty
-    @functools.lru_cache()
+    @functools.lru_cache
     def minimum_address(cls) -> int:
         return 0
 
     @classproperty
-    @functools.lru_cache()
+    @functools.lru_cache
     def maximum_address(cls) -> int:
         return (1 << cls._maxvirtaddr) - 1
 
@@ -125,7 +123,6 @@ class Intel(linear.LinearlyMappedLayer):
         high_mask = (1 << (high_bit + 1)) - 1
         low_mask = (1 << low_bit) - 1
         mask = high_mask ^ low_mask
-        # print(high_bit, low_bit, bin(mask), bin(value))
         return value & mask
 
     @staticmethod
@@ -147,7 +144,7 @@ class Intel(linear.LinearlyMappedLayer):
         return self._mask(addr, self._maxvirtaddr, 0) + self._canonical_prefix
 
     def decanonicalize(self, addr: int) -> int:
-        """Removes canonicalization to ensure an adress fits within the correct range if it has been canonicalized
+        """Removes canonicalization to ensure an address fits within the correct range if it has been canonicalized
 
         This will produce an address outside the range if the canonicalization is incorrect
         """
@@ -182,7 +179,7 @@ class Intel(linear.LinearlyMappedLayer):
 
     def _pte_pfn(self, entry: int) -> int:
         """Extracts the page frame number (PFN) from the page table entry (PTE) entry"""
-        return entry >> self.page_shift
+        return self._mask(entry, self._maxphyaddr - 1, 0) >> self.page_shift
 
     def _translate_entry(self, offset: int) -> Tuple[int, int]:
         """Translates a specific offset based on paging tables.
@@ -254,12 +251,7 @@ class Intel(linear.LinearlyMappedLayer):
             if INTEL_TRANSLATION_DEBUGGING:
                 vollog.log(
                     constants.LOGLEVEL_VVVV,
-                    "Entry {} at index {} gives data {} as {}".format(
-                        hex(entry),
-                        hex(index),
-                        hex(struct.unpack(self._entry_format, entry_data)[0]),
-                        name,
-                    ),
+                    f"Entry {hex(entry)} at index {hex(index)} gives data {hex(struct.unpack(self._entry_format, entry_data)[0])} as {name}",
                 )
 
             # Read out the new entry from memory

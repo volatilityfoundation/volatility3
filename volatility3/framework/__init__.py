@@ -6,31 +6,26 @@
 import glob
 import sys
 import zipfile
-
-required_python_version = (3, 8, 0)
-if (
-    sys.version_info.major != required_python_version[0]
-    or sys.version_info.minor < required_python_version[1]
-    or (
-        sys.version_info.minor == required_python_version[1]
-        and sys.version_info.micro < required_python_version[2]
-    )
-):
-    raise RuntimeError(
-        "Volatility framework requires python version {}.{}.{} or greater".format(
-            *required_python_version
-        )
-    )
-
 import importlib
 import inspect
 import logging
 import os
 import traceback
-from typing import Any, Dict, Generator, List, Tuple, Type, TypeVar
+from typing import Any, Dict, Generator, List, Optional, Tuple, Type, TypeVar
 
 from volatility3.framework import constants, interfaces
 
+if (
+    sys.version_info.major != constants.REQUIRED_PYTHON_VERSION[0]
+    or sys.version_info.minor < constants.REQUIRED_PYTHON_VERSION[1]
+    or (
+        sys.version_info.minor == constants.REQUIRED_PYTHON_VERSION[1]
+        and sys.version_info.micro < constants.REQUIRED_PYTHON_VERSION[2]
+    )
+):
+    raise RuntimeError(
+        f"Volatility framework requires python version {'.'.join(str(x) for x in constants.REQUIRED_PYTHON_VERSION)} or greater"
+    )
 
 # ##
 #
@@ -56,27 +51,25 @@ def require_interface_version(*args) -> None:
     if len(args):
         if args[0] != interface_version()[0]:
             raise RuntimeError(
-                "Framework interface version {} is incompatible with required version {}".format(
-                    interface_version()[0], args[0]
-                )
+                f"Framework interface version {interface_version()[0]} is incompatible with required version {args[0]}"
             )
         if len(args) > 1:
             if args[1] > interface_version()[1]:
                 raise RuntimeError(
                     "Framework interface version {} is an older revision than the required version {}".format(
-                        ".".join([str(x) for x in interface_version()[0:2]]),
-                        ".".join([str(x) for x in args[0:2]]),
+                        ".".join(str(x) for x in interface_version()[0:2]),
+                        ".".join(str(x) for x in args[0:2]),
                     )
                 )
 
 
-class NonInheritable(object):
+class NonInheritable:
     def __init__(self, value: Any, cls: Type) -> None:
         self.default_value = value
         self.cls = cls
 
-    def __get__(self, obj: Any, get_type: Type = None) -> Any:
-        if type == self.cls:
+    def __get__(self, obj: Any, get_type: Type = Optional[None]) -> Any:
+        if type is self.cls:
             if hasattr(self.default_value, "__get__"):
                 return self.default_value.__get__(obj, get_type)
             return self.default_value
@@ -99,8 +92,7 @@ def class_subclasses(cls: Type[T]) -> Generator[Type[T], None, None]:
         # The typing system is not clever enough to realize that clazz has a hidden attr after the hasattr check
         if not hasattr(clazz, "hidden") or not clazz.hidden:  # type: ignore
             yield clazz
-        for return_value in class_subclasses(clazz):
-            yield return_value
+        yield from class_subclasses(clazz)
 
 
 def import_files(base_module, ignore_errors: bool = False) -> List[str]:
@@ -161,11 +153,7 @@ def import_files(base_module, ignore_errors: bool = False) -> List[str]:
 
 def _filter_files(filename: str):
     """Ensures that a filename traversed is an importable python file"""
-    return (
-        filename.endswith(".py")
-        or filename.endswith(".pyc")
-        or filename.endswith(".pyo")
-    ) and not filename.startswith("__")
+    return (filename.endswith((".py", ".pyc"))) and not filename.startswith("__")
 
 
 def import_file(module: str, path: str, ignore_errors: bool = False) -> List[str]:
@@ -189,9 +177,7 @@ def import_file(module: str, path: str, ignore_errors: bool = False) -> List[str
                     traceback.TracebackException.from_exception(e).format(chain=True)
                 )
             )
-            vollog.debug(
-                "Failed to import module {} based on file: {}".format(module, path)
-            )
+            vollog.debug(f"Failed to import module {module} based on file: {path}")
             failures.append(module)
             if not ignore_errors:
                 raise
@@ -209,8 +195,7 @@ def _zipwalk(path: str):
                 zip_results[os.path.join(path, os.path.dirname(file.filename))] = (
                     dirlist
                 )
-    for value in zip_results:
-        yield value, zip_results[value]
+    yield from zip_results.items()
 
 
 def list_plugins() -> Dict[str, Type[interfaces.plugins.PluginInterface]]:

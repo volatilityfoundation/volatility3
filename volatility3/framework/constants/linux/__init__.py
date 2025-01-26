@@ -6,6 +6,7 @@
 Linux-specific values that aren't found in debug symbols
 """
 from enum import IntEnum, Flag
+from dataclasses import dataclass
 
 KERNEL_NAME = "__kernel__"
 
@@ -352,3 +353,57 @@ NSEC_PER_SEC = 1e9
 MODULE_MAXIMUM_CORE_SIZE = 20000000
 MODULE_MAXIMUM_CORE_TEXT_SIZE = 20000000
 MODULE_MINIMUM_SIZE = 4096
+
+
+@dataclass
+class TaintFlag:
+    shift: int
+    desc: str
+    when_present: bool
+    module: bool
+
+
+TAINT_FLAGS = {
+    "P": TaintFlag(
+        shift=1 << 0, desc="PROPRIETARY_MODULE", when_present=True, module=True
+    ),
+    "G": TaintFlag(
+        shift=1 << 0, desc="PROPRIETARY_MODULE", when_present=False, module=True
+    ),
+    "F": TaintFlag(shift=1 << 1, desc="FORCED_MODULE", when_present=True, module=False),
+    "S": TaintFlag(
+        shift=1 << 2, desc="CPU_OUT_OF_SPEC", when_present=True, module=False
+    ),
+    "R": TaintFlag(shift=1 << 3, desc="FORCED_RMMOD", when_present=True, module=False),
+    "M": TaintFlag(shift=1 << 4, desc="MACHINE_CHECK", when_present=True, module=False),
+    "B": TaintFlag(shift=1 << 5, desc="BAD_PAGE", when_present=True, module=False),
+    "U": TaintFlag(shift=1 << 6, desc="USER", when_present=True, module=False),
+    "D": TaintFlag(shift=1 << 7, desc="DIE", when_present=True, module=False),
+    "A": TaintFlag(
+        shift=1 << 8, desc="OVERRIDDEN_ACPI_TABLE", when_present=True, module=False
+    ),
+    "W": TaintFlag(shift=1 << 9, desc="WARN", when_present=True, module=False),
+    "C": TaintFlag(shift=1 << 10, desc="CRAP", when_present=True, module=True),
+    "I": TaintFlag(
+        shift=1 << 11, desc="FIRMWARE_WORKAROUND", when_present=True, module=False
+    ),
+    "O": TaintFlag(shift=1 << 12, desc="OOT_MODULE", when_present=True, module=True),
+    "E": TaintFlag(
+        shift=1 << 13, desc="UNSIGNED_MODULE", when_present=True, module=True
+    ),
+    "L": TaintFlag(shift=1 << 14, desc="SOFTLOCKUP", when_present=True, module=False),
+    "K": TaintFlag(shift=1 << 15, desc="LIVEPATCH", when_present=True, module=True),
+    "X": TaintFlag(shift=1 << 16, desc="AUX", when_present=True, module=True),
+    "T": TaintFlag(shift=1 << 17, desc="RANDSTRUCT", when_present=True, module=True),
+    "N": TaintFlag(shift=1 << 18, desc="TEST", when_present=True, module=True),
+}
+"""Flags used to taint kernel and modules, for debugging purposes.
+
+Map based on 6.12-rc5.
+
+Documentation :
+    - https://www.kernel.org/doc/Documentation/admin-guide/sysctl/kernel.rst#:~:text=guide/sysrq.rst.-,tainted,-%3D%3D%3D%3D%3D%3D%3D%0A%0ANon%2Dzero%20if
+    - https://www.kernel.org/doc/Documentation/admin-guide/tainted-kernels.rst#:~:text=More%20detailed%20explanation%20for%20tainting
+    - taint_flag kernel struct
+    - taint_flags kernel constant
+"""

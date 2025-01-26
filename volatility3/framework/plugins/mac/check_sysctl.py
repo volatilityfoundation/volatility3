@@ -60,7 +60,7 @@ class Check_sysctl(plugins.PluginInterface):
         return var_str
 
     def _process_sysctl_list(self, kernel, sysctl_list, recursive=0):
-        if type(sysctl_list) == volatility3.framework.objects.Pointer:
+        if type(sysctl_list) is volatility3.framework.objects.Pointer:
             sysctl_list = sysctl_list.dereference().cast("sysctl_oid_list")
 
         sysctl = sysctl_list.slh_first
@@ -93,10 +93,9 @@ class Check_sysctl(plugins.PluginInterface):
                 val = self._parse_global_variable_sysctls(kernel, name)
             elif ctltype == "CTLTYPE_NODE":
                 if sysctl.oid_handler == 0:
-                    for info in self._process_sysctl_list(
+                    yield from self._process_sysctl_list(
                         kernel, sysctl.oid_arg1, recursive=1
-                    ):
-                        yield info
+                    )
 
                 val = "Node"
 

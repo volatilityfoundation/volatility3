@@ -3,13 +3,11 @@
 #
 
 import logging
-import os
 import struct
 from typing import Optional
 
 from volatility3.framework import constants, exceptions, interfaces, layers
 from volatility3.framework.automagic import symbol_cache, symbol_finder
-from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, scanners
 from volatility3.framework.symbols import mac
 
@@ -184,7 +182,7 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         aslr_shift = 0
 
         for offset, banner in offset_generator:
-            banner_major, banner_minor = [int(x) for x in banner[22:].split(b".")[0:2]]
+            banner_major, banner_minor = (int(x) for x in banner[22:].split(b".")[0:2])
 
             tmp_aslr_shift = offset - cls.virtual_to_physical_address(
                 version_json_address

@@ -42,7 +42,7 @@ class AutomagicInterface(
     priority = 10
     """An ordering to indicate how soon this automagic should be run"""
 
-    exclusion_list = []
+    exclusion_list: List[str] = []
     """A list of plugin categories (typically operating systems) which the plugin will not operate on"""
 
     def __init__(

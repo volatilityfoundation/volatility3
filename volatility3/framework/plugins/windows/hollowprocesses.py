@@ -12,20 +12,15 @@ from volatility3.plugins.windows import pslist, vadinfo
 
 vollog = logging.getLogger(__name__)
 
-VadData = NamedTuple(
-    "VadData",
-    [
-        ("protection", str),
-        ("path", str),
-    ],
-)
 
-DLLData = NamedTuple(
-    "DLLData",
-    [
-        ("path", str),
-    ],
-)
+class VadData(NamedTuple):
+    protection: str
+    path: str
+
+
+class DLLData(NamedTuple):
+    path: str
+
 
 ### Useful references on process hollowing
 # https://cysinfo.com/detecting-deceptive-hollowing-techniques/
@@ -146,9 +141,7 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
         """
         image_base = self._get_image_base(proc)
         if image_base is not None and image_base != proc.SectionBaseAddress:
-            yield "The ImageBaseAddress reported from the PEB ({:#x}) does not match the process SectionBaseAddress ({:#x})".format(
-                image_base, proc.SectionBaseAddress
-            )
+            yield f"The ImageBaseAddress reported from the PEB ({image_base:#x}) does not match the process SectionBaseAddress ({proc.SectionBaseAddress:#x})"
 
     def _check_exe_protection(
         self, proc, vads: Dict[int, VadData], __
@@ -166,13 +159,9 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
         base = proc.SectionBaseAddress
 
         if base not in vads:
-            yield "There is no VAD starting at the base address of the process executable ({:#x})".format(
-                base
-            )
+            yield f"There is no VAD starting at the base address of the process executable ({base:#x})"
         elif vads[base].protection != "PAGE_EXECUTE_WRITECOPY":
-            yield "Unexpected protection ({}) for VAD hosting the process executable ({:#x}) with path {}".format(
-                vads[base].protection, base, vads[base].path
-            )
+            yield f"Unexpected protection ({vads[base].protection}) for VAD hosting the process executable ({base:#x}) with path {vads[base].path}"
 
     def _check_dlls_protection(
         self, _, vads: Dict[int, VadData], dlls: Dict[int, DLLData]
@@ -184,9 +173,7 @@ class HollowProcesses(interfaces.plugins.PluginInterface):
 
             # PAGE_EXECUTE_WRITECOPY is the only valid permission for mapped DLLs and .exe files
             if vads[dll_base].protection != "PAGE_EXECUTE_WRITECOPY":
-                yield "Unexpected protection ({}) for DLL in the PEB's load order list ({:#x}) with path {}".format(
-                    vads[dll_base].protection, dll_base, dlls[dll_base].path
-                )
+                yield f"Unexpected protection ({vads[dll_base].protection}) for DLL in the PEB's load order list ({dll_base:#x}) with path {dlls[dll_base].path}"
 
     def _generator(self, procs):
         checks = [

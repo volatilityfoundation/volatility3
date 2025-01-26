@@ -191,7 +191,7 @@ class unhooked_system_calls(interfaces.plugins.PluginInterface):
 
                     # gather processes on small_idx since these are the malware infected ones
                     for pid, pname in cb[small_idx]:
-                        ps.append("{:d}:{}".format(pid, pname))
+                        ps.append(f"{pid:d}:{pname}")
 
                     proc_names = ", ".join(ps)
 

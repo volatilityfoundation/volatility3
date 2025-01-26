@@ -119,7 +119,7 @@ class LayerWriter(plugins.PluginInterface):
                         # Update the filename, which may have changed if a file
                         # with the same name already existed.
                         output_name = file_handle.preferred_filename
-                    except IOError as excp:
+                    except OSError as excp:
                         yield 0, (f"Layer cannot be written to {output_name}: {excp}",)
 
                     yield 0, (f"Layer has been written to {output_name}",)

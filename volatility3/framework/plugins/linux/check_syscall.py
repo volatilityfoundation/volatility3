@@ -1,8 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-"""A module containing a collection of plugins that produce data typically
-found in Linux's /proc file system."""
+"""A module containing a plugin that checks the system call table for hooks."""
 import contextlib
 import logging
 from typing import List
@@ -103,7 +102,7 @@ class Check_syscall(plugins.PluginInterface):
 
         try:
             func_addr = vmlinux.get_symbol(syscall_entry_func).address
-        except exceptions.SymbolError as e:
+        except exceptions.SymbolError:
             # if we can't find the disassemble function then bail and rely on a different method
             return 0
 

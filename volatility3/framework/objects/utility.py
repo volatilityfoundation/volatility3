@@ -22,8 +22,8 @@ def bswap_32(value: int) -> int:
 
 
 def bswap_64(value: int) -> int:
-    low = bswap_32((value >> 32))
-    high = bswap_32((value & 0xFFFFFFFF))
+    low = bswap_32(value >> 32)
+    high = bswap_32(value & 0xFFFFFFFF)
 
     return ((high << 32) | low) & 0xFFFFFFFFFFFFFFFF
 

@@ -13,15 +13,17 @@ import sys
 import warnings
 from typing import Callable, Optional
 
-import volatility3.framework.constants.linux
-import volatility3.framework.constants.windows
+from volatility3.framework.constants import linux as linux
+from volatility3.framework.constants import windows as windows
 from volatility3.framework.constants._version import (
-    PACKAGE_VERSION,
-    VERSION_MAJOR,
-    VERSION_MINOR,
-    VERSION_PATCH,
-    VERSION_SUFFIX,
+    PACKAGE_VERSION as PACKAGE_VERSION,
+    VERSION_MAJOR as VERSION_MAJOR,
+    VERSION_MINOR as VERSION_MINOR,
+    VERSION_PATCH as VERSION_PATCH,
+    VERSION_SUFFIX as VERSION_SUFFIX,
 )
+
+REQUIRED_PYTHON_VERSION = (3, 8, 0)
 
 PLUGINS_PATH = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "plugins")),

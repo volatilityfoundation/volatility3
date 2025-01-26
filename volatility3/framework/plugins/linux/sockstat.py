@@ -372,7 +372,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         bt_sock = sock.cast("bt_sock")
 
         def bt_addr(addr):
-            return ":".join(reversed(["%02x" % x for x in addr.b]))
+            return ":".join(reversed([f"{x:02x}" for x in addr.b]))
 
         src_addr = src_port = dst_addr = dst_port = None
         bt_protocol = bt_sock.get_protocol()
@@ -438,7 +438,7 @@ class Sockstat(plugins.PluginInterface):
     """Lists all network connections for all processes."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (3, 0, 1)
+    _version = (3, 0, 2)
 
     @classmethod
     def get_requirements(cls):
@@ -455,7 +455,7 @@ class Sockstat(plugins.PluginInterface):
                 name="lsof", plugin=lsof.Lsof, version=(2, 0, 0)
             ),
             requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+                name="pslist", plugin=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="linuxutils", component=linux.LinuxUtilities, version=(2, 0, 0)

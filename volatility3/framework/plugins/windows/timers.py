@@ -14,7 +14,7 @@ from volatility3.framework import (
 )
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
-from volatility3.framework.symbols.windows import versions
+from volatility3.framework.symbols.windows import versions, extensions
 from volatility3.plugins.windows import ssdt, kpcrs
 
 vollog = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class Timers(interfaces.plugins.PluginInterface):
     """Print kernel timers and associated module DPCs"""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -49,7 +49,7 @@ class Timers(interfaces.plugins.PluginInterface):
         kernel_module_name: str,
         layer_name: str,
         symbol_table: str,
-    ) -> Iterable[Tuple[str, int, str]]:
+    ) -> Iterable[extensions.KTIMER]:
         """Lists all kernel timers.
 
         Args:
@@ -141,7 +141,7 @@ class Timers(interfaces.plugins.PluginInterface):
                 if dpc.DeferredRoutine == 0:
                     continue
                 deferred_routine = dpc.DeferredRoutine
-            except Exception as e:
+            except Exception:
                 continue
 
             module_symbols = list(

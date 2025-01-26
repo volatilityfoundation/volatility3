@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-from typing import Iterator, Any, Iterable, List, Tuple, Set
+from typing import Iterator, Any, Iterable, List, Optional, Tuple, Set
 
 from volatility3.framework import interfaces, objects, exceptions, constants
 from volatility3.framework.symbols import intermed
@@ -97,7 +97,7 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         context: interfaces.context.ContextInterface,
         handlers: Iterator[Any],
         target_address,
-        kernel_module_name: str = None,
+        kernel_module_name: Optional[str] = None,
     ):
         mod_name = "UNKNOWN"
         symbol_name = "N/A"
@@ -232,10 +232,9 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         next_member: str,
         max_elements: int = 4096,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
-        for element in cls._walk_iterable(
+        yield from cls._walk_iterable(
             queue, "tqh_first", "tqe_next", next_member, max_elements
-        ):
-            yield element
+        )
 
     @classmethod
     def walk_list_head(
@@ -244,10 +243,9 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         next_member: str,
         max_elements: int = 4096,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
-        for element in cls._walk_iterable(
+        yield from cls._walk_iterable(
             queue, "lh_first", "le_next", next_member, max_elements
-        ):
-            yield element
+        )
 
     @classmethod
     def walk_slist(
@@ -256,7 +254,6 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
         next_member: str,
         max_elements: int = 4096,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
-        for element in cls._walk_iterable(
+        yield from cls._walk_iterable(
             queue, "slh_first", "sle_next", next_member, max_elements
-        ):
-            yield element
+        )

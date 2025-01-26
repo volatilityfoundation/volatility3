@@ -41,24 +41,36 @@ to be able to run properly.  Any that are defined as optional need not necessari
 
         @classmethod
         def get_requirements(cls):
-            return [requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                   architectures = ["Intel32", "Intel64"]),
-                    requirements.ListRequirement(name = 'pid',
-                                                 element_type = int,
-                                                 description = "Process IDs to include (all other processes are excluded)",
-                                                 optional = True),
-                    requirements.PluginRequirement(name = 'pslist',
-                                                   plugin = pslist.PsList,
-                                                   version = (2, 0, 0))]
+            return [
+                requirements.ModuleRequirement(
+                    name = 'kernel',
+                    description = 'Windows kernel',
+                    architectures = ["Intel32", "Intel64"]
+                ),
+                requirements.ListRequirement(
+                    name = 'pid',
+                    element_type = int,
+                    description = "Process IDs to include (all other processes are excluded)",
+                    optional = True
+                ),
+                requirements.PluginRequirement(
+                    name = 'pslist',
+                    plugin = pslist.PsList,
+                    version = (2, 0, 0)
+                ),
+            ]
 
 
-This is a classmethod, because it is called before the specific plugin object has been instantiated (in order to know how
+This is a classmethod, so it can be called before the specific plugin object has been instantiated (in order to know how
 to instantiate the plugin).  At the moment these requirements are fairly straightforward:
 
 ::
 
-    requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                   architectures = ["Intel32", "Intel64"]),
+    requirements.ModuleRequirement(
+        name = 'kernel',
+        description = 'Windows kernel',
+        architectures = ["Intel32", "Intel64"]
+    ),
 
 This requirement specifies the need for a particular submodule.  Each module requires a
 :py:class:`TranslationLayer <volatility3.framework.interfaces.layers.TranslationLayerInterface>` and a
@@ -85,9 +97,11 @@ not be requested directly from the user.
 
     ::
 
-        requirements.TranslationLayerRequirement(name = 'primary',
-                                                 description = 'Memory layer for the kernel',
-                                                 architectures = ["Intel32", "Intel64"]),
+        requirements.TranslationLayerRequirement(
+            name = 'primary',
+            description = 'Memory layer for the kernel',
+            architectures = ["Intel32", "Intel64"]
+        ),
 
     This requirement indicates that the plugin will operate on a single
     :py:class:`TranslationLayer <volatility3.framework.interfaces.layers.TranslationLayerInterface>`.  The name of the
@@ -110,8 +124,10 @@ not be requested directly from the user.
 
     ::
 
-        requirements.SymbolTableRequirement(name = "nt_symbols",
-                                            description = "Windows kernel symbols"),
+        requirements.SymbolTableRequirement(
+            name = "nt_symbols",
+            description = "Windows kernel symbols"
+        ),
 
     This requirement specifies the need for a particular
     :py:class:`SymbolTable <volatility3.framework.interfaces.symbols.SymbolTableInterface>`
@@ -127,10 +143,12 @@ not be requested directly from the user.
 
 ::
 
-    requirements.ListRequirement(name = 'pid',
-                                 description = 'Filter on specific process IDs',
-                                 element_type = int,
-                                 optional = True),
+    requirements.ListRequirement(
+        name = 'pid',
+        description = 'Filter on specific process IDs',
+        element_type = int,
+        optional = True
+    ),
 
 The next requirement is a List Requirement, populated by integers.  The description will be presented to the user to
 describe what the value represents.  The optional flag indicates that the plugin can function without the ``pid`` value
@@ -138,9 +156,11 @@ being defined within the configuration tree at all.
 
 ::
 
-    requirements.PluginRequirement(name = 'pslist',
-                                   plugin = pslist.PsList,
-                                   version = (2, 0, 0))]
+    requirements.PluginRequirement(
+        name = 'pslist',
+        plugin = pslist.PsList,
+        version = (2, 0, 0)
+    )
 
 This requirement indicates that the plugin will make use of another plugin's code, and specifies the version requirements
 on that plugin.  The version is specified in terms of Semantic Versioning meaning that, to be compatible, the major
@@ -180,16 +200,24 @@ that will be output as part of the :py:class:`~volatility3.framework.interfaces.
             filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
             kernel = self.context.modules[self.config['kernel']]
 
-            return renderers.TreeGrid([("PID", int),
-                                       ("Process", str),
-                                       ("Base", format_hints.Hex),
-                                       ("Size", format_hints.Hex),
-                                       ("Name", str),
-                                       ("Path", str)],
-                                      self._generator(pslist.PsList.list_processes(self.context,
-                                                                                   kernel.layer_name,
-                                                                                   kernel.symbol_table_name,
-                                                                                   filter_func = filter_func)))
+            return renderers.TreeGrid(
+                [
+                    ("PID", int),
+                    ("Process", str),
+                    ("Base", format_hints.Hex),
+                    ("Size", format_hints.Hex),
+                    ("Name", str),
+                    ("Path", str),
+                ],
+                self._generator(
+                    pslist.PsList.list_processes(
+                        self.context,
+                        kernel.layer_name,
+                        kernel.symbol_table_name,
+                        filter_func = filter_func
+                    )
+                )
+            )
 
 In this instance, the plugin constructs a filter (using the PsList plugin's *classmethod* for creating filters).
 It checks the plugin's configuration for the ``pid`` value, and passes it in as a list if it finds it, or None if
@@ -281,5 +309,3 @@ such as ``<table>!_UNICODE``) and the parameters to that type.
 Since the cast value must populate a string typed column, it had to be a Python string (such as being cast to the native
 type string) and could not have been a special Structure such as ``_UNICODE``.  For the format hint columns, the format
 hint type must be used to ensure the error checking does not fail.
-
-

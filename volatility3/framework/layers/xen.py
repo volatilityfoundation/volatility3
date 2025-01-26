@@ -54,6 +54,7 @@ class XenCoreDumpLayer(elf.Elf64Layer):
 
         segments = []
         self._segment_headers = []
+        segment_names = None
 
         for sindex in range(ehdr.e_shnum):
             shdr = self.context.object(

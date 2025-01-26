@@ -36,7 +36,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         layer_name: str,
         offset: int,
         symbol_table_class: str = "volatility3.framework.symbols.intermed.IntermediateSymbolTable",
-        config_path: str = None,
+        config_path: Optional[str] = None,
         progress_callback: constants.ProgressCallback = None,
     ) -> Optional[str]:
         """Produces the name of a symbol table loaded from the offset for an MZ header
@@ -94,7 +94,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         if not requirements.VersionRequirement.matches_required(
             (1, 0, 0), symbol_cache.SqliteCache.version
         ):
-            vollog.debug(f"Required version of SQLiteCache not found")
+            vollog.debug("Required version of SQLiteCache not found")
             return None
 
         identifiers_path = os.path.join(
@@ -291,9 +291,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
                 break
             except PermissionError:
                 vollog.warning(
-                    "Cannot write necessary symbol file, please check permissions on {}".format(
-                        potential_output_filename
-                    )
+                    f"Cannot write necessary symbol file, please check permissions on {potential_output_filename}"
                 )
                 continue
             finally:
@@ -390,8 +388,8 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         config_path: str,
         layer_name: str,
         pdb_name: str,
-        module_offset: int = None,
-        module_size: int = None,
+        module_offset: Optional[int] = None,
+        module_size: Optional[int] = None,
     ) -> str:
         """Creates symbol table for a module in the specified layer_name.
 
@@ -420,8 +418,8 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         config_path: str,
         layer_name: str,
         pdb_name: str,
-        module_offset: int = None,
-        module_size: int = None,
+        module_offset: Optional[int] = None,
+        module_size: Optional[int] = None,
         create_module: bool = False,
     ) -> Tuple[Optional[str], Optional[str]]:
         if module_offset is None:
@@ -480,8 +478,8 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         config_path: str,
         layer_name: str,
         pdb_name: str,
-        module_offset: int = None,
-        module_size: int = None,
+        module_offset: Optional[int] = None,
+        module_size: Optional[int] = None,
     ) -> str:
         """Creates a module in the specified layer_name based on a pdb name.
 

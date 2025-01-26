@@ -270,7 +270,6 @@ class _ScheduledTasksReader(io.BytesIO):
         return val
 
     def read_aligned_bstring_expand_sz(self) -> Optional[str]:
-        # type: () -> Optional[str]
         sz = self.read_aligned_u4()
         if sz is None:
             return None

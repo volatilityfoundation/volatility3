@@ -19,7 +19,7 @@ import os
 import sys
 import tempfile
 import traceback
-from typing import Any, Dict, List, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 from urllib import parse, request
 
 try:
@@ -57,14 +57,14 @@ formatter = logging.Formatter("%(levelname)-8s %(name)-12s: %(message)s")
 console.setFormatter(formatter)
 
 
-class PrintedProgress(object):
+class PrintedProgress:
     """A progress handler that prints the progress value and the description
     onto the command line."""
 
     def __init__(self):
         self._max_message_len = 0
 
-    def __call__(self, progress: Union[int, float], description: str = None):
+    def __call__(self, progress: Union[int, float], description: Optional[str] = None):
         """A simple function for providing text-based feedback.
 
         .. warning:: Only for development use.
@@ -81,7 +81,7 @@ class PrintedProgress(object):
 class MuteProgress(PrintedProgress):
     """A dummy progress handler that produces no output when called."""
 
-    def __call__(self, progress: Union[int, float], description: str = None):
+    def __call__(self, progress: Union[int, float], description: Optional[str] = None):
         pass
 
 
@@ -126,9 +126,7 @@ class CommandLine:
             "--help",
             action="help",
             default=argparse.SUPPRESS,
-            help="Show this help message and exit, for specific plugin options use '{} <pluginname> --help'".format(
-                parser.prog
-            ),
+            help=f"Show this help message and exit, for specific plugin options use '{parser.prog} <pluginname> --help'",
         )
         parser.add_argument(
             "-c",
@@ -360,9 +358,7 @@ class CommandLine:
         subparser = parser.add_subparsers(
             title="Plugins",
             dest="plugin",
-            description="For plugin specific options, run '{} <plugin> --help'".format(
-                self.CLI_NAME
-            ),
+            description=f"For plugin specific options, run '{self.CLI_NAME} <plugin> --help'",
             action=volargparse.HelpfulSubparserAction,
             metavar="PLUGIN",
         )
@@ -371,6 +367,7 @@ class CommandLine:
                 plugin,
                 help=plugin_list[plugin].__doc__,
                 description=plugin_list[plugin].__doc__,
+                epilog=plugin_list[plugin].additional_description,
             )
             self.populate_requirements_argparse(plugin_parser, plugin_list[plugin])
 
@@ -416,7 +413,7 @@ class CommandLine:
 
         # UI fills in the config, here we load it from the config file and do it before we process the CL parameters
         if args.config:
-            with open(args.config, "r") as f:
+            with open(args.config) as f:
                 json_val = json.load(f)
                 ctx.config.splice(
                     plugin_config_path,
@@ -722,9 +719,7 @@ class CommandLine:
                     if isinstance(requirement, requirements.ListRequirement):
                         if not isinstance(value, list):
                             raise TypeError(
-                                "Configuration for ListRequirement was not a list: {}".format(
-                                    requirement.name
-                                )
+                                f"Configuration for ListRequirement was not a list: {requirement.name}"
                             )
                         value = [requirement.element_type(x) for x in value]
                     if not inspect.isclass(configurables_list[configurable]):
@@ -797,7 +792,7 @@ class CommandLine:
                 fd, self._name = tempfile.mkstemp(
                     suffix=".vol3", prefix="tmp_", dir=output_dir
                 )
-                self._file = io.open(fd, mode="w+b")
+                self._file = open(fd, mode="w+b")
                 CLIFileHandler.__init__(self, filename)
                 for item in dir(self._file):
                     if not item.startswith("_") and item not in (
@@ -870,9 +865,7 @@ class CommandLine:
                 requirement, interfaces.configuration.RequirementInterface
             ):
                 raise TypeError(
-                    "Plugin contains requirements that are not RequirementInterfaces: {}".format(
-                        configurable.__name__
-                    )
+                    f"Plugin contains requirements that are not RequirementInterfaces: {configurable.__name__}"
                 )
             if isinstance(requirement, interfaces.configuration.SimpleTypeRequirement):
                 additional["type"] = requirement.instance_type
@@ -887,7 +880,7 @@ class CommandLine:
                 volatility3.framework.configuration.requirements.ListRequirement,
             ):
                 # Allow a list of integers, specified with the convenient 0x hexadecimal format
-                if requirement.element_type == int:
+                if requirement.element_type is int:
                     additional["type"] = lambda x: int(x, 0)
                 else:
                     additional["type"] = requirement.element_type

@@ -111,8 +111,21 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             The list of indices at which a 1 was found.
         """
         ret = []
+        # This value is broken in many samples and was causing essentially infinite loops
+        # Testing showed that 8192 is the current size across all Windows versions
+        # We give some leeway in case it increases in later versions, while still keeping it sane
+        # The problematic samples had values that looked like addresses, so in the billions
+        if bitmap_size_in_byte > 8192 * 10:
+            return ret
+
         for idx in range(bitmap_size_in_byte):
-            current_byte = context.layers[layer_name].read(bitmap_offset + idx, 1)[0]
+            try:
+                current_byte = context.layers[layer_name].read(bitmap_offset + idx, 1)[
+                    0
+                ]
+            except exceptions.InvalidAddressException:
+                continue
+
             current_offs = idx * 8
             for bit in range(8):
                 if current_byte & (1 << bit) != 0:
@@ -154,32 +167,37 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             )
         else:
             # invalid argument.
-            return None
+            return
 
         vollog.debug(f"Current Port: {port}")
         # the given port serves as a shifted index into the port pool lists
         list_index = port >> 8
         truncated_port = port & 0xFF
 
-        # constructing port_pool object here so callers don't have to
-        port_pool = context.object(
-            net_symbol_table + constants.BANG + "_INET_PORT_POOL",
-            layer_name=layer_name,
-            offset=port_pool_addr,
-        )
+        try:
+            # constructing port_pool object here so callers don't have to
+            port_pool = context.object(
+                net_symbol_table + constants.BANG + "_INET_PORT_POOL",
+                layer_name=layer_name,
+                offset=port_pool_addr,
+            )
+            # first, grab the given port's PortAssignment (`_PORT_ASSIGNMENT`)
+            inpa = port_pool.PortAssignments[list_index]
 
-        # first, grab the given port's PortAssignment (`_PORT_ASSIGNMENT`)
-        inpa = port_pool.PortAssignments[list_index]
-
-        # then parse the port assignment list (`_PORT_ASSIGNMENT_LIST`) and grab the correct entry
-        assignment = inpa.InPaBigPoolBase.Assignments[truncated_port]
+            # then parse the port assignment list (`_PORT_ASSIGNMENT_LIST`) and grab the correct entry
+            assignment = inpa.InPaBigPoolBase.Assignments[truncated_port]
+        except exceptions.InvalidAddressException:
+            return
 
         if not assignment:
-            return None
+            return
 
         # the value within assignment.Entry is a) masked and b) points inside of the network object
         # first decode the pointer
-        netw_inside = cls._decode_pointer(assignment.Entry)
+        try:
+            netw_inside = cls._decode_pointer(assignment.Entry)
+        except exceptions.InvalidAddressException:
+            return
 
         if netw_inside:
             # if the value is valid, calculate the actual object address by subtracting the offset
@@ -188,15 +206,29 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             )
             yield curr_obj
 
+            try:
+                next_obj_address = cls._decode_pointer(curr_obj.Next)
+            except exceptions.InvalidAddressException:
+                return
+
             # if the same port is used on different interfaces multiple objects are created
             # those can be found by following the pointer within the object's `Next` field until it is empty
-            while curr_obj.Next:
-                curr_obj = context.object(
-                    obj_name,
-                    layer_name=layer_name,
-                    offset=cls._decode_pointer(curr_obj.Next) - ptr_offset,
-                )
+            while next_obj_address:
+                try:
+                    curr_obj = context.object(
+                        obj_name,
+                        layer_name=layer_name,
+                        offset=next_obj_address - ptr_offset,
+                    )
+                except exceptions.InvalidAddressException:
+                    return
+
                 yield curr_obj
+
+                try:
+                    next_obj_address = cls._decode_pointer(curr_obj.Next)
+                except exceptions.InvalidAddressException:
+                    return
 
     @classmethod
     def get_tcpip_module(
@@ -243,16 +275,25 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             The hash table entries which are _not_ empty
         """
         # we are looking for entries whose values are not their own address
+        # smear sanity check from mass testing
+        if ht_length > 4096:
+            return
+
         for index in range(ht_length):
             current_addr = ht_offset + index * alignment
-            current_pointer = context.object(
-                net_symbol_table + constants.BANG + "pointer",
-                layer_name=layer_name,
-                offset=current_addr,
-            )
+            try:
+                current_pointer = context.object(
+                    net_symbol_table + constants.BANG + "pointer",
+                    layer_name=layer_name,
+                    offset=current_addr,
+                )
+            except exceptions.InvalidAddressException:
+                continue
+
             # check if addr of pointer is equal to the value pointed to
             if current_pointer.vol.offset == current_pointer:
                 continue
+
             yield current_pointer
 
     @classmethod
@@ -292,11 +333,15 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             tcpip_symbol_table + constants.BANG + "PartitionCount"
         ).address
 
-        part_table_addr = context.object(
-            net_symbol_table + constants.BANG + "pointer",
-            layer_name=layer_name,
-            offset=tcpip_module_offset + part_table_symbol,
-        )
+        try:
+            part_table_addr = context.object(
+                net_symbol_table + constants.BANG + "pointer",
+                layer_name=layer_name,
+                offset=tcpip_module_offset + part_table_symbol,
+            )
+        except exceptions.InvalidAddressException:
+            vollog.debug("`PartitionTable` not present in memory.")
+            return
 
         # part_table is the actual partition table offset and consists out of a dynamic amount of _PARTITION objects
         part_table = context.object(
@@ -304,23 +349,41 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             layer_name=layer_name,
             offset=part_table_addr,
         )
-        part_count = int.from_bytes(
-            context.layers[layer_name].read(tcpip_module_offset + part_count_symbol, 1),
-            "little",
-        )
+
+        try:
+            part_count = int.from_bytes(
+                context.layers[layer_name].read(
+                    tcpip_module_offset + part_count_symbol, 1
+                ),
+                "little",
+            )
+        except exceptions.InvalidAddressException:
+            vollog.debug("`PartitionCount` not present in memory.")
+            return
+
         part_table.Partitions.count = part_count
 
         vollog.debug(
-            "Found TCP connection PartitionTable @ 0x{:x} (partition count: {})".format(
-                part_table_addr, part_count
-            )
+            f"Found TCP connection PartitionTable @ 0x{part_table_addr:x} (partition count: {part_count})"
         )
         entry_offset = context.symbol_space.get_type(obj_name).relative_child_offset(
             "ListEntry"
         )
-        for ctr, partition in enumerate(part_table.Partitions):
+
+        try:
+            partitions = part_table.Partitions
+        except exceptions.InvalidAddressException:
+            vollog.debug("Partitions member not present in memory")
+            return
+
+        for ctr, partition in enumerate(partitions):
             vollog.debug(f"Parsing partition {ctr}")
-            if partition.Endpoints.NumEntries > 0:
+            try:
+                num_entries = partition.Endpoints.NumEntries
+            except exceptions.InvalidAddressException:
+                continue
+
+            if num_entries > 0:
                 for endpoint_entry in cls.parse_hashtable(
                     context,
                     layer_name,
@@ -404,6 +467,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             upp_symbol = context.symbol_space.get_symbol(
                 tcpip_symbol_table + constants.BANG + "UdpPortPool"
             ).address
+
             upp_addr = context.object(
                 net_symbol_table + constants.BANG + "pointer",
                 layer_name=layer_name,
@@ -490,24 +554,26 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         """
 
         # first, TCP endpoints by parsing the partition table
-        for endpoint in cls.parse_partitions(
-            context,
-            layer_name,
-            net_symbol_table,
-            tcpip_symbol_table,
-            tcpip_module_offset,
-        ):
-            yield endpoint
-
-        # then, towards the UDP and TCP port pools
-        # first, find their addresses
-        upp_addr, tpp_addr = cls.find_port_pools(
+        yield from cls.parse_partitions(
             context,
             layer_name,
             net_symbol_table,
             tcpip_symbol_table,
             tcpip_module_offset,
         )
+
+        # then, towards the UDP and TCP port pools
+        # first, find their addresses
+        try:
+            upp_addr, tpp_addr = cls.find_port_pools(
+                context,
+                layer_name,
+                net_symbol_table,
+                tcpip_symbol_table,
+                tcpip_module_offset,
+            )
+        except (exceptions.SymbolError, exceptions.InvalidAddressException):
+            vollog.debug("Unable to reconstruct port pools")
 
         # create port pool objects at the detected address and parse the port bitmap
         upp_obj = context.object(
@@ -624,9 +690,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     proto = "TCPv6"
                 else:
                     vollog.debug(
-                        "TCP Endpoint @ 0x{:2x} has unknown address family 0x{:x}".format(
-                            netw_obj.vol.offset, netw_obj.get_address_family()
-                        )
+                        f"TCP Endpoint @ 0x{netw_obj.vol.offset:2x} has unknown address family 0x{netw_obj.get_address_family():x}"
                     )
                     proto = "TCPv?"
 

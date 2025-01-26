@@ -115,9 +115,7 @@ class Maps(interfaces.plugins.PluginInterface):
             proc_layer_name = task.add_process_layer()
         except exceptions.InvalidAddressException as excp:
             vollog.debug(
-                "Process {}: invalid address {} in layer {}".format(
-                    pid, excp.invalid_address, excp.layer_name
-                )
+                f"Process {pid}: invalid address {excp.invalid_address} in layer {excp.layer_name}"
             )
             return None
         vm_size = vm_end - vm_start
@@ -154,7 +152,9 @@ class Maps(interfaces.plugins.PluginInterface):
         address_list = self.config.get("address", None)
         if not address_list:
             # do not filter as no address_list was supplied
-            vma_filter_func = lambda _: True
+            def vma_filter_func(_):
+                return True
+
         else:
             # filter for any vm_start that matches the supplied address config
             def vma_filter_function(task: interfaces.objects.ObjectInterface) -> bool:

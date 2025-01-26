@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import Any, Callable, Iterable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from volatility3.framework import constants, interfaces, layers
 from volatility3.framework.automagic import symbol_cache

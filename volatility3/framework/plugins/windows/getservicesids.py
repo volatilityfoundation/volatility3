@@ -10,6 +10,7 @@ from typing import List
 
 from volatility3.framework import renderers, interfaces, constants, exceptions
 from volatility3.framework.configuration import requirements
+from volatility3.framework.layers import registry
 from volatility3.plugins.windows.registry import hivelist
 
 vollog = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ def createservicesid(svc) -> str:
         ## The use of struct here is OK. It doesn't make much sense
         ## to leverage obj.Object inside this loop.
         dec.append(struct.unpack("<I", sha[i * 4 : i * 4 + 4])[0])
-    return "S-1-5-80-" + "-".join([str(n) for n in dec])
+    return "S-1-5-80-" + "-".join(str(n) for n in dec)
 
 
 class GetServiceSIDs(interfaces.plugins.PluginInterface):
@@ -55,7 +56,7 @@ class GetServiceSIDs(interfaces.plugins.PluginInterface):
             )
 
         # Get service sids dictionary (we need only the service sids).
-        with open(sids_json_file_name, "r") as file_handle:
+        with open(sids_json_file_name) as file_handle:
             self.servicesids = json.load(file_handle)["service sids"]
 
     @classmethod
@@ -86,10 +87,18 @@ class GetServiceSIDs(interfaces.plugins.PluginInterface):
             # Get ControlSet\Services.
             try:
                 services = hive.get_key(r"CurrentControlSet\Services")
-            except (KeyError, exceptions.InvalidAddressException):
+            except (
+                KeyError,
+                exceptions.InvalidAddressException,
+                registry.RegistryFormatException,
+            ):
                 try:
                     services = hive.get_key(r"ControlSet001\Services")
-                except (KeyError, exceptions.InvalidAddressException):
+                except (
+                    KeyError,
+                    exceptions.InvalidAddressException,
+                    registry.RegistryFormatException,
+                ):
                     continue
 
             if services:

@@ -133,8 +133,17 @@ class CM_KEY_BODY(objects.StructType):
 
     def get_full_key_name(self) -> str:
         output = []
+        seen = set()
+
         kcb = self.KeyControlBlock
         while kcb.ParentKcb:
+            if kcb.ParentKcb.vol.offset in seen:
+                return None
+            seen.add(kcb.ParentKcb.vol.offset)
+
+            if len(output) > 128:
+                return None
+
             if kcb.NameBlock.Name is None:
                 break
 
@@ -159,14 +168,20 @@ class CM_KEY_NODE(objects.StructType):
     """Extension to allow traversal of registry keys."""
 
     def get_volatile(self) -> bool:
+        """
+        Returns a bool indicating whether or not the key is volatile.
+
+        Raises TypeError if the key was not instantiated on a RegistryHive layer
+        """
         if not isinstance(self._context.layers[self.vol.layer_name], RegistryHive):
-            raise ValueError(
-                "Cannot determine volatility of registry key without an offset in a RegistryHive layer"
-            )
+            raise TypeError("CM_KEY_NODE was not instantiated on a RegistryHive layer")
         return bool(self.vol.offset & 0x80000000)
 
     def get_subkeys(self) -> Iterator["CM_KEY_NODE"]:
-        """Returns a list of the key nodes."""
+        """Returns a list of the key nodes.
+
+        Raises TypeError if the key was not instantiated on a RegistryHive layer
+        """
         hive = self._context.layers[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
             raise TypeError("CM_KEY_NODE was not instantiated on a RegistryHive layer")
@@ -196,9 +211,7 @@ class CM_KEY_NODE(objects.StructType):
             yield cast("CM_KEY_NODE", node)
         else:
             vollog.debug(
-                "Unexpected node type encountered when traversing subkeys: {}, signature: {}".format(
-                    node.vol.type_name, signature
-                )
+                f"Unexpected node type encountered when traversing subkeys: {node.vol.type_name}, signature: {signature}"
             )
 
         if listjump:
@@ -224,7 +237,10 @@ class CM_KEY_NODE(objects.StructType):
                     yield from self._get_subkeys_recursive(hive, subnode)
 
     def get_values(self) -> Iterator["CM_KEY_VALUE"]:
-        """Returns a list of the Value nodes for a key."""
+        """Returns a list of the Value nodes for a key.
+
+        Raises TypeError if the key was not instantiated on a RegistryHive layer
+        """
         hive = self._context.layers[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
             raise TypeError("CM_KEY_NODE was not instantiated on a RegistryHive layer")
@@ -253,6 +269,11 @@ class CM_KEY_NODE(objects.StructType):
         return self.Name.cast("string", max_length=namelength, encoding="latin-1")
 
     def get_key_path(self) -> str:
+        """
+        Returns the full path to this registry key.
+
+        Raises TypeError if the key was not instantiated on a RegistryHive layer
+        """
         reg = self._context.layers[self.vol.layer_name]
         if not isinstance(reg, RegistryHive):
             raise TypeError("Key was not instantiated on a RegistryHive layer")
@@ -278,7 +299,16 @@ class CM_KEY_VALUE(objects.StructType):
         return RegValueTypes(self.Type)
 
     def decode_data(self) -> Union[int, bytes]:
-        """Properly decodes the data associated with the value node"""
+        """
+        Properly decodes the data associated with the value node.
+
+        If an InvalidAddressException occurs when reading data from the
+        underlying RegistryHive layer, the data will be padded with null bytes
+        of the same length.
+
+        Raises ValueError if the data cannot be read
+        Raises TypeError if the class was not instantiated on a RegistryHive layer
+        """
         # Determine if the data is stored inline
         datalen = self.DataLength
         data = b""
@@ -312,14 +342,26 @@ class CM_KEY_VALUE(objects.StructType):
                     and block_offset < layer.maximum_address
                 ):
                     amount = min(BIG_DATA_MAXLEN, datalen)
-                    data += layer.read(
-                        offset=layer.get_cell(block_offset).vol.offset, length=amount
-                    )
+                    try:
+                        data += layer.read(
+                            offset=layer.get_cell(block_offset).vol.offset,
+                            length=amount,
+                        )
+                    except exceptions.InvalidAddressException:
+                        vollog.debug(
+                            f"Failed to read {amount:x} bytes of data, padding with {amount:x}"
+                        )
                     datalen -= amount
         else:
             # Suspect Data actually points to a Cell,
             # but the length at the start could be negative so just adding 4 to jump past it
-            data = layer.read(self.Data + 4, datalen)
+            try:
+                data = layer.read(self.Data + 4, datalen)
+            except exceptions.InvalidAddressException:
+                vollog.debug(
+                    f"Failed to read {datalen:x} bytes of data, returning {datalen:x} null bytes"
+                )
+                data = b"\x00" * datalen
 
         if self.get_type() == RegValueTypes.REG_DWORD:
             if len(data) != struct.calcsize("<L"):

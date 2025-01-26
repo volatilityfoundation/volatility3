@@ -8,7 +8,7 @@ from typing import Tuple
 from Crypto.Cipher import ARC4, AES
 from Crypto.Hash import HMAC
 
-from volatility3.framework import interfaces, renderers
+from volatility3.framework import interfaces, renderers, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import registry
 from volatility3.framework.symbols.windows import versions
@@ -140,9 +140,14 @@ class Cachedump(interfaces.plugins.PluginInterface):
             if cache_item.Name == "NL$Control":
                 continue
 
-            data = sechive.read(cache_item.Data + 4, cache_item.DataLength)
-            if data is None:
+            try:
+                data = sechive.read(cache_item.Data + 4, cache_item.DataLength)
+            except exceptions.InvalidAddressException:
                 continue
+
+            if not data:
+                continue
+
             (
                 uname_len,
                 domain_len,

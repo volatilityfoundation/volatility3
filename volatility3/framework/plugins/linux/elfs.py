@@ -1,8 +1,8 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-"""A module containing a collection of plugins that produce data typically
-found in Linux's /proc file system."""
+"""A module containing a plugin for enumerating memory-mapped
+ELF files across all processes."""
 
 import logging
 from typing import List, Optional, Type
@@ -25,7 +25,7 @@ class Elfs(plugins.PluginInterface):
     """Lists all memory mapped ELF files for all processes."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 2)
+    _version = (2, 0, 3)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -36,7 +36,7 @@ class Elfs(plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+                name="pslist", plugin=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",

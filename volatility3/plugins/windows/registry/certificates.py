@@ -1,11 +1,11 @@
 import contextlib
 import logging
 import struct
-from typing import List, Iterator, Optional, Tuple, Type
+from typing import Iterator, List, Optional, Tuple, Type
 
 from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework.symbols.windows.extensions.registry import RegValueTypes
+from volatility3.framework.symbols.windows.extensions import registry
 from volatility3.plugins.windows.registry import hivelist, printkey
 
 vollog = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ class Certificates(interfaces.plugins.PluginInterface):
         open_method: Type[interfaces.plugins.FileHandlerInterface],
     ) -> Optional[interfaces.plugins.FileHandlerInterface]:
         try:
-            dump_name = "{}-{}-{}.crt".format(hive_offset, reg_section, key_hash)
+            dump_name = f"{hive_offset}-{reg_section}-{key_hash}.crt"
             file_handle = open_method(dump_name)
             file_handle.write(certificate_data)
             return file_handle
@@ -81,7 +81,11 @@ class Certificates(interfaces.plugins.PluginInterface):
                 "Microsoft\\SystemCertificates",
                 "Software\\Microsoft\\SystemCertificates",
             ]:
-                with contextlib.suppress(KeyError, exceptions.InvalidAddressException):
+                with contextlib.suppress(
+                    KeyError,
+                    registry.RegistryFormatException,
+                    exceptions.InvalidAddressException,
+                ):
                     # Walk it
                     node_path = hive.get_key(top_key, return_list=True)
                     for (
@@ -92,7 +96,11 @@ class Certificates(interfaces.plugins.PluginInterface):
                         _volatility,
                         node,
                     ) in printkey.PrintKey.key_iterator(hive, node_path, recurse=True):
-                        if not is_key and RegValueTypes(node.Type).name == "REG_BINARY":
+                        if (
+                            not is_key
+                            and registry.RegValueTypes(node.Type)
+                            == registry.RegValueTypes.REG_BINARY
+                        ):
                             name, certificate_data = self.parse_data(node.decode_data())
                             unique_key_offset = (
                                 key_path.casefold().index(top_key.casefold())

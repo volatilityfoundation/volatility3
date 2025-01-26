@@ -116,8 +116,7 @@ class UnloadedModules(interfaces.plugins.PluginInterface, timeliner.TimeLinerInt
         )
         unloadedmodules_array.UnloadedDrivers.count = unloaded_count
 
-        for mod in unloadedmodules_array.UnloadedDrivers:
-            yield mod
+        yield from unloadedmodules_array.UnloadedDrivers
 
     def _generator(self):
         kernel = self.context.modules[self.config["kernel"]]

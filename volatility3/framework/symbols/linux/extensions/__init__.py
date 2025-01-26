@@ -15,11 +15,10 @@ from typing import Generator, Iterable, Iterator, Optional, Tuple, List, Union, 
 from volatility3.framework import constants, exceptions, objects, interfaces, symbols
 from volatility3.framework.renderers import conversion
 from volatility3.framework.constants import linux as linux_constants
-from volatility3.framework.layers import linear
+from volatility3.framework.layers import linear, intel
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import generic, linux, intermed
 from volatility3.framework.symbols.linux.extensions import elf
-
 
 vollog = logging.getLogger(__name__)
 
@@ -200,8 +199,7 @@ class module(generic.GenericIntelProcess):
             count=num_sects,
         )
 
-        for attr in arr:
-            yield attr
+        yield from arr
 
     def get_elf_table_name(self):
         elf_table_name = intermed.IntermediateSymbolTable.create(
@@ -237,8 +235,7 @@ class module(generic.GenericIntelProcess):
             count=self.num_symtab + 1,
         )
         if self.section_strtab:
-            for sym in syms:
-                yield sym
+            yield from syms
 
     def get_symbols_names_and_addresses(self) -> Iterable[Tuple[str, int]]:
         """Get names and addresses for each symbol of the module
@@ -309,8 +306,48 @@ class module(generic.GenericIntelProcess):
 
 
 class task_struct(generic.GenericIntelProcess):
+    def is_valid(self) -> bool:
+        layer = self._context.layers[self.vol.layer_name]
+        # Make sure the entire task content is readable
+        if not layer.is_valid(self.vol.offset, self.vol.size):
+            return False
+
+        if self.pid < 0 or self.tgid < 0:
+            return False
+
+        if self.has_member("signal") and not (
+            self.signal and self.signal.is_readable()
+        ):
+            return False
+
+        if self.has_member("nsproxy") and not (
+            self.nsproxy and self.nsproxy.is_readable()
+        ):
+            return False
+
+        if self.has_member("real_parent") and not (
+            self.real_parent and self.real_parent.is_readable()
+        ):
+            return False
+
+        if (
+            self.has_member("active_mm")
+            and self.active_mm
+            and not self.active_mm.is_readable()
+        ):
+            return False
+
+        if self.mm:
+            if not self.mm.is_readable():
+                return False
+
+            if self.mm != self.active_mm:
+                return False
+
+        return True
+
     def add_process_layer(
-        self, config_prefix: str = None, preferred_name: str = None
+        self, config_prefix: Optional[str] = None, preferred_name: Optional[str] = None
     ) -> Optional[str]:
         """Constructs a new layer based on the process's DTB.
 
@@ -326,9 +363,11 @@ class task_struct(generic.GenericIntelProcess):
             raise TypeError(
                 "Parent layer is not a translation layer, unable to construct process layer"
             )
-        dtb, layer_name = parent_layer.translate(pgd)
-        if not dtb:
+        try:
+            dtb, layer_name = parent_layer.translate(pgd)
+        except exceptions.InvalidAddressException:
             return None
+
         if preferred_name is None:
             preferred_name = self.vol.layer_name + f"_Process{self.pid}"
         # Add the constructed layer and return the name
@@ -401,6 +440,8 @@ class task_struct(generic.GenericIntelProcess):
         tasks_iterable = self._get_tasks_iterable()
         threads_seen = set([self.vol.offset])
         for task in tasks_iterable:
+            if not task.is_valid():
+                continue
             if task.vol.offset not in threads_seen:
                 threads_seen.add(task.vol.offset)
                 yield task
@@ -635,6 +676,20 @@ class task_struct(generic.GenericIntelProcess):
         # root time namespace, not within the task's own time namespace
         return boottime + task_start_time_timedelta
 
+    def get_parent_pid(self) -> int:
+        """Returns the parent process ID (PPID)
+
+        This method replicates the Linux kernel's `getppid` syscall behavior.
+        Avoid using `task.parent`; instead, use this function for accurate results.
+        """
+
+        if self.real_parent and self.real_parent.is_readable():
+            ppid = self.real_parent.tgid
+        else:
+            ppid = 0
+
+        return ppid
+
 
 class fs_struct(objects.StructType):
     def get_root_dentry(self):
@@ -797,23 +852,30 @@ class mm_struct(objects.StructType):
     def _get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mmap list member of an mm_struct. Use this only if
         required, get_vma_iter() will choose the correct _get_maple_tree_iter() or
-        _get_mmap_iter() automatically as required."""
+        _get_mmap_iter() automatically as required.
+
+        Yields:
+            vm_area_struct objects
+        """
 
         if not self.has_member("mmap"):
             raise AttributeError(
                 "_get_mmap_iter called on mm_struct where no mmap member exists."
             )
-        if not self.mmap:
+        vma_pointer = self.mmap
+        if not (vma_pointer and vma_pointer.is_readable()):
             return None
-        yield self.mmap
+        vma_object = vma_pointer.dereference()
+        yield vma_object
 
-        seen = {self.mmap.vol.offset}
-        link = self.mmap.vm_next
+        seen = {vma_pointer}
+        vma_pointer = vma_pointer.vm_next
 
-        while link != 0 and link.vol.offset not in seen:
-            yield link
-            seen.add(link.vol.offset)
-            link = link.vm_next
+        while vma_pointer and vma_pointer.is_readable() and vma_pointer not in seen:
+            vma_object = vma_pointer.dereference()
+            yield vma_object
+            seen.add(vma_pointer)
+            vma_pointer = vma_pointer.vm_next
 
     # TODO: As of version 3.0.0 this method should be removed
     def get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
@@ -828,7 +890,11 @@ class mm_struct(objects.StructType):
     def _get_maple_tree_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mm_mt member of an mm_struct. Use this only if
         required, get_vma_iter() will choose the correct _get_maple_tree_iter() or
-        get_mmap_iter() automatically as required."""
+        get_mmap_iter() automatically as required.
+
+        Yields:
+            vm_area_struct objects
+        """
 
         if not self.has_member("mm_mt"):
             raise AttributeError(
@@ -836,20 +902,27 @@ class mm_struct(objects.StructType):
             )
         symbol_table_name = self.get_symbol_table_name()
         for vma_pointer in self.mm_mt.get_slot_iter():
-            # convert pointer to vm_area_struct and yield
-            vma = self._context.object(
+            # Convert pointer to vm_area_struct and yield
+            vma_object = self._context.object(
                 symbol_table_name + constants.BANG + "vm_area_struct",
                 layer_name=self.vol.native_layer_name,
                 offset=vma_pointer,
             )
-            yield vma
+            yield vma_object
 
     def get_vma_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Returns an iterator for the VMAs in an mm_struct. Automatically choosing the mmap or mm_mt as required."""
+        """Returns an iterator for the VMAs in an mm_struct.
+        Automatically choosing the mmap or mm_mt as required.
+
+        Yields:
+            vm_area_struct objects
+        """
 
         if self.has_member("mmap"):
+            # kernels < 6.1
             yield from self._get_mmap_iter()
         elif self.has_member("mm_mt"):
+            # kernels >= 6.1 d4af56c5c7c6781ca6ca8075e2cf5bc119ed33d1
             yield from self._get_maple_tree_iter()
         else:
             raise AttributeError("Unable to find mmap or mm_mt in mm_struct")
@@ -1107,8 +1180,15 @@ class dentry(objects.StructType):
             walk_member = "d_sib"
             list_head_member = self.d_children
         elif self.has_member("d_child") and self.has_member("d_subdirs"):
-            # 2.5.0 <= kernels < 6.8
+            # 3.19.0 <= kernels < 6.8
             walk_member = "d_child"
+            list_head_member = self.d_subdirs
+        elif self.has_member("d_u") and self.has_member("d_subdirs"):
+            # kernels < 3.19
+
+            # Actually, 'd_u.d_child' but to_list() doesn't support something like that.
+            # Since, it's an union, everything is at the same offset than 'd_u'.
+            walk_member = "d_u"
             list_head_member = self.d_subdirs
         else:
             raise exceptions.VolatilityException("Unsupported dentry type")
@@ -1188,35 +1268,43 @@ class list_head(objects.StructType, collections.abc.Iterable):
             Objects of the type specified via the "symbol_type" argument.
 
         """
-        layer = layer or self.vol.layer_name
+        layer_name = layer or self.vol.layer_name
+
+        trans_layer = self._context.layers[layer_name]
+        if not trans_layer.is_valid(self.vol.offset):
+            return None
 
         relative_offset = self._context.symbol_space.get_type(
             symbol_type
         ).relative_child_offset(member)
 
-        direction = "prev"
-        if forward:
-            direction = "next"
-        try:
-            link = getattr(self, direction).dereference()
-        except exceptions.InvalidAddressException:
+        direction = "next" if forward else "prev"
+
+        link_ptr = getattr(self, direction)
+        if not (link_ptr and link_ptr.is_readable()):
             return None
+        link = link_ptr.dereference()
+
         if not sentinel:
-            yield self._context.object(
-                symbol_type, layer, offset=self.vol.offset - relative_offset
-            )
+            obj_offset = self.vol.offset - relative_offset
+            if not trans_layer.is_valid(obj_offset):
+                return None
+
+            yield self._context.object(symbol_type, layer_name, offset=obj_offset)
+
         seen = {self.vol.offset}
         while link.vol.offset not in seen:
-            obj = self._context.object(
-                symbol_type, layer, offset=link.vol.offset - relative_offset
-            )
-            yield obj
+            obj_offset = link.vol.offset - relative_offset
+            if not trans_layer.is_valid(obj_offset):
+                return None
+
+            yield self._context.object(symbol_type, layer_name, offset=obj_offset)
 
             seen.add(link.vol.offset)
-            try:
-                link = getattr(link, direction).dereference()
-            except exceptions.InvalidAddressException:
+            link_ptr = getattr(link, direction)
+            if not (link_ptr and link_ptr.is_readable()):
                 break
+            link = link_ptr.dereference()
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
@@ -1462,7 +1550,7 @@ class mount(objects.StructType):
 
     def next_peer(self):
         table_name = self.vol.type_name.split(constants.BANG)[0]
-        mount_struct = "{0}{1}mount".format(table_name, constants.BANG)
+        mount_struct = f"{table_name}{constants.BANG}mount"
         offset = self._context.symbol_space.get_type(
             mount_struct
         ).relative_child_offset("mnt_share")
@@ -2060,13 +2148,40 @@ class cred(objects.StructType):
         return int(value)
 
     @property
-    def euid(self):
+    def uid(self) -> int:
+        """Returns the real user ID
+
+        Returns:
+            The real user ID value
+        """
+        return self._get_cred_int_value("uid")
+
+    @property
+    def gid(self) -> int:
+        """Returns the real user ID
+
+        Returns:
+            The real user ID value
+        """
+        return self._get_cred_int_value("gid")
+
+    @property
+    def euid(self) -> int:
         """Returns the effective user ID
+
+        Returns:
+            The effective user ID value
+        """
+        return self._get_cred_int_value("euid")
+
+    @property
+    def egid(self) -> int:
+        """Returns the effective group ID
 
         Returns:
             int: the effective user ID value
         """
-        return self._get_cred_int_value("euid")
+        return self._get_cred_int_value("egid")
 
 
 class kernel_cap_struct(objects.StructType):
@@ -2441,7 +2556,12 @@ class inode(objects.StructType):
         """
         if not self.i_size:
             return
-        elif not (self.i_mapping and self.i_mapping.nrpages > 0):
+
+        if not (
+            self.i_mapping
+            and self.i_mapping.is_readable()
+            and self.i_mapping.nrpages > 0
+        ):
             return
 
         page_cache = linux.PageCache(
@@ -2449,19 +2569,26 @@ class inode(objects.StructType):
             kernel_module_name="kernel",
             page_cache=self.i_mapping.dereference(),
         )
+
         yield from page_cache.get_cached_pages()
 
-    def get_contents(self):
+    def get_contents(self) -> Iterable[Tuple[int, bytes]]:
         """Get the inode cached pages from the page cache
 
         Yields:
             page_index (int): The page index in the Tree. File offset is page_index * PAGE_SIZE.
-            page_content (str): The page content
+            page_content (bytes): The page content
         """
         for page_obj in self.get_pages():
+            if page_obj.mapping != self.i_mapping:
+                vollog.warning(
+                    f"Cached page at {page_obj.vol.offset:#x} has a mismatched address space with the inode. Skipping page"
+                )
+                continue
             page_index = int(page_obj.index)
             page_content = page_obj.get_content()
-            yield page_index, page_content
+            if page_content:
+                yield page_index, page_content
 
 
 class address_space(objects.StructType):
@@ -2469,7 +2596,7 @@ class address_space(objects.StructType):
     def i_pages(self):
         """Returns the appropriate member containing the page cache tree"""
         if self.has_member("i_pages"):
-            # Kernel >= 4.17
+            # Kernel >= 4.17 b93b016313b3ba8003c3b8bb71f569af91f19fc7
             return self.member("i_pages")
         elif self.has_member("page_tree"):
             # Kernel < 4.17
@@ -2479,16 +2606,22 @@ class address_space(objects.StructType):
 
 
 class page(objects.StructType):
-    @property
-    @functools.lru_cache()
+    def is_valid(self) -> bool:
+        if self.mapping and not self.mapping.is_readable():
+            return False
+
+        if self.to_paddr() < 0:
+            return False
+
+        return True
+
+    @functools.cached_property
     def pageflags_enum(self) -> Dict:
         """Returns 'pageflags' enumeration key/values
 
         Returns:
             A dictionary with the pageflags enumeration key/values
         """
-        # FIXME: It would be even better to use @functools.cached_property instead,
-        # however, this requires Python +3.8
         try:
             pageflags_enum = self._context.symbol_space.get_enumeration(
                 self.get_symbol_table_name() + constants.BANG + "pageflags"
@@ -2502,24 +2635,12 @@ class page(objects.StructType):
 
         return pageflags_enum
 
-    def get_flags_list(self) -> List[str]:
-        """Returns a list of page flags
+    @functools.cached_property
+    def _intel_vmemmap_start(self) -> int:
+        """Determine the start of the struct page array, for Intel systems.
 
         Returns:
-            List of page flags
-        """
-        flags = []
-        for name, value in self.pageflags_enum.items():
-            if self.flags & (1 << value) != 0:
-                flags.append(name)
-
-        return flags
-
-    def to_paddr(self) -> int:
-        """Converts a page's virtual address to its physical address using the current physical memory model.
-
-        Returns:
-            int: page physical address
+            int: vmemmap_start address
         """
         vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
@@ -2559,14 +2680,40 @@ class page(objects.StructType):
                 "Something went wrong, we shouldn't be here"
             )
 
-        page_type_size = vmlinux.get_type("page").size
+        return vmemmap_start
+
+    def _intel_to_paddr(self) -> int:
+        """Converts a page's virtual address to its physical address using the current Intel memory model.
+
+        Returns:
+            int: page physical address
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
         pagec = vmlinux_layer.canonicalize(self.vol.offset)
-        pfn = (pagec - vmemmap_start) // page_type_size
+        pfn = (pagec - self._intel_vmemmap_start) // vmlinux.get_type("page").size
         page_paddr = pfn * vmlinux_layer.page_size
 
         return page_paddr
 
-    def get_content(self) -> Union[str, None]:
+    def to_paddr(self) -> int:
+        """Converts a page's virtual address to its physical address using the current CPU memory model.
+
+        Returns:
+            int: page physical address
+        """
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
+        if isinstance(vmlinux_layer, intel.Intel):
+            page_paddr = self._intel_to_paddr()
+        else:
+            raise exceptions.LayerException(
+                f"Architecture {type(vmlinux_layer)} vmemmap_start calculation isn't currently supported."
+            )
+
+        return page_paddr
+
+    def get_content(self) -> Union[bytes, None]:
         """Returns the page content
 
         Returns:
@@ -2574,13 +2721,34 @@ class page(objects.StructType):
         """
         vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         vmlinux_layer = vmlinux.context.layers[vmlinux.layer_name]
-        physical_layer = vmlinux.context.layers["memory_layer"]
+        physical_layer_name = self._context.layers[self.vol.layer_name].config.get(
+            "memory_layer", self.vol.layer_name
+        )
+        physical_layer = self._context.layers[physical_layer_name]
         page_paddr = self.to_paddr()
         if not page_paddr:
             return None
 
-        page_data = physical_layer.read(page_paddr, vmlinux_layer.page_size)
-        return page_data
+        if not physical_layer.is_valid(page_paddr, length=vmlinux_layer.page_size):
+            vollog.debug(
+                "Unable to read page 0x%x content at 0x%x", self.vol.offset, page_paddr
+            )
+            return None
+
+        return physical_layer.read(page_paddr, vmlinux_layer.page_size)
+
+    def get_flags_list(self) -> List[str]:
+        """Returns a list of page flags
+
+        Returns:
+            List of page flags
+        """
+        flags = []
+        for name, value in self.pageflags_enum.items():
+            if self.flags & (1 << value) != 0:
+                flags.append(name)
+
+        return flags
 
 
 class IDR(objects.StructType):
@@ -2658,8 +2826,7 @@ class IDR(objects.StructType):
         id_storage = linux.IDStorage.choose_id_storage(
             self._context, kernel_module_name="kernel"
         )
-        for page_addr in id_storage.get_entries(root=self.idr_rt):
-            yield page_addr
+        yield from id_storage.get_entries(root=self.idr_rt)
 
     def get_entries(self) -> Iterable[int]:
         """Walks the IDR and yield a pointer associated with each element.
@@ -2677,22 +2844,21 @@ class IDR(objects.StructType):
             # Kernels < 4.11
             get_entries_func = self._old_kernel_get_entries
 
-        for page_addr in get_entries_func():
-            yield page_addr
+        yield from get_entries_func()
 
 
 class rb_root(objects.StructType):
-    def _walk_nodes(self, root_node) -> Iterator[int]:
+    def _walk_nodes(self, root_node: int) -> Iterator[int]:
         """Traverses the Red-Black tree from the root node and yields a pointer to each
         node in this tree.
 
         Args:
-            root_node: A Red-Black tree node from which to start descending
+            root_node: A Red-Black tree node pointer from which to start descending
 
         Yields:
             A pointer to every node descending from the specified root node
         """
-        if not root_node:
+        if not (root_node and root_node.is_readable()):
             return
 
         yield root_node
@@ -2707,3 +2873,111 @@ class rb_root(objects.StructType):
         """
 
         yield from self._walk_nodes(root_node=self.rb_node)
+
+
+class scatterlist(objects.StructType):
+    SG_CHAIN = 0x01
+    SG_END = 0x02
+    SG_PAGE_LINK_MASK = SG_CHAIN | SG_END
+
+    def _sg_flags(self) -> int:
+        return self.page_link & self.SG_PAGE_LINK_MASK
+
+    def _sg_is_chain(self) -> int:
+        return self._sg_flags() & self.SG_CHAIN
+
+    def _sg_is_last(self) -> int:
+        return self._sg_flags() & self.SG_END
+
+    def _sg_chain_ptr(self) -> int:
+        """Clears the last two bits basically."""
+        return self.page_link & ~self.SG_PAGE_LINK_MASK
+
+    def _sg_dma_len(self) -> int:
+        # Depends on CONFIG_NEED_SG_DMA_LENGTH
+        if self.has_member("dma_length"):
+            return self.dma_length
+        return self.length
+
+    def _get_sg_max_single_alloc(self) -> int:
+        """Based on kernel's SG_MAX_SINGLE_ALLOC.
+
+        Doc. from kernel source :
+            * Maximum number of entries that will be allocated in one piece, if
+            * a list larger than this is required then chaining will be utilized.
+        """
+        return self._context.layers[self.vol.layer_name].page_size // self.vol.size
+
+    def _sg_next(self) -> Optional[interfaces.objects.ObjectInterface]:
+        """Get the next scatterlist struct from the list.
+        Based on kernel's sg_next.
+
+        Doc. from kernel source :
+            * Notes on SG table design.
+            *
+            * We use the unsigned long page_link field in the scatterlist struct to place
+            * the page pointer AND encode information about the sg table as well. The two
+            * lower bits are reserved for this information.
+            *
+            * If bit 0 is set, then the page_link contains a pointer to the next sg
+            * table list. Otherwise the next entry is at sg + 1.
+            *
+            * If bit 1 is set, then this sg entry is the last element in a list.
+        """
+        if self._sg_is_last():
+            return None
+
+        if self._sg_is_chain():
+            next_address = self._sg_chain_ptr()
+        else:
+            next_address = self.vol.offset + self.vol.size
+
+        sg = self._context.object(
+            self.get_symbol_table_name() + constants.BANG + "scatterlist",
+            self.vol.layer_name,
+            next_address,
+        )
+        return sg
+
+    def for_each_sg(self) -> Optional[Iterator[interfaces.objects.ObjectInterface]]:
+        """Iterate over each struct in the scatterlist."""
+        sg = self
+        sg_max_single_alloc = self._get_sg_max_single_alloc()
+
+        # Empty scatterlists protection
+        if sg.page_link == 0 and sg._sg_dma_len() == 0 and sg.dma_address == 0:
+            return None
+        else:
+            # Yield itself first
+            yield sg
+
+        entries_count = 1
+        # entries_count <= sg_max_single_alloc should always be true if the
+        # scatterlists were correctly chained.
+        while entries_count <= sg_max_single_alloc:
+            sg = sg._sg_next()
+            if sg is None:
+                break
+            # Points to a new scatterlist
+            elif sg._sg_is_chain():
+                entries_count = 0
+            else:
+                entries_count += 1
+                yield sg
+
+    def get_content(
+        self,
+    ) -> Optional[Iterator[bytes]]:
+        """Traverse a scatterlist to gather content located at each
+        dma_address position.
+
+        Returns:
+            An iterator of bytes
+        """
+        # Either "physical" is layer-1 because this is a module layer, or "physical" is the current layer
+        physical_layer_name = self._context.layers[self.vol.layer_name].config.get(
+            "memory_layer", self.vol.layer_name
+        )
+        physical_layer = self._context.layers[physical_layer_name]
+        for sg in self.for_each_sg():
+            yield from physical_layer.read(sg.dma_address, sg._sg_dma_len())

@@ -212,9 +212,7 @@ class VerInfo(interfaces.plugins.PluginInterface):
                 proc_layer_name = proc.add_process_layer()
             except exceptions.InvalidAddressException as excp:
                 vollog.debug(
-                    "Process {}: invalid address {} in layer {}".format(
-                        proc_id, excp.invalid_address, excp.layer_name
-                    )
+                    f"Process {proc_id}: invalid address {excp.invalid_address} in layer {excp.layer_name}"
                 )
                 continue
 

@@ -3,8 +3,9 @@
 #
 
 import logging
+from typing import Iterable, Tuple
 
-from volatility3.framework import exceptions, renderers
+from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
@@ -16,8 +17,8 @@ vollog = logging.getLogger(__name__)
 class Envars(plugins.PluginInterface):
     """Lists processes with their environment variables"""
 
-    _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 1)
+    _required_framework_version = (2, 13, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -29,7 +30,7 @@ class Envars(plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+                name="pslist", plugin=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -39,84 +40,98 @@ class Envars(plugins.PluginInterface):
             ),
         ]
 
+    @staticmethod
+    def get_task_env_variables(
+        context: interfaces.context.ContextInterface,
+        task: interfaces.objects.ObjectInterface,
+        env_area_max_size: int = 8192,
+    ) -> Iterable[Tuple[str, str]]:
+        """Yields environment variables for a given task.
+
+        Args:
+            context: The plugin's operational context.
+            task: The task object from which to extract environment variables.
+            env_area_max_size: Maximum allowable size for the environment variables area.
+                Tasks exceeding this size will be skipped. Default is 8192.
+
+        Yields:
+            Tuples of (key, value) representing each environment variable.
+        """
+
+        task_name = utility.array_to_string(task.comm)
+        task_pid = task.pid
+        env_start = task.mm.env_start
+        env_end = task.mm.env_end
+        env_area_size = env_end - env_start
+        if not (0 < env_area_size <= env_area_max_size):
+            vollog.debug(
+                f"Task {task_pid} {task_name} appears to have environment variables of size "
+                f"{env_area_size} bytes which fails the sanity checking, will not extract "
+                "any envars."
+            )
+            return None
+
+        # Get process layer to read envars from
+        proc_layer_name = task.add_process_layer()
+        if proc_layer_name is None:
+            return None
+        proc_layer = context.layers[proc_layer_name]
+
+        # Ensure the entire buffer is readable to prevent relying on exception handling
+        if not proc_layer.is_valid(env_start, env_area_size):
+            # Not mapped / swapped out
+            vollog.debug(
+                f"Unable to read environment variables for {task_pid} {task_name} starting at "
+                f" virtual address 0x{env_start:x} for {env_area_size} bytes, will not "
+                "extract any envars."
+            )
+            return None
+
+        # Read the full task environment variable buffer.
+        envar_data = proc_layer.read(env_start, env_area_size)
+
+        # Parse envar data, envars are null terminated, keys and values are separated by '='
+        envar_data = envar_data.rstrip(b"\x00")
+        for envar_pair in envar_data.split(b"\x00"):
+            try:
+                env_key, env_value = envar_pair.decode().split("=", 1)
+            except ValueError:
+                # Some legitimate programs, like 'avahi-daemon', avoid reallocating the args
+                # and instead exploit the fact that the environment variables area is contiguous
+                # to the args. This allows them to include a longer process name in the listing,
+                # causing overwrites and incorrect results. In such cases, it's better to abort
+                # the current task rather than displaying misleading or incorrect output.
+                break
+
+            yield env_key, env_value
+
     def _generator(self, tasks):
         """Generates a listing of processes along with environment variables"""
 
         # walk the process list and return the envars
         for task in tasks:
-            pid = task.pid
-
-            # get process name as string
-            name = utility.array_to_string(task.comm)
-
-            # try and get task parent
-            try:
-                ppid = task.parent.pid
-            except exceptions.InvalidAddressException:
-                vollog.debug(
-                    f"Unable to read parent pid for task {pid} {name}, setting ppid to 0."
-                )
-                ppid = 0
-
-            # kernel threads never have an mm as they do not have userland mappings
-            try:
-                mm = task.mm
-            except exceptions.InvalidAddressException:
-                # no mm so cannot get envars
-                vollog.debug(
-                    f"Unable to access mm for task {pid} {name} it is likely a kernel thread, will not extract any envars."
-                )
-                mm = None
+            if task.is_kernel_thread:
                 continue
 
-            # if mm exists attempt to get envars
-            if mm:
-                # get process layer to read envars from
-                proc_layer_name = task.add_process_layer()
-                if proc_layer_name is None:
-                    vollog.debug(
-                        f"Unable to construct process layer for task {pid} {name}, will not extract any envars."
-                    )
-                    continue
-                proc_layer = self.context.layers[proc_layer_name]
+            task_pid = task.pid
+            task_name = utility.array_to_string(task.comm)
+            task_ppid = task.get_parent_pid()
 
-                # get the size of the envars with sanity checking
-                envars_size = task.mm.env_end - task.mm.env_start
-                if not (0 < envars_size <= 8192):
-                    vollog.debug(
-                        f"Task {pid} {name} appears to have envars of size {envars_size} bytes which fails the sanity checking, will not extract any envars."
-                    )
-                    continue
-
-                # attempt to read all envars data
-                try:
-                    envar_data = proc_layer.read(task.mm.env_start, envars_size)
-                except exceptions.InvalidAddressException:
-                    vollog.debug(
-                        f"Unable to read full envars for {pid} {name} starting at virtual offset {hex(task.mm.env_start)} for {envars_size} bytes, will not extract any envars."
-                    )
-                    continue
-
-                # parse envar data, envars are null terminated, keys and values are separated by '='
-                envar_data = envar_data.rstrip(b"\x00")
-                for envar_pair in envar_data.split(b"\x00"):
-                    try:
-                        key, value = envar_pair.decode().split("=", 1)
-                    except ValueError:
-                        vollog.debug(
-                            f"Unable to extract envars for {pid} {name} starting at virtual offset {hex(task.mm.env_start)}, they don't appear to be '=' separated"
-                        )
-                        continue
-                    yield (0, (pid, ppid, name, key, value))
+            for env_key, env_value in self.get_task_env_variables(self.context, task):
+                yield (0, (task_pid, task_ppid, task_name, env_key, env_value))
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
-
-        return renderers.TreeGrid(
-            [("PID", int), ("PPID", int), ("COMM", str), ("KEY", str), ("VALUE", str)],
-            self._generator(
-                pslist.PsList.list_tasks(
-                    self.context, self.config["kernel"], filter_func=filter_func
-                )
-            ),
+        tasks = pslist.PsList.list_tasks(
+            self.context, self.config["kernel"], filter_func=filter_func
         )
+
+        headers = [
+            ("PID", int),
+            ("PPID", int),
+            ("COMM", str),
+            ("KEY", str),
+            ("VALUE", str),
+        ]
+
+        return renderers.TreeGrid(headers, self._generator(tasks))

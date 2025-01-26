@@ -53,10 +53,10 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         self._resolved: Dict[str, interfaces.objects.Template] = {}
         self._resolved_symbols: Dict[str, interfaces.objects.Template] = {}
 
-    def clear_symbol_cache(self, table_name: str = None) -> None:
+    def clear_symbol_cache(self, table_name: Optional[str] = None) -> None:
         """Clears the symbol cache for the specified table name. If no table
         name is specified, the caches of all symbol tables are cleared."""
-        table_list: List[interfaces.symbols.BaseSymbolTableInterface] = list()
+        table_list: List[interfaces.symbols.BaseSymbolTableInterface] = []
         if table_name is None:
             table_list = list(self._dict.values())
         else:
@@ -81,7 +81,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
                 yield table + constants.BANG + symbol_name
 
     def get_symbols_by_location(
-        self, offset: int, size: int = 0, table_name: str = None
+        self, offset: int, size: int = 0, table_name: Optional[str] = None
     ) -> Iterable[str]:
         """Returns all symbols that exist at a specific relative address."""
         table_list: Iterable[interfaces.symbols.BaseSymbolTableInterface] = (
@@ -128,7 +128,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         self,
         producer: str,
         validator: Callable[[Optional[Tuple], Optional[datetime.datetime]], bool],
-        tables: List[str] = None,
+        tables: Optional[List[str]] = None,
     ) -> bool:
         """Verifies the producer metadata and version of tables
 

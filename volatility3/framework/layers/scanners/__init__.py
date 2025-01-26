@@ -5,7 +5,7 @@ import re
 from typing import Generator, List, Tuple, Dict, Optional
 
 from volatility3.framework.interfaces import layers
-from volatility3.framework.layers.scanners import multiregexp
+from volatility3.framework.layers.scanners import multiregexp as multiregexp
 
 
 class BytesScanner(layers.ScannerInterface):
@@ -72,7 +72,7 @@ class MultiStringScanner(layers.ScannerInterface):
             return None
 
         for char in value:
-            trie[char] = trie.get(char, {})
+            trie.setdefault(char, {})
             trie = trie[char]
 
         # Mark the end of a string

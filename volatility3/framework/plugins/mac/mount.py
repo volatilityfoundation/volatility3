@@ -49,8 +49,7 @@ class Mount(plugins.PluginInterface):
 
         list_head = kernel.object_from_symbol(symbol_name="mountlist")
 
-        for mount in mac.MacUtilities.walk_tailq(list_head, "mnt_list"):
-            yield mount
+        yield from mac.MacUtilities.walk_tailq(list_head, "mnt_list")
 
     def _generator(self):
         for mount in self.list_mounts(self.context, self.config["kernel"]):

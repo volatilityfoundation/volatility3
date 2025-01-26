@@ -49,12 +49,12 @@ def hex_bytes_as_text(value: bytes, width: int = 16) -> str:
                 output += "\n"
             printables = ""
 
-    # Handle leftovers when the lenght is not mutiple of width
+    # Handle leftovers when the length is not mutiple of width
     if printables:
         padding = width - len(printables)
-        output += "   " * (padding)
+        output += "   " * padding
         output += printables
-        output += " " * (padding)
+        output += " " * padding
 
     return output
 
@@ -132,7 +132,7 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
             for i in disasm_types[disasm.architecture].disasm(
                 disasm.data, disasm.offset
             ):
-                output += f"\n0x{i.address:x}:\t{i.mnemonic}\t{i.op_str}"
+                output += f"\n{i.address:#x}:\t{i.mnemonic}\t{i.op_str}"
         return output
     return QuickTextRenderer._type_renderers[bytes](disasm.data)
 
@@ -176,7 +176,7 @@ class QuickTextRenderer(CLIRenderer):
         format_hints.HexBytes: optional(hex_bytes_as_text),
         format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
         interfaces.renderers.Disassembly: optional(display_disassembly),
-        bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
+        bytes: optional(lambda x: " ".join(f"{b:02x}" for b in x)),
         datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
         "default": optional(lambda x: f"{x}"),
     }
@@ -256,7 +256,7 @@ class CSVRenderer(CLIRenderer):
         format_hints.HexBytes: optional(hex_bytes_as_text),
         format_hints.MultiTypeData: optional(multitypedata_as_text),
         interfaces.renderers.Disassembly: optional(display_disassembly),
-        bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
+        bytes: optional(lambda x: " ".join(f"{b:02x}" for b in x)),
         datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
         "default": optional(lambda x: f"{x}"),
     }
@@ -342,7 +342,7 @@ class PrettyTextRenderer(CLIRenderer):
         column_separator = " | "
 
         tree_indent_column = "".join(
-            random.choice(string.ascii_uppercase + string.digits) for _ in range(20)
+            random.choices(string.ascii_uppercase + string.digits, k=20)
         )
         max_column_widths = dict(
             [(column.name, len(column.name)) for column in grid.columns]
@@ -450,7 +450,7 @@ class JsonRenderer(CLIRenderer):
         format_hints.HexBytes: quoted_optional(hex_bytes_as_text),
         interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
         format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
-        bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
+        bytes: optional(lambda x: " ".join(f"{b:02x}" for b in x)),
         datetime.datetime: lambda x: (
             x.isoformat()
             if not isinstance(x, interfaces.renderers.BaseAbsentValue)
@@ -467,7 +467,7 @@ class JsonRenderer(CLIRenderer):
 
     def output_result(self, outfd, result):
         """Outputs the JSON data to a file in a particular format"""
-        outfd.write("{}\n".format(json.dumps(result, indent=2, sort_keys=True)))
+        outfd.write(f"{json.dumps(result, indent=2, sort_keys=True)}\n")
 
     def render(self, grid: interfaces.renderers.TreeGrid):
         outfd = sys.stdout

@@ -2,14 +2,14 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from typing import List, Iterable, Generator
+from typing import Generator, Iterable, List, Optional
 
-from volatility3.framework import exceptions, interfaces, constants, renderers
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
-from volatility3.plugins.windows import pslist, pedump
+from volatility3.plugins.windows import pedump, pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -104,11 +104,10 @@ class Modules(interfaces.plugins.PluginInterface):
 
             try:
                 BaseDllName = mod.BaseDllName.get_string()
+                if self.config["name"] and self.config["name"] not in BaseDllName:
+                    continue
             except exceptions.InvalidAddressException:
                 BaseDllName = interfaces.renderers.BaseAbsentValue()
-
-            if self.config["name"] and self.config["name"] not in BaseDllName:
-                continue
 
             try:
                 FullDllName = mod.FullDllName.get_string()
@@ -134,7 +133,7 @@ class Modules(interfaces.plugins.PluginInterface):
         context: interfaces.context.ContextInterface,
         layer_name: str,
         symbol_table: str,
-        pids: List[int] = None,
+        pids: Optional[List[int]] = None,
     ) -> Generator[str, None, None]:
         """Build a cache of possible virtual layers, in priority starting with
         the primary/kernel layer. Then keep one layer per session by cycling
@@ -165,26 +164,42 @@ class Modules(interfaces.plugins.PluginInterface):
 
                 # create the session space object in the process' own layer.
                 # not all processes have a valid session pointer.
-                session_space = context.object(
-                    symbol_table + constants.BANG + "_MM_SESSION_SPACE",
-                    layer_name=layer_name,
-                    offset=proc.Session,
-                )
+                try:
+                    session_space = context.object(
+                        symbol_table + constants.BANG + "_MM_SESSION_SPACE",
+                        layer_name=layer_name,
+                        offset=proc.Session,
+                    )
+                    session_id = session_space.SessionId
 
-                if session_space.SessionId in seen_ids:
+                except exceptions.SymbolError:
+                    # In Windows 11 24H2, the _MM_SESSION_SPACE type was
+                    # replaced with _PSP_SESSION_SPACE, and the kernel PDB
+                    # doesn't contain information about its members (otherwise,
+                    # we would just fall back to the new type). However, it
+                    # appears to be, for our purposes, functionally identical
+                    # to the _MM_SESSION_SPACE. Because _MM_SESSION_SPACE
+                    # stores its session ID at offset 8 as an unsigned long, we
+                    # create an unsigned long at that offset and use that
+                    # instead.
+                    session_id = context.object(
+                        layer_name=layer_name,
+                        object_type=symbol_table + constants.BANG + "unsigned long",
+                        offset=proc.Session + 8,
+                    )
+
+                if session_id in seen_ids:
                     continue
 
             except exceptions.InvalidAddressException:
                 vollog.log(
                     constants.LOGLEVEL_VVV,
-                    "Process {} does not have a valid Session or a layer could not be constructed for it".format(
-                        proc_id
-                    ),
+                    f"Process {proc_id} does not have a valid Session or a layer could not be constructed for it",
                 )
                 continue
 
             # save the layer if we haven't seen the session yet
-            seen_ids.append(session_space.SessionId)
+            seen_ids.append(session_id)
             yield proc_layer_name
 
     @classmethod
@@ -250,8 +265,7 @@ class Modules(interfaces.plugins.PluginInterface):
             object_type=type_name, offset=list_entry.vol.offset - reloff, absolute=True
         )
 
-        for mod in module.InLoadOrderLinks:
-            yield mod
+        yield from module.InLoadOrderLinks
 
     def run(self):
         return renderers.TreeGrid(

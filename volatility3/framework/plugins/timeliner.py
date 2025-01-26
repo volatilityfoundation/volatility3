@@ -54,7 +54,9 @@ class Timeliner(interfaces.plugins.PluginInterface):
         self.automagics: Optional[List[interfaces.automagic.AutomagicInterface]] = None
 
     @classmethod
-    def get_usable_plugins(cls, selected_list: List[str] = None) -> List[Type]:
+    def get_usable_plugins(
+        cls, selected_list: Optional[List[str]] = None
+    ) -> List[Type]:
         # Initialize for the run
         plugin_list = list(framework.class_subclasses(TimeLinerInterface))
 
@@ -143,9 +145,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                     times = self.timeline.get((plugin_name, item), {})
                     if times.get(timestamp_type, None) is not None:
                         vollog.debug(
-                            "Multiple timestamps for the same plugin/file combination found: {} {}".format(
-                                plugin_name, item
-                            )
+                            f"Multiple timestamps for the same plugin/file combination found: {plugin_name} {item}"
                         )
                     times[timestamp_type] = timestamp
                     self.timeline[(plugin_name, item)] = times
@@ -206,8 +206,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 )
                 vollog.log(logging.DEBUG, traceback.format_exc())
 
-        for data_item in sorted(data, key=self._sort_function):
-            yield data_item
+        yield from sorted(data, key=self._sort_function)
 
         # Write out a body file if necessary
         if self.config.get("create-bodyfile", True):

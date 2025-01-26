@@ -138,8 +138,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
         mapping = cls.determine_map(module)
         for entry in mapping:
             if "Unused" not in entry:
-                for value in mapping[entry]:
-                    yield value
+                yield from mapping[entry]
 
     def run(self):
         kernel = self.context.modules[self.config["kernel"]]

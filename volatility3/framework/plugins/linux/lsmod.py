@@ -1,8 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-"""A module containing a collection of plugins that produce data typically
-found in Linux's /proc file system."""
+"""A module containing a plugin that lists loaded kernel modules."""
 
 import logging
 from typing import List, Iterable
@@ -54,8 +53,7 @@ class Lsmod(plugins.PluginInterface):
 
         table_name = modules.vol.type_name.split(constants.BANG)[0]
 
-        for module in modules.to_list(table_name + constants.BANG + "module", "list"):
-            yield module
+        yield from modules.to_list(table_name + constants.BANG + "module", "list")
 
     def _generator(self):
         try:

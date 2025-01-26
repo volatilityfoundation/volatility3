@@ -80,7 +80,7 @@ class Kauth_scopes(interfaces.plugins.PluginInterface):
                 (
                     identifier,
                     format_hints.Hex(scope.ks_idata),
-                    len([l for l in scope.get_listeners()]),
+                    len([listener for listener in scope.get_listeners()]),
                     format_hints.Hex(callback),
                     module_name,
                     symbol_name,

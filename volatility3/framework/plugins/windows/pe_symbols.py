@@ -158,7 +158,7 @@ class PESymbolFinder:
 
 class PDBSymbolFinder(PESymbolFinder):
     """
-    PESymbolFinder implementation for  PDB modules
+    PESymbolFinder implementation for PDB modules
     """
 
     def _do_get_address(self, name: str) -> Optional[int]:
@@ -195,7 +195,7 @@ class PDBSymbolFinder(PESymbolFinder):
 
 class ExportSymbolFinder(PESymbolFinder):
     """
-    PESymbolFinder implementation for  PDB modules
+    PESymbolFinder implementation for PDB modules
     """
 
     def _get_name(self, export: pefile.ExportData) -> Optional[str]:
@@ -300,7 +300,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         base_address: int,
     ) -> Optional[pefile.PE]:
         """
-        Attempts to pefile object from the bytes of the PE file
+        Attempts to create a pefile object from the bytes of the PE file
 
         Args:
             pe_table_name: name of the pe types table
@@ -645,7 +645,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
             and wanted_addresses_identifier not in wanted_symbols
         ):
             vollog.warning(
-                f"Invalid `wanted_symbols` sent to `find_symbols`. addresses and names keys both misssing."
+                "Invalid `wanted_symbols` sent to `find_symbols`. addresses and names keys both misssing."
             )
             return
 

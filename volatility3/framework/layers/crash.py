@@ -1,7 +1,6 @@
 # This file is Copyright 2021 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-import contextlib
 import logging
 import struct
 from typing import Tuple, Optional
@@ -138,7 +137,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             ulong_bitmap_array = summary_header.get_buffer_long()
             # outer_index points to a 32 bits array inside a list of arrays,
             # each bit indicating a page mapping state
-            for outer_index in range(0, ulong_bitmap_array.vol.count):
+            for outer_index in range(ulong_bitmap_array.vol.count):
                 ulong_bitmap = ulong_bitmap_array[outer_index]
                 # All pages in this 32 bits array are mapped (speedup iteration process)
                 if ulong_bitmap == 0xFFFFFFFF:
@@ -166,7 +165,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
                         seg_first_bit = None
                 # Some pages in this 32 bits array are mapped and some aren't
                 else:
-                    for inner_bit_position in range(0, 32):
+                    for inner_bit_position in range(32):
                         current_bit = outer_index * 32 + inner_bit_position
                         page_mapped = ulong_bitmap & (1 << inner_bit_position)
                         if page_mapped:
@@ -220,9 +219,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             for idx, (start_position, mapped_offset, length, _) in enumerate(segments):
                 vollog.log(
                     constants.LOGLEVEL_VVVV,
-                    "Segment {}: Position {:#x} Offset {:#x} Length {:#x}".format(
-                        idx, start_position, mapped_offset, length
-                    ),
+                    f"Segment {idx}: Position {start_position:#x} Offset {mapped_offset:#x} Length {length:#x}",
                 )
 
         self._segments = segments

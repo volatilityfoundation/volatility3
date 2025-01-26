@@ -2,7 +2,9 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import datetime
-from typing import Any, Callable, Iterable, List, Tuple
+import dataclasses
+import contextlib
+from typing import Any, Callable, Iterable, List, Optional
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
@@ -14,11 +16,25 @@ from volatility3.plugins import timeliner
 from volatility3.plugins.linux import elfs
 
 
+@dataclasses.dataclass
+class TaskFields:
+    offset: int
+    user_pid: int
+    user_tid: int
+    user_ppid: int
+    name: str
+    uid: Optional[int]
+    gid: Optional[int]
+    euid: Optional[int]
+    egid: Optional[int]
+    creation_time: Optional[datetime.datetime]
+
+
 class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the processes present in a particular linux memory image."""
 
-    _required_framework_version = (2, 0, 0)
-    _version = (3, 0, 0)
+    _required_framework_version = (2, 13, 0)
+    _version = (4, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -58,7 +74,9 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     @classmethod
-    def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[Any], bool]:
+    def create_pid_filter(
+        cls, pid_list: Optional[List[int]] = None
+    ) -> Callable[[Any], bool]:
         """Constructs a filter function for process IDs.
 
         Args:
@@ -82,7 +100,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     @classmethod
     def get_task_fields(
         cls, task: interfaces.objects.ObjectInterface, decorate_comm: bool = False
-    ) -> Tuple[int, int, int, int, str, datetime.datetime]:
+    ) -> TaskFields:
         """Extract the fields needed for the final output
 
         Args:
@@ -91,21 +109,34 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                            and of Kernel threads in square brackets.
                            Defaults to False.
         Returns:
-            A tuple with the fields to show in the plugin output.
+            A TaskFields object with the fields to show in the plugin output.
         """
-        pid = task.tgid
-        tid = task.pid
-        ppid = task.parent.tgid if task.parent else 0
         name = utility.array_to_string(task.comm)
-        start_time = task.get_create_time()
         if decorate_comm:
             if task.is_kernel_thread:
                 name = f"[{name}]"
             elif task.is_user_thread:
                 name = f"{{{name}}}"
 
-        task_fields = (task.vol.offset, pid, tid, ppid, name, start_time)
-        return task_fields
+        # This function may be called with a partially initialized/uninitialized task.
+        # Ensure it always returns a valid TaskFields object, ready for use in a plugin.
+        valid_cred = task.cred and task.cred.is_readable()
+        creation_time = None
+        with contextlib.suppress(Exception):
+            creation_time = task.get_create_time()
+
+        return TaskFields(
+            offset=task.vol.offset,
+            user_pid=task.tgid,
+            user_tid=task.pid,
+            user_ppid=task.get_parent_pid(),
+            name=name,
+            uid=task.cred.uid if valid_cred else None,
+            gid=task.cred.gid if valid_cred else None,
+            euid=task.cred.euid if valid_cred else None,
+            egid=task.cred.egid if valid_cred else None,
+            creation_time=creation_time,
+        )
 
     def _get_file_output(self, task: interfaces.objects.ObjectInterface) -> str:
         """Extract the elf for the process if requested
@@ -148,6 +179,10 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 file_output = "VMA start matching task start_code not found"
         return file_output
 
+    @staticmethod
+    def _format_cred(cred):
+        return renderers.NotAvailableValue() if cred is None else cred
+
     def _generator(
         self,
         pid_filter: Callable[[Any], bool],
@@ -179,17 +214,24 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             else:
                 file_output = "Disabled"
 
-            offset, pid, tid, ppid, name, creation_time = self.get_task_fields(
-                task, decorate_comm
-            )
+            task_fields = self.get_task_fields(task, decorate_comm)
+
+            task_uid = self._format_cred(task_fields.uid)
+            task_gid = self._format_cred(task_fields.gid)
+            task_euid = self._format_cred(task_fields.euid)
+            task_egid = self._format_cred(task_fields.egid)
 
             yield 0, (
-                format_hints.Hex(offset),
-                pid,
-                tid,
-                ppid,
-                name,
-                creation_time or renderers.NotAvailableValue(),
+                format_hints.Hex(task_fields.offset),
+                task_fields.user_pid,
+                task_fields.user_tid,
+                task_fields.user_ppid,
+                task_fields.name,
+                task_uid,
+                task_gid,
+                task_euid,
+                task_egid,
+                task_fields.creation_time or renderers.NotAvailableValue(),
                 file_output,
             )
 
@@ -217,6 +259,9 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         # Note that the init_task itself is not yielded, since "ps" also never shows it.
         for task in init_task.tasks:
+            if not task.is_valid():
+                continue
+
             if filter_func(task):
                 continue
 
@@ -238,6 +283,10 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             ("TID", int),
             ("PPID", int),
             ("COMM", str),
+            ("UID", int),
+            ("GID", int),
+            ("EUID", int),
+            ("EGID", int),
             ("CREATION TIME", datetime.datetime),
             ("File output", str),
         ]
@@ -251,10 +300,11 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         for task in self.list_tasks(
             self.context, self.config["kernel"], filter_func, include_threads=True
         ):
-            offset, user_pid, user_tid, _user_ppid, name, creation_time = (
-                self.get_task_fields(task)
+            task_fields = self.get_task_fields(task)
+            description = f"Process {task_fields.user_pid}/{task_fields.user_tid} {task_fields.name} ({task_fields.offset})"
+
+            yield (
+                description,
+                timeliner.TimeLinerType.CREATED,
+                task_fields.creation_time,
             )
-
-            description = f"Process {user_pid}/{user_tid} {name} ({offset})"
-
-            yield (description, timeliner.TimeLinerType.CREATED, creation_time)

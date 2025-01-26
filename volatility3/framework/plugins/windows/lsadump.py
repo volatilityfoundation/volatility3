@@ -8,7 +8,7 @@ from typing import Optional
 from Crypto.Cipher import ARC4, DES, AES
 from Crypto.Hash import MD5, SHA256
 
-from volatility3.framework import interfaces, renderers
+from volatility3.framework import interfaces, renderers, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import registry
 from volatility3.framework.symbols.windows import versions
@@ -81,7 +81,10 @@ class Lsadump(interfaces.plugins.PluginInterface):
         if not enc_reg_value:
             return None
 
-        obf_lsa_key = sechive.read(enc_reg_value.Data + 4, enc_reg_value.DataLength)
+        try:
+            obf_lsa_key = sechive.read(enc_reg_value.Data + 4, enc_reg_value.DataLength)
+        except exceptions.InvalidAddressException:
+            return None
 
         if not obf_lsa_key:
             return None

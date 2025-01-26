@@ -82,7 +82,7 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
                 ethread.get_exit_time()
             )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
         except exceptions.InvalidAddressException:
-            vollog.debug("Thread invalid address {:#x}".format(ethread.vol.offset))
+            vollog.debug(f"Thread invalid address {ethread.vol.offset:#x}")
             return None
 
         return (

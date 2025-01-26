@@ -139,7 +139,7 @@ class PoolScanner(plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.PluginRequirement(
-                name="handles", plugin=handles.Handles, version=(1, 0, 0)
+                name="handles", plugin=handles.Handles, version=(2, 0, 0)
             ),
         ]
 
@@ -183,7 +183,7 @@ class PoolScanner(plugins.PluginInterface):
 
     @staticmethod
     def builtin_constraints(
-        symbol_table: str, tags_filter: List[bytes] = None
+        symbol_table: str, tags_filter: Optional[List[bytes]] = None
     ) -> List[PoolConstraint]:
         """Get built-in PoolConstraints given a list of pool tags.
 

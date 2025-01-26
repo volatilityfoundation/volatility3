@@ -130,3 +130,7 @@ class OfflineException(VolatilityException):
 
 class RenderException(VolatilityException):
     """Thrown if there is an error during rendering"""
+
+
+class LinuxPageCacheException(VolatilityException):
+    """Thrown if there is an error during Linux Page Cache processing"""

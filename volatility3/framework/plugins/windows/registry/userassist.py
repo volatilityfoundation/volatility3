@@ -13,7 +13,7 @@ from typing import Any, Generator, List, Tuple
 from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers.physical import BufferDataLayer
-from volatility3.framework.layers.registry import RegistryHive
+from volatility3.framework.layers.registry import RegistryHive, RegistryFormatException
 from volatility3.framework.renderers import conversion, format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.plugins.windows.registry import hivelist
@@ -39,7 +39,7 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
                 os.path.join(os.path.dirname(__file__), "userassist.json"), "rb"
             ) as fp:
                 self._folder_guids = json.load(fp)
-        except IOError:
+        except OSError:
             vollog.error("Usersassist data file not found")
 
     @classmethod
@@ -167,10 +167,21 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
 
         self._determine_userassist_type()
 
-        userassist_node_path = hive.get_key(
-            "software\\microsoft\\windows\\currentversion\\explorer\\userassist",
-            return_list=True,
-        )
+        try:
+            userassist_node_path = hive.get_key(
+                "software\\microsoft\\windows\\currentversion\\explorer\\userassist",
+                return_list=True,
+            )
+        except RegistryFormatException as e:
+            vollog.warning(
+                f"Error accessing UserAssist key in {hive_name} at {hive.hive_offset:#x}: {e}"
+            )
+            return None
+        except KeyError:
+            vollog.warning(
+                f"UserAssist key not found in {hive_name} at {hive.hive_offset:#x}"
+            )
+            return None
 
         if not userassist_node_path:
             vollog.warning("list_userassist did not find a valid node_path (or None)")
@@ -308,9 +319,7 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
                 )
             except exceptions.InvalidAddressException as excp:
                 vollog.debug(
-                    "Invalid address identified in lower layer {}: {}".format(
-                        excp.layer_name, excp.invalid_address
-                    )
+                    f"Invalid address identified in lower layer {excp.layer_name}: {excp.invalid_address}"
                 )
             except KeyError:
                 vollog.debug(

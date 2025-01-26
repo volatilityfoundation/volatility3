@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 from volatility3.cli.volshell import generic
 from volatility3.framework import constants, interfaces
@@ -63,7 +63,7 @@ class Volshell(generic.Volshell):
         object: Union[
             str, interfaces.objects.ObjectInterface, interfaces.objects.Template
         ],
-        offset: int = None,
+        offset: Optional[int] = None,
     ):
         """Display Type describes the members of a particular object in alphabetical order"""
         if isinstance(object, str):
@@ -71,7 +71,7 @@ class Volshell(generic.Volshell):
                 object = self.current_symbol_table + constants.BANG + object
         return super().display_type(object, offset)
 
-    def display_symbols(self, symbol_table: str = None):
+    def display_symbols(self, symbol_table: Optional[str] = None):
         """Prints an alphabetical list of symbols for a symbol table"""
         if symbol_table is None:
             symbol_table = self.current_symbol_table

@@ -149,7 +149,7 @@ class ABCKmsg(ABC):
         #   This might seem insignificant but it could cause some issues
         #   when compared with userland tool results or when used in
         #   timelines.
-        return "%lu.%06lu" % (nsec / 1000000000, (nsec % 1000000000) / 1000)
+        return f"{nsec // 1000000000}.{(nsec % 1000000000) // 1000:06}"
 
     def get_timestamp_in_sec_str(self, obj) -> str:
         # obj could be log, printk_log or printk_info
@@ -166,7 +166,7 @@ class ABCKmsg(ABC):
 
     def get_caller_text(self, caller_id):
         caller_name = "CPU" if caller_id & 0x80000000 else "Task"
-        caller = "%s(%u)" % (caller_name, caller_id & ~0x80000000)
+        caller = f"{caller_name}({caller_id & ~0x80000000})"
         return caller
 
     def get_prefix(self, obj) -> Tuple[int, int, str, str]:
@@ -317,23 +317,27 @@ class Kmsg_3_5_to_3_11(ABCKmsg):
         while cur_idx < end_idx:
             msg_offset = log_buf_ptr + cur_idx  # type: ignore
             msg = self.vmlinux.object(object_type=log_struct_name, offset=msg_offset)
-            if msg.len == 0:
-                # As per kernel/printk.c:
-                # A length == 0 for the next message indicates a wrap-around to
-                # the beginning of the buffer.
-                cur_idx = 0
-                end_idx = log_next_idx
-            else:
-                facility, level, timestamp, caller = self.get_prefix(msg)
-                level_txt = self.get_level_text(level)
-                facility_txt = self.get_facility_text(facility)
+            try:
+                if msg.len == 0:
+                    # As per kernel/printk.c:
+                    # A length == 0 for the next message indicates a wrap-around to
+                    # the beginning of the buffer.
+                    cur_idx = 0
+                    end_idx = log_next_idx
+                else:
+                    facility, level, timestamp, caller = self.get_prefix(msg)
+                    level_txt = self.get_level_text(level)
+                    facility_txt = self.get_facility_text(facility)
 
-                for line in self.get_log_lines(msg):
-                    yield facility_txt, level_txt, timestamp, caller, line
-                for line in self.get_dict_lines(msg):
-                    yield facility_txt, level_txt, timestamp, caller, line
+                    for line in self.get_log_lines(msg):
+                        yield facility_txt, level_txt, timestamp, caller, line
+                    for line in self.get_dict_lines(msg):
+                        yield facility_txt, level_txt, timestamp, caller, line
 
-                cur_idx += msg.len
+                    cur_idx += msg.len
+            except exceptions.InvalidAddressException:
+                vollog.warning("Kmsg buffer msg length could not be read")
+                return
 
 
 class Kmsg_3_11_to_5_10(Kmsg_3_5_to_3_11):

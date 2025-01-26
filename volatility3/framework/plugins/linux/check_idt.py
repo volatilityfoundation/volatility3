@@ -53,7 +53,7 @@ class Check_idt(interfaces.plugins.PluginInterface):
         address_mask = self.context.layers[vmlinux.layer_name].address_mask
 
         # hw handlers + system call
-        check_idxs = list(range(0, 20)) + [128]
+        check_idxs = list(range(20)) + [128]
 
         if is_32bit:
             if vmlinux.has_type("gate_struct"):

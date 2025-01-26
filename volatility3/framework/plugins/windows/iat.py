@@ -1,7 +1,9 @@
 # This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 
-import logging, io, pefile
+import logging
+import io
+import pefile
 from volatility3.framework.symbols import intermed
 from volatility3.framework import renderers, interfaces, exceptions, constants
 from volatility3.framework.configuration import requirements
@@ -119,9 +121,7 @@ class IAT(interfaces.plugins.PluginInterface):
                             )
             except exceptions.InvalidAddressException as excp:
                 vollog.debug(
-                    "Process {}: invalid address {} in layer {}".format(
-                        proc_id, excp.invalid_address, excp.layer_name
-                    )
+                    f"Process {proc_id}: invalid address {excp.invalid_address} in layer {excp.layer_name}"
                 )
                 continue
 

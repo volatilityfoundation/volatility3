@@ -39,7 +39,7 @@ class Privs(interfaces.plugins.PluginInterface):
             )
 
         # Get service sids dictionary (we need only the service sids).
-        with open(sids_json_file_name, "r") as file_handle:
+        with open(sids_json_file_name) as file_handle:
             temp_json = json.load(file_handle)["privileges"]
             self.privilege_info = {
                 int(priv_num): temp_json[priv_num] for priv_num in temp_json

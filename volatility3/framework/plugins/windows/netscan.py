@@ -161,20 +161,15 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             raise NotImplementedError(
                 "Kernel Debug Structure version format not supported!"
             )
-        except:
-            # unsure what to raise here. Also, it might be useful to add some kind of fallback,
+        except Exception:
+            # FIXME: unsure what to raise here. Also, it might be useful to add some kind of fallback,
             # either to a user-provided version or to another method to determine tcpip.sys's version
             raise exceptions.VolatilityException(
                 "Kernel Debug Structure missing VERSION/KUSER structure, unable to determine Windows version!"
             )
 
         vollog.debug(
-            "Determined OS Version: {}.{} {}.{}".format(
-                kuser.NtMajorVersion,
-                kuser.NtMinorVersion,
-                vers.MajorVersion,
-                vers.MinorVersion,
-            )
+            f"Determined OS Version: {kuser.NtMajorVersion}.{kuser.NtMinorVersion} {vers.MajorVersion}.{vers.MinorVersion}"
         )
 
         if nt_major_version == 10 and arch == "x64":
@@ -272,9 +267,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 if ver:
                     tcpip_mod_version = ver[3]
                     vollog.debug(
-                        "Determined tcpip.sys's FileVersion: {}".format(
-                            tcpip_mod_version
-                        )
+                        f"Determined tcpip.sys's FileVersion: {tcpip_mod_version}"
                     )
                 else:
                     vollog.debug("Could not determine tcpip.sys's FileVersion.")
@@ -316,12 +309,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             else:
                 raise NotImplementedError(
-                    "This version of Windows is not supported: {}.{} {}.{}!".format(
-                        nt_major_version,
-                        nt_minor_version,
-                        vers.MajorVersion,
-                        vers_minor_version,
-                    )
+                    f"This version of Windows is not supported: {nt_major_version}.{nt_minor_version} {vers.MajorVersion}.{vers_minor_version}!"
                 )
 
         vollog.debug(f"Determined symbol filename: {filename}")
@@ -510,17 +498,8 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 for i in row_data
             ]
             description = (
-                "Network connection: Process {} {} Local Address {}:{} "
-                "Remote Address {}:{} State {} Protocol {} ".format(
-                    row_data[7],
-                    row_data[8],
-                    row_data[2],
-                    row_data[3],
-                    row_data[4],
-                    row_data[5],
-                    row_data[6],
-                    row_data[1],
-                )
+                f"Network connection: Process {row_data[7]} {row_data[8]} Local Address {row_data[2]}:{row_data[3]} "
+                f"Remote Address {row_data[4]}:{row_data[5]} State {row_data[6]} Protocol {row_data[1]} "
             )
             yield (description, timeliner.TimeLinerType.CREATED, row_data[9])
 

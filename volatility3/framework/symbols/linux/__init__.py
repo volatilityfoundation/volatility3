@@ -3,6 +3,8 @@
 #
 import math
 import contextlib
+import functools
+import logging
 from abc import ABC, abstractmethod
 from typing import Iterator, List, Tuple, Optional, Union
 
@@ -11,6 +13,8 @@ from volatility3.framework import constants, exceptions, interfaces, objects
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux import extensions
+
+vollog = logging.getLogger(__name__)
 
 
 class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
@@ -43,6 +47,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.optional_set_type_class("bpf_prog_aux", extensions.bpf_prog_aux)
         self.optional_set_type_class("kernel_cap_struct", extensions.kernel_cap_struct)
         self.optional_set_type_class("kernel_cap_t", extensions.kernel_cap_t)
+        self.optional_set_type_class("scatterlist", extensions.scatterlist)
 
         # kernels >= 4.18
         self.optional_set_type_class("timespec64", extensions.timespec64)
@@ -76,7 +81,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""
 
-    _version = (2, 1, 1)
+    _version = (2, 2, 0)
     _required_framework_version = (2, 0, 0)
 
     framework.require_interface_version(*_required_framework_version)
@@ -483,6 +488,22 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
 
         return kernel
 
+    @classmethod
+    def convert_fourcc_code(cls, code: int) -> str:
+        """Convert a fourcc integer back to its fourcc string representation.
+
+        Args:
+            code: the numerical representation of the fourcc
+
+        Returns:
+            The fourcc code string.
+        """
+
+        code_bytes_length = (code.bit_length() + 7) // 8
+        return "".join(
+            [chr((code >> (i * 8)) & 0xFF) for i in range(code_bytes_length)]
+        )
+
 
 class IDStorage(ABC):
     """Abstraction to support both XArray and RadixTree"""
@@ -596,7 +617,7 @@ class IDStorage(ABC):
         raise NotImplementedError
 
     def nodep_to_node(self, nodep) -> interfaces.objects.ObjectInterface:
-        """Instanciates a tree node from its pointer
+        """Instantiates a tree node from its pointer
 
         Args:
             nodep: Pointer to the XArray/RadixTree node
@@ -629,8 +650,7 @@ class IDStorage(ABC):
                 if self.is_valid_node(nodep):
                     yield nodep
             else:
-                for child_node in self._iter_node(nodep, height - 1):
-                    yield child_node
+                yield from self._iter_node(nodep, height - 1)
 
     def get_entries(self, root: interfaces.objects.ObjectInterface) -> Iterator[int]:
         """Walks the tree data structure
@@ -644,7 +664,7 @@ class IDStorage(ABC):
         height = self.get_tree_height(root.vol.offset)
 
         nodep = self.get_head_node(root)
-        if not nodep:
+        if not (nodep and nodep.is_readable()):
             return
 
         # Keep the internal flag before untagging it
@@ -659,8 +679,7 @@ class IDStorage(ABC):
             if self.is_valid_node(nodep):
                 yield nodep
         else:
-            for child_node in self._iter_node(nodep, height):
-                yield child_node
+            yield from self._iter_node(nodep, height)
 
 
 class XArray(IDStorage):
@@ -680,7 +699,7 @@ class XArray(IDStorage):
 
     def get_node_height(self, nodep) -> int:
         node = self.nodep_to_node(nodep)
-        return (node.shift / self.CHUNK_SHIFT) + 1
+        return (node.shift // self.CHUNK_SHIFT) + 1
 
     def get_head_node(self, tree) -> int:
         return tree.xa_head
@@ -703,6 +722,7 @@ class RadixTree(IDStorage):
     RADIX_TREE_INTERNAL_NODE = 1
     RADIX_TREE_EXCEPTIONAL_ENTRY = 2
     RADIX_TREE_ENTRY_MASK = 3
+    RADIX_TREE_MAP_SHIFT = 6  # CONFIG_BASE_FULL
 
     # Dynamic values. These will be initialized later
     RADIX_TREE_INDEX_BITS = None
@@ -739,42 +759,56 @@ class RadixTree(IDStorage):
     def get_tree_height(self, treep) -> int:
         with contextlib.suppress(exceptions.SymbolError):
             if self.vmlinux.get_type("radix_tree_root").has_member("height"):
-                # kernels < 4.7.10
+                # kernels < 4.7 d0891265bbc988dc91ed8580b38eb3dac128581b
                 radix_tree_root = self.vmlinux.object(
                     "radix_tree_root", offset=treep, absolute=True
                 )
                 return radix_tree_root.height
 
-        # kernels >= 4.7.10
+        # kernels >= 4.7
         return 0
+
+    @functools.cached_property
+    def _max_height_array(self):
+        if self.vmlinux.has_symbol("height_to_maxindex"):
+            # 2.6.24 26fb1589cb0aaec3a0b4418c54f30c1a2b1781f6 <= Kernels < 4.7 d0891265bbc988dc91ed8580b38eb3dac128581b
+            return self.vmlinux.object_from_symbol("height_to_maxindex")
+        elif self.vmlinux.has_symbol("height_to_maxnodes"):
+            # 4.8 c78c66d1ddfdbd2353f3fcfeba0268524537b096 <= kernels < 4.20 8cf2f98411e3a0865026a1061af637161b16d32b
+            return self.vmlinux.object_from_symbol("height_to_maxnodes")
+
+        return None
 
     def _radix_tree_maxindex(self, node, height) -> int:
         """Return the maximum key which can be store into a radix tree with this height."""
 
-        if not self.vmlinux.has_symbol("height_to_maxindex"):
-            # Kernels >= 4.7
-            return (self.CHUNK_SIZE << node.shift) - 1
+        if self._max_height_array:
+            # 2.6.24 <= kernels <= 4.20 See _max_height_array()
+            return self._max_height_array[height]
         else:
-            # Kernels < 4.7
-            height_to_maxindex_array = self.vmlinux.object_from_symbol(
-                "height_to_maxindex"
-            )
-            maxindex = height_to_maxindex_array[height]
-            return maxindex
+            # Kernels >= 4.20
+            return (self.CHUNK_SIZE << node.shift) - 1
 
     def get_node_height(self, nodep) -> int:
         node = self.nodep_to_node(nodep)
         if hasattr(node, "shift"):
             # 4.7 <= Kernels < 4.20
-            return (node.shift / self.CHUNK_SHIFT) + 1
+            height = (node.shift // self.CHUNK_SHIFT) + 1
         elif hasattr(node, "path"):
             # 3.15 <= Kernels < 4.7
-            return node.path & self.RADIX_TREE_HEIGHT_MASK
+            height = node.path & self.RADIX_TREE_HEIGHT_MASK
         elif hasattr(node, "height"):
             # Kernels < 3.15
-            return node.height
+            height = node.height
         else:
             raise exceptions.VolatilityException("Cannot find radix-tree node height")
+
+        if self._max_height_array and not (0 <= height < self._max_height_array.count):
+            error_msg = f"Radix Tree node {node.vol.offset:#x} height {height} exceeds max height of {self._max_height_array.count}"
+            vollog.error(error_msg)
+            raise exceptions.LinuxPageCacheException(error_msg)
+
+        return height
 
     def get_head_node(self, tree) -> int:
         return tree.rnode
@@ -788,17 +822,19 @@ class RadixTree(IDStorage):
     def untag_node(self, nodep) -> int:
         return nodep & (~self.RADIX_TREE_ENTRY_MASK)
 
-    def is_valid_node(self, nodep) -> bool:
+    def _is_exceptional_node(self, nodep) -> bool:
         # In kernels 4.20, exceptional nodes were removed and internal entries took their bitmask
-        if self.vmlinux.has_type("radix_tree_root"):
-            return (
-                nodep & self.RADIX_TREE_ENTRY_MASK
-            ) != self.RADIX_TREE_EXCEPTIONAL_ENTRY
+        return (
+            self.vmlinux.has_type("radix_tree_root")
+            and (nodep & self.RADIX_TREE_ENTRY_MASK)
+            == self.RADIX_TREE_EXCEPTIONAL_ENTRY
+        )
 
-        return True
+    def is_valid_node(self, nodep) -> bool:
+        return not self._is_exceptional_node(nodep)
 
 
-class PageCache(object):
+class PageCache:
     """Linux Page Cache abstraction"""
 
     def __init__(
@@ -824,11 +860,17 @@ class PageCache(object):
         Yields:
             Page objects
         """
-
+        layer = self.vmlinux.context.layers[self.vmlinux.layer_name]
         for page_addr in self._idstorage.get_entries(self._page_cache.i_pages):
-            if not page_addr:
-                continue
+            if not layer.is_valid(page_addr):
+                error_msg = f"Invalid cached page address at {page_addr:#x}, aborting"
+                vollog.error(error_msg)
+                raise exceptions.LinuxPageCacheException(error_msg)
 
             page = self.vmlinux.object("page", offset=page_addr, absolute=True)
-            if page:
-                yield page
+            if not page.is_valid():
+                error_msg = f"Invalid cached page at {page_addr:#x}, aborting"
+                vollog.error(error_msg)
+                raise exceptions.LinuxPageCacheException(error_msg)
+
+            yield page

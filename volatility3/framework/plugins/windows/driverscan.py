@@ -64,7 +64,7 @@ class DriverScan(interfaces.plugins.PluginInterface):
         names associated with a driver
 
         Args:
-            driver: A Eriver object
+            driver: A Driver object
 
         Returns:
             A tuple of strings of (driver name, service key, driver alt. name)

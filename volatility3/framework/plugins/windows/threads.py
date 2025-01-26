@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Callable, Iterable, List, Generator
+from typing import Iterable, List, Generator
 
 from volatility3.framework import interfaces, constants
 from volatility3.framework.configuration import requirements
@@ -82,5 +82,4 @@ class Threads(thrdscan.ThrdScan):
             symbol_table=symbol_table_name,
             filter_func=filter_func,
         ):
-            for thread in cls.list_threads(module, proc):
-                yield thread
+            yield from cls.list_threads(module, proc)

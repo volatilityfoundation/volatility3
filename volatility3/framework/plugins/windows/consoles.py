@@ -95,9 +95,7 @@ class Consoles(interfaces.plugins.PluginInterface):
 
                 except exceptions.InvalidAddressException as excp:
                     vollog.debug(
-                        "Process {}: invalid address {} in layer {}".format(
-                            proc_id, excp.invalid_address, excp.layer_name
-                        )
+                        f"Process {proc_id}: invalid address {excp.invalid_address} in layer {excp.layer_name}"
                     )
 
     @classmethod
@@ -176,12 +174,7 @@ class Consoles(interfaces.plugins.PluginInterface):
             )
 
         vollog.debug(
-            "Determined OS Version: {}.{} {}.{}".format(
-                kuser.NtMajorVersion,
-                kuser.NtMinorVersion,
-                vers.MajorVersion,
-                vers.MinorVersion,
-            )
+            f"Determined OS Version: {kuser.NtMajorVersion}.{kuser.NtMinorVersion} {vers.MajorVersion}.{vers.MinorVersion}"
         )
 
         if nt_major_version == 10 and arch == "x64":
@@ -260,9 +253,7 @@ class Consoles(interfaces.plugins.PluginInterface):
                     if ver:
                         conhost_mod_version = ver[3]
                         vollog.debug(
-                            "Determined conhost.exe's FileVersion: {}".format(
-                                conhost_mod_version
-                            )
+                            f"Determined conhost.exe's FileVersion: {conhost_mod_version}"
                         )
                     else:
                         vollog.debug("Could not determine conhost.exe's FileVersion.")
@@ -311,12 +302,7 @@ class Consoles(interfaces.plugins.PluginInterface):
 
             else:
                 raise NotImplementedError(
-                    "This version of Windows is not supported: {}.{} {}.{}!".format(
-                        nt_major_version,
-                        nt_minor_version,
-                        vers.MajorVersion,
-                        vers_minor_version,
-                    )
+                    f"This version of Windows is not supported: {nt_major_version}.{nt_minor_version} {vers.MajorVersion}.{vers_minor_version}!"
                 )
 
         vollog.debug(f"Determined symbol filename: {filename}")

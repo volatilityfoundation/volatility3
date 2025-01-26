@@ -18,7 +18,7 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
     """Scans all virtual memory areas for tasks using yara."""
 
     _required_framework_version = (2, 4, 0)
-    _version = (1, 0, 1)
+    _version = (1, 0, 2)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -31,7 +31,7 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                 optional=True,
             ),
             requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+                name="pslist", plugin=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.PluginRequirement(
                 name="yarascan", plugin=yarascan.YaraScan, version=(2, 0, 0)

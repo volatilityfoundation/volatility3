@@ -203,7 +203,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                 connector = " "
                 if chunk_size < 2:
                     connector = ""
-                ascii_data = connector.join([self._ascii_bytes(x) for x in valid_data])
+                ascii_data = connector.join(self._ascii_bytes(x) for x in valid_data)
 
             print(hex(offset), "  ", hex_data, "  ", ascii_data)
             offset += 16
@@ -240,7 +240,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             return None
         return self.context.modules[self.current_kernel_name]
 
-    def change_layer(self, layer_name: str = None):
+    def change_layer(self, layer_name: Optional[str] = None):
         """Changes the current default layer"""
         if not layer_name:
             layer_name = self.current_layer
@@ -250,7 +250,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             self.__current_layer = layer_name
         sys.ps1 = f"({self.current_layer}) >>> "
 
-    def change_symbol_table(self, symbol_table_name: str = None):
+    def change_symbol_table(self, symbol_table_name: Optional[str] = None):
         """Changes the current_symbol_table"""
         if not symbol_table_name:
             print("No symbol table provided, not changing current symbol table")
@@ -262,7 +262,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             self.__current_symbol_table = symbol_table_name
         print(f"Current Symbol Table: {self.current_symbol_table}")
 
-    def change_kernel(self, kernel_name: str = None):
+    def change_kernel(self, kernel_name: Optional[str] = None):
         if not kernel_name:
             print("No kernel module name provided, not changing current kernel")
         if kernel_name not in self.context.modules:
@@ -347,7 +347,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         object: Union[
             str, interfaces.objects.ObjectInterface, interfaces.objects.Template
         ],
-        offset: int = None,
+        offset: Optional[int] = None,
     ):
         """Display Type describes the members of a particular object in alphabetical order"""
         if not isinstance(
@@ -479,7 +479,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         if treegrid is not None:
             self.render_treegrid(treegrid)
 
-    def display_symbols(self, symbol_table: str = None):
+    def display_symbols(self, symbol_table: Optional[str] = None):
         """Prints an alphabetical list of symbols for a symbol table"""
         if symbol_table is None:
             print("No symbol table provided")
@@ -553,17 +553,16 @@ class Volshell(interfaces.plugins.PluginInterface):
             if argname in kwargs:
                 del kwargs[argname]
 
-        for keyword in kwargs:
-            val = kwargs[keyword]
-            if not isinstance(
-                val, interfaces.configuration.BasicTypes
-            ) and not isinstance(val, list):
-                if not isinstance(val, list) or all(
-                    isinstance(x, interfaces.configuration.BasicTypes) for x in val
-                ):
-                    raise TypeError(
-                        "Configurable values must be simple types (int, bool, str, bytes)"
-                    )
+        for keyword, val in kwargs.items():
+            BasicType_or_list_of_BasicType = False  # excludes list of lists
+            if isinstance(val, interfaces.configuration.BasicTypes):
+                BasicType_or_list_of_BasicType = True
+            if all(isinstance(x, interfaces.configuration.BasicTypes) for x in val):
+                BasicType_or_list_of_BasicType = True
+            if not BasicType_or_list_of_BasicType:
+                raise TypeError(
+                    "Configurable values must be simple types (int, bool, str, bytes)"
+                )
             self.context.config[config_path + "." + keyword] = val
 
         constructed = clazz(self.context, config_path, **constructor_args)
@@ -585,7 +584,6 @@ class NullFileHandler(io.BytesIO, interfaces.plugins.FileHandlerInterface):
 
     def writelines(self, lines: Iterable[bytes]):
         """Dummy method"""
-        pass
 
     def write(self, b: bytes):
         """Dummy method"""

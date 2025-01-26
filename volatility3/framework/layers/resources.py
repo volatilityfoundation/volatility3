@@ -29,7 +29,7 @@ except ImportError:
 
 try:
     # Import so that the handler is found by the framework.class_subclasses callc
-    import smb.SMBHandler  # lgtm [py/unused-import]
+    from smb import SMBHandler as SMBHandler  # lgtm [py/unused-import]
 except ImportError:
     # If we fail to import this, it means that SMB handling won't be available
     pass
@@ -57,7 +57,7 @@ def cascadeCloseFile(new_fp: IO[bytes], original_fp: IO[bytes]) -> IO[bytes]:
     return new_fp
 
 
-class ResourceAccessor(object):
+class ResourceAccessor:
     """Object for opening URLs as files (downloading locally first if
     necessary)"""
 

@@ -12,7 +12,7 @@ class Check_creds(interfaces.plugins.PluginInterface):
     """Checks if any processes are sharing credential structures"""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 1)
+    _version = (2, 0, 2)
 
     @classmethod
     def get_requirements(cls):
@@ -23,7 +23,7 @@ class Check_creds(interfaces.plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+                name="pslist", plugin=pslist.PsList, version=(4, 0, 0)
             ),
         ]
 
@@ -55,7 +55,7 @@ class Check_creds(interfaces.plugins.PluginInterface):
 
         for cred_addr, pids in creds.items():
             if len(pids) > 1:
-                pid_str = ", ".join([str(pid) for pid in pids])
+                pid_str = ", ".join(str(pid) for pid in pids)
 
                 fields = [
                     format_hints.Hex(cred_addr),

@@ -18,6 +18,7 @@ vollog = logging.getLogger(__name__)
 class SvcList(svcscan.SvcScan):
     """Lists services contained with the services.exe doubly linked list of services"""
 
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     def __init__(self, *args, **kwargs):
@@ -41,7 +42,7 @@ class SvcList(svcscan.SvcScan):
     @classmethod
     def _get_exe_range(cls, proc) -> Optional[Tuple[int, int]]:
         """
-        Returns a tuple of starting,ending address for
+        Returns a tuple of starting address and size of
         the VAD containing services.exe
         """
 
@@ -85,9 +86,7 @@ class SvcList(svcscan.SvcScan):
                 layer_name = proc.add_process_layer()
             except exceptions.InvalidAddressException:
                 vollog.warning(
-                    "Unable to access memory of services.exe running with PID: {}".format(
-                        proc.UniqueProcessId
-                    )
+                    f"Unable to access memory of services.exe running with PID: {proc.UniqueProcessId}"
                 )
                 continue
 
@@ -105,11 +104,10 @@ class SvcList(svcscan.SvcScan):
                 scanner=scanners.BytesScanner(needle=b"Sc27"),
                 sections=exe_range,
             ):
-                for record in cls.enumerate_vista_or_later_header(
+                yield from cls.enumerate_vista_or_later_header(
                     context,
                     service_table_name,
                     service_binary_dll_map,
                     layer_name,
                     offset,
-                ):
-                    yield record
+                )

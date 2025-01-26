@@ -119,8 +119,7 @@ class Kevents(interfaces.plugins.PluginInterface):
             return None
 
         for klist in klist_array:
-            for kn in mac.MacUtilities.walk_slist(klist, "kn_link"):
-                yield kn
+            yield from mac.MacUtilities.walk_slist(klist, "kn_link")
 
     @classmethod
     def _get_task_kevents(cls, kernel, task):

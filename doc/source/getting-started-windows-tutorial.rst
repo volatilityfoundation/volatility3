@@ -15,19 +15,19 @@ Memory can be acquired using a number of tools, below are some examples but othe
 Listing Plugins
 ---------------
 
-The following is a sample of the windows plugins available for volatility3, it is not complete and more more plugins may
+The following is a sample of the windows plugins available for volatility3, it is not complete and more plugins may
 be added.  For a complete reference, please see the volatility 3 :doc:`list of plugins <volatility3.plugins>`.
 For plugin requests, please create an issue with a description of the requested plugin.
 
 .. code-block:: shell-session
 
-    $ python3 vol.py --help | grep windows | head -n 5
+    $ python3 vol.py --help | grep windows | head -n 4
         windows.bigpools.BigPools
         windows.cmdline.CmdLine
         windows.crashinfo.Crashinfo
         windows.dlllist.DllList
 
-.. note:: Here the the command is piped to grep and head in-order to provide the start of a list of the available windows plugins.
+.. note:: Here the the command is piped to grep and head to provide the start of a list of the available windows plugins.
 
 Using plugins
 -------------
@@ -95,9 +95,9 @@ windows.pstree
         ** 616	504	svchost.exe	0xfa8002b86ab0	13	314	0	False	2022-02-07 16:32:16.000000 	N/A
         ** 624	504	svchost.exe	0xfa8002410630	10	350	0	False	2022-02-07 16:30:14.000000 	N/A
 
-``windows.pstree`` helps to display the parent child relationships between processes.
+``windows.pstree`` helps to display the parent-child relationships between processes.
 
-.. note:: Here the the command is piped to head in-order to provide smaller output, here listing only the first 20.
+.. note:: Here the the command is piped to head to provide smaller output, here listing only the first 20.
 
 windows.hashdump
 ~~~~~~~~~~~~~~~~
@@ -116,9 +116,3 @@ windows.hashdump
     Dennis	        1003	aad3b435b51404eeaad3b435b51404ee	cf96684bbc7877920adaa9663698bf54
 
 ``windows.hashdump`` helps to list the hashes of the users in the system.
-
-
-    
-
-
-

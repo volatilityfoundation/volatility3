@@ -39,7 +39,9 @@ def runvol(args, volatility, python):
     return p.returncode, stdout, stderr
 
 
-def runvol_plugin(plugin, img, volatility, python, pluginargs=[], globalargs=[]):
+def runvol_plugin(plugin, img, volatility, python, pluginargs=None, globalargs=None):
+    pluginargs = pluginargs or []
+    globalargs = globalargs or []
     args = (
         globalargs
         + [
@@ -54,11 +56,66 @@ def runvol_plugin(plugin, img, volatility, python, pluginargs=[], globalargs=[])
     return runvol(args, volatility, python)
 
 
+def runvolshell(img, volshell, python, volshellargs=None, globalargs=None):
+    volshellargs = volshellargs or []
+    globalargs = globalargs or []
+    args = (
+        globalargs
+        + [
+            "--single-location",
+            img,
+            "-q",
+        ]
+        + volshellargs
+    )
+
+    return runvol(args, volshell, python)
+
+
 #
 # TESTS
 #
 
+
+def basic_volshell_test(image, volatility, python, globalargs):
+    # Basic VolShell test to verify requirements and ensure VolShell runs without crashing
+
+    volshell_commands = [
+        "print(ps())",
+        "exit()",
+    ]
+
+    # FIXME: When the minimum Python version includes 3.12, replace the following with:
+    # with tempfile.NamedTemporaryFile(delete_on_close=False) as fd: ...
+    fd, filename = tempfile.mkstemp(suffix=".txt")
+    try:
+        volshell_script = "\n".join(volshell_commands)
+        with os.fdopen(fd, "w") as f:
+            f.write(volshell_script)
+
+        rc, out, _err = runvolshell(
+            img=image,
+            volshell=volatility,
+            python=python,
+            volshellargs=["--script", filename],
+            globalargs=globalargs,
+        )
+    finally:
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(filename)
+
+    assert rc == 0
+    assert out.count(b"\n") >= 4
+
+    return out
+
+
 # WINDOWS
+
+
+def test_windows_volshell(image, volatility, python):
+    out = basic_volshell_test(image, volatility, python, globalargs=["-w"])
+    assert out.count(b"<EPROCESS") > 40
 
 
 def test_windows_pslist(image, volatility, python):
@@ -332,86 +389,91 @@ def test_windows_vadyarascan_yara_string(image, volatility, python):
 # LINUX
 
 
+def test_linux_volshell(image, volatility, python):
+    out = basic_volshell_test(image, volatility, python, globalargs=["-l"])
+    assert out.count(b"<task_struct") > 100
+
+
 def test_linux_pslist(image, volatility, python):
     rc, out, _err = runvol_plugin("linux.pslist.PsList", image, volatility, python)
-    out = out.lower()
 
+    assert rc == 0
+    out = out.lower()
     assert (out.find(b"init") != -1) or (out.find(b"systemd") != -1)
     assert out.find(b"watchdog") != -1
     assert out.count(b"\n") > 10
-    assert rc == 0
 
 
 def test_linux_check_idt(image, volatility, python):
     rc, out, _err = runvol_plugin(
         "linux.check_idt.Check_idt", image, volatility, python
     )
-    out = out.lower()
 
+    assert rc == 0
+    out = out.lower()
     assert out.count(b"__kernel__") >= 10
     assert out.count(b"\n") > 10
-    assert rc == 0
 
 
 def test_linux_check_syscall(image, volatility, python):
     rc, out, _err = runvol_plugin(
         "linux.check_syscall.Check_syscall", image, volatility, python
     )
-    out = out.lower()
 
+    assert rc == 0
+    out = out.lower()
     assert out.find(b"sys_close") != -1
     assert out.find(b"sys_open") != -1
     assert out.count(b"\n") > 100
-    assert rc == 0
 
 
 def test_linux_lsmod(image, volatility, python):
     rc, out, _err = runvol_plugin("linux.lsmod.Lsmod", image, volatility, python)
-    out = out.lower()
 
-    assert out.count(b"\n") > 10
     assert rc == 0
+    out = out.lower()
+    assert out.count(b"\n") > 10
 
 
 def test_linux_lsof(image, volatility, python):
     rc, out, _err = runvol_plugin("linux.lsof.Lsof", image, volatility, python)
-    out = out.lower()
 
+    assert rc == 0
+    out = out.lower()
     assert out.count(b"socket:") >= 10
     assert out.count(b"\n") > 35
-    assert rc == 0
 
 
 def test_linux_proc_maps(image, volatility, python):
     rc, out, _err = runvol_plugin("linux.proc.Maps", image, volatility, python)
-    out = out.lower()
 
+    assert rc == 0
+    out = out.lower()
     assert out.count(b"anonymous mapping") >= 10
     assert out.count(b"\n") > 100
-    assert rc == 0
 
 
 def test_linux_tty_check(image, volatility, python):
     rc, out, _err = runvol_plugin(
         "linux.tty_check.tty_check", image, volatility, python
     )
-    out = out.lower()
 
+    assert rc == 0
+    out = out.lower()
     assert out.find(b"__kernel__") != -1
     assert out.count(b"\n") >= 5
-    assert rc == 0
 
 
 def test_linux_sockstat(image, volatility, python):
     rc, out, _err = runvol_plugin("linux.sockstat.Sockstat", image, volatility, python)
 
+    assert rc == 0
     assert out.count(b"AF_UNIX") >= 354
     assert out.count(b"AF_BLUETOOTH") >= 5
     assert out.count(b"AF_INET") >= 32
     assert out.count(b"AF_INET6") >= 20
     assert out.count(b"AF_PACKET") >= 1
     assert out.count(b"AF_NETLINK") >= 43
-    assert rc == 0
 
 
 def test_linux_library_list(image, volatility, python):
@@ -423,49 +485,48 @@ def test_linux_library_list(image, volatility, python):
         pluginargs=["--pids", "2363"],
     )
 
+    assert rc == 0
     assert re.search(
         rb"NetworkManager\s2363\s0x7f52cdda0000\s/lib/x86_64-linux-gnu/libnss_files.so.2",
         out,
     )
 
     assert out.count(b"\n") > 10
-    assert rc == 0
 
 
 def test_linux_pstree(image, volatility, python):
     rc, out, _err = runvol_plugin("linux.pstree.PsTree", image, volatility, python)
-    out = out.lower()
 
+    assert rc == 0
+    out = out.lower()
     assert (out.find(b"init") != -1) or (out.find(b"systemd") != -1)
     assert out.count(b"\n") > 10
-    assert rc == 0
 
 
 def test_linux_pidhashtable(image, volatility, python):
     rc, out, _err = runvol_plugin(
         "linux.pidhashtable.PIDHashTable", image, volatility, python
     )
-    out = out.lower()
 
+    assert rc == 0
+    out = out.lower()
     assert (out.find(b"init") != -1) or (out.find(b"systemd") != -1)
     assert out.count(b"\n") > 10
-    assert rc == 0
 
 
 def test_linux_bash(image, volatility, python):
     rc, out, _err = runvol_plugin("linux.bash.Bash", image, volatility, python)
-    out = out.lower()
 
-    assert out.count(b"\n") > 10
     assert rc == 0
+    assert out.count(b"\n") > 10
 
 
 def test_linux_boottime(image, volatility, python):
     rc, out, _err = runvol_plugin("linux.boottime.Boottime", image, volatility, python)
-    out = out.lower()
 
-    assert out.count(b"utc") >= 1
     assert rc == 0
+    out = out.lower()
+    assert out.count(b"utc") >= 1
 
 
 def test_linux_capabilities(image, volatility, python):
@@ -482,36 +543,33 @@ def test_linux_capabilities(image, volatility, python):
         # However, we can still check that the plugin requirements are met.
         return None
 
-    out = out.lower()
-
-    assert out.count(b"\n") > 10
     assert rc == 0
+    assert out.count(b"\n") > 10
 
 
 def test_linux_check_creds(image, volatility, python):
-    rc, _out, _err = runvol_plugin(
+    rc, out, _err = runvol_plugin(
         "linux.check_creds.Check_creds", image, volatility, python
     )
 
     # linux-sample-1.bin has no processes sharing credentials.
     # This validates that plugin requirements are met and exceptions are not raised.
     assert rc == 0
+    assert out.count(b"\n") >= 4
 
 
 def test_linux_elfs(image, volatility, python):
     rc, out, _err = runvol_plugin("linux.elfs.Elfs", image, volatility, python)
-    out = out.lower()
 
-    assert out.count(b"\n") > 10
     assert rc == 0
+    assert out.count(b"\n") > 10
 
 
 def test_linux_envars(image, volatility, python):
     rc, out, _err = runvol_plugin("linux.envars.Envars", image, volatility, python)
-    out = out.lower()
 
-    assert out.count(b"\n") > 10
     assert rc == 0
+    assert out.count(b"\n") > 10
 
 
 def test_linux_kthreads(image, volatility, python):
@@ -528,44 +586,42 @@ def test_linux_kthreads(image, volatility, python):
         # However, we can still check that the plugin requirements are met.
         return None
 
-    out = out.lower()
-
-    assert out.count(b"\n") > 10
     assert rc == 0
+    assert out.count(b"\n") >= 4
 
 
 def test_linux_malfind(image, volatility, python):
-    rc, _out, _err = runvol_plugin("linux.malfind.Malfind", image, volatility, python)
+    rc, out, _err = runvol_plugin("linux.malfind.Malfind", image, volatility, python)
 
     # linux-sample-1.bin has no process memory ranges with potential injected code.
     # This validates that plugin requirements are met and exceptions are not raised.
     assert rc == 0
+    assert out.count(b"\n") >= 4
 
 
 def test_linux_mountinfo(image, volatility, python):
     rc, out, _err = runvol_plugin(
         "linux.mountinfo.MountInfo", image, volatility, python
     )
-    out = out.lower()
 
-    assert out.count(b"\n") > 10
     assert rc == 0
+    assert out.count(b"\n") > 10
 
 
 def test_linux_psaux(image, volatility, python):
     rc, out, _err = runvol_plugin("linux.psaux.PsAux", image, volatility, python)
-    out = out.lower()
 
-    assert out.count(b"\n") > 50
     assert rc == 0
+    assert out.count(b"\n") > 50
 
 
 def test_linux_ptrace(image, volatility, python):
-    rc, _out, _err = runvol_plugin("linux.ptrace.Ptrace", image, volatility, python)
+    rc, out, _err = runvol_plugin("linux.ptrace.Ptrace", image, volatility, python)
 
-    # linux-sample-1.bin has no processes being ptreaced.
+    # linux-sample-1.bin has no processes being ptraced.
     # This validates that plugin requirements are met and exceptions are not raised.
     assert rc == 0
+    assert out.count(b"\n") >= 4
 
 
 def test_linux_vmaregexscan(image, volatility, python):
@@ -576,10 +632,9 @@ def test_linux_vmaregexscan(image, volatility, python):
         python,
         pluginargs=["--pid", "1", "--pattern", "\\x7fELF"],
     )
-    out = out.lower()
 
-    assert out.count(b"\n") > 10
     assert rc == 0
+    assert out.count(b"\n") > 10
 
 
 def test_linux_vmayarascan_yara_rule(image, volatility, python):
@@ -613,9 +668,8 @@ def test_linux_vmayarascan_yara_rule(image, volatility, python):
         with contextlib.suppress(FileNotFoundError):
             os.remove(filename)
 
-    out = out.lower()
-    assert out.count(b"\n") > 4
     assert rc == 0
+    assert out.count(b"\n") > 4
 
 
 def test_linux_vmayarascan_yara_string(image, volatility, python):
@@ -626,13 +680,173 @@ def test_linux_vmayarascan_yara_string(image, volatility, python):
         python,
         pluginargs=["--pid", "1", "--yara-string", "ELF"],
     )
-    out = out.lower()
 
-    assert out.count(b"\n") > 10
     assert rc == 0
+    assert out.count(b"\n") > 10
+
+
+def test_linux_page_cache_files(image, volatility, python):
+    rc, out, _err = runvol_plugin(
+        "linux.pagecache.Files",
+        image,
+        volatility,
+        python,
+        pluginargs=["--find", "/etc/passwd"],
+    )
+
+    assert rc == 0
+    assert out.count(b"\n") > 4
+
+    # inode_num inode_addr ... file_path
+    assert re.search(
+        rb"146829\s0x88001ab5c270.*?/etc/passwd",
+        out,
+    )
+
+
+def test_linux_page_cache_inodepages(image, volatility, python):
+
+    inode_address = hex(0x88001AB5C270)
+    inode_dump_filename = f"inode_{inode_address}.dmp"
+
+    rc, out, _err = runvol_plugin(
+        "linux.pagecache.InodePages",
+        image,
+        volatility,
+        python,
+        pluginargs=["--inode", inode_address],
+    )
+
+    assert rc == 0
+    assert out.count(b"\n") > 4
+
+    # PageVAddr PagePAddr MappingAddr .. DumpSafe
+    assert re.search(
+        rb"0xea000054c5f8\s0x18389000\s0x88001ab5c3b0.*?True",
+        out,
+    )
+
+    try:
+        rc, out, _err = runvol_plugin(
+            "linux.pagecache.InodePages",
+            image,
+            volatility,
+            python,
+            pluginargs=["--inode", inode_address, "--dump"],
+        )
+
+        assert rc == 0
+        assert out.count(b"\n") >= 4
+
+        assert os.path.exists(inode_dump_filename)
+        with open(inode_dump_filename, "rb") as fp:
+            inode_contents = fp.read()
+        assert inode_contents.count(b"\n") > 30
+        assert inode_contents.count(b"root:x:0:0:root:/root:/bin/bash") > 0
+    finally:
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(inode_dump_filename)
+
+
+def test_linux_check_afinfo(image, volatility, python):
+    rc, out, _err = runvol_plugin(
+        "linux.check_afinfo.Check_afinfo", image, volatility, python
+    )
+
+    # linux-sample-1.bin has no suspicious results.
+    # This validates that plugin requirements are met and exceptions are not raised.
+    assert rc == 0
+    assert out.count(b"\n") >= 4
+
+
+def test_linux_check_modules(image, volatility, python):
+    rc, out, _err = runvol_plugin(
+        "linux.check_modules.Check_modules", image, volatility, python
+    )
+
+    # linux-sample-1.bin has no suspicious results.
+    # This validates that plugin requirements are met and exceptions are not raised.
+    assert rc == 0
+    assert out.count(b"\n") >= 4
+
+
+def test_linux_ebpf_progs(image, volatility, python):
+    rc, out, err = runvol_plugin(
+        "linux.ebpf.EBPF",
+        image,
+        volatility,
+        python,
+        globalargs=["-vvv"],
+    )
+
+    if rc != 0 and err.count(b"Unsupported kernel") > 0:
+        # The linux-sample-1.bin kernel implementation isn't supported.
+        # However, we can still check that the plugin requirements are met.
+        return None
+
+    assert rc == 0
+    assert out.count(b"\n") > 4
+
+
+def test_linux_iomem(image, volatility, python):
+    rc, out, _err = runvol_plugin("linux.iomem.IOMem", image, volatility, python)
+
+    assert rc == 0
+    assert out.count(b"\n") > 100
+
+
+def test_linux_keyboard_notifiers(image, volatility, python):
+    rc, out, _err = runvol_plugin(
+        "linux.keyboard_notifiers.Keyboard_notifiers", image, volatility, python
+    )
+
+    # linux-sample-1.bin has no suspicious results for this plugin.
+    # This validates that plugin requirements are met and exceptions are not raised.
+    assert rc == 0
+    assert out.count(b"\n") >= 4
+
+
+def test_linux_kmesg(image, volatility, python):
+    rc, out, _err = runvol_plugin("linux.kmsg.Kmsg", image, volatility, python)
+
+    assert rc == 0
+    assert out.count(b"\n") > 100
+
+
+def test_linux_netfilter(image, volatility, python):
+    rc, out, _err = runvol_plugin(
+        "linux.netfilter.Netfilter", image, volatility, python
+    )
+
+    # linux-sample-1.bin has no suspicious results for this plugin.
+    # This validates that plugin requirements are met and exceptions are not raised.
+    assert rc == 0
+    assert out.count(b"\n") >= 4
+
+
+def test_linux_psscan(image, volatility, python):
+    rc, out, _err = runvol_plugin("linux.psscan.PsScan", image, volatility, python)
+
+    assert rc == 0
+    assert out.count(b"\n") > 100
+
+
+def test_linux_hidden_modules(image, volatility, python):
+    rc, out, _err = runvol_plugin(
+        "linux.hidden_modules.Hidden_modules", image, volatility, python
+    )
+
+    # linux-sample-1.bin has no hidden modules.
+    # This validates that plugin requirements are met and exceptions are not raised.
+    assert rc == 0
+    assert out.count(b"\n") >= 4
 
 
 # MAC
+
+
+def test_mac_volshell(image, volatility, python):
+    basic_volshell_test(image, volatility, python, globalargs=["-m"])
 
 
 def test_mac_pslist(image, volatility, python):

@@ -6,9 +6,9 @@ import math
 import logging
 import datetime
 from dataclasses import dataclass, astuple
-from typing import List, Set, Type, Iterable
+from typing import List, Set, Type, Iterable, Tuple
 
-from volatility3.framework import renderers, interfaces
+from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.configuration import requirements
@@ -104,7 +104,7 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 1)
+    _version = (1, 0, 2)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -147,7 +147,13 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
             Otherwise, it returns the same symlink_path
         """
         # i_link (fast symlinks) were introduced in 4.2
-        if inode and inode.is_link and inode.has_member("i_link") and inode.i_link:
+        if (
+            inode
+            and inode.is_link
+            and inode.has_member("i_link")
+            and inode.i_link
+            and inode.i_link.is_readable()
+        ):
             i_link_str = inode.i_link.dereference().cast(
                 "string", max_length=255, encoding="utf-8", errors="replace"
             )
@@ -253,6 +259,10 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
             if not root_inode.is_valid():
                 continue
 
+            if not (root_inode.i_mapping and root_inode.i_mapping.is_readable()):
+                # Retrieving data from the page cache requires a valid address space
+                continue
+
             # Inode already processed?
             if root_inode_ptr in seen_inodes:
                 continue
@@ -282,6 +292,10 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
                 file_inode = file_inode_ptr.dereference()
                 if not file_inode.is_valid():
+                    continue
+
+                if not (file_inode.i_mapping and file_inode.i_mapping.is_readable()):
+                    # Retrieving data from the page cache requires a valid address space
                     continue
 
                 # Inode already processed?
@@ -316,10 +330,12 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
             if self.config["find"]:
                 if inode_in.path == self.config["find"]:
                     inode_out = inode_in.to_user(vmlinux_layer)
+
                     yield (0, astuple(inode_out))
                     break  # Only the first match
             else:
                 inode_out = inode_in.to_user(vmlinux_layer)
+
                 yield (0, astuple(inode_out))
 
     def generate_timeline(self):
@@ -389,7 +405,7 @@ class InodePages(plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 1)
+    _version = (2, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -412,9 +428,10 @@ class InodePages(plugins.PluginInterface):
                 description="Inode address",
                 optional=True,
             ),
-            requirements.StringRequirement(
+            requirements.BooleanRequirement(
                 name="dump",
-                description="Output file path",
+                description="Extract inode content",
+                default=False,
                 optional=True,
             ),
         ]
@@ -436,33 +453,85 @@ class InodePages(plugins.PluginInterface):
         """
         if not inode.is_reg:
             vollog.error("The inode is not a regular file")
-            return
+            return None
 
         # By using truncate/seek, provided the filesystem supports it, a sparse file will be
         # created, saving both disk space and I/O time.
         # Additionally, using the page index will guarantee that each page is written at the
         # appropriate file position.
+        inode_size = inode.i_size
         try:
-            with open_method(filename) as f:
-                inode_size = inode.i_size
-                f.truncate(inode_size)
-
+            file_initialized = False
+            with open_method(filename) as file_obj:
                 for page_idx, page_content in inode.get_contents():
                     current_fp = page_idx * vmlinux_layer.page_size
                     max_length = inode_size - current_fp
-                    page_bytes = page_content[:max_length]
-                    if current_fp + len(page_bytes) > inode_size:
+                    page_bytes_len = min(max_length, len(page_content))
+                    if (
+                        current_fp >= inode_size
+                        or current_fp + page_bytes_len > inode_size
+                    ):
                         vollog.error(
                             "Page out of file bounds: inode 0x%x, inode size %d, page index %d",
                             inode.vol.offset,
                             inode_size,
                             page_idx,
                         )
-                    f.seek(current_fp)
-                    f.write(page_bytes)
+                        continue
+                    page_bytes = page_content[:page_bytes_len]
 
-        except IOError as e:
+                    if not file_initialized:
+                        # Lazy initialization to avoid truncating the file until we are
+                        # certain there is something to write
+                        file_obj.truncate(inode_size)
+                        file_initialized = True
+
+                    file_obj.seek(current_fp)
+                    file_obj.write(page_bytes)
+        except exceptions.LinuxPageCacheException:
+            vollog.error(
+                f"Error dumping cached pages for inode at {inode.vol.offset:#x}"
+            )
+        except OSError as e:
             vollog.error("Unable to write to file (%s): %s", filename, e)
+
+    def _generate_inode_fields(
+        self,
+        inode: interfaces.objects.ObjectInterface,
+        vmlinux_layer: interfaces.layers.TranslationLayerInterface,
+    ) -> Iterable[Tuple[int, int, int, int, bool, str]]:
+        inode_size = inode.i_size
+        try:
+            for page_obj in inode.get_pages():
+                if page_obj.mapping != inode.i_mapping:
+                    vollog.warning(
+                        f"Cached page at {page_obj.vol.offset:#x} has a mismatched address space with the inode. Skipping page"
+                    )
+                    continue
+                page_vaddr = page_obj.vol.offset
+                page_paddr = page_obj.to_paddr()
+                page_mapping_addr = page_obj.mapping
+                page_index = page_obj.index
+                page_file_offset = page_index * vmlinux_layer.page_size
+                dump_safe = (
+                    page_file_offset < inode_size
+                    and page_mapping_addr
+                    and page_mapping_addr.is_readable()
+                )
+                page_flags_list = page_obj.get_flags_list()
+                page_flags = ",".join([x.replace("PG_", "") for x in page_flags_list])
+                fields = (
+                    page_vaddr,
+                    page_paddr,
+                    page_mapping_addr,
+                    page_index,
+                    dump_safe,
+                    page_flags,
+                )
+
+                yield 0, fields
+        except exceptions.LinuxPageCacheException:
+            vollog.warning(f"Page cache for inode at {inode.vol.offset:#x} is corrupt")
 
     def _generator(self):
         vmlinux_module_name = self.config["kernel"]
@@ -471,7 +540,7 @@ class InodePages(plugins.PluginInterface):
 
         if self.config["inode"] and self.config["find"]:
             vollog.error("Cannot use --inode and --find simultaneously")
-            return
+            return None
 
         if self.config["find"]:
             inodes_iter = Files.get_inodes(
@@ -482,46 +551,33 @@ class InodePages(plugins.PluginInterface):
                 if inode_in.path == self.config["find"]:
                     inode = inode_in.inode
                     break  # Only the first match
-
+            else:
+                vollog.error("Unable to find inode with path %s", self.config["find"])
+                return None
         elif self.config["inode"]:
             inode = vmlinux.object("inode", self.config["inode"], absolute=True)
         else:
             vollog.error("You must use either --inode or --find")
-            return
+            return None
 
         if not inode.is_valid():
             vollog.error("Invalid inode at 0x%x", inode.vol.offset)
-            return
+            return None
 
         if not inode.is_reg:
             vollog.error("The inode is not a regular file")
-            return
-
-        inode_size = inode.i_size
-        for page_obj in inode.get_pages():
-            page_vaddr = page_obj.vol.offset
-            page_paddr = page_obj.to_paddr()
-            page_mapping_addr = page_obj.mapping
-            page_index = int(page_obj.index)
-            page_file_offset = page_index * vmlinux_layer.page_size
-            dump_safe = page_file_offset < inode_size
-            page_flags_list = page_obj.get_flags_list()
-            page_flags = ",".join([x.replace("PG_", "") for x in page_flags_list])
-            fields = (
-                page_vaddr,
-                page_paddr,
-                page_mapping_addr,
-                page_index,
-                dump_safe,
-                page_flags,
-            )
-
-            yield 0, fields
+            return None
 
         if self.config["dump"]:
-            filename = self.config["dump"]
-            vollog.info("[*] Writing inode at 0x%x to '%s'", inode.vol.offset, filename)
-            self.write_inode_content_to_file(inode, filename, self.open, vmlinux_layer)
+            open_method = self.open
+            inode_address = inode.vol.offset
+            filename = open_method.sanitize_filename(f"inode_0x{inode_address:x}.dmp")
+            vollog.info("[*] Writing inode at 0x%x to '%s'", inode_address, filename)
+            self.write_inode_content_to_file(
+                inode, filename, open_method, vmlinux_layer
+            )
+        else:
+            yield from self._generate_inode_fields(inode, vmlinux_layer)
 
     def run(self):
         headers = [

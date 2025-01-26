@@ -53,9 +53,7 @@ class Memmap(interfaces.plugins.PluginInterface):
                 proc_layer = self.context.layers[proc_layer_name]
             except exceptions.InvalidAddressException as excp:
                 vollog.debug(
-                    "Process {}: invalid address {} in layer {}".format(
-                        pid, excp.invalid_address, excp.layer_name
-                    )
+                    f"Process {pid}: invalid address {excp.invalid_address} in layer {excp.layer_name}"
                 )
                 continue
 
@@ -80,11 +78,7 @@ class Memmap(interfaces.plugins.PluginInterface):
                         except exceptions.InvalidAddressException:
                             file_output = "Error outputting to file"
                             vollog.debug(
-                                "Unable to write {}'s address {} to {}".format(
-                                    proc_layer_name,
-                                    offset,
-                                    file_handle.preferred_filename,
-                                )
+                                f"Unable to write {proc_layer_name}'s address {offset} to {file_handle.preferred_filename}"
                             )
 
                     yield (

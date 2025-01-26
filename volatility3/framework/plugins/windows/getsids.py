@@ -58,7 +58,7 @@ class GetSIDs(interfaces.plugins.PluginInterface):
             )
 
         # Get all the sids from the json file.
-        with open(sids_json_file_name, "r") as file_handle:
+        with open(sids_json_file_name) as file_handle:
             sids_json_data = json.load(file_handle)
             self.servicesids = sids_json_data["service sids"]
             self.well_known_sids = sids_json_data["well known"]
@@ -122,7 +122,7 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                         except (
                             exceptions.InvalidAddressException,
                             layers.registry.RegistryFormatException,
-                        ) as excp:
+                        ):
                             continue
                         try:
                             value_data = node.decode_data()
@@ -156,9 +156,13 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                             ValueError,
                             exceptions.InvalidAddressException,
                             layers.registry.RegistryFormatException,
-                        ) as excp:
+                        ):
                             continue
-            except (KeyError, exceptions.InvalidAddressException):
+            except (
+                KeyError,
+                exceptions.InvalidAddressException,
+                layers.registry.RegistryFormatException,
+            ):
                 continue
 
         return sids

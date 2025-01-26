@@ -3,9 +3,9 @@
 #
 
 import logging
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
-from volatility3.framework import constants, exceptions, renderers, interfaces, symbols
+from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
@@ -13,23 +13,15 @@ from volatility3.plugins.windows import pslist, psscan
 
 vollog = logging.getLogger(__name__)
 
-try:
-    import capstone
-
-    has_capstone = True
-except ImportError:
-    has_capstone = False
-
 
 class Handles(interfaces.plugins.PluginInterface):
     """Lists process open handles."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 2)
+    _version = (2, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._sar_value = None
         self._type_map = None
         self._cookie = None
         self._level_mask = 7
@@ -62,21 +54,6 @@ class Handles(interfaces.plugins.PluginInterface):
             ),
         ]
 
-    def _decode_pointer(self, value, magic):
-        """Windows encodes pointers to objects and decodes them on the fly
-        before using them.
-
-        This function mimics the decoding routine so we can generate the
-        proper pointer values as well.
-        """
-
-        value = value & 0xFFFFFFFFFFFFFFF8
-        value = value >> magic
-        # if (value & (1 << 47)):
-        #    value = value | 0xFFFF000000000000
-
-        return value
-
     def _get_item(self, handle_table_entry, handle_value):
         """Given  a handle table entry (_HANDLE_TABLE_ENTRY) structure from a
         process' handle table, determine where the corresponding object's
@@ -91,7 +68,12 @@ class Handles(interfaces.plugins.PluginInterface):
             if not self.context.layers[virtual].is_valid(handle_table_entry.Object):
                 return None
             fast_ref = handle_table_entry.Object.cast("_EX_FAST_REF")
-            object_header = fast_ref.dereference().cast("_OBJECT_HEADER")
+
+            try:
+                object_header = fast_ref.dereference().cast("_OBJECT_HEADER")
+            except exceptions.InvalidAddressException:
+                return None
+
             object_header.GrantedAccess = handle_table_entry.GrantedAccess
         except AttributeError:
             # starting with windows 8
@@ -100,29 +82,26 @@ class Handles(interfaces.plugins.PluginInterface):
             )
 
             if is_64bit:
-                if handle_table_entry.LowValue == 0:
+                try:
+                    pointer_bits = handle_table_entry.ObjectPointerBits
+                except exceptions.InvalidAddressException:
                     return None
 
-                magic = self.find_sar_value()
+                if pointer_bits == 0:
+                    return None
 
-                # is this the right thing to raise here?
-                if magic is None:
-                    if has_capstone:
-                        raise AttributeError(
-                            "Unable to find the SAR value for decoding handle table pointers"
-                        )
-                    else:
-                        raise exceptions.MissingModuleException(
-                            "capstone",
-                            "Requires capstone to find the SAR value for decoding handle table pointers",
-                        )
+                offset = pointer_bits << 4
 
-                offset = self._decode_pointer(handle_table_entry.LowValue, magic)
             else:
-                if handle_table_entry.InfoTable == 0:
+                try:
+                    info_table = handle_table_entry.InfoTable
+                except exceptions.InvalidAddressException:
                     return None
 
-                offset = handle_table_entry.InfoTable & ~7
+                if info_table == 0:
+                    return None
+
+                offset = info_table & ~7
 
             # print("LowValue: {0:#x} Magic: {1:#x} Offset: {2:#x}".format(handle_table_entry.InfoTable, magic, offset))
             object_header = self.context.object(
@@ -130,82 +109,13 @@ class Handles(interfaces.plugins.PluginInterface):
                 virtual,
                 offset=offset,
             )
-            object_header.GrantedAccess = handle_table_entry.GrantedAccessBits
+            try:
+                object_header.GrantedAccess = handle_table_entry.GrantedAccessBits
+            except exceptions.InvalidAddressException:
+                return None
 
         object_header.HandleValue = handle_value
         return object_header
-
-    def find_sar_value(self):
-        """Locate ObpCaptureHandleInformationEx if it exists in the sample.
-
-        Once found, parse it for the SAR value that we need to decode
-        pointers in the _HANDLE_TABLE_ENTRY which allows us to find the
-        associated _OBJECT_HEADER.
-        """
-        DEFAULT_SAR_VALUE = 0x10  # to be used only when decoding fails
-
-        if self._sar_value is None:
-            if not has_capstone:
-                vollog.debug(
-                    "capstone module is missing, unable to create disassembly of ObpCaptureHandleInformationEx"
-                )
-                return None
-            kernel = self.context.modules[self.config["kernel"]]
-
-            virtual_layer_name = kernel.layer_name
-            kvo = self.context.layers[virtual_layer_name].config[
-                "kernel_virtual_offset"
-            ]
-            ntkrnlmp = self.context.module(
-                kernel.symbol_table_name, layer_name=virtual_layer_name, offset=kvo
-            )
-
-            try:
-                func_addr = ntkrnlmp.get_symbol("ObpCaptureHandleInformationEx").address
-            except exceptions.SymbolError:
-                vollog.debug("Unable to locate ObpCaptureHandleInformationEx symbol")
-                return None
-
-            try:
-                func_addr_to_read = kvo + func_addr
-                num_bytes_to_read = 0x200
-                vollog.debug(
-                    f"ObpCaptureHandleInformationEx symbol located at {hex(func_addr_to_read)}"
-                )
-                data = self.context.layers.read(
-                    virtual_layer_name, func_addr_to_read, num_bytes_to_read
-                )
-            except exceptions.InvalidAddressException:
-                vollog.warning(
-                    f"Failed to read {hex(num_bytes_to_read)} bytes at symbol {hex(func_addr_to_read)}. Unable to decode SAR value. Failing back to a common value of {hex(DEFAULT_SAR_VALUE)}"
-                )
-                self._sar_value = DEFAULT_SAR_VALUE
-                return self._sar_value
-
-            md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
-
-            instruction_count = 0
-            for address, size, mnemonic, op_str in md.disasm_lite(
-                data, kvo + func_addr
-            ):
-                # print("{} {} {} {}".format(address, size, mnemonic, op_str))
-                instruction_count += 1
-                if mnemonic.startswith("sar"):
-                    # if we don't want to parse op strings, we can disasm the
-                    # single sar instruction again, but we use disasm_lite for speed
-                    self._sar_value = int(op_str.split(",")[1].strip(), 16)
-                    vollog.debug(
-                        f"SAR located at {hex(address)} with value of {hex(self._sar_value)}"
-                    )
-                    break
-
-            if self._sar_value is None:
-                vollog.warning(
-                    f"Failed to to locate SAR value having parsed {instruction_count} instructions, failing back to a common value of {hex(DEFAULT_SAR_VALUE)}"
-                )
-                self._sar_value = DEFAULT_SAR_VALUE
-
-        return self._sar_value
 
     @classmethod
     def get_type_map(
@@ -268,7 +178,7 @@ class Handles(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 vollog.log(
                     constants.LOGLEVEL_VVV,
-                    f"Cannot access _OBJECT_HEADER Name at {objt.vol.offset:#x}",
+                    f"Cannot access _OBJECT_HEADER Name at {ptr.vol.offset:#x}",
                 )
                 continue
 
@@ -334,9 +244,16 @@ class Handles(interfaces.plugins.PluginInterface):
         masked_offset = offset & layer_object.maximum_address
 
         for entry in table:
+            # This triggered a backtrace in many testing samples
+            # in the level == 0 path
+            # The code above this calls `is_valid` on the `offset`
+            # It is sent but then does not validate `entry` before
+            # sending it to `_get_item`
+            if not self.context.layers[virtual].is_valid(entry.vol.offset):
+                continue
+
             if level > 0:
-                for x in self._make_handle_array(entry, level - 1, depth):
-                    yield x
+                yield from self._make_handle_array(entry, level - 1, depth)
                 depth += 1
             else:
                 handle_multiplier = 4
@@ -372,8 +289,7 @@ class Handles(interfaces.plugins.PluginInterface):
             )
             return None
 
-        for handle_table_entry in self._make_handle_array(TableCode, table_levels):
-            yield handle_table_entry
+        yield from self._make_handle_array(TableCode, table_levels)
 
     def _generator(self, procs):
         kernel = self.context.modules[self.config["kernel"]]
@@ -425,7 +341,7 @@ class Handles(interfaces.plugins.PluginInterface):
                         try:
                             obj_name = entry.NameInfo.Name.String
                         except (ValueError, exceptions.InvalidAddressException):
-                            obj_name = ""
+                            obj_name = None
 
                 except exceptions.InvalidAddressException:
                     vollog.log(
@@ -443,7 +359,7 @@ class Handles(interfaces.plugins.PluginInterface):
                         format_hints.Hex(entry.HandleValue),
                         obj_type,
                         format_hints.Hex(entry.GrantedAccess),
-                        obj_name,
+                        obj_name or renderers.NotAvailableValue(),
                     ),
                 )
 

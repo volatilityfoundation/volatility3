@@ -332,7 +332,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
         try:
             if hive:
                 result = hive.get_key(key)
-        except KeyError:
+        except (KeyError, registry.RegistryFormatException):
             vollog.info(
                 f"Unable to load the required registry key {hive.get_name()}\\{key} from this memory image"
             )

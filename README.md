@@ -88,7 +88,7 @@ The latest generated copy of the documentation can be found at: <https://volatil
 
 ## Licensing and Copyright
 
-Copyright (C) 2007-2024 Volatility Foundation
+Copyright (C) 2007-2025 Volatility Foundation
 
 All Rights Reserved
 

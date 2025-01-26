@@ -232,10 +232,8 @@ class HiveList(interfaces.plugins.PluginInterface):
         for hive in hg:
             if hive.vol.offset in seen:
                 vollog.debug(
-                    "Hivelist found an already seen offset {} while "
-                    "traversing forwards, this should not occur".format(
-                        hex(hive.vol.offset)
-                    )
+                    f"Hivelist found an already seen offset {hex(hive.vol.offset)} while "
+                    "traversing forwards, this should not occur"
                 )
                 break
             seen.add(hive.vol.offset)
@@ -249,18 +247,14 @@ class HiveList(interfaces.plugins.PluginInterface):
         forward_invalid = hg.invalid
         if forward_invalid:
             vollog.debug(
-                "Hivelist failed traversing the list forwards at {}, traversing backwards".format(
-                    hex(forward_invalid)
-                )
+                f"Hivelist failed traversing the list forwards at {hex(forward_invalid)}, traversing backwards"
             )
             hg = HiveGenerator(cmhive, forward=False)
             for hive in hg:
                 if hive.vol.offset in seen:
                     vollog.debug(
-                        "Hivelist found an already seen offset {} while "
-                        "traversing backwards, list walking met in the middle".format(
-                            hex(hive.vol.offset)
-                        )
+                        f"Hivelist found an already seen offset {hex(hive.vol.offset)} while "
+                        "traversing backwards, list walking met in the middle"
                     )
                     break
                 seen.add(hive.vol.offset)
@@ -281,10 +275,8 @@ class HiveList(interfaces.plugins.PluginInterface):
                 # by walking the list, so revert to scanning, and walk the list forwards and backwards from each
                 # found hive
                 vollog.debug(
-                    "Hivelist failed traversing backwards at {}, a different "
-                    "location from forwards, revert to scanning".format(
-                        hex(backward_invalid)
-                    )
+                    f"Hivelist failed traversing backwards at {hex(backward_invalid)}, a different "
+                    "location from forwards, revert to scanning"
                 )
                 for hive in hivescan.HiveScan.scan_hives(
                     context, layer_name, symbol_table
@@ -320,9 +312,7 @@ class HiveList(interfaces.plugins.PluginInterface):
                                             yield linked_hive
                     except exceptions.InvalidAddressException:
                         vollog.debug(
-                            "InvalidAddressException when traversing hive {} found from scan, skipping".format(
-                                hex(hive.vol.offset)
-                            )
+                            f"InvalidAddressException when traversing hive {hex(hive.vol.offset)} found from scan, skipping"
                         )
 
     def run(self) -> renderers.TreeGrid:

@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import List
+from typing import List, Iterable
 
 from volatility3.framework import renderers, interfaces, constants
 from volatility3.framework.symbols import linux
@@ -19,7 +19,7 @@ class PIDHashTable(plugins.PluginInterface):
     """Enumerates processes through the PID hash table"""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 2)
+    _version = (1, 0, 3)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -30,7 +30,7 @@ class PIDHashTable(plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+                name="pslist", plugin=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="linuxutils", component=linux.LinuxUtilities, version=(2, 1, 0)
@@ -218,7 +218,7 @@ class PIDHashTable(plugins.PluginInterface):
 
         return None
 
-    def get_tasks(self) -> interfaces.objects.ObjectInterface:
+    def get_tasks(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Enumerates processes through the PID hash table
 
         Yields:
@@ -231,14 +231,16 @@ class PIDHashTable(plugins.PluginInterface):
 
         yield from sorted(pid_func(), key=lambda t: (t.tgid, t.pid))
 
-    def _generator(
-        self, decorate_comm: bool = False
-    ) -> interfaces.objects.ObjectInterface:
+    def _generator(self, decorate_comm: bool = False):
         for task in self.get_tasks():
-            offset, pid, tid, ppid, name, _creation_time = (
-                pslist.PsList.get_task_fields(task, decorate_comm)
+            task_fields = pslist.PsList.get_task_fields(task, decorate_comm)
+            fields = (
+                format_hints.Hex(task_fields.offset),
+                task_fields.user_pid,
+                task_fields.user_tid,
+                task_fields.user_ppid,
+                task_fields.name,
             )
-            fields = format_hints.Hex(offset), pid, tid, ppid, name
             yield 0, fields
 
     def run(self):

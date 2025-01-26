@@ -73,7 +73,7 @@ class ROW(objects.StructType):
                     )
                     for i in range(0, len(char_row), 3)
                 )
-        except Exception as e:
+        except Exception:
             line = ""
 
         if truncate:
@@ -107,11 +107,10 @@ class EXE_ALIAS_LIST(objects.StructType):
     def get_aliases(self) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Generator for the individual aliases for a
         particular executable."""
-        for alias in self.AliasList.to_list(
+        yield from self.AliasList.to_list(
             f"{self.get_symbol_table_name()}{constants.BANG}_ALIAS",
             "ListEntry",
-        ):
-            yield alias
+        )
 
 
 class SCREEN_INFORMATION(objects.StructType):
@@ -245,11 +244,10 @@ class CONSOLE_INFORMATION(objects.StructType):
     def get_histories(
         self,
     ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
-        for cmd_hist in self.HistoryList.to_list(
+        yield from self.HistoryList.to_list(
             f"{self.get_symbol_table_name()}{constants.BANG}_COMMAND_HISTORY",
             "ListEntry",
-        ):
-            yield cmd_hist
+        )
 
     def get_exe_aliases(
         self,
@@ -258,20 +256,18 @@ class CONSOLE_INFORMATION(objects.StructType):
         # Windows 10 22000 and Server 20348 made this a Pointer
         if isinstance(exe_alias_list, objects.Pointer):
             exe_alias_list = exe_alias_list.dereference()
-        for exe_alias_list_item in exe_alias_list.to_list(
+        yield from exe_alias_list.to_list(
             f"{self.get_symbol_table_name()}{constants.BANG}_EXE_ALIAS_LIST",
             "ListEntry",
-        ):
-            yield exe_alias_list_item
+        )
 
     def get_processes(
         self,
     ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
-        for proc in self.ConsoleProcessList.to_list(
+        yield from self.ConsoleProcessList.to_list(
             f"{self.get_symbol_table_name()}{constants.BANG}_CONSOLE_PROCESS_LIST",
             "ListEntry",
-        ):
-            yield proc
+        )
 
     def get_title(self) -> Union[str, None]:
         try:
@@ -393,8 +389,7 @@ class COMMAND_HISTORY(objects.StructType):
         rest are coalesced.
         """
 
-        for i, cmd in self.scan_command_bucket(self.CommandBucket.End):
-            yield i, cmd
+        yield from self.scan_command_bucket(self.CommandBucket.End)
 
 
 win10_x64_class_types = {

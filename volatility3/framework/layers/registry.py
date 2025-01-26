@@ -140,7 +140,13 @@ class RegistryHive(linear.LinearlyMappedLayer):
         """Returns the appropriate Node, interpreted from the Cell based on its
         Signature."""
         cell = self.get_cell(cell_offset)
-        signature = cell.cast("string", max_length=2, encoding="latin-1")
+        try:
+            signature = cell.cast("string", max_length=2, encoding="latin-1")
+        except (RegistryInvalidIndex, exceptions.InvalidAddressException):
+            vollog.debug(
+                f"Failed to get cell signature for cell (0x{cell.vol.offset:x})"
+            )
+            return cell
         if signature == "nk":
             return cell.u.KeyNode
         elif signature == "sk":
@@ -156,9 +162,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
         else:
             # It doesn't matter that we use KeyNode, we're just after the first two bytes
             vollog.debug(
-                "Unknown Signature {} (0x{:x}) at offset {}".format(
-                    signature, cell.u.KeyNode.Signature, cell_offset
-                )
+                f"Unknown Signature {signature} (0x{cell.u.KeyNode.Signature:x}) at offset {cell_offset}"
             )
             return cell
 
@@ -178,9 +182,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
         if not root_node.vol.type_name.endswith(constants.BANG + "_CM_KEY_NODE"):
             raise RegistryFormatException(
                 self.name,
-                "Encountered {} instead of _CM_KEY_NODE".format(
-                    root_node.vol.type_name
-                ),
+                f"Encountered {root_node.vol.type_name} instead of _CM_KEY_NODE",
             )
         node_key = [root_node]
         if key.endswith("\\"):
@@ -190,9 +192,9 @@ class RegistryHive(linear.LinearlyMappedLayer):
         while key_array and node_key:
             subkeys = node_key[-1].get_subkeys()
             for subkey in subkeys:
-                # registry keys are not case sensitive so compare lowercase
-                # https://msdn.microsoft.com/en-us/library/windows/desktop/ms724946(v=vs.85).aspx
-                if subkey.get_name().lower() == key_array[0].lower():
+                # registry keys are not case sensitive so compare likewise
+                # https://learn.microsoft.com/en-us/windows/win32/sysinfo/structure-of-the-registry
+                if subkey.get_name().casefold() == key_array[0].casefold():
                     node_key = node_key + [subkey]
                     found_key, key_array = found_key + [key_array[0]], key_array[1:]
                     break

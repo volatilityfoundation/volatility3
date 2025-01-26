@@ -25,9 +25,9 @@ as long as the symbol files stay in the same location.
 Windows symbol tables
 ---------------------
 
-For Windows systems, Volatility accepts a string made up of the GUID and Age of the required PDB file.  It then
+For Windows systems, Volatility accepts a string made up of the GUID and age of the required PDB file.  It then
 searches all files under the configured symbol directories under the windows subdirectory.  Any that contain metadata
-which matches the pdb name and GUID/age (or any compressed variant) will be used.  If such a symbol table cannot be found, then
+which matches the PDB name and GUID/age (or any compressed variant) will be used.  If such a symbol table cannot be found, then
 the associated PDB file will be downloaded from Microsoft's Symbol Server and converted into the appropriate JSON
 format, and will be saved in the correct location.
 
@@ -54,8 +54,8 @@ most Volatility plugins.  Note that in most linux distributions, the standard ke
 and the kernel with debugging information is stored in a package that must be acquired separately.
 
 A generic table isn't guaranteed to produce accurate results, and would reduce the number of structures
-that all plugins could rely on.  As such, and because linux kernels with different configurations can produce different structures,
-volatility 3 requires that the banners in the JSON file match the banners found in the image *exactly*, not just the version
+that all plugins could rely on.  As such, and because Linux kernels with different configurations can produce different structures,
+Volatility 3 requires that the banners in the JSON file match the banners found in the image *exactly*, not just the version
 number.  This can include elements such as the compilation time and even the version of gcc used for the compilation.
 The exact match is required to ensure that the results volatility returns are accurate, therefore there is no simple means
 provided to get the wrong JSON ISF file to easily match.
@@ -63,8 +63,8 @@ provided to get the wrong JSON ISF file to easily match.
 To determine the string for a particular memory image, use the `banners` plugin.  Once the specific banner is known,
 try to locate that exact kernel debugging package for the operating system.  Unfortunately each distribution provides
 its debugging packages under different package names and there are so many that the distribution may not keep all old
-versions of the debugging symbols, and therefore **it may not be possible to find the right symbols to analyze a linux
-memory image with volatility**.  With Macs there are far fewer kernels and only one distribution, making it easier to
+versions of the debugging symbols, and therefore **it may not be possible to find the right symbols to analyze a Linux
+memory image with Volatility**.  With Macs there are far fewer kernels and only one distribution, making it easier to
 ensure that the right symbols can be found.
 
 Once a kernel with debugging symbols/appropriate DWARF file has been located, `dwarf2json <https://github.com/volatilityfoundation/dwarf2json>`_ will convert it into an
@@ -75,7 +75,7 @@ symbol offsets within the DWARF data, which dwarf2json can extract into the JSON
 
 The banners available for volatility to use can be found using the `isfinfo` plugin, but this will potentially take a
 long time to run depending on the number of JSON files available.  This will list all the JSON (ISF) files that
-volatility3 is aware of, and for linux/mac systems what banner string they search for.  For volatility to use the JSON
+Volatility 3 is aware of, and for linux/mac systems what banner string they search for.  For volatility to use the JSON
 file, the banners must match exactly (down to the compilation date).
 
 .. note::

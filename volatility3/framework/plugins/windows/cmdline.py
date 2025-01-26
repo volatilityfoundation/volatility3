@@ -84,9 +84,7 @@ class CmdLine(interfaces.plugins.PluginInterface):
                 result_text = f"Required memory at {exp.invalid_address:#x} is not valid (process exited?)"
 
             except exceptions.InvalidAddressException as exp:
-                result_text = "Process {}: Required memory at {:#x} is not valid (incomplete layer {}?)".format(
-                    proc_id, exp.invalid_address, exp.layer_name
-                )
+                result_text = f"Process {proc_id}: Required memory at {exp.invalid_address:#x} is not valid (incomplete layer {exp.layer_name}?)"
 
             yield (0, (proc.UniqueProcessId, process_name, result_text))
 

@@ -67,6 +67,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
 
         Args:
             conhost_proc: the process object for conhost.exe
+            size_filter: size above which vads will not be returned
 
         Returns:
             A list of tuples of:
@@ -99,8 +100,8 @@ class CmdScan(interfaces.plugins.PluginInterface):
             kernel_layer_name: The name of the layer on which to operate
             kernel_symbol_table_name: The name of the table containing the kernel symbols
             config_path: The config path where to find symbol files
-            procs: list of process objects
-            max_history: an initial set of CommandHistorySize values
+            procs: List of process objects
+            max_history: An initial set of CommandHistorySize values
 
         Returns:
             The conhost process object, the command history structure, a dictionary of properties for
@@ -227,7 +228,6 @@ class CmdScan(interfaces.plugins.PluginInterface):
                                 "data": command_history.CommandCountMax,
                             }
                         )
-
                         command_history_properties.append(
                             {
                                 "level": 1,
@@ -236,6 +236,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                                 "data": "",
                             }
                         )
+
                         for (
                             cmd_index,
                             bucket_cmd,
@@ -352,7 +353,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
 
     def _conhost_proc_filter(self, proc: interfaces.objects.ObjectInterface):
         """
-        Used to filter to only conhost.exe processes
+        Used to filter only conhost.exe processes
         """
         process_name = utility.array_to_string(proc.ImageFileName)
 

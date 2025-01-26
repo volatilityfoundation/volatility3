@@ -48,7 +48,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
                 name="driverirp", plugin=driverirp.DriverIrp, version=(1, 0, 0)
             ),
             requirements.PluginRequirement(
-                name="handles", plugin=handles.Handles, version=(1, 0, 0)
+                name="handles", plugin=handles.Handles, version=(2, 0, 0)
             ),
         ]
 

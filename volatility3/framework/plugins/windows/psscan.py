@@ -89,7 +89,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         cls,
         context: interfaces.context.ContextInterface,
         layer_name: str,
-        offset: int = None,
+        offset: Optional[int] = None,
         physical: bool = True,
         exclude: bool = False,
     ) -> Callable[[interfaces.objects.ObjectInterface], bool]:
@@ -102,29 +102,38 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         Returns:
             Filter function to be passed to the list of processes.
         """
-        filter_func = lambda _: False
+
+        def filter_func(_):
+            return False
 
         if offset:
             if physical:
                 if exclude:
-                    filter_func = (
-                        lambda proc: cls.physical_offset_from_virtual(
-                            context, layer_name, proc
+
+                    def filter_func(proc):
+                        return (
+                            cls.physical_offset_from_virtual(context, layer_name, proc)
+                            == offset
                         )
-                        == offset
-                    )
+
                 else:
-                    filter_func = (
-                        lambda proc: cls.physical_offset_from_virtual(
-                            context, layer_name, proc
+
+                    def filter_func(proc):
+                        return (
+                            cls.physical_offset_from_virtual(context, layer_name, proc)
+                            != offset
                         )
-                        != offset
-                    )
+
             else:
                 if exclude:
-                    filter_func = lambda proc: proc.vol.offset == offset
+
+                    def filter_func(proc):
+                        return proc.vol.offset == offset
+
                 else:
-                    filter_func = lambda proc: proc.vol.offset != offset
+
+                    def filter_func(proc):
+                        return proc.vol.offset != offset
 
         return filter_func
 

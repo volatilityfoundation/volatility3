@@ -405,10 +405,24 @@ class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
 
     def get_attached_devices(self) -> Generator[ObjectInterface, None, None]:
         """Enumerate the attached device's objects"""
-        device = self.AttachedDevice.dereference()
+        seen = set()
+
+        try:
+            device = self.AttachedDevice.dereference()
+        except exceptions.InvalidAddressException:
+            return
+
         while device:
+            if device.vol.offset in seen:
+                break
+            seen.add(device.vol.offset)
+
             yield device
-            device = device.AttachedDevice.dereference()
+
+            try:
+                device = device.AttachedDevice.dereference()
+            except exceptions.InvalidAddressException:
+                return
 
 
 class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
@@ -421,10 +435,24 @@ class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
 
     def get_devices(self) -> Generator[ObjectInterface, None, None]:
         """Enumerate the driver's device objects"""
-        device = self.DeviceObject.dereference()
+        seen = set()
+
+        try:
+            device = self.DeviceObject.dereference()
+        except exceptions.InvalidAddressException:
+            return
+
         while device:
+            if device.vol.offset in seen:
+                return
+            seen.add(device.vol.offset)
+
             yield device
-            device = device.NextDevice.dereference()
+
+            try:
+                device = device.NextDevice.dereference()
+            except exceptions.InvalidAddressException:
+                return
 
     def is_valid(self) -> bool:
         """Determine if the object is valid."""
@@ -519,7 +547,8 @@ class ETHREAD(objects.StructType, pool.ExecutiveObject):
                 if not isinstance(ctime, datetime.datetime):
                     return False
 
-                if not (1998 < ctime.year < 2030):
+                current_year = datetime.datetime.now().year
+                if not (1998 < ctime.year < current_year + 10):
                     return False
 
         except exceptions.InvalidAddressException:
@@ -692,7 +721,9 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
         return True
 
-    def add_process_layer(self, config_prefix: str = None, preferred_name: str = None):
+    def add_process_layer(
+        self, config_prefix: Optional[str] = None, preferred_name: Optional[str] = None
+    ):
         """Constructs a new layer based on the process's DirectoryTableBase."""
 
         parent_layer = self._context.layers[self.vol.layer_name]
@@ -749,11 +780,10 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
         try:
             peb = self.get_peb()
-            for entry in peb.Ldr.InLoadOrderModuleList.to_list(
+            yield from peb.Ldr.InLoadOrderModuleList.to_list(
                 f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
                 "InLoadOrderLinks",
-            ):
-                yield entry
+            )
         except exceptions.InvalidAddressException:
             return None
 
@@ -762,11 +792,10 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
         try:
             peb = self.get_peb()
-            for entry in peb.Ldr.InInitializationOrderModuleList.to_list(
+            yield from peb.Ldr.InInitializationOrderModuleList.to_list(
                 f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
                 "InInitializationOrderLinks",
-            ):
-                yield entry
+            )
         except exceptions.InvalidAddressException:
             return None
 
@@ -775,11 +804,10 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
         try:
             peb = self.get_peb()
-            for entry in peb.Ldr.InMemoryOrderModuleList.to_list(
+            yield from peb.Ldr.InMemoryOrderModuleList.to_list(
                 f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
                 "InMemoryOrderLinks",
-            ):
-                yield entry
+            )
         except exceptions.InvalidAddressException:
             return None
 
@@ -797,7 +825,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
         return renderers.UnreadableValue()
 
-    def get_session_id(self):
+    def get_session_id(self) -> Union[int, interfaces.renderers.BaseAbsentValue]:
         try:
             if self.has_member("Session"):
                 if self.Session == 0:
@@ -813,12 +841,30 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
                     offset=kvo,
                     native_layer_name=self.vol.native_layer_name,
                 )
-                session = ntkrnlmp.object(
-                    object_type="_MM_SESSION_SPACE", offset=self.Session, absolute=True
-                )
-
-                if session.has_member("SessionId"):
-                    return session.SessionId
+                try:
+                    session = ntkrnlmp.object(
+                        object_type="_MM_SESSION_SPACE",
+                        offset=self.Session,
+                        absolute=True,
+                    )
+                    if session.has_member("SessionId"):
+                        return session.SessionId
+                except exceptions.SymbolError:
+                    # In Windows 11 24H2, the _MM_SESSION_SPACE type was
+                    # replaced with _PSP_SESSION_SPACE, and the kernel PDB
+                    # doesn't contain information about its members (otherwise,
+                    # we would just fall back to the new type). However, it
+                    # appears to be, for our purposes, functionally identical
+                    # to the _MM_SESSION_SPACE. Because _MM_SESSION_SPACE
+                    # stores its session ID at offset 8 as an unsigned long, we
+                    # create an unsigned long at that offset and use that
+                    # instead.
+                    session_id = ntkrnlmp.object(
+                        object_type="unsigned long",
+                        offset=self.Session + 8,
+                        absolute=True,
+                    )
+                    return session_id
 
         except exceptions.InvalidAddressException:
             vollog.log(
@@ -916,56 +962,55 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
     ) -> Iterator[interfaces.objects.ObjectInterface]:
         """Returns an iterator of the entries in the list."""
 
-        layer = layer or self.vol.layer_name
+        layer_name = layer or self.vol.layer_name
+        native_layer_name = layer_name or self.vol.native_layer_name
+
+        trans_layer = self._context.layers[layer_name]
+        if not trans_layer.is_valid(self.vol.offset):
+            return None
 
         relative_offset = self._context.symbol_space.get_type(
             symbol_type
         ).relative_child_offset(member)
 
-        direction = "Blink"
-        if forward:
-            direction = "Flink"
+        direction = "Flink" if forward else "Blink"
 
-        trans_layer = self._context.layers[layer]
-
-        try:
-            is_valid = trans_layer.is_valid(self.vol.offset)
-            if not is_valid:
-                return None
-
-            link = getattr(self, direction).dereference()
-        except exceptions.InvalidAddressException:
+        link_ptr = getattr(self, direction)
+        if not (link_ptr and link_ptr.is_readable()):
             return None
+        link = link_ptr.dereference()
 
         if not sentinel:
+            obj_offset = self.vol.offset - relative_offset
+            if not trans_layer.is_valid(obj_offset):
+                return None
+
             yield self._context.object(
                 symbol_type,
-                layer,
-                offset=self.vol.offset - relative_offset,
-                native_layer_name=layer or self.vol.native_layer_name,
+                layer_name,
+                offset=obj_offset,
+                native_layer_name=native_layer_name,
             )
 
         seen = {self.vol.offset}
         while link.vol.offset not in seen:
             obj_offset = link.vol.offset - relative_offset
-
             if not trans_layer.is_valid(obj_offset):
                 return None
 
-            obj = self._context.object(
+            yield self._context.object(
                 symbol_type,
-                layer,
+                layer_name,
                 offset=obj_offset,
-                native_layer_name=layer or self.vol.native_layer_name,
+                native_layer_name=native_layer_name,
             )
-            yield obj
 
             seen.add(link.vol.offset)
 
-            try:
-                link = getattr(link, direction).dereference()
-            except exceptions.InvalidAddressException:
+            link_ptr = getattr(link, direction)
+            if not (link_ptr and link_ptr.is_readable()):
                 return None
+            link = link_ptr.dereference()
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
@@ -1076,7 +1121,7 @@ class KTIMER(objects.StructType):
         return self.Header.Type in self.VALID_TYPES
 
     def get_due_time(self):
-        return "{0:#010x}:{1:#010x}".format(self.DueTime.HighPart, self.DueTime.LowPart)
+        return f"{self.DueTime.HighPart:#010x}:{self.DueTime.LowPart:#010x}"
 
     def get_dpc(self):
         """Return Dpc, and if Windows 7 or later, decode it"""
@@ -1383,7 +1428,7 @@ class SHARED_CACHE_MAP(objects.StructType):
         )
 
         # Iterate through the entries
-        for counter in range(0, self.VACB_ARRAY):
+        for counter in range(self.VACB_ARRAY):
             # Check if the VACB entry is in use
             if not vacb_array[counter]:
                 continue
@@ -1467,7 +1512,7 @@ class SHARED_CACHE_MAP(objects.StructType):
 
         if not section_size > self.VACB_SIZE_OF_FIRST_LEVEL:
             array_head = vacb_obj
-            for counter in range(0, full_blocks):
+            for counter in range(full_blocks):
                 vacb_entry = self._context.object(
                     symbol_table_name + constants.BANG + "pointer",
                     layer_name=self.vol.layer_name,
@@ -1526,7 +1571,7 @@ class SHARED_CACHE_MAP(objects.StructType):
 
             # Walk the array and if any entry points to the shared cache map object then we extract it.
             # Otherwise, if it is non-zero, then traverse to the next level.
-            for counter in range(0, self.VACB_ARRAY):
+            for counter in range(self.VACB_ARRAY):
                 if not vacb_array[counter]:
                     continue
 

@@ -23,7 +23,7 @@ Alignment
 .. _Array:
 
 Array
-    This represents a list of items, which can be access by an index, which is zero-based (meaning the first
+    This represents a list of items, which can be accessed by an index, which is zero-based (meaning the first
     element has index 0).  Items in arrays are almost always the same size (it is not a generic list, as in python)
     even if they are :ref:`pointers<pointer>` to different sized objects.
 
@@ -43,7 +43,14 @@ Dereference
 .. _Domain:
 
 Domain
-    This the grouping for input values for a mapping or mathematical function.
+    The set of input values for a mapping or mathematical function.
+
+I
+-
+.. _Intermediate Symbol File (ISF):
+
+Intermediate Symbol File (ISF)
+    They contain kernel structures and specific offsets formatted as JSON. For macOS and Linux analysis, the kernel needs to be added as an ISF file to the volatility 3 symbols directory.  For Windows, the required ISF file can often be generated from PDB files automatically downloaded from Microsoft servers, and therefore does not require manual intervention.
 
 M
 -
@@ -54,9 +61,7 @@ Map, mapping
     of the :ref:`Range<range>`).  Mappings can be seen as a mathematical function, and therefore volatility 3
     attempts to use mathematical functional notation where possible.  Within volatility a mapping is most often
     used to refer to the function for translating addresses from a higher layer (domain) to a lower layer (range).
-    For further information, please see
-    `Function (mathematics) in wikipedia https://en.wikipedia.org/wiki/Function_(mathematics)`
-
+    For further information, please see `Function (mathematics) in Wikipedia<https://en.wikipedia.org/wiki/Function_(mathematics)>_`.
 
 .. _Member:
 
@@ -69,7 +74,7 @@ O
 .. _Object:
 
 Object
-    This has a specific meaning within computer programming (as in Object Oriented Programming), but within the world
+    This has a specific meaning within computer programming (as in object-oriented programming), but within the world
     of Volatility it is used to refer to a type that has been associated with a chunk of data, or a specific instance
     of a type.  See also :ref:`Type<type>`.
 
@@ -116,6 +121,11 @@ Page Table
     possible to use them as a way to map a particular address within a (potentially larger, but sparsely populated)
     virtual space to a concrete (and usually contiguous) physical space, through the process of :ref:`mapping<map>`.
 
+.. _Plugin:
+
+Plugin
+    Plugins are the "functions" of the volatility framework. They carry out algorithms on data stored in layers using objects constructed from symbols.  Broadly, plugins take in a number of TranslationLayers (the data, which is a representation of part of an image, in a specified type described by templates) and outputs a TreeGrid.
+
 .. _Pointer:
 
 Pointer
@@ -145,9 +155,9 @@ Struct, Structure
 
 Symbol
     This is used in many different contexts, as a short term for many things.  Within Volatility, a symbol is a
-    construct that usually encompasses a specific type :ref:`type<Type>` at a specific :ref:`offset<Offset>`,
+    construct that usually encompasses a specific :ref:`type<Type>` at a specific :ref:`offset<Offset>`,
     representing a particular instance of that type within the memory of a compiled and running program.  An example
-    would be the location in memory of a list of active tcp endpoints maintained by the networking stack
+    would be the location in memory of a list of active TCP endpoints maintained by the networking stack
     within an operating system.
 
 T

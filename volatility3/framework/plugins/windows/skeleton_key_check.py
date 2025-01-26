@@ -172,9 +172,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         except exceptions.InvalidAddressException:
             vollog.debug(
-                "Unable to construct cSystems array at given offset: {:x}".format(
-                    array_start
-                )
+                f"Unable to construct cSystems array at given offset: {array_start:x}"
             )
             array = None
 
@@ -284,16 +282,13 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         for proc in proc_list:
             try:
-                proc_id = proc.UniqueProcessId
                 proc_layer_name = proc.add_process_layer()
 
                 return proc, proc_layer_name
 
             except exceptions.InvalidAddressException as excp:
                 vollog.debug(
-                    "Process {}: invalid address {} in layer {}".format(
-                        proc_id, excp.invalid_address, excp.layer_name
-                    )
+                    f"Invalid address {excp.invalid_address} in layer {excp.layer_name}"
                 )
 
         return None, None
@@ -435,15 +430,20 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
                     # we do not want to fail just because the count is not in memory
                     # 16 was the size on samples I tested, so I chose it as the default
+                    count = 16
+
                     if target_address:
-                        count = int.from_bytes(
-                            self.context.layers[proc_layer_name].read(
-                                target_address, 4
-                            ),
-                            "little",
-                        )
-                    else:
-                        count = 16
+                        try:
+                            count = int.from_bytes(
+                                self.context.layers[proc_layer_name].read(
+                                    target_address, 4
+                                ),
+                                "little",
+                            )
+                        except exceptions.InvalidAddressException:
+                            vollog.debug(
+                                "Unable to read `cCsystems`. Defaulting to 16."
+                            )
 
                     found_count = True
 

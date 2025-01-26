@@ -2,15 +2,15 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from typing import Iterable, List, Tuple
+from typing import Iterable, List
 import struct
 from enum import Enum
 
 from volatility3.framework import renderers, interfaces, symbols, constants, exceptions
 from volatility3.framework.configuration import requirements
-from volatility3.framework.objects import utility
 from volatility3.framework.layers import scanners
 from volatility3.framework.renderers import format_hints
+from volatility3.plugins.linux import pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -27,8 +27,8 @@ class DescExitStateEnum(Enum):
 class PsScan(interfaces.plugins.PluginInterface):
     """Scans for processes present in a particular linux image."""
 
-    _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 1)
+    _required_framework_version = (2, 13, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -38,36 +38,10 @@ class PsScan(interfaces.plugins.PluginInterface):
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
+            requirements.PluginRequirement(
+                name="pslist", plugin=pslist.PsList, version=(4, 0, 0)
+            ),
         ]
-
-    def _get_task_fields(
-        self, task: interfaces.objects.ObjectInterface
-    ) -> Tuple[int, int, int, str, str]:
-        """Extract the fields needed for the final output
-
-        Args:
-            task: A task object from where to get the fields.
-        Returns:
-            A tuple with the fields to show in the plugin output.
-        """
-        pid = task.tgid
-        tid = task.pid
-        ppid = 0
-
-        if task.parent.is_readable():
-            ppid = task.parent.tgid
-        name = utility.array_to_string(task.comm)
-        exit_state = DescExitStateEnum(task.exit_state).name
-
-        task_fields = (
-            format_hints.Hex(task.vol.offset),
-            pid,
-            tid,
-            ppid,
-            name,
-            exit_state,
-        )
-        return task_fields
 
     def _generator(self):
         """Generates the tasks found from scanning."""
@@ -78,8 +52,18 @@ class PsScan(interfaces.plugins.PluginInterface):
         for task in self.scan_tasks(
             self.context, vmlinux_module_name, vmlinux.layer_name
         ):
-            row = self._get_task_fields(task)
-            yield (0, row)
+            task_fields = pslist.PsList.get_task_fields(task)
+            exit_state = DescExitStateEnum(task.exit_state).name
+            fields = (
+                format_hints.Hex(task_fields.offset),
+                task_fields.user_pid,
+                task_fields.user_tid,
+                task_fields.user_ppid,
+                task_fields.name,
+                exit_state,
+            )
+
+            yield (0, fields)
 
     @classmethod
     def scan_tasks(
@@ -133,7 +117,7 @@ class PsScan(interfaces.plugins.PluginInterface):
             )
         elif len(kernel_layer.dependencies) == 0:
             vollog.error(
-                f"Kernel layer has no dependencies, meaning there is no memory layer for this plugin to scan."
+                "Kernel layer has no dependencies, meaning there is no memory layer for this plugin to scan."
             )
             raise exceptions.LayerException(
                 kernel_layer_name, f"Layer {kernel_layer_name} has no dependencies"

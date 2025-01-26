@@ -26,7 +26,11 @@ from typing import (
     Union,
 )
 
-Column = NamedTuple("Column", [("name", str), ("type", Any)])
+
+class Column(NamedTuple):
+    name: str
+    type: Any
+
 
 RenderOption = Any
 
@@ -98,11 +102,11 @@ class TreeNode(abc.Sequence, metaclass=ABCMeta):
         """
 
 
-class BaseAbsentValue(object):
+class BaseAbsentValue:
     """Class that represents values which are not present for some reason."""
 
 
-class Disassembly(object):
+class Disassembly:
     """A class to indicate that the bytes provided should be disassembled
     (based on the architecture)"""
 
@@ -137,7 +141,7 @@ ColumnsType = List[Tuple[str, BaseTypes]]
 VisitorSignature = Callable[[TreeNode, _Type], _Type]
 
 
-class TreeGrid(object, metaclass=ABCMeta):
+class TreeGrid(metaclass=ABCMeta):
     """Class providing the interface for a TreeGrid (which contains TreeNodes)
 
     The structure of a TreeGrid is designed to maintain the structure of the tree in a single object.
@@ -179,7 +183,7 @@ class TreeGrid(object, metaclass=ABCMeta):
     @abstractmethod
     def populate(
         self,
-        function: VisitorSignature = None,
+        function: Optional[VisitorSignature] = None,
         initial_accumulator: Any = None,
         fail_on_errors: bool = True,
     ) -> Optional[Exception]:
@@ -231,7 +235,7 @@ class TreeGrid(object, metaclass=ABCMeta):
         node: Optional[TreeNode],
         function: VisitorSignature,
         initial_accumulator: _Type,
-        sort_key: ColumnSortKey = None,
+        sort_key: Optional[ColumnSortKey] = None,
     ) -> None:
         """Visits all the nodes in a tree, calling function on each one.
 

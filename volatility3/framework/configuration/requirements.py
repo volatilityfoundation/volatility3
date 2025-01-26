@@ -11,7 +11,7 @@ expect to be in the context (such as particular layers or symboltables).
 import abc
 import logging
 import os
-from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type
+from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Type
 from urllib import parse, request
 
 from volatility3.framework import constants, interfaces
@@ -111,7 +111,7 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
 
         Args:
             element_type: The (requirement) type of each element within the list
-            max_elements; The maximum number of acceptable elements this list can contain
+            max_elements: The maximum number of acceptable elements this list can contain
             min_elements: The minimum number of acceptable elements this list can contain
         """
         super().__init__(*args, **kwargs)
@@ -314,11 +314,11 @@ class TranslationLayerRequirement(
     def __init__(
         self,
         name: str,
-        description: str = None,
+        description: Optional[str] = None,
         default: interfaces.configuration.ConfigSimpleType = None,
         optional: bool = False,
-        oses: List = None,
-        architectures: List = None,
+        oses: Optional[List] = None,
+        architectures: Optional[List[str]] = None,
     ) -> None:
         """Constructs a Translation Layer Requirement.
 
@@ -526,19 +526,19 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
         description: Optional[str] = None,
         default: bool = False,
         optional: bool = False,
-        component: Type[interfaces.configuration.VersionableInterface] = None,
+        component: Optional[Type[interfaces.configuration.VersionableInterface]] = None,
         version: Optional[Tuple[int, ...]] = None,
     ) -> None:
+        if version is None:
+            raise TypeError("Version cannot be None")
+        if component is None:
+            raise TypeError("Component cannot be None")
         if description is None:
-            description = f"Version {'.'.join([str(x) for x in version])} dependency on {component.__module__}.{component.__name__} unmet"
+            description = f"Version {'.'.join(str(x) for x in version)} dependency on {component.__module__}.{component.__name__} unmet"
         super().__init__(
             name=name, description=description, default=default, optional=optional
         )
-        if component is None:
-            raise TypeError("Component cannot be None")
         self._component: Type[interfaces.configuration.VersionableInterface] = component
-        if version is None:
-            raise TypeError("Version cannot be None")
         self._version = version
 
     def unsatisfied(
@@ -546,7 +546,7 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
         context: interfaces.context.ContextInterface,
         config_path: str,
         accumulator: Optional[
-            List[interfaces.configuration.VersionableInterface]
+            Set[interfaces.configuration.VersionableInterface]
         ] = None,
     ) -> Dict[str, interfaces.configuration.RequirementInterface]:
         # Mypy doesn't appreciate our classproperty implementation, self._plugin.version has no type
@@ -580,7 +580,7 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
                     )
 
             if result:
-                result.update({config_path: self})
+                result[config_path] = self
                 return result
 
         context.config[interfaces.configuration.path_join(config_path, self.name)] = (
@@ -604,10 +604,10 @@ class PluginRequirement(VersionRequirement):
     def __init__(
         self,
         name: str,
-        description: str = None,
+        description: Optional[str] = None,
         default: bool = False,
         optional: bool = False,
-        plugin: Type[interfaces.plugins.PluginInterface] = None,
+        plugin: Optional[Type[interfaces.plugins.PluginInterface]] = None,
         version: Optional[Tuple[int, ...]] = None,
     ) -> None:
         super().__init__(
@@ -627,7 +627,7 @@ class ModuleRequirement(
     def __init__(
         self,
         name: str,
-        description: str = None,
+        description: Optional[str] = None,
         default: bool = False,
         architectures: Optional[List[str]] = None,
         optional: bool = False,
@@ -664,9 +664,7 @@ class ModuleRequirement(
         if value is not None:
             vollog.log(
                 constants.LOGLEVEL_V,
-                "TypeError - Module Requirement only accepts string labels: {}".format(
-                    repr(value)
-                ),
+                f"TypeError - Module Requirement only accepts string labels: {repr(value)}",
             )
             return {config_path: self}
 

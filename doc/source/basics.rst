@@ -14,7 +14,7 @@ Memory layers
 -------------
 
 A memory layer is a body of data that can be accessed by requesting data at a specific address.  At its lowest level
-this data is stored on a phyiscal medium (RAM) and very early computers addresses locations in memory directly.  However,
+this data is stored on a phyiscal medium (RAM) and very early computers addressed locations in memory directly.  However,
 as the size of memory increased and it became more difficult to manage memory most architectures moved to a "paged" model 
 of memory, where the available memory is cut into specific fixed-sized pages.  To help further, programs can ask for any address 
 and the processor will look up their (virtual) address in a map, to find out where the (physical) address that it lives at is,
@@ -25,8 +25,8 @@ address `9`).  The automagic that runs at the start of every volatility session 
 a kernel virtual layer, which allows for kernel addresses to be looked up and the correct data returned.  There can, however, be
 several maps, and in general there is a different map for each process (although a portion of the operating system's memory is
 usually mapped to the same location across all processes).  The maps may take the same address but point to a different part of 
-physical memory.  It also means that two processes could theoretically share memory, but having an virtual address mapped to the 
-same physical address as another process.  See the worked example below for more information.
+physical memory.  It also means that two processes could theoretically share memory, both having a virtual address mapped to the 
+same physical address.  See the worked example below for more information.
 
 To translate an address on a layer, call :py:meth:`layer.mapping(offset, length, ignore_errors) <volatility3.framework.interfaces.layers.TranslationLayerInterface.mapping>` and it will return a list of chunks without overlap, in order,
 for the requested range.  If a portion cannot be mapped, an exception will be thrown unless `ignore_errors` is true.  Each 
@@ -61,7 +61,7 @@ mean they each see something different:
     4 -> 2                                      16 - Free
 
 In this example, part of the operating system is visible across all processes (although not all processes can write to the memory, there
-is a permissions model for intel addressing which is not discussed further here).)
+is a permissions model for Intel addressing which is not discussed further here).
 
 In Volatility 3 mappings are represented by a directed graph of layers, whose end nodes are
 :py:class:`DataLayers <volatility3.framework.interfaces.layers.DataLayerInterface>` and whose internal nodes are :py:class:`TranslationLayers <volatility3.framework.interfaces.layers.TranslationLayerInterface>`.
@@ -69,13 +69,13 @@ In this way, a raw memory image in the LiME file format and a page file can be c
 memory layer.  When requesting addresses from the Intel layer, it will use the Intel memory mapping algorithm, along 
 with the address of the directory table base or page table map, to translate that
 address into a physical address, which will then either be directed towards the swap layer or the LiME layer.  Should it
-be directed towards the LiME layer, the LiME file format algorithm will be translate the new address to determine where 
+be directed towards the LiME layer, the LiME file format algorithm will translate the new address to determine where 
 within the file the data is stored.  When the :py:meth:`layer.read() <volatility3.framework.interfaces.layers.TranslationLayerInterface.read>` 
 method is called, the translation is done automatically and the correct data gathered and combined.
 
 .. note:: Volatility 2 had a similar concept, called address spaces, but these could only stack linearly one on top of another.
 
-The list of layers supported by volatility can be determined by running the `frameworkinfo` plugin.
+The list of layers supported by Volatility can be determined by running the `frameworkinfo` plugin.
 
 Templates and Objects
 ---------------------
@@ -167,8 +167,7 @@ There are certain setup tasks that establish the context in a way favorable to a
 several tasks that are repetitive and also easy to get wrong.  These are called
 :py:class:`Automagic <volatility3.framework.interfaces.automagic.AutomagicInterface>`, since they do things like magically
 taking a raw memory image and automatically providing the plugin with an appropriate Intel translation layer and an
-accurate symbol table without either the plugin or the calling program having to specify all the necessary details.
+accurate symbol table without either the plugin or the calling program having to specify all the necessary details.  Automagics are a core component which consumers of the library can call or not at their discretion.
 
 .. note:: Volatility 2 used to do this as well, but it wasn't a particularly modular mechanism, and was used only for
     stacking address spaces (rather than identifying profiles), and it couldn't really be disabled/configured easily.
-    Automagics in Volatility 3 are a core component which consumers of the library can call or not at their discretion.

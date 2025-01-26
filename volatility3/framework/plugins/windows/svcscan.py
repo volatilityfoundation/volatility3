@@ -15,7 +15,7 @@ from volatility3.framework import (
     symbols,
 )
 from volatility3.framework.configuration import requirements
-from volatility3.framework.layers import scanners
+from volatility3.framework.layers import scanners, registry
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import versions
@@ -26,13 +26,9 @@ from volatility3.plugins.windows.registry import hivelist
 vollog = logging.getLogger(__name__)
 
 
-ServiceBinaryInfo = NamedTuple(
-    "ServiceBinaryInfo",
-    [
-        ("dll", Union[str, interfaces.renderers.BaseAbsentValue]),
-        ("binary", Union[str, interfaces.renderers.BaseAbsentValue]),
-    ],
-)
+class ServiceBinaryInfo(NamedTuple):
+    dll: Union[str, interfaces.renderers.BaseAbsentValue]
+    binary: Union[str, interfaces.renderers.BaseAbsentValue]
 
 
 class SvcScan(interfaces.plugins.PluginInterface):
@@ -163,12 +159,20 @@ class SvcScan(interfaces.plugins.PluginInterface):
                 return cast(
                     objects.StructType, hive.get_key(r"CurrentControlSet\Services")
                 )
-            except (KeyError, exceptions.InvalidAddressException):
+            except (
+                KeyError,
+                exceptions.InvalidAddressException,
+                registry.RegistryFormatException,
+            ):
                 try:
                     return cast(
                         objects.StructType, hive.get_key(r"ControlSet001\Services")
                     )
-                except (KeyError, exceptions.InvalidAddressException):
+                except (
+                    KeyError,
+                    exceptions.InvalidAddressException,
+                    registry.RegistryFormatException,
+                ):
                     vollog.log(
                         constants.LOGLEVEL_VVVV,
                         "Could not retrieve any control set from SYSTEM hive",
@@ -306,9 +310,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
                 proc_layer_name = task.add_process_layer()
             except exceptions.InvalidAddressException as excp:
                 vollog.debug(
-                    "Process {}: invalid address {} in layer {}".format(
-                        proc_id, excp.invalid_address, excp.layer_name
-                    )
+                    f"Process {proc_id}: invalid address {excp.invalid_address} in layer {excp.layer_name}"
                 )
                 continue
 
