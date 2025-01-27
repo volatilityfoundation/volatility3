@@ -434,28 +434,35 @@ class SqliteCache(CacheManagerInterface):
 
         # Remote Entries
 
-        if not constants.OFFLINE and constants.REMOTE_ISF_URL:
-            progress_callback(0, "Reading remote ISF list")
-            cursor = self._database.cursor()
-            cursor.execute(
-                f"SELECT cached FROM cache WHERE local = 0 and cached < datetime('now', '{self.cache_period}')"
-            )
-            remote_identifiers = RemoteIdentifierFormat(constants.REMOTE_ISF_URL)
-            progress_callback(50, "Reading remote ISF list")
-            for operating_system in constants.OS_CATEGORIES:
-                identifiers = remote_identifiers.process(
-                    {}, operating_system=operating_system
+        if not constants.OFFLINE and constants.REMOTE_ISF_URLs:
+            length = len(constants.REMOTE_ISF_URLs)
+            # Reverse to ensure first item has the highest priority
+            for index, remote_isf_url in enumerate(reversed(constants.REMOTE_ISF_URLs)):
+                progress_callback(index / length * 100, "Reading remote ISF list")
+                cursor = self._database.cursor()
+                cursor.execute(
+                    f"SELECT cached FROM cache WHERE local = 0 and cached < datetime('now', '{self.cache_period}')"
                 )
-                for identifier, location in identifiers:
-                    identifier = identifier.rstrip()
-                    identifier = (
-                        identifier[:-1] if identifier.endswith(b"\x00") else identifier
-                    )  # Linux banners dumped by dwarf2json end with "\x00\n". If not stripped, the banner cannot match.
-                    cursor.execute(
-                        "INSERT OR REPLACE INTO cache(identifier, location, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
-                        (identifier, location, operating_system, False),
+                remote_identifiers = RemoteIdentifierFormat(remote_isf_url)
+                progress_callback(
+                    (index + 0.5) / length * 100, "Reading remote ISF list"
+                )
+                for operating_system in constants.OS_CATEGORIES:
+                    identifiers = remote_identifiers.process(
+                        {}, operating_system=operating_system
                     )
-            progress_callback(100, "Reading remote ISF list")
+                    for identifier, location in identifiers:
+                        identifier = identifier.rstrip()
+                        identifier = (
+                            identifier[:-1]
+                            if identifier.endswith(b"\x00")
+                            else identifier
+                        )  # Linux banners dumped by dwarf2json end with "\x00\n". If not stripped, the banner cannot match.
+                        cursor.execute(
+                            "INSERT OR REPLACE INTO cache(identifier, location, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
+                            (identifier, location, operating_system, False),
+                        )
+                progress_callback((index + 1) / length * 100, "Reading remote ISF list")
             self._database.commit()
 
     def get_identifier_dictionary(

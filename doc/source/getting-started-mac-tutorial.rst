@@ -37,7 +37,7 @@ For plugin requests, please create an issue with a description of the requested 
         mac.check_sysctl.Check_sysctl
         mac.check_trap_table.Check_trap_table
 
-.. note:: Here the the command is piped to grep and head to provide the start of the list of macOS plugins.
+.. note:: Here the command is piped to grep and head to provide the start of the list of macOS plugins.
 
 
 Using plugins

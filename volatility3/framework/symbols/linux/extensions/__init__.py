@@ -1602,7 +1602,7 @@ class vfsmount(objects.StructType):
             exceptions.VolatilityException: If vfsmount_ptr is not a 'vfsmount \\*'
 
         Returns:
-            bool: 'True' if the given argument points to the the same 'vfsmount'
+            bool: 'True' if the given argument points to the same 'vfsmount'
             as 'self'.
         """
         if isinstance(vfsmount_ptr, objects.Pointer):

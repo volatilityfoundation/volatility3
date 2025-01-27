@@ -40,7 +40,7 @@ For plugin requests, please create an issue with a description of the requested 
         linux.check_creds.Check_creds
         linux.check_idt.Check_idt
 
-.. note:: Here the the command is piped to grep and head to provide the start of the list of linux plugins.
+.. note:: Here the command is piped to grep and head to provide the start of the list of linux plugins.
 
 
 Using plugins
