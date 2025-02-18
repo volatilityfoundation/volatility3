@@ -12,9 +12,9 @@ console.setLevel(logging.DEBUG)
 formatter = logging.Formatter("%(levelname)-8s %(name)-12s: %(message)s")
 console.setFormatter(formatter)
 
-logger = logging.getLogger("")
-logger.addHandler(console)
-logger.setLevel(logging.DEBUG)
+vollog = logging.getLogger("")
+vollog.addHandler(console)
+vollog.setLevel(logging.DEBUG)
 
 from volatility3 import schemas  # noqa: E402
 

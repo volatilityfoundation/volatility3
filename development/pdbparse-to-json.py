@@ -10,21 +10,21 @@ from urllib import request
 import pdbparse
 import pdbparse.undecorate
 
-logger = logging.getLogger(__name__)
-logger.setLevel(1)
+vollog = logging.getLogger(__name__)
+vollog.setLevel(1)
 
 if __name__ == "__main__":
     console = logging.StreamHandler()
     console.setLevel(1)
     formatter = logging.Formatter("%(levelname)-8s %(name)-12s: %(message)s")
     console.setFormatter(formatter)
-    logger.addHandler(console)
+    vollog.addHandler(console)
 
 
 class PDBRetreiver:
 
     def retreive_pdb(self, guid: str, file_name: str) -> Optional[str]:
-        logger.info("Download PDB file...")
+        vollog.info("Download PDB file...")
         file_name = ".".join(file_name.split(".")[:-1] + ["pdb"])
         for sym_url in ["http://msdl.microsoft.com/download/symbols"]:
             url = sym_url + f"/{file_name}/{guid}/"
@@ -32,12 +32,12 @@ class PDBRetreiver:
             result = None
             for suffix in [file_name[:-1] + "_", file_name]:
                 try:
-                    logger.debug("Attempting to retrieve %s", url + suffix)
+                    vollog.debug("Attempting to retrieve %s", url + suffix)
                     result, _ = request.urlretrieve(url + suffix)
                 except request.HTTPError as excp:
-                    logger.debug("Failed with %s", excp)
+                    vollog.debug("Failed with %s", excp)
             if result:
-                logger.debug("Successfully written to %s", result)
+                vollog.debug("Successfully written to %s", result)
                 break
         return result
 
@@ -114,7 +114,7 @@ class PDBConvertor:
 
     def __init__(self, filename: str):
         self._filename = filename
-        logger.info("Parsing PDB...")
+        vollog.info("Parsing PDB...")
         self._pdb = pdbparse.parse(filename)
         self._seen_ctypes: Set[str] = set([])
 
@@ -172,7 +172,7 @@ class PDBConvertor:
 
     def read_enums(self) -> Dict:
         """Reads the Enumerations from the PDB file"""
-        logger.info("Reading enums...")
+        vollog.info("Reading enums...")
         output: Dict[str, Any] = {}
         stream = self._pdb.STREAM_TPI
         for type_index in stream.types:
@@ -198,7 +198,7 @@ class PDBConvertor:
 
     def read_symbols(self) -> Dict:
         """Reads the symbols from the PDB file"""
-        logger.info("Reading symbols...")
+        vollog.info("Reading symbols...")
         output = {}
 
         try:
@@ -227,7 +227,7 @@ class PDBConvertor:
 
     def read_usertypes(self) -> Dict:
         """Reads the user types from the PDB file"""
-        logger.info("Reading usertypes...")
+        vollog.info("Reading usertypes...")
         output = {}
         stream = self._pdb.STREAM_TPI
         for type_index in stream.types:
