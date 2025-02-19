@@ -74,8 +74,9 @@ class Threads(thrdscan.ThrdScan):
         layer_name = module.layer_name
         symbol_table_name = module.symbol_table_name
 
-        filter_func = pslist.PsList.create_pid_filter(context.config.get("pid", None))
-
+        pid_arg = interfaces.configuration.path_join("plugins", "Threads", "pid")
+        filter_func = pslist.PsList.create_pid_filter(context.config.get(pid_arg), None)
+        
         for proc in pslist.PsList.list_processes(
             context=context,
             layer_name=layer_name,
