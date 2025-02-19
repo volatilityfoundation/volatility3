@@ -2,7 +2,6 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import binascii
-import hashlib
 import logging
 from struct import pack, unpack
 from typing import List, Optional, Tuple
@@ -401,7 +400,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
 
         revision = sam_data[0x00]
         if revision == 2:
-            md5 = hashlib.md5()
+            md5 = MD5.new()
 
             md5.update(sam_data[0x70:0x80] + cls.aqwerty + bootkey + cls.anum)
             rc4_key = md5.digest()
