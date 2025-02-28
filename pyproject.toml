@@ -76,6 +76,9 @@ include = ["volatility3*"]
 mypy_path = "./stubs"
 show_traceback = true
 
+[tool.pyright]
+stubPath = "./stubs"
+
 [tool.ruff]
 line-length = 88
 target-version = "py38"
