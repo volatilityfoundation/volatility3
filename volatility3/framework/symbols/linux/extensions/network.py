@@ -199,7 +199,7 @@ class net_device(objects.StructType):
         """
         return self.flags & self._get_net_device_flag_value("IFF_PROMISC") != 0
 
-    def get_net_namespace_id(self) -> int:
+    def _do_get_net_namespace_id(self) -> int:
         """Return the network namespace id for this network interface.
 
         Returns:
@@ -215,6 +215,17 @@ class net_device(objects.StructType):
             net_ns_id = nd_net.get_inode()
 
         return net_ns_id
+
+    def get_net_namespace_id(self) -> Optional[int]:
+        """Return the network namespace id for this network interface.
+
+        Returns:
+            int: the network namespace id for this network interface
+        """
+        try:
+            return self._do_get_net_namespace_id()
+        except exceptions.InvalidAddressException:
+            return None
 
     def get_operational_state(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
         """Return the netwok device oprational state (RFC 2863) string
