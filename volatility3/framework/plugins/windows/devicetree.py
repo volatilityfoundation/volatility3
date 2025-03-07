@@ -138,7 +138,7 @@ class DeviceTree(interfaces.plugins.PluginInterface):
                     yield (
                         1,
                         (
-                            format_hints.Hex(driver.vol.offset),
+                            format_hints.Hex(device.vol.offset),
                             "DEV",
                             driver_name,
                             device_name,
@@ -170,7 +170,7 @@ class DeviceTree(interfaces.plugins.PluginInterface):
                         yield (
                             level,
                             (
-                                format_hints.Hex(driver.vol.offset),
+                                format_hints.Hex(attached_device.vol.offset),
                                 "ATT",
                                 driver_name,
                                 device_name,
