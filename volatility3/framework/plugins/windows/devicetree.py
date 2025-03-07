@@ -3,12 +3,12 @@
 #
 
 import logging
+from typing import Iterator, List, Set, Tuple
 
-from typing import Iterator, List, Tuple
-
-from volatility3.framework import constants, renderers, exceptions, interfaces
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
+from volatility3.framework.symbols.windows.extensions import DEVICE_OBJECT
 from volatility3.plugins.windows import driverscan
 
 DEVICE_CODES = {
@@ -102,7 +102,7 @@ class DeviceTree(interfaces.plugins.PluginInterface):
         ):
             try:
                 try:
-                    driver_name = driver.get_driver_name()
+                    driver_name = driver.DriverName.get_string()
                 except (ValueError, exceptions.InvalidAddressException):
                     vollog.log(
                         constants.LOGLEVEL_VVVV,
@@ -124,59 +124,20 @@ class DeviceTree(interfaces.plugins.PluginInterface):
 
                 # Scan to get the device information of driver.
                 for device in driver.get_devices():
-                    try:
-                        device_name = device.get_device_name()
-                    except (ValueError, exceptions.InvalidAddressException):
-                        vollog.log(
-                            constants.LOGLEVEL_VVVV,
-                            f"Failed to get Device name : {device.vol.offset:x}",
-                        )
-                        device_name = renderers.UnparsableValue()
-
-                    device_type = DEVICE_CODES.get(device.DeviceType, "UNKNOWN")
-
-                    yield (
-                        1,
-                        (
-                            format_hints.Hex(device.vol.offset),
-                            "DEV",
-                            driver_name,
-                            device_name,
-                            renderers.NotApplicableValue(),
-                            device_type,
-                        ),
-                    )
-
-                    # Scan to get the attached devices information of device.
-                    for level, attached_device in enumerate(
-                        device.get_attached_devices(), start=2
-                    ):
-                        try:
-                            device_name = attached_device.get_device_name()
-                        except (ValueError, exceptions.InvalidAddressException):
-                            vollog.log(
-                                constants.LOGLEVEL_VVVV,
-                                f"Failed to get Attached Device Name: {attached_device.vol.offset:x}",
-                            )
-                            device_name = renderers.UnparsableValue()
-
-                        attached_device_driver_name = (
-                            attached_device.DriverObject.DriverName.get_string()
-                        )
-                        attached_device_type = DEVICE_CODES.get(
-                            attached_device.DeviceType, "UNKNOWN"
-                        )
-
-                        yield (
-                            level,
-                            (
-                                format_hints.Hex(attached_device.vol.offset),
-                                "ATT",
-                                driver_name,
-                                device_name,
-                                attached_device_driver_name,
-                                attached_device_type,
-                            ),
+                    for level, (
+                        offset,
+                        drv_name,
+                        dev_name,
+                        att_drv_name,
+                        dev_typ,
+                    ) in self._traverse_device_stack(device, driver_name, 1):
+                        yield level, (
+                            offset,
+                            "DEV" if level == 1 else "ATT",
+                            drv_name,
+                            dev_name,
+                            att_drv_name,
+                            dev_typ,
                         )
 
             except exceptions.InvalidAddressException:
@@ -185,6 +146,48 @@ class DeviceTree(interfaces.plugins.PluginInterface):
                     f"Invalid address identified in drivers and devices: {driver.vol.offset:x}",
                 )
                 continue
+
+    @staticmethod
+    def _traverse_device_stack(
+        device: DEVICE_OBJECT, driver_name: str, level: int, seen: Set[int] = set()
+    ) -> Iterator[Tuple]:
+        while device and device.vol.offset not in seen:
+            seen.add(device.vol.offset)
+            try:
+                device_name = device.get_device_name()
+            except (ValueError, exceptions.InvalidAddressException):
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    f"Failed to get Device name : {device.vol.offset:x}",
+                )
+                device_name = renderers.UnparsableValue()
+
+            device_type = DEVICE_CODES.get(device.DeviceType, "UNKNOWN")
+
+            att_drv_name = device.DriverObject.DriverName.get_string()
+
+            yield (
+                level,
+                (
+                    format_hints.Hex(device.vol.offset),
+                    driver_name,
+                    device_name,
+                    att_drv_name,
+                    device_type,
+                ),
+            )
+            try:
+                attached = device.AttachedDevice.dereference()
+                yield from DeviceTree._traverse_device_stack(
+                    attached, driver_name, level + 1, seen
+                )
+            except exceptions.InvalidAddressException:
+                pass
+
+            try:
+                device = device.NextDevice.dereference()
+            except exceptions.InvalidAddressException:
+                pass
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid(
