@@ -182,12 +182,18 @@ class DeviceTree(interfaces.plugins.PluginInterface):
                     attached, driver_name, level + 1, seen
                 )
             except exceptions.InvalidAddressException:
-                pass
+                vollog.debug(
+                    f"Failed to dereference attached device for device at {device.vol.offset:#x}, "
+                    "devnode may not have drivers associated with it"
+                )
 
             try:
                 device = device.NextDevice.dereference()
             except exceptions.InvalidAddressException:
-                pass
+                vollog.debug(
+                    f"Failed to dereference next driver in linked list at {int(device.NextDevice)}, "
+                    "may have reached end of list"
+                )
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid(
