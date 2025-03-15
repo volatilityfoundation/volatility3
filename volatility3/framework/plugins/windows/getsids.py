@@ -4,16 +4,15 @@
 import json
 import logging
 import ntpath
-import os
 import re
 from typing import List, Dict, Union
+from importlib import resources
 
 from volatility3.framework import (
     renderers,
     interfaces,
     objects,
     exceptions,
-    constants,
     layers,
 )
 from volatility3.framework.configuration import requirements
@@ -42,23 +41,10 @@ class GetSIDs(interfaces.plugins.PluginInterface):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for plugin_dir in constants.PLUGINS_PATH:
-            sids_json_file_name = os.path.join(
-                plugin_dir, os.path.join("windows", "sids_and_privileges.json")
-            )
-            if os.path.exists(sids_json_file_name):
-                break
-        else:
-            vollog.log(
-                constants.LOGLEVEL_VVV,
-                "sids_and_privileges.json file is missing plugin error",
-            )
-            raise RuntimeError(
-                "The sids_and_privileges.json file missed from you plugin directory"
-            )
 
-        # Get all the sids from the json file.
-        with open(sids_json_file_name) as file_handle:
+        with resources.open_text(
+            "volatility3.data", "sids_and_privileges.json"
+        ) as file_handle:
             sids_json_data = json.load(file_handle)
             self.servicesids = sids_json_data["service sids"]
             self.well_known_sids = sids_json_data["well known"]

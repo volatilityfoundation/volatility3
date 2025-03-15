@@ -4,11 +4,11 @@
 import hashlib
 import json
 import logging
-import os
 import struct
+from importlib import resources
 from typing import List
 
-from volatility3.framework import renderers, interfaces, constants, exceptions
+from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import registry
 from volatility3.plugins.windows.registry import hivelist
@@ -39,24 +39,9 @@ class GetServiceSIDs(interfaces.plugins.PluginInterface):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Find the sids json path (or raise error if its not in the plugin directory).
-        for plugin_dir in constants.PLUGINS_PATH:
-            sids_json_file_name = os.path.join(
-                plugin_dir, os.path.join("windows", "sids_and_privileges.json")
-            )
-            if os.path.exists(sids_json_file_name):
-                break
-        else:
-            vollog.log(
-                constants.LOGLEVEL_VVV,
-                "sids_and_privileges.json file is missing plugin error",
-            )
-            raise RuntimeError(
-                "The sids_and_privileges.json file missed from you plugin directory"
-            )
-
-        # Get service sids dictionary (we need only the service sids).
-        with open(sids_json_file_name) as file_handle:
+        with resources.open_text(
+            "volatility3.data", "sids_and_privileges.json"
+        ) as file_handle:
             self.servicesids = json.load(file_handle)["service sids"]
 
     @classmethod
