@@ -374,6 +374,9 @@ class Kallsyms(interfaces.configuration.VersionableInterface):
             sym_addr = self._get_symbol_address_by_index(index=index)
             _, sym_size = self._get_symbol_pos(sym_addr)
 
+            if kassymbolbasic.type is None:
+                return None, None
+
             kassymbol = KASSymbol(
                 name=kassymbolbasic.name,
                 type=kassymbolbasic.type,
@@ -402,7 +405,14 @@ class Kallsyms(interfaces.configuration.VersionableInterface):
         """
         current_offset = 0
         for sym_idx in range(self._kallsyms_num_syms):
-            kassymbol, compressed_length = self._get_symbol(current_offset, sym_idx)
+            try:
+                kassymbol, compressed_length = self._get_symbol(current_offset, sym_idx)
+            except exceptions.InvalidAddressExeption:
+                vollog.debug(
+                    f"Unable to reconstruct core symbol at offset {current_offset:#x} and index {sym_idx}"
+                )
+                continue
+
             if kassymbol:
                 yield kassymbol
 
@@ -1101,8 +1111,18 @@ class Kallsyms(interfaces.configuration.VersionableInterface):
                 sym_address = elf_sym_obj.st_value & layer.address_mask
                 sym_size = elf_sym_obj.st_size
                 sym_type = module.get_symbol_type(elf_sym_obj, elf_sym_idx)
-                is_exported = self._is_symbol_exported(sym_name, sym_address, module)
-                sym_type = sym_type.upper() if is_exported else sym_type.lower()
+
+                try:
+                    is_exported = self._is_symbol_exported(
+                        sym_name, sym_address, module
+                    )
+                    sym_type = sym_type.upper() if is_exported else sym_type.lower()
+                except exceptions.InvalidAddressException:
+                    vollog.warning(
+                        "Forcing sym_type to lower case as it's export status could not be determined."
+                    )
+                    sym_type = sym_type.lower()
+                    is_exported = False
 
                 yield KASSymbol(
                     name=sym_name,
@@ -1252,7 +1272,12 @@ class Kallsyms(interfaces.configuration.VersionableInterface):
 
         # Even when bpf_jit_kallsyms is disabled (/proc/sys/net/core/bpf_jit_kallsyms = 0),
         # this function will still be able to gather the symbols.
-        bpf_kallsyms_list = vmlinux.object_from_symbol("bpf_kallsyms")
+        try:
+            bpf_kallsyms_list = vmlinux.object_from_symbol("bpf_kallsyms")
+        except exceptions.SymbolError:
+            vollog.warning("Unable to reconstrct `bpf_kallsyms`. Cannot proceed.")
+            return None
+
         for elem in bpf_kallsyms_list.to_list(list_type_symname, list_head_member):
             # See kernel's bpf_get_kallsym()
             if list_type == "bpf_ksym":
