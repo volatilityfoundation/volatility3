@@ -53,7 +53,9 @@ class MBRScan(interfaces.plugins.PluginInterface):
         layer = self.context.layers[physical_layer_name]
         architecture = (
             "intel"
-            if not symbols.symbol_table_is_64bit(self.context, kernel.symbol_table_name)
+            if not symbols.symbol_table_is_64bit(
+                context=self.context, symbol_table_name=kernel.symbol_table_name
+            )
             else "intel64"
         )
 

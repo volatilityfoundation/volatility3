@@ -1,8 +1,8 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-"""A module containing a collection of plugins that produce data typically
-found in Linux's /proc file system."""
+"""A module containing a plugin for enumerating memory-mapped
+ELF files across all processes."""
 
 import logging
 from typing import List, Optional, Type
@@ -14,7 +14,9 @@ from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux.extensions import elf
+from volatility3.framework.constants.linux import ELF_MAX_EXTRACTION_SIZE
 from volatility3.plugins.linux import pslist
+
 
 vollog = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ class Elfs(plugins.PluginInterface):
     """Lists all memory mapped ELF files for all processes."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+    _version = (2, 0, 3)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -33,8 +35,8 @@ class Elfs(plugins.PluginInterface):
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -82,12 +84,20 @@ class Elfs(plugins.PluginInterface):
         )
 
         if not elf_object.is_valid():
+            vollog.debug("ELF object to be dumped is not valid")
             return None
 
         sections = {}
         # TODO: Apply more effort to reconstruct ELF, e.g.: https://github.com/enbarberis/core2ELF64 ?
         for phdr in elf_object.get_program_headers():
-            if phdr.p_type != 1:  # PT_LOAD = 1
+            try:
+                if phdr.p_type.description != "PT_LOAD":
+                    continue
+            except ValueError:
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    f"Skipping unknown ELF program header type: {phdr.p_type}",
+                )
                 continue
 
             start = phdr.p_vaddr
@@ -95,18 +105,18 @@ class Elfs(plugins.PluginInterface):
             end = start + size
 
             # Use complete memory pages for dumping
-            # If start isn't a multiple of 4096, stick to the highest multiple < start
-            # If end isn't a multiple of 4096, stick to the lowest multiple > end
-            if start % 4096:
-                start = start & ~0xFFF
+            # If start isn't a multiple of a page, stick to the highest multiple < start
+            # If end isn't a multiple of a page, stick to the lowest multiple > end
+            if start % proc_layer.page_size:
+                start = start & proc_layer.page_mask
 
-            if end % 4096:
-                end = (end & ~0xFFF) + 4096
+            if end % proc_layer.page_size:
+                end = (end & proc_layer.page_mask) + proc_layer.page_size
 
             real_size = end - start
 
             # Check if ELF has a legitimate size
-            if real_size < 0 or real_size > constants.linux.ELF_MAX_EXTRACTION_SIZE:
+            if real_size < 0 or real_size > ELF_MAX_EXTRACTION_SIZE:
                 raise ValueError(f"The claimed size of the ELF is invalid: {real_size}")
 
             sections[start] = real_size
@@ -140,12 +150,7 @@ class Elfs(plugins.PluginInterface):
 
             for vma in task.mm.get_vma_iter():
                 hdr = proc_layer.read(vma.vm_start, 4, pad=True)
-                if not (
-                    hdr[0] == 0x7F
-                    and hdr[1] == 0x45
-                    and hdr[2] == 0x4C
-                    and hdr[3] == 0x46
-                ):
+                if hdr != b"\x7fELF":
                     continue
 
                 path = vma.get_name(self.context, task)
@@ -172,7 +177,7 @@ class Elfs(plugins.PluginInterface):
                         name,
                         format_hints.Hex(vma.vm_start),
                         format_hints.Hex(vma.vm_end),
-                        path,
+                        path or renderers.NotAvailableValue(),
                         file_output,
                     ),
                 )

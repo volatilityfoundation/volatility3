@@ -17,6 +17,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
     """Lists virtual mapped sections."""
 
     _required_framework_version = (2, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -78,7 +79,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
                 )
             else:
                 raise exceptions.SymbolError(
-                    None, module.name, "Required structures not found"
+                    "SystemVaRegions", module.name, "Required structures not found"
                 )
         elif module.has_symbol("MiSystemVaType"):
             system_range_start = module.object(
@@ -99,7 +100,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
             )
         else:
             raise exceptions.SymbolError(
-                None, module.name, "Required structures not found"
+                "MiVisibleState", module.name, "Required structures not found"
             )
 
         return result
@@ -138,8 +139,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
         mapping = cls.determine_map(module)
         for entry in mapping:
             if "Unused" not in entry:
-                for value in mapping[entry]:
-                    yield value
+                yield from mapping[entry]
 
     def run(self):
         kernel = self.context.modules[self.config["kernel"]]
@@ -148,7 +148,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
         module = self.context.module(
             kernel.symbol_table_name,
             layer_name=layer.name,
-            offset=layer.config["kernel_virtual_offset"],
+            offset=kernel.offset,
         )
 
         return renderers.TreeGrid(

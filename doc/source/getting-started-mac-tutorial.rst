@@ -37,7 +37,7 @@ For plugin requests, please create an issue with a description of the requested 
         mac.check_sysctl.Check_sysctl
         mac.check_trap_table.Check_trap_table
 
-.. note:: Here the the command is piped to grep and head in-order to provide the start of the list of macOS plugins.
+.. note:: Here the the command is piped to grep and head to provide the start of the list of macOS plugins.
 
 
 Using plugins
@@ -78,7 +78,7 @@ Thanks go to `stuxnet <https://github.com/stuxnet999/>`_ for providing this memo
         
 
 The above command helps us to find the memory dump's Darwin kernel version. Now using the above banner we can search for the needed ISF file.
-If ISF file cannot be found then, follow the instructions on :ref:`getting-started-mac-tutorial:Procedure to create symbol tables for macOS`. After that, place the ISF file under the ``volatility3/symbols`` directory.
+If an ISF file cannot be found then, follow the instructions on :ref:`getting-started-mac-tutorial:Procedure to create symbol tables for macOS`. After that, place the ISF file under the ``volatility3/symbols`` directory.
 
 mac.pslist
 ~~~~~~~~~~
@@ -125,7 +125,7 @@ mac.pstree
         337     1       system_installd
         * 455   337     update_dyld_shar
 
-``mac.pstree`` helps us to display the parent child relationships between processes.
+``mac.pstree`` helps us to display the parent-child relationships between processes.
 
 mac.ifconfig
 ~~~~~~~~~~~~
@@ -150,4 +150,4 @@ mac.ifconfig
         utun0                   False
         utun0   fe80:5::2a95:bb15:87e3:977c             False
         
-we can use the ``mac.ifconfig`` plugin to get information about the configuration of the network interfaces of the host under investigation.
+We can use the ``mac.ifconfig`` plugin to get information about the configuration of the network interfaces of the host under investigation.

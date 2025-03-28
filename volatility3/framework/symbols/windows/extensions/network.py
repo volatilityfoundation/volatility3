@@ -4,7 +4,7 @@
 
 import logging
 import socket
-from typing import Dict, Tuple, List, Union
+from typing import Dict, Tuple, List, Union, Optional
 
 from volatility3.framework import exceptions
 from volatility3.framework import objects, interfaces
@@ -22,7 +22,7 @@ def inet_ntop(address_family: int, packed_ip: Union[List[int], Array]) -> str:
             raise RuntimeError(
                 "This version of python does not have socket.inet_ntop, please upgrade"
             )
-    raise socket.error("[Errno 97] Address family not supported by protocol")
+    raise OSError("[Errno 97] Address family not supported by protocol")
 
 
 # Python's socket.AF_INET6 is 0x1e but Microsoft defines it
@@ -86,19 +86,29 @@ class _TCP_LISTENER(objects.StructType):
         except exceptions.InvalidAddressException:
             return None
 
-    def get_owner_pid(self):
-        if self.get_owner().is_valid():
-            if self.get_owner().has_valid_member("UniqueProcessId"):
-                return self.get_owner().UniqueProcessId
+    def get_owner_pid(self) -> Optional[int]:
+        owner = self.get_owner()
+
+        if owner is None:
+            return None
+
+        if owner.is_valid():
+            if owner.has_valid_member("UniqueProcessId"):
+                return owner.UniqueProcessId
 
         return None
 
-    def get_owner_procname(self):
-        if self.get_owner().is_valid():
-            if self.get_owner().has_valid_member("ImageFileName"):
-                return self.get_owner().ImageFileName.cast(
+    def get_owner_procname(self) -> Optional[str]:
+        owner = self.get_owner()
+
+        if owner is None:
+            return None
+
+        if owner.is_valid():
+            if owner.has_valid_member("ImageFileName"):
+                return owner.ImageFileName.cast(
                     "string",
-                    max_length=self.get_owner().ImageFileName.vol.count,
+                    max_length=owner.ImageFileName.vol.count,
                     errors="replace",
                 )
 
@@ -167,11 +177,9 @@ class _TCP_LISTENER(objects.StructType):
 
     def is_valid(self):
         try:
-            if not self.get_address_family() in (AF_INET, AF_INET6):
+            if self.get_address_family() not in (AF_INET, AF_INET6):
                 vollog.debug(
-                    "netw obj 0x{:x} invalid due to invalid address_family {}".format(
-                        self.vol.offset, self.get_address_family()
-                    )
+                    f"netw obj 0x{self.vol.offset:x} invalid due to invalid address_family {self.get_address_family()}"
                 )
                 return False
 
@@ -211,7 +219,13 @@ class _TCP_ENDPOINT(_TCP_LISTENER):
             return None
 
     def is_valid(self):
-        if self.State not in self.State.choices.values():
+        # netstat calls this before validating the object itself
+        try:
+            state = self.State
+        except exceptions.InvalidAddressException:
+            return False
+
+        if state not in state.choices.values():
             vollog.debug(
                 f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid tcp state {self.State}"
             )

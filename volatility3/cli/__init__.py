@@ -19,9 +19,17 @@ import os
 import sys
 import tempfile
 import traceback
-from typing import Any, Dict, List, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 from urllib import parse, request
 
+try:
+    import argcomplete
+
+    HAS_ARGCOMPLETE = True
+except ImportError:
+    HAS_ARGCOMPLETE = False
+
+from volatility3.cli import text_filter
 import volatility3.plugins
 import volatility3.symbols
 from volatility3 import framework
@@ -49,14 +57,14 @@ formatter = logging.Formatter("%(levelname)-8s %(name)-12s: %(message)s")
 console.setFormatter(formatter)
 
 
-class PrintedProgress(object):
+class PrintedProgress:
     """A progress handler that prints the progress value and the description
     onto the command line."""
 
     def __init__(self):
         self._max_message_len = 0
 
-    def __call__(self, progress: Union[int, float], description: str = None):
+    def __call__(self, progress: Union[int, float], description: Optional[str] = None):
         """A simple function for providing text-based feedback.
 
         .. warning:: Only for development use.
@@ -73,14 +81,14 @@ class PrintedProgress(object):
 class MuteProgress(PrintedProgress):
     """A dummy progress handler that produces no output when called."""
 
-    def __call__(self, progress: Union[int, float], description: str = None):
+    def __call__(self, progress: Union[int, float], description: Optional[str] = None):
         pass
 
 
 class CommandLine:
     """Constructs a command-line interface object for users to run plugins."""
 
-    CLI_NAME = "volatility"
+    CLI_NAME = os.path.basename(sys.argv[0])  # vol or volatility
 
     def __init__(self):
         self.setup_logging()
@@ -118,9 +126,7 @@ class CommandLine:
             "--help",
             action="help",
             default=argparse.SUPPRESS,
-            help="Show this help message and exit, for specific plugin options use '{} <pluginname> --help'".format(
-                parser.prog
-            ),
+            help=f"Show this help message and exit, for specific plugin options use '{parser.prog} <pluginname> --help'",
         )
         parser.add_argument(
             "-c",
@@ -227,11 +233,34 @@ class CommandLine:
             default=constants.CACHE_PATH,
             type=str,
         )
-        parser.add_argument(
+        isf_group = parser.add_mutually_exclusive_group()
+        isf_group.add_argument(
             "--offline",
             help="Do not search online for additional JSON files",
             default=False,
             action="store_true",
+        )
+        isf_group.add_argument(
+            "-u",
+            "--remote-isf-url",
+            metavar="URL",
+            help="Search online for ISF json files",
+            default=constants.REMOTE_ISF_URL,
+            type=str,
+        )
+        parser.add_argument(
+            "--filters",
+            help="List of filters to apply to the output (in the form of [+-]columname,pattern[!])",
+            default=[],
+            action="append",
+        )
+        parser.add_argument(
+            "--hide-columns",
+            help="Case-insensitive space separated list of prefixes to determine which columns to hide in the output if provided",
+            default=None,
+            action="extend",
+            nargs="*",
+            type=str,
         )
 
         parser.set_defaults(**default_config)
@@ -257,12 +286,14 @@ class CommandLine:
             file_logger.setFormatter(file_formatter)
             rootlog.addHandler(file_logger)
             vollog.info("Logging started")
+
+        self.order_extra_verbose_levels()
         if partial_args.verbosity < 3:
             if partial_args.verbosity < 1:
                 sys.tracebacklimit = None
-            console.setLevel(30 - (partial_args.verbosity * 10))
+            console.setLevel(logging.WARNING - (partial_args.verbosity * 10))
         else:
-            console.setLevel(10 - (partial_args.verbosity - 2))
+            console.setLevel(logging.DEBUG - (partial_args.verbosity - 2))
 
         for level, msg in delayed_logs:
             vollog.log(level, msg)
@@ -297,6 +328,8 @@ class CommandLine:
 
         if partial_args.offline:
             constants.OFFLINE = partial_args.offline
+        elif partial_args.remote_isf_url:
+            constants.REMOTE_ISF_URL = partial_args.remote_isf_url
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
@@ -325,14 +358,26 @@ class CommandLine:
         subparser = parser.add_subparsers(
             title="Plugins",
             dest="plugin",
-            description="For plugin specific options, run '{} <plugin> --help'".format(
-                self.CLI_NAME
-            ),
+            description=f"For plugin specific options, run '{self.CLI_NAME} <plugin> --help'",
             action=volargparse.HelpfulSubparserAction,
+            metavar="PLUGIN",
         )
         for plugin in sorted(plugin_list):
+            # First line of a plugin docstring will be the short description for -h.
+            # Text after the first two consecutive new lines will be
+            # the additional description (argparse epilog).
+            short_help = additional_help = None
+            if plugin_list[plugin].__doc__ is not None:
+                doc_split = plugin_list[plugin].__doc__.split("\n\n", 1)
+                short_help = doc_split[0].strip()
+                if len(doc_split) > 1:
+                    additional_help = doc_split[1].strip()
+
             plugin_parser = subparser.add_parser(
-                plugin, help=plugin_list[plugin].__doc__
+                plugin,
+                help=short_help,
+                description=short_help,
+                epilog=additional_help,
             )
             self.populate_requirements_argparse(plugin_parser, plugin_list[plugin])
 
@@ -342,9 +387,15 @@ class CommandLine:
         # Hand the plugin requirements over to the CLI (us) and let it construct the config tree
 
         # Run the argparser
+        if HAS_ARGCOMPLETE:
+            # The autocompletion line must be after the partial_arg handling, so that it doesn't trip it
+            # before all the plugins have been added
+            argcomplete.autocomplete(parser)
         args = parser.parse_args()
         if args.plugin is None:
-            parser.error("Please select a plugin to run")
+            parser.error(
+                f"Please select a plugin to run (see '{self.CLI_NAME} --help' for options"
+            )
 
         vollog.log(
             constants.LOGLEVEL_VVV, f"Cache directory used: {constants.CACHE_PATH}"
@@ -372,7 +423,7 @@ class CommandLine:
 
         # UI fills in the config, here we load it from the config file and do it before we process the CL parameters
         if args.config:
-            with open(args.config, "r") as f:
+            with open(args.config) as f:
                 json_val = json.load(f)
                 ctx.config.splice(
                     plugin_config_path,
@@ -454,7 +505,11 @@ class CommandLine:
         try:
             # Construct and run the plugin
             if constructed:
-                renderers[args.renderer]().render(constructed.run())
+                grid = constructed.run()
+                renderer = renderers[args.renderer]()
+                renderer.filter = text_filter.CLIFilter(grid, args.filters)
+                renderer.column_hide_list = args.hide_columns
+                renderer.render(grid)
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
 
@@ -528,6 +583,8 @@ class CommandLine:
         fulltrace = traceback.TracebackException.from_exception(excp).format(chain=True)
         vollog.debug("".join(fulltrace))
 
+        file_a_bug_msg = f"Please re-run with -vvv and file a bug with the output at {constants.BUG_URL}"
+
         if isinstance(excp, exceptions.InvalidAddressException):
             general = "Volatility was unable to read a requested page:"
             if isinstance(excp, exceptions.SwappedInvalidAddressException):
@@ -572,22 +629,28 @@ class CommandLine:
         elif isinstance(excp, exceptions.LayerException):
             general = f"Volatility experienced a layer-related issue: {excp.layer_name}"
             detail = f"{excp}"
-            caused_by = [
-                "A faulty layer implementation (re-run with -vvv and file a bug)"
-            ]
+            caused_by = [f"A faulty layer implementation. {file_a_bug_msg}"]
         elif isinstance(excp, exceptions.MissingModuleException):
             general = f"Volatility could not import a necessary module: {excp.module}"
             detail = f"{excp}"
             caused_by = [
                 "A required python module is not installed (install the module and re-run)"
             ]
+        elif isinstance(excp, exceptions.RenderException):
+            general = "Volatility experienced an issue when rendering the output:"
+            detail = f"{excp}"
+            caused_by = ["An invalid renderer option, such as no visible columns"]
+        elif isinstance(excp, exceptions.VersionMismatchException):
+            general = "A version mismatch was detected between two components:"
+            detail = f"{excp}"
+            caused_by = [
+                excp.failure_reason or "An outdated API caller, such as a method.",
+                file_a_bug_msg,
+            ]
         else:
             general = "Volatility encountered an unexpected situation."
             detail = ""
-            caused_by = [
-                "Please re-run using with -vvv and file a bug with the output",
-                f"at {constants.BUG_URL}",
-            ]
+            caused_by = [file_a_bug_msg]
 
         # Code that actually renders the exception
         output = sys.stderr
@@ -670,9 +733,7 @@ class CommandLine:
                     if isinstance(requirement, requirements.ListRequirement):
                         if not isinstance(value, list):
                             raise TypeError(
-                                "Configuration for ListRequirement was not a list: {}".format(
-                                    requirement.name
-                                )
+                                f"Configuration for ListRequirement was not a list: {requirement.name}"
                             )
                         value = [requirement.element_type(x) for x in value]
                     if not inspect.isclass(configurables_list[configurable]):
@@ -685,6 +746,17 @@ class CommandLine:
                     )
                     context.config[extended_path] = value
 
+    def order_extra_verbose_levels(self):
+        for level, level_value in enumerate(
+            [
+                constants.LOGLEVEL_V,
+                constants.LOGLEVEL_VV,
+                constants.LOGLEVEL_VVV,
+                constants.LOGLEVEL_VVVV,
+            ]
+        ):
+            logging.addLevelName(level_value, f"DETAIL {level+1}")
+
     def file_handler_class_factory(self, direct=True):
         output_dir = self.output_dir
 
@@ -693,19 +765,17 @@ class CommandLine:
                 """Gets the final filename"""
                 if output_dir is None:
                     raise TypeError("Output directory is not a string")
+
                 os.makedirs(output_dir, exist_ok=True)
 
-                pref_name_array = self.preferred_filename.split(".")
-                filename, extension = (
-                    os.path.join(output_dir, ".".join(pref_name_array[:-1])),
-                    pref_name_array[-1],
-                )
-                output_filename = f"{filename}.{extension}"
+                output_filename = os.path.join(output_dir, self.preferred_filename)
+                filename, extension = os.path.splitext(output_filename)
 
                 counter = 1
                 while os.path.exists(output_filename):
-                    output_filename = f"{filename}-{counter}.{extension}"
+                    output_filename = f"{filename}-{counter}{extension}"
                     counter += 1
+
                 return output_filename
 
         class CLIMemFileHandler(io.BytesIO, CLIFileHandler):
@@ -736,7 +806,7 @@ class CommandLine:
                 fd, self._name = tempfile.mkstemp(
                     suffix=".vol3", prefix="tmp_", dir=output_dir
                 )
-                self._file = io.open(fd, mode="w+b")
+                self._file = open(fd, mode="w+b")
                 CLIFileHandler.__init__(self, filename)
                 for item in dir(self._file):
                     if not item.startswith("_") and item not in (
@@ -768,8 +838,16 @@ class CommandLine:
                 if self._file.closed:
                     return None
 
-                self._file.close()
                 output_filename = self._get_final_filename()
+
+                # Update the filename, which may have changed if a file with
+                # the same name already existed. This needs to be done before
+                # closing the file, otherwise FileHandlerInterface will raise
+                # an exception. Also, the preferred_filename setter only allows
+                #  a specific set of characters, where '/' is not in that list
+                self.preferred_filename = os.path.basename(output_filename)
+
+                self._file.close()
                 os.rename(self._name, output_filename)
 
         if direct:
@@ -801,9 +879,7 @@ class CommandLine:
                 requirement, interfaces.configuration.RequirementInterface
             ):
                 raise TypeError(
-                    "Plugin contains requirements that are not RequirementInterfaces: {}".format(
-                        configurable.__name__
-                    )
+                    f"Plugin contains requirements that are not RequirementInterfaces: {configurable.__name__}"
                 )
             if isinstance(requirement, interfaces.configuration.SimpleTypeRequirement):
                 additional["type"] = requirement.instance_type
@@ -817,7 +893,11 @@ class CommandLine:
                 requirement,
                 volatility3.framework.configuration.requirements.ListRequirement,
             ):
-                additional["type"] = requirement.element_type
+                # Allow a list of integers, specified with the convenient 0x hexadecimal format
+                if requirement.element_type is int:
+                    additional["type"] = lambda x: int(x, 0)
+                else:
+                    additional["type"] = requirement.element_type
                 nargs = "*" if requirement.optional else "+"
                 additional["nargs"] = nargs
             elif isinstance(

@@ -20,9 +20,10 @@ from volatility3.framework import (
 )
 from volatility3.framework.interfaces.objects import ObjectInterface
 from volatility3.framework.layers import intel
+from volatility3.framework.objects import utility
 from volatility3.framework.renderers import conversion
-from volatility3.framework.symbols import generic
-from volatility3.framework.symbols.windows.extensions import kdbg, pe, pool
+from volatility3.framework.symbols import generic, windows
+from volatility3.framework.symbols.windows.extensions import pool
 
 vollog = logging.getLogger(__name__)
 
@@ -51,7 +52,9 @@ class MMVAD_SHORT(objects.StructType):
 
         # the offset is different on 32 and 64 bits
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
-        if not symbols.symbol_table_is_64bit(self._context, symbol_table_name):
+        if not symbols.symbol_table_is_64bit(
+            context=self._context, symbol_table_name=symbol_table_name
+        ):
             vad_address -= 4
         else:
             vad_address -= 12
@@ -261,14 +264,20 @@ class MMVAD_SHORT(objects.StructType):
     def get_commit_charge(self):
         """Get the VAD's commit charge (number of committed pages)"""
 
-        if self.has_member("u1") and self.u1.has_member("VadFlags1"):
+        if self.has_member("CommitCharge"):
+            return self.CommitCharge
+
+        elif self.has_member("u1") and self.u1.has_member("VadFlags1"):
             return self.u1.VadFlags1.CommitCharge
 
         elif self.has_member("u") and self.u.has_member("VadFlags"):
             return self.u.VadFlags.CommitCharge
 
         elif self.has_member("Core"):
-            return self.Core.u1.VadFlags1.CommitCharge
+            if self.Core.has_member("CommitCharge"):
+                return self.Core.CommitCharge
+            else:
+                return self.Core.u1.VadFlags1.CommitCharge
 
         raise AttributeError("Unable to find the commit charge member")
 
@@ -306,16 +315,19 @@ class MMVAD_SHORT(objects.StructType):
 
         raise AttributeError("Unable to find the private memory member")
 
+    @property
+    def Protection(self):
+        if self.has_member("u"):
+            return self.u.VadFlags.Protection
+        elif self.has_member("Core"):
+            return self.Core.u.VadFlags.Protection
+        else:
+            return None
+
     def get_protection(self, protect_values, winnt_protections):
         """Get the VAD's protection constants as a string."""
 
-        protect = None
-
-        if self.has_member("u"):
-            protect = self.u.VadFlags.Protection
-
-        elif self.has_member("Core"):
-            protect = self.Core.u.VadFlags.Protection
+        protect = self.Protection
 
         try:
             value = protect_values[protect]
@@ -378,7 +390,9 @@ class EX_FAST_REF(objects.StructType):
 
         # the mask value is different on 32 and 64 bits
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
-        if not symbols.symbol_table_is_64bit(self._context, symbol_table_name):
+        if not symbols.symbol_table_is_64bit(
+            context=self._context, symbol_table_name=symbol_table_name
+        ):
             max_fast_ref = 7
         else:
             max_fast_ref = 15
@@ -401,10 +415,24 @@ class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
 
     def get_attached_devices(self) -> Generator[ObjectInterface, None, None]:
         """Enumerate the attached device's objects"""
-        device = self.AttachedDevice.dereference()
+        seen = set()
+
+        try:
+            device = self.AttachedDevice.dereference()
+        except exceptions.InvalidAddressException:
+            return
+
         while device:
+            if device.vol.offset in seen:
+                break
+            seen.add(device.vol.offset)
+
             yield device
-            device = device.AttachedDevice.dereference()
+
+            try:
+                device = device.AttachedDevice.dereference()
+            except exceptions.InvalidAddressException:
+                return
 
 
 class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
@@ -417,10 +445,24 @@ class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
 
     def get_devices(self) -> Generator[ObjectInterface, None, None]:
         """Enumerate the driver's device objects"""
-        device = self.DeviceObject.dereference()
+        seen = set()
+
+        try:
+            device = self.DeviceObject.dereference()
+        except exceptions.InvalidAddressException:
+            return
+
         while device:
+            if device.vol.offset in seen:
+                return
+            seen.add(device.vol.offset)
+
             yield device
-            device = device.NextDevice.dereference()
+
+            try:
+                device = device.NextDevice.dereference()
+            except exceptions.InvalidAddressException:
+                return
 
     def is_valid(self) -> bool:
         """Determine if the object is valid."""
@@ -492,8 +534,47 @@ class KMUTANT(objects.StructType, pool.ExecutiveObject):
         return header.NameInfo.Name.String  # type: ignore
 
 
-class ETHREAD(objects.StructType):
+class ETHREAD(objects.StructType, pool.ExecutiveObject):
     """A class for executive thread objects."""
+
+    def is_valid(self) -> bool:
+        """Determine if the object is valid."""
+
+        try:
+            # validation by TID:
+            if self.Cid.UniqueThread % 4 != 0:  # NT tids are divisible by 4
+                return False
+
+            # validation by PID of parent process:
+            if self.Cid.UniqueProcess % 4 != 0:
+                return False
+
+            # validation by thread creation time:
+            if (
+                self.Cid.UniqueProcess != 4
+            ):  # The System process (PID 4) has no create time
+                ctime = self.get_create_time()
+                if not isinstance(ctime, datetime.datetime):
+                    return False
+
+                current_year = datetime.datetime.now().year
+                if not (1998 < ctime.year < current_year + 10):
+                    return False
+
+        except exceptions.InvalidAddressException:
+            return False
+
+        # passed all validations
+        return True
+
+    def get_create_time(self):
+        # For Windows XPs
+        if self.has_member("ThreadsProcess"):
+            return conversion.wintime_to_datetime(self.CreateTime.QuadPart >> 3)
+        return conversion.wintime_to_datetime(self.CreateTime.QuadPart)
+
+    def get_exit_time(self):
+        return conversion.wintime_to_datetime(self.ExitTime.QuadPart)
 
     def owning_process(self) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""
@@ -555,6 +636,38 @@ class UNICODE_STRING(objects.StructType):
     String = property(get_string)
 
 
+class ERESOURCE(objects.StructType):
+    def is_valid(self) -> bool:
+        vollog.debug(f"Checking ERESOURCE Validity: {hex(self.vol.offset)}")
+
+        if not self._context.layers[self.vol.layer_name].is_valid(self.vol.offset):
+            return False
+
+        sym_table = self.get_symbol_table_name()
+
+        waiters_valid = self.SharedWaiters == 0 or self._context.layers[
+            self.vol.layer_name
+        ].is_valid(
+            self.SharedWaiters.vol.offset,
+            self._context.symbol_space.get_type(
+                sym_table + constants.BANG + "_KSEMAPHORE"
+            ).size,
+        )
+
+        try:
+            return (
+                waiters_valid
+                and self.SystemResourcesList.Flink is not None
+                and self.SystemResourcesList.Blink is not None
+                and self.SystemResourcesList.Flink != self.SystemResourcesList.Blink
+                and self.SystemResourcesList.Flink.Blink == self.vol.offset
+                and self.SystemResourcesList.Blink.Flink == self.vol.offset
+                and self.NumberOfSharedWaiters == 0
+            )
+        except exceptions.InvalidAddressException:
+            return False
+
+
 class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
     """A class for executive kernel processes objects."""
 
@@ -573,10 +686,22 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
                 ctime = self.get_create_time()
                 if not isinstance(ctime, datetime.datetime):
+                    # A process must have a creation time
                     return False
 
-                if not (1998 < ctime.year < 2030):
+                current_year = datetime.datetime.now().year
+                if not (1998 < ctime.year < current_year + 10):
                     return False
+
+                etime = self.get_exit_time()
+                if isinstance(etime, datetime.datetime):
+                    if not (1998 < etime.year < current_year + 10):
+                        return False
+
+                    # Exit time, if available, must be after the creation time
+                    # At this point, we are sure both are datetimes, so let's compare them
+                    if ctime > etime:
+                        return False
 
             # NT pids are divisible by 4
             if self.UniqueProcessId % 4 != 0:
@@ -595,14 +720,20 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             if dtb & ~0xFFF == 0:
                 return False
 
-            ## TODO: we can also add the thread Flink and Blink tests if necessary
+            # Quick smear test on thread Flink and Blink
+            kernel = 0x80000000  # Yes, it's a quick test
+            list_head = self.ThreadListHead
+            if list_head.Flink < kernel or list_head.Blink < kernel:
+                return False
 
         except exceptions.InvalidAddressException:
             return False
 
         return True
 
-    def add_process_layer(self, config_prefix: str = None, preferred_name: str = None):
+    def add_process_layer(
+        self, config_prefix: Optional[str] = None, preferred_name: Optional[str] = None
+    ):
         """Constructs a new layer based on the process's DirectoryTableBase."""
 
         parent_layer = self._context.layers[self.vol.layer_name]
@@ -654,44 +785,136 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         )
         return peb
 
-    def load_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Generator for DLLs in the order that they were loaded."""
+    def get_peb32(self) -> Optional[interfaces.objects.ObjectInterface]:
+        """Constructs a PEB32 object"""
+        if constants.BANG not in self.vol.type_name:
+            raise ValueError(
+                f"Invalid symbol table name syntax (no {constants.BANG} found)"
+            )
+
+        # add_process_layer can raise InvalidAddressException.
+        # if that happens, we let the exception propagate upwards
+        proc_layer_name = self.add_process_layer()
+        proc_layer = self._context.layers[proc_layer_name]
+
+        # Determine if process is running under WOW64.
+        if self.get_is_wow64():
+            proc = self.get_wow_64_process()
+        else:
+            return None
+        # Confirm WoW64Process points to a valid process address
+        if not proc_layer.is_valid(proc):
+            raise exceptions.InvalidAddressException(
+                proc_layer_name, proc, f"Invalid Wow64Process address at {self.Peb:0x}"
+            )
+
+        # Leverage the context of existing symbol table to help configure
+        # a new symbol table for 32-bit types
+        sym_table = self.get_symbol_table_name()
+        config_path = self._context.symbol_space[sym_table].config_path
+
+        # Load the 32-bit types into a new symbol space
+        # We use the WindowsKernelIntermedSymbols class to make
+        # sure we get all the object helpers. For example, traversing
+        # linked-lists.
+        self._32bit_table_name = windows.WindowsKernelIntermedSymbols.create(
+            self._context, config_path, "windows", "wow64"
+        )
+
+        # windows 10
+        if self._context.symbol_space.has_type(
+            sym_table + constants.BANG + "_EWOW64PROCESS"
+        ):
+            offset = proc.Peb
+
+        # vista sp0-sp1 and 2003 sp1-sp2
+        elif self._context.symbol_space.has_type(
+            sym_table + constants.BANG + "_WOW64_PROCESS"
+        ):
+            offset = proc.Wow64
+
+        else:
+            offset = proc
+
+        peb32 = self._context.object(
+            f"{self._32bit_table_name}{constants.BANG}_PEB32",
+            layer_name=proc_layer_name,
+            offset=offset,
+        )
+        return peb32
+
+    def set_types(self, peb) -> str:
+        ldr_data = self._context.symbol_space.get_type(
+            self._32bit_table_name + constants.BANG + "_PEB_LDR_DATA"
+        )
+        peb.Ldr = peb.Ldr.cast("pointer", subtype=ldr_data)
+        sym_table = self._32bit_table_name
+        return sym_table
+
+    def _walk_ldr_list(
+        self, list_member: str, link_member: str
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
+        """
+        Walks LDR_DATA_TABLEs and enforces the entries at least have a valid base address
+        This function also breaks up exception handling as much as possible to ensure the
+        most data is returned as possible
+        """
+        pebs = []
 
         try:
             peb = self.get_peb()
-            for entry in peb.Ldr.InLoadOrderModuleList.to_list(
-                f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
-                "InLoadOrderLinks",
-            ):
-                yield entry
+            if peb:
+                pebs.append(peb)
         except exceptions.InvalidAddressException:
-            return None
+            vollog.debug(f"Process at {self.vol.offset:#x} has invalid PEB")
+
+        try:
+            peb32 = self.get_peb32()
+            if peb32:
+                pebs.append(peb32)
+        except exceptions.InvalidAddressException:
+            vollog.debug(f"Process at {self.vol.offset:#x} has invalid 32 bit PEB")
+
+        for peb in pebs:
+            sym_table = self.get_symbol_table_name()
+            # Fixes #1636
+            try:
+                peb.Ldr
+            except exceptions.InvalidAddressException:
+                continue
+
+            if peb.Ldr.vol.type_name.split(constants.BANG)[-1] == ("unsigned long"):
+                sym_table = self.set_types(peb)
+
+            for ldr in peb.Ldr.member(list_member).to_list(
+                f"{sym_table}{constants.BANG}" + "_LDR_DATA_TABLE_ENTRY", link_member
+            ):
+                try:
+                    # Several samples in testing crashed from DLLs being returned
+                    # where DllBase was on the next page and that page was not in memory
+                    # Not being able to retrieve the base makes the entry pretty useless
+                    # So we enforce here its presence
+                    ldr.DllBase
+                    yield ldr
+                except exceptions.InvalidAddressException:
+                    continue
+
+    def load_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Generator for DLLs in the order that they were loaded."""
+
+        yield from self._walk_ldr_list("InLoadOrderModuleList", "InLoadOrderLinks")
 
     def init_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Generator for DLLs in the order that they were initialized"""
 
-        try:
-            peb = self.get_peb()
-            for entry in peb.Ldr.InInitializationOrderModuleList.to_list(
-                f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
-                "InInitializationOrderLinks",
-            ):
-                yield entry
-        except exceptions.InvalidAddressException:
-            return None
+        yield from self._walk_ldr_list(
+            "InInitializationOrderModuleList", "InInitializationOrderLinks"
+        )
 
     def mem_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Generator for DLLs in the order that they appear in memory"""
 
-        try:
-            peb = self.get_peb()
-            for entry in peb.Ldr.InMemoryOrderModuleList.to_list(
-                f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
-                "InMemoryOrderLinks",
-            ):
-                yield entry
-        except exceptions.InvalidAddressException:
-            return None
+        yield from self._walk_ldr_list("InMemoryOrderModuleList", "InMemoryOrderLinks")
 
     def get_handle_count(self):
         try:
@@ -707,28 +930,51 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
         return renderers.UnreadableValue()
 
-    def get_session_id(self):
+    def get_session_id(self) -> Union[int, interfaces.renderers.BaseAbsentValue]:
         try:
             if self.has_member("Session"):
                 if self.Session == 0:
                     return renderers.NotApplicableValue()
 
                 symbol_table_name = self.get_symbol_table_name()
-                kvo = self._context.layers[self.vol.native_layer_name].config[
-                    "kernel_virtual_offset"
-                ]
+                kvo = self._context.layers[self.vol.native_layer_name].config.get(
+                    "kernel_virtual_offset", None
+                )
+                if not kvo:
+                    raise ValueError(
+                        "Intel layer does not have an associated kernel virtual offset, failing"
+                    )
+
                 ntkrnlmp = self._context.module(
                     symbol_table_name,
                     layer_name=self.vol.native_layer_name,
                     offset=kvo,
                     native_layer_name=self.vol.native_layer_name,
                 )
-                session = ntkrnlmp.object(
-                    object_type="_MM_SESSION_SPACE", offset=self.Session, absolute=True
-                )
-
-                if session.has_member("SessionId"):
-                    return session.SessionId
+                try:
+                    session = ntkrnlmp.object(
+                        object_type="_MM_SESSION_SPACE",
+                        offset=self.Session,
+                        absolute=True,
+                    )
+                    if session.has_member("SessionId"):
+                        return session.SessionId
+                except exceptions.SymbolError:
+                    # In Windows 11 24H2, the _MM_SESSION_SPACE type was
+                    # replaced with _PSP_SESSION_SPACE, and the kernel PDB
+                    # doesn't contain information about its members (otherwise,
+                    # we would just fall back to the new type). However, it
+                    # appears to be, for our purposes, functionally identical
+                    # to the _MM_SESSION_SPACE. Because _MM_SESSION_SPACE
+                    # stores its session ID at offset 8 as an unsigned long, we
+                    # create an unsigned long at that offset and use that
+                    # instead.
+                    session_id = ntkrnlmp.object(
+                        object_type="unsigned long",
+                        offset=self.Session + 8,
+                        absolute=True,
+                    )
+                    return session_id
 
         except exceptions.InvalidAddressException:
             vollog.log(
@@ -826,56 +1072,55 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
     ) -> Iterator[interfaces.objects.ObjectInterface]:
         """Returns an iterator of the entries in the list."""
 
-        layer = layer or self.vol.layer_name
+        layer_name = layer or self.vol.layer_name
+        native_layer_name = layer_name or self.vol.native_layer_name
+
+        trans_layer = self._context.layers[layer_name]
+        if not trans_layer.is_valid(self.vol.offset):
+            return None
 
         relative_offset = self._context.symbol_space.get_type(
             symbol_type
         ).relative_child_offset(member)
 
-        direction = "Blink"
-        if forward:
-            direction = "Flink"
+        direction = "Flink" if forward else "Blink"
 
-        trans_layer = self._context.layers[layer]
-
-        try:
-            is_valid = trans_layer.is_valid(self.vol.offset)
-            if not is_valid:
-                return None
-
-            link = getattr(self, direction).dereference()
-        except exceptions.InvalidAddressException:
+        link_ptr = getattr(self, direction)
+        if not (link_ptr and link_ptr.is_readable()):
             return None
+        link = link_ptr.dereference()
 
         if not sentinel:
+            obj_offset = self.vol.offset - relative_offset
+            if not trans_layer.is_valid(obj_offset):
+                return None
+
             yield self._context.object(
                 symbol_type,
-                layer,
-                offset=self.vol.offset - relative_offset,
-                native_layer_name=layer or self.vol.native_layer_name,
+                layer_name,
+                offset=obj_offset,
+                native_layer_name=native_layer_name,
             )
 
         seen = {self.vol.offset}
         while link.vol.offset not in seen:
             obj_offset = link.vol.offset - relative_offset
-
             if not trans_layer.is_valid(obj_offset):
                 return None
 
-            obj = self._context.object(
+            yield self._context.object(
                 symbol_type,
-                layer,
+                layer_name,
                 offset=obj_offset,
-                native_layer_name=layer or self.vol.native_layer_name,
+                native_layer_name=native_layer_name,
             )
-            yield obj
 
             seen.add(link.vol.offset)
 
-            try:
-                link = getattr(link, direction).dereference()
-            except exceptions.InvalidAddressException:
+            link_ptr = getattr(link, direction)
+            if not (link_ptr and link_ptr.is_readable()):
                 return None
+            link = link_ptr.dereference()
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
@@ -889,7 +1134,13 @@ class TOKEN(objects.StructType):
 
         if self.UserAndGroupCount < 0xFFFF:
             layer_name = self.vol.layer_name
-            kvo = self._context.layers[layer_name].config["kernel_virtual_offset"]
+            kvo = self._context.layers[layer_name].config.get(
+                "kernel_virtual_offset", None
+            )
+            if not kvo:
+                raise ValueError(
+                    "Intel layer does not have an associated kernel virtual offset, failing"
+                )
             symbol_table = self.get_symbol_table_name()
             ntkrnlmp = self._context.module(
                 symbol_table, layer_name=layer_name, offset=kvo
@@ -954,6 +1205,74 @@ class TOKEN(objects.StructType):
                     yield luid.Luid.LowPart, True, enabled, default
             else:
                 vollog.log(constants.LOGLEVEL_VVVV, "Broken Token Privileges.")
+
+
+class KTIMER(objects.StructType):
+    """A class for Kernel Timers"""
+
+    VALID_TYPES = {
+        8: "TimerNotificationObject",
+        9: "TimerSynchronizationObject",
+    }
+
+    def get_signaled(self):
+        if self.Header.SignalState:
+            return "Yes"
+        return "-"
+
+    def valid_type(self):
+        return self.Header.Type in self.VALID_TYPES
+
+    def get_due_time(self):
+        return f"{self.DueTime.HighPart:#010x}:{self.DueTime.LowPart:#010x}"
+
+    def get_dpc(self):
+        """Return Dpc, and if Windows 7 or later, decode it"""
+        symbol_table_name = self.get_symbol_table_name()
+        kvo = self._context.layers[self.vol.native_layer_name].config.get(
+            "kernel_virtual_offset", None
+        )
+        if not kvo:
+            raise ValueError(
+                "Intel layer does not have an associated kernel virtual offset, failing"
+            )
+        ntkrnlmp = self._context.module(
+            symbol_table_name,
+            layer_name=self.vol.native_layer_name,
+            offset=kvo,
+            native_layer_name=self.vol.native_layer_name,
+        )
+
+        if ntkrnlmp.has_symbol("KiWaitNever") and ntkrnlmp.has_symbol("KiWaitAlways"):
+            wait_never = ntkrnlmp.object(
+                object_type="unsigned long long",
+                offset=ntkrnlmp.get_symbol("KiWaitNever").address,
+            )
+            wait_always = ntkrnlmp.object(
+                object_type="unsigned long long",
+                offset=ntkrnlmp.get_symbol("KiWaitAlways").address,
+            )
+
+            low_byte = (wait_never) & 0xFF
+            entry = utility.rol(self.Dpc.get_raw_value() ^ wait_never, low_byte)
+            swap_xor = self._context.layers[self.vol.native_layer_name].canonicalize(
+                self.vol.offset
+            )
+            entry = utility.bswap_64(entry ^ swap_xor)
+            dpc = entry ^ wait_always
+
+            symbol_table_name = self.get_symbol_table_name()
+            kdpc_type = self._context.symbol_space.get_type(
+                symbol_table_name + constants.BANG + "_KDPC"
+            )
+
+            return self._context.object(
+                object_type=kdpc_type,
+                layer_name=self.vol.layer_name,
+                offset=dpc,
+            )
+        else:
+            return self.Dpc
 
 
 class KTHREAD(objects.StructType):
@@ -1077,8 +1396,19 @@ class CONTROL_AREA(objects.StructType):
         )
         mmpte_size = mmpte_type.size
         subsection = self.get_subsection()
-        is_64bit = symbols.symbol_table_is_64bit(self._context, symbol_table_name)
+        is_64bit = symbols.symbol_table_is_64bit(
+            context=self._context, symbol_table_name=symbol_table_name
+        )
         is_pae = self._context.layers[self.vol.layer_name].metadata.get("pae", False)
+
+        # the sector_size is used as a multiplier to the StartingSector
+        # within each _SUBSECTION. ImageSectionObjects use a multiplier
+        # of 0x200 corresponding to sector alignment on disk,
+        # while DataSectionObjects use a multiplier of 0x1000 corresponding
+        # to the size of a page
+        sector_size = 0x200
+        if self.u.Flags.Image != 1:
+            sector_size = 0x1000
 
         # This is a null-terminated single-linked list.
         while subsection != 0:
@@ -1090,7 +1420,7 @@ class CONTROL_AREA(objects.StructType):
 
             # The offset into the file is stored implicitly based on the PTE location within the Subsection.
             starting_sector = subsection.StartingSector
-            subsection_offset = starting_sector * 0x200
+            subsection_offset = starting_sector * sector_size
 
             # Similar to the check in is_valid(), make sure the SubsectionBase is not page aligned.
             # if subsection.SubsectionBase & self.PAGE_MASK == 0:
@@ -1207,7 +1537,7 @@ class SHARED_CACHE_MAP(objects.StructType):
         )
 
         # Iterate through the entries
-        for counter in range(0, self.VACB_ARRAY):
+        for counter in range(self.VACB_ARRAY):
             # Check if the VACB entry is in use
             if not vacb_array[counter]:
                 continue
@@ -1291,7 +1621,7 @@ class SHARED_CACHE_MAP(objects.StructType):
 
         if not section_size > self.VACB_SIZE_OF_FIRST_LEVEL:
             array_head = vacb_obj
-            for counter in range(0, full_blocks):
+            for counter in range(full_blocks):
                 vacb_entry = self._context.object(
                     symbol_table_name + constants.BANG + "pointer",
                     layer_name=self.vol.layer_name,
@@ -1350,7 +1680,7 @@ class SHARED_CACHE_MAP(objects.StructType):
 
             # Walk the array and if any entry points to the shared cache map object then we extract it.
             # Otherwise, if it is non-zero, then traverse to the next level.
-            for counter in range(0, self.VACB_ARRAY):
+            for counter in range(self.VACB_ARRAY):
                 if not vacb_array[counter]:
                     continue
 

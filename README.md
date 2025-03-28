@@ -18,63 +18,44 @@ the Volatility Software License (VSL). See the
 [LICENSE](https://www.volatilityfoundation.org/license/vsl-v1.0) file for 
 more details.
 
-## Requirements
+## Installing
 
-Volatility 3 requires Python 3.7.0 or later. To install the most minimal set of dependencies (some plugins will not work) use a command such as:
-
-```shell
-pip3 install -r requirements-minimal.txt
-```
-
-Alternately, the minimal packages will be installed automatically when Volatility 3 is installed using setup.py. However, as noted in the Quick Start section below, Volatility 3 does not *need* to be installed via setup.py prior to using it.
+Volatility 3 requires Python 3.8.0 or later and is published on the [PyPi registry](https://pypi.org/project/volatility3).
 
 ```shell
-python3 setup.py build 
-python3 setup.py install
+pip install volatility3
 ```
 
-To enable the full range of Volatility 3 functionality, use a command like the one below. For partial functionality, comment out any unnecessary packages in [requirements.txt](requirements.txt) prior to running the command.
+If you want to use the latest development version of Volatility 3 we recommend you manually clone this repository and install an editable version of the project.
+We recommend you use a virtual environment to keep installed dependencies separate from system packages.
 
-```shell
-pip3 install -r requirements.txt
-```
-
-## Downloading Volatility
-
-The latest stable version of Volatility will always be the stable branch of the GitHub repository. You can get the latest version of the code using the following command:
+The latest stable version of Volatility will always be the `stable` branch of the GitHub repository. The default branch is `develop`.
 
 ```shell
 git clone https://github.com/volatilityfoundation/volatility3.git
+cd volatility3/
+python3 -m venv venv && . venv/bin/activate
+pip install -e ".[dev]"
 ```
 
 ## Quick Start
 
-1. Clone the latest version of Volatility from GitHub:
-
-    ```shell
-    git clone https://github.com/volatilityfoundation/volatility3.git
-    ```
+1. Install Volatility 3 as documented in the Installing section of the readme.
 
 2. See available options:
 
     ```shell
-    python3 vol.py -h
+    vol -h
     ```
 
-3. To get more information on a Windows memory sample and to make sure
-Volatility supports that sample type, run
-`python3 vol.py -f <imagepath> windows.info`
-
-   Example:
+3. To get more information on a Windows memory sample and to make sure Volatility supports that sample type, run `vol -f <imagepath> windows.info`:
 
     ```shell
-    python3 vol.py -f /home/user/samples/stuxnet.vmem windows.info
+    vol -f /home/user/samples/stuxnet.vmem windows.info
     ```
 
-4. Run some other plugins. The `-f` or `--single-location` is not strictly
-required, but most plugins expect a single sample. Some also
-require/accept other options.  Run `python3 vol.py <plugin> -h`
-for more information on a particular command.
+4. Run some other plugins. The `-f` or `--single-location` is not strictly required, but most plugins expect a single sample.
+Some also require/accept other options.  Run `vol <plugin> -h` for more information on a particular command.
 
 ## Symbol Tables
 
@@ -107,7 +88,7 @@ The latest generated copy of the documentation can be found at: <https://volatil
 
 ## Licensing and Copyright
 
-Copyright (C) 2007-2024 Volatility Foundation
+Copyright (C) 2007-2025 Volatility Foundation
 
 All Rights Reserved
 

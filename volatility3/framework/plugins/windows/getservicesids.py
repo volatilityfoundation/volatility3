@@ -10,6 +10,7 @@ from typing import List
 
 from volatility3.framework import renderers, interfaces, constants, exceptions
 from volatility3.framework.configuration import requirements
+from volatility3.framework.layers import registry
 from volatility3.plugins.windows.registry import hivelist
 
 vollog = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ def createservicesid(svc) -> str:
         ## The use of struct here is OK. It doesn't make much sense
         ## to leverage obj.Object inside this loop.
         dec.append(struct.unpack("<I", sha[i * 4 : i * 4 + 4])[0])
-    return "S-1-5-80-" + "-".join([str(n) for n in dec])
+    return "S-1-5-80-" + "-".join(str(n) for n in dec)
 
 
 class GetServiceSIDs(interfaces.plugins.PluginInterface):
@@ -55,7 +56,7 @@ class GetServiceSIDs(interfaces.plugins.PluginInterface):
             )
 
         # Get service sids dictionary (we need only the service sids).
-        with open(sids_json_file_name, "r") as file_handle:
+        with open(sids_json_file_name) as file_handle:
             self.servicesids = json.load(file_handle)["service sids"]
 
     @classmethod
@@ -67,36 +68,50 @@ class GetServiceSIDs(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="hivelist", component=hivelist.HiveList, version=(2, 0, 0)
             ),
         ]
 
     def _generator(self):
-        kernel = self.context.modules[self.config["kernel"]]
         # Get the system hive
         for hive in hivelist.HiveList.list_hives(
             context=self.context,
             base_config_path=self.config_path,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            kernel_module_name=self.config["kernel"],
             filter_string="machine\\system",
             hive_offsets=None,
         ):
             # Get ControlSet\Services.
             try:
                 services = hive.get_key(r"CurrentControlSet\Services")
-            except (KeyError, exceptions.InvalidAddressException):
+            except (
+                KeyError,
+                exceptions.InvalidAddressException,
+                registry.RegistryException,
+            ):
                 try:
                     services = hive.get_key(r"ControlSet001\Services")
-                except (KeyError, exceptions.InvalidAddressException):
+                except (
+                    KeyError,
+                    exceptions.InvalidAddressException,
+                    registry.RegistryException,
+                ):
                     continue
 
             if services:
                 for s in services.get_subkeys():
-                    if s.get_name() not in self.servicesids.values():
-                        sid = createservicesid(s.get_name())
-                        yield (0, (sid, s.get_name()))
+                    try:
+                        sid_name = s.get_name()
+                    except (
+                        exceptions.InvalidAddressException,
+                        registry.RegistryException,
+                    ):
+                        continue
+
+                    if sid_name not in self.servicesids.values():
+                        sid = createservicesid(sid_name)
+                        yield (0, (sid, sid_name))
 
     def run(self):
         return renderers.TreeGrid([("SID", str), ("Service", str)], self._generator())

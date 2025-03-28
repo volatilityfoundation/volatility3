@@ -31,8 +31,8 @@ class Kauth_scopes(interfaces.plugins.PluginInterface):
             requirements.VersionRequirement(
                 name="macutils", component=mac.MacUtilities, version=(1, 1, 0)
             ),
-            requirements.PluginRequirement(
-                name="lsmod", plugin=lsmod.Lsmod, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="lsmod", component=lsmod.Lsmod, version=(2, 0, 0)
             ),
         ]
 
@@ -80,7 +80,7 @@ class Kauth_scopes(interfaces.plugins.PluginInterface):
                 (
                     identifier,
                     format_hints.Hex(scope.ks_idata),
-                    len([l for l in scope.get_listeners()]),
+                    len([listener for listener in scope.get_listeners()]),
                     format_hints.Hex(callback),
                     module_name,
                     symbol_name,

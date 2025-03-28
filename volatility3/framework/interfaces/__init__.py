@@ -13,12 +13,12 @@ components of volatility to write plugins.
 # This will also avoid namespace issues, because people can use interfaces.layers to
 # avoid clashing with the layers package
 from volatility3.framework.interfaces import (
-    renderers,
-    configuration,
-    context,
-    layers,
-    objects,
-    plugins,
-    symbols,
-    automagic,
+    renderers as renderers,
+    configuration as configuration,
+    context as context,
+    layers as layers,
+    objects as objects,
+    plugins as plugins,
+    symbols as symbols,
+    automagic as automagic,
 )

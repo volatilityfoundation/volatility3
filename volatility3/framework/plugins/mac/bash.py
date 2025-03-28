@@ -30,8 +30,13 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 description="Kernel module for the OS",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -44,7 +49,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
     def _generator(self, tasks):
         darwin = self.context.modules[self.config["kernel"]]
         is_32bit = not symbols.symbol_table_is_64bit(
-            self.context, darwin.symbol_table_name
+            context=self.context, symbol_table_name=darwin.symbol_table_name
         )
         if is_32bit:
             pack_format = "I"

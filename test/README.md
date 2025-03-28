@@ -2,13 +2,11 @@
 
 ## Requirements
 
-The Volatility 3 Testing Framework requires the same version of Python as Volatility3 itself. To install the current set of dependencies that the framework requires, use a command like this:
+The Volatility 3 Testing Framework requires the same version of Python as Volatility 3 itself. To install the current set of dependencies that the framework requires, use a command like this:
 
 ```shell
-pip3 install -r requirements-testing.txt
+pip3 install -e .[test]
 ```
-
-NOTE: `requirements-testing.txt` can be found in this current `test/` directory.
 
 ## Quick Start: Manual Testing
 

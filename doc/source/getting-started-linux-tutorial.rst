@@ -11,6 +11,7 @@ Volatility3 does not provide the ability to acquire memory.  Below are some exam
 * `AVML - Acquire Volatile Memory for Linux <https://github.com/microsoft/avml>`_
 * `LiME - Linux Memory Extract <https://github.com/504ensicsLabs/LiME>`_
 
+Be aware that LiME raw format is not supported by volatility3, the padded or lime option should be used instead. `This issue contains further information <https://github.com/504ensicsLabs/LiME/issues/111>`_.
 
 Procedure to create symbol tables for linux
 --------------------------------------------
@@ -26,7 +27,7 @@ To create a symbol table please refer to :ref:`symbol-tables:Mac or Linux symbol
 Listing plugins
 ---------------
 
-The following is a sample of the linux plugins available for volatility3, it is not complete and more more plugins may
+The following is a sample of the linux plugins available for volatility3, it is not complete and more plugins may
 be added.  For a complete reference, please see the volatility 3 :doc:`list of plugins <volatility3.plugins>`.
 For plugin requests, please create an issue with a description of the requested plugin.
 
@@ -39,7 +40,7 @@ For plugin requests, please create an issue with a description of the requested 
         linux.check_creds.Check_creds
         linux.check_idt.Check_idt
 
-.. note:: Here the the command is piped to grep and head in-order to provide the start of the list of linux plugins.
+.. note:: Here the the command is piped to grep and head to provide the start of the list of linux plugins.
 
 
 Using plugins
@@ -79,9 +80,9 @@ Thanks go to `stuxnet <https://github.com/stuxnet999/>`_ for providing this memo
 
 
 The above command helps us to find the memory dump's kernel version and the distribution version. Now using the above banner we can search for the needed ISF file from the ISF server.
-If ISF file cannot be found then, follow the instructions on :ref:`getting-started-linux-tutorial:Procedure to create symbol tables for linux`. After that, place the ISF file under the ``volatility3/symbols/linux`` directory.
+If an ISF file cannot be found then, follow the instructions on :ref:`getting-started-linux-tutorial:Procedure to create symbol tables for linux`. After that, place the ISF file under the ``volatility3/symbols/linux`` directory.
 
-.. tip:: Use the banner text which is most repeated to search from ISF Server.
+.. tip:: Use the banner text which is most repeated to search on the ISF Server.
 
 linux.pslist
 ~~~~~~~~~~~~
@@ -156,7 +157,7 @@ linux.pstree
         ***** 1548      1266    gsd-keyboard
         ***** 1550      1266    gsd-media-keys
 
-``linux.pstree`` helps us to display the parent child relationships between processes.
+``linux.pstree`` helps us to display the parent-child relationships between processes.
 
 linux.bash
 ~~~~~~~~~~

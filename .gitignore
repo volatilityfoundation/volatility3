@@ -27,6 +27,7 @@ config*.json
 # Pyinstaller files
 build
 dist
+*.egg-info
 
 # Environments
 .env

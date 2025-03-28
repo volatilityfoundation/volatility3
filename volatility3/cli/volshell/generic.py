@@ -8,13 +8,14 @@ import random
 import string
 import struct
 import sys
+import textwrap
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union
 from urllib import parse, request
 
 from volatility3.cli import text_renderer, volshell
 from volatility3.framework import exceptions, interfaces, objects, plugins, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework.layers import intel, physical, resources
+from volatility3.framework.layers import intel, physical, resources, scanners
 
 try:
     import capstone
@@ -23,6 +24,14 @@ try:
 except ImportError:
     has_capstone = False
 
+try:
+    from IPython import terminal
+    from traitlets import config as traitlets_config
+
+    has_ipython = True
+except ImportError:
+    has_ipython = False
+
 MAX_DEREFERENCE_COUNT = 4  # the max number of times display_type should follow pointers
 
 
@@ -30,6 +39,8 @@ class Volshell(interfaces.plugins.PluginInterface):
     """Shell environment to directly interact with a memory image."""
 
     _required_framework_version = (2, 0, 0)
+
+    DEFAULT_NUM_DISPLAY_BYTES = 128
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -51,7 +62,13 @@ class Volshell(interfaces.plugins.PluginInterface):
                     description="File to load and execute at start",
                     default=None,
                     optional=True,
-                )
+                ),
+                requirements.BooleanRequirement(
+                    name="script-only",
+                    description="Exit volshell after the script specified in --script completes",
+                    default=False,
+                    optional=True,
+                ),
             ]
         return reqs + [
             requirements.TranslationLayerRequirement(
@@ -60,7 +77,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         ]
 
     def run(
-        self, additional_locals: Dict[str, Any] = None
+        self, additional_locals: Dict[str, Any] = {}
     ) -> interfaces.renderers.TreeGrid:
         """Runs the interactive volshell plugin.
 
@@ -69,40 +86,70 @@ class Volshell(interfaces.plugins.PluginInterface):
         """
 
         # Try to enable tab completion
-        try:
-            import readline
-        except ImportError:
-            pass
-        else:
-            import rlcompleter
+        if not has_ipython:
+            try:
+                import readline
+                import rlcompleter
 
-            completer = rlcompleter.Completer(namespace=self._construct_locals_dict())
-            readline.set_completer(completer.complete)
-            readline.parse_and_bind("tab: complete")
-            print("Readline imported successfully")
+                completer = rlcompleter.Completer(
+                    namespace=self._construct_locals_dict()
+                )
+                readline.set_completer(completer.complete)
+                readline.parse_and_bind("tab: complete")
+                print("Readline imported successfully")
+            except ImportError:
+                print(
+                    "Readline or rlcompleter module could not be imported. Tab completion will not be available."
+                )
 
         # TODO: provide help, consider generic functions (pslist?) and/or providing windows/linux functions
 
         mode = self.__module__.split(".")[-1]
         mode = mode[0].upper() + mode[1:]
 
-        banner = f"""
-    Call help() to see available functions
+        banner = textwrap.dedent(
+            f"""
+            Call help() to see available functions
 
-    Volshell mode        : {mode}
-    Current Layer        : {self.current_layer}
-    Current Symbol Table : {self.current_symbol_table}
-    Current Kernel Name  : {self.current_kernel_name}
-"""
+            Volshell mode        : {mode}
+            Current Layer        : {self.current_layer}
+            Current Symbol Table : {self.current_symbol_table}
+            Current Kernel Name  : {self.current_kernel_name}
+            """
+        )
 
         sys.ps1 = f"({self.current_layer}) >>> "
-        self.__console = code.InteractiveConsole(locals=self._construct_locals_dict())
+        # Dict self._construct_locals_dict() will have priority on keys
+        combined_locals = additional_locals.copy()
+        combined_locals.update(self._construct_locals_dict())
+        if has_ipython:
+
+            class LayerNamePrompt(terminal.prompts.Prompts):
+                def in_prompt_tokens(self, cli=None):
+                    slf = self.shell.user_ns.get("self")
+                    layer_name = slf.current_layer if slf else "no_layer"
+                    return [(terminal.prompts.Token.Prompt, f"[{layer_name}]> ")]
+
+            c = traitlets_config.Config()
+            c.TerminalInteractiveShell.prompts_class = LayerNamePrompt
+            c.InteractiveShellEmbed.banner2 = banner
+            self.__console = terminal.embed.InteractiveShellEmbed(
+                config=c, user_ns=combined_locals
+            )
+        else:
+            self.__console = code.InteractiveConsole(locals=combined_locals)
         # Since we have to do work to add the option only once for all different modes of volshell, we can't
         # rely on the default having been set
         if self.config.get("script", None) is not None:
             self.run_script(location=self.config["script"])
 
-        self.__console.interact(banner=banner)
+            if self.config.get("script-only"):
+                exit()
+
+        if has_ipython:
+            self.__console()
+        else:
+            self.__console.interact(banner=banner)
 
         return renderers.TreeGrid([("Terminating", str)], None)
 
@@ -114,7 +161,7 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         variables = []
         print("\nMethods:")
-        for aliases, item in self.construct_locals():
+        for aliases, item in sorted(self.construct_locals()):
             name = ", ".join(aliases)
             if item.__doc__ and callable(item):
                 print(f"* {name}")
@@ -127,8 +174,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             print(f"  {var}")
 
     def construct_locals(self) -> List[Tuple[List[str], Any]]:
-        """Returns a dictionary listing the functions to be added to the
-        environment."""
+        """Returns a listing of the functions to be added to the environment."""
         return [
             (["dt", "display_type"], self.display_type),
             (["db", "display_bytes"], self.display_bytes),
@@ -149,6 +195,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             (["cc", "create_configurable"], self.create_configurable),
             (["lf", "load_file"], self.load_file),
             (["rs", "run_script"], self.run_script),
+            (["rx", "regex_scan"], self.regex_scan),
         ]
 
     def _construct_locals_dict(self) -> Dict[str, Any]:
@@ -200,7 +247,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                 connector = " "
                 if chunk_size < 2:
                     connector = ""
-                ascii_data = connector.join([self._ascii_bytes(x) for x in valid_data])
+                ascii_data = connector.join(self._ascii_bytes(x) for x in valid_data)
 
             print(hex(offset), "  ", hex_data, "  ", ascii_data)
             offset += 16
@@ -237,7 +284,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             return None
         return self.context.modules[self.current_kernel_name]
 
-    def change_layer(self, layer_name: str = None):
+    def change_layer(self, layer_name: Optional[str] = None):
         """Changes the current default layer"""
         if not layer_name:
             layer_name = self.current_layer
@@ -247,7 +294,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             self.__current_layer = layer_name
         sys.ps1 = f"({self.current_layer}) >>> "
 
-    def change_symbol_table(self, symbol_table_name: str = None):
+    def change_symbol_table(self, symbol_table_name: Optional[str] = None):
         """Changes the current_symbol_table"""
         if not symbol_table_name:
             print("No symbol table provided, not changing current symbol table")
@@ -259,7 +306,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             self.__current_symbol_table = symbol_table_name
         print(f"Current Symbol Table: {self.current_symbol_table}")
 
-    def change_kernel(self, kernel_name: str = None):
+    def change_kernel(self, kernel_name: Optional[str] = None):
         if not kernel_name:
             print("No kernel module name provided, not changing current kernel")
         if kernel_name not in self.context.modules:
@@ -268,27 +315,54 @@ class Volshell(interfaces.plugins.PluginInterface):
             self.__current_kernel_name = kernel_name
         print(f"Current kernel : {self.current_kernel_name}")
 
-    def display_bytes(self, offset, count=128, layer_name=None):
+    def display_bytes(self, offset, count=DEFAULT_NUM_DISPLAY_BYTES, layer_name=None):
         """Displays byte values and ASCII characters"""
         remaining_data = self._read_data(offset, count=count, layer_name=layer_name)
         self._display_data(offset, remaining_data)
 
-    def display_quadwords(self, offset, count=128, layer_name=None):
+    def display_quadwords(
+        self, offset, count=DEFAULT_NUM_DISPLAY_BYTES, layer_name=None, byteorder="@"
+    ):
         """Displays quad-word values (8 bytes) and corresponding ASCII characters"""
         remaining_data = self._read_data(offset, count=count, layer_name=layer_name)
-        self._display_data(offset, remaining_data, format_string="Q")
+        self._display_data(offset, remaining_data, format_string=f"{byteorder}Q")
 
-    def display_doublewords(self, offset, count=128, layer_name=None):
+    def display_doublewords(
+        self, offset, count=DEFAULT_NUM_DISPLAY_BYTES, layer_name=None, byteorder="@"
+    ):
         """Displays double-word values (4 bytes) and corresponding ASCII characters"""
         remaining_data = self._read_data(offset, count=count, layer_name=layer_name)
-        self._display_data(offset, remaining_data, format_string="I")
+        self._display_data(offset, remaining_data, format_string=f"{byteorder}I")
 
-    def display_words(self, offset, count=128, layer_name=None):
+    def display_words(
+        self, offset, count=DEFAULT_NUM_DISPLAY_BYTES, layer_name=None, byteorder="@"
+    ):
         """Displays word values (2 bytes) and corresponding ASCII characters"""
         remaining_data = self._read_data(offset, count=count, layer_name=layer_name)
-        self._display_data(offset, remaining_data, format_string="H")
+        self._display_data(offset, remaining_data, format_string=f"{byteorder}H")
 
-    def disassemble(self, offset, count=128, layer_name=None, architecture=None):
+    def regex_scan(self, pattern, count=DEFAULT_NUM_DISPLAY_BYTES, layer_name=None):
+        """Scans for regex pattern in layer using RegExScanner."""
+        if not isinstance(pattern, bytes):
+            raise TypeError("pattern must be bytes, e.g. rx(b'pattern')")
+        layer_name_to_scan = layer_name or self.current_layer
+        for offset in self.context.layers[layer_name_to_scan].scan(
+            scanner=scanners.RegExScanner(pattern),
+            context=self.context,
+        ):
+            remaining_data = self._read_data(
+                offset, count=count, layer_name=layer_name_to_scan
+            )
+            self._display_data(offset, remaining_data)
+            print("")
+
+    def disassemble(
+        self,
+        offset,
+        count=DEFAULT_NUM_DISPLAY_BYTES,
+        layer_name=None,
+        architecture=None,
+    ):
         """Disassembles a number of instructions from the code at offset"""
         remaining_data = self._read_data(offset, count=count, layer_name=layer_name)
         if not has_capstone:
@@ -343,7 +417,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         object: Union[
             str, interfaces.objects.ObjectInterface, interfaces.objects.Template
         ],
-        offset: int = None,
+        offset: Optional[int] = None,
     ):
         """Display Type describes the members of a particular object in alphabetical order"""
         if not isinstance(
@@ -574,7 +648,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         if treegrid is not None:
             self.render_treegrid(treegrid)
 
-    def display_symbols(self, symbol_table: str = None):
+    def display_symbols(self, symbol_table: Optional[str] = None):
         """Prints an alphabetical list of symbols for a symbol table"""
         if symbol_table is None:
             print("No symbol table provided")
@@ -603,10 +677,13 @@ class Volshell(interfaces.plugins.PluginInterface):
             location = "file:" + request.pathname2url(location)
         print(f"Running code from {location}\n")
         accessor = resources.ResourceAccessor()
-        with accessor.open(url=location) as fp:
-            self.__console.runsource(
-                io.TextIOWrapper(fp, encoding="utf-8").read(), symbol="exec"
-            )
+        with accessor.open(url=location) as handle, io.TextIOWrapper(
+            handle, encoding="utf-8"
+        ) as fp:
+            if has_ipython:
+                self.__console.ex(fp.read())
+            else:
+                self.__console.runsource(fp.read(), symbol="exec")
         print("\nCode complete")
 
     def load_file(self, location: str):
@@ -648,17 +725,16 @@ class Volshell(interfaces.plugins.PluginInterface):
             if argname in kwargs:
                 del kwargs[argname]
 
-        for keyword in kwargs:
-            val = kwargs[keyword]
-            if not isinstance(
-                val, interfaces.configuration.BasicTypes
-            ) and not isinstance(val, list):
-                if not isinstance(val, list) or all(
-                    [isinstance(x, interfaces.configuration.BasicTypes) for x in val]
-                ):
-                    raise TypeError(
-                        "Configurable values must be simple types (int, bool, str, bytes)"
-                    )
+        for keyword, val in kwargs.items():
+            BasicType_or_list_of_BasicType = False  # excludes list of lists
+            if isinstance(val, interfaces.configuration.BasicTypes):
+                BasicType_or_list_of_BasicType = True
+            if all(isinstance(x, interfaces.configuration.BasicTypes) for x in val):
+                BasicType_or_list_of_BasicType = True
+            if not BasicType_or_list_of_BasicType:
+                raise TypeError(
+                    "Configurable values must be simple types (int, bool, str, bytes)"
+                )
             self.context.config[config_path + "." + keyword] = val
 
         constructed = clazz(self.context, config_path, **constructor_args)
@@ -680,7 +756,6 @@ class NullFileHandler(io.BytesIO, interfaces.plugins.FileHandlerInterface):
 
     def writelines(self, lines: Iterable[bytes]):
         """Dummy method"""
-        pass
 
     def write(self, b: bytes):
         """Dummy method"""

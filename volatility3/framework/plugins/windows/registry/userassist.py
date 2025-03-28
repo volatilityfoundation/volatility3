@@ -13,15 +13,19 @@ from typing import Any, Generator, List, Tuple
 from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers.physical import BufferDataLayer
-from volatility3.framework.layers.registry import RegistryHive
+from volatility3.framework.layers.registry import (
+    RegistryHive,
+    RegistryException,
+)
 from volatility3.framework.renderers import conversion, format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.plugins.windows.registry import hivelist
+from volatility3.plugins import timeliner
 
 vollog = logging.getLogger(__name__)
 
 
-class UserAssist(interfaces.plugins.PluginInterface):
+class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Print userassist registry keys and information."""
 
     _required_framework_version = (2, 0, 0)
@@ -38,7 +42,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
                 os.path.join(os.path.dirname(__file__), "userassist.json"), "rb"
             ) as fp:
                 self._folder_guids = json.load(fp)
-        except IOError:
+        except OSError:
             vollog.error("Usersassist data file not found")
 
     @classmethod
@@ -52,8 +56,13 @@ class UserAssist(interfaces.plugins.PluginInterface):
             requirements.IntRequirement(
                 name="offset", description="Hive Offset", default=None, optional=True
             ),
-            requirements.PluginRequirement(
-                name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="hivelist", component=hivelist.HiveList, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
             ),
         ]
 
@@ -166,10 +175,21 @@ class UserAssist(interfaces.plugins.PluginInterface):
 
         self._determine_userassist_type()
 
-        userassist_node_path = hive.get_key(
-            "software\\microsoft\\windows\\currentversion\\explorer\\userassist",
-            return_list=True,
-        )
+        try:
+            userassist_node_path = hive.get_key(
+                "software\\microsoft\\windows\\currentversion\\explorer\\userassist",
+                return_list=True,
+            )
+        except RegistryException as e:
+            vollog.warning(
+                f"Error accessing UserAssist key in {hive_name} at {hive.hive_offset:#x}: {e}"
+            )
+            return None
+        except KeyError:
+            vollog.warning(
+                f"UserAssist key not found in {hive_name} at {hive.hive_offset:#x}"
+            )
+            return None
 
         if not userassist_node_path:
             vollog.warning("list_userassist did not find a valid node_path (or None)")
@@ -226,7 +246,14 @@ class UserAssist(interfaces.plugins.PluginInterface):
 
                 # output any subkeys under Count
                 for subkey in countkey.get_subkeys():
-                    subkey_name = subkey.get_name()
+                    try:
+                        subkey_name = subkey.get_name()
+                    except (
+                        exceptions.InvalidAddressException,
+                        RegistryException,
+                    ):
+                        subkey_name = renderers.UnreadableValue()
+
                     result = (
                         1,
                         (
@@ -248,7 +275,14 @@ class UserAssist(interfaces.plugins.PluginInterface):
 
                 # output any values under Count
                 for value in countkey.get_values():
-                    value_name = value.get_name()
+                    try:
+                        value_name = value.get_name()
+                    except (
+                        exceptions.InvalidAddressException,
+                        RegistryException,
+                    ):
+                        value_name = renderers.UnreadableValue()
+
                     with contextlib.suppress(UnicodeDecodeError):
                         value_name = codecs.encode(value_name, "rot_13")
 
@@ -283,14 +317,16 @@ class UserAssist(interfaces.plugins.PluginInterface):
         hive_offsets = None
         if self.config.get("offset", None) is not None:
             hive_offsets = [self.config.get("offset", None)]
-        kernel = self.context.modules[self.config["kernel"]]
+
+        self._reg_table_name = intermed.IntermediateSymbolTable.create(
+            self.context, self._config_path, "windows", "registry"
+        )
 
         # get all the user hive offsets or use the one specified
         for hive in hivelist.HiveList.list_hives(
             context=self.context,
             base_config_path=self.config_path,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            kernel_module_name=self.config["kernel"],
             filter_string="ntuser.dat",
             hive_offsets=hive_offsets,
         ):
@@ -303,9 +339,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
                 )
             except exceptions.InvalidAddressException as excp:
                 vollog.debug(
-                    "Invalid address identified in lower layer {}: {}".format(
-                        excp.layer_name, excp.invalid_address
-                    )
+                    f"Invalid address identified in lower layer {excp.layer_name}: {excp.invalid_address}"
                 )
             except KeyError:
                 vollog.debug(
@@ -335,11 +369,17 @@ class UserAssist(interfaces.plugins.PluginInterface):
             )
             yield result
 
-    def run(self):
-        self._reg_table_name = intermed.IntermediateSymbolTable.create(
-            self.context, self._config_path, "windows", "registry"
-        )
+    def generate_timeline(self):
+        for row in self._generator():
+            _depth, row_data = row
+            # check the name and the timestamp to not be empty
+            if isinstance(row_data[5], str) and not isinstance(
+                row_data[10], renderers.NotApplicableValue
+            ):
+                description = f"UserAssist: {row_data[5]} {row_data[2]} ({row_data[7]})"
+                yield (description, timeliner.TimeLinerType.MODIFIED, row_data[10])
 
+    def run(self):
         return renderers.TreeGrid(
             [
                 ("Hive Offset", renderers.format_hints.Hex),

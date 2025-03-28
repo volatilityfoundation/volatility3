@@ -11,14 +11,13 @@
 #
 # https://volatility-labs.blogspot.com/2021/10/memory-forensics-r-illustrated.html
 
-import io
 import logging
 from typing import Iterable, Tuple, List, Optional
 
 import pefile
 
 from volatility3.framework import interfaces, symbols, exceptions
-from volatility3.framework import renderers, constants
+from volatility3.framework import renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import scanners
 from volatility3.framework.objects import utility
@@ -26,7 +25,7 @@ from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import pdbutil
 from volatility3.framework.symbols.windows.extensions import pe
-from volatility3.plugins.windows import pslist, vadinfo
+from volatility3.plugins.windows import pslist, vadinfo, pe_symbols
 
 try:
     import capstone
@@ -53,7 +52,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="pslist", component=pslist.PsList, version=(2, 0, 0)
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="vadinfo", component=vadinfo.VadInfo, version=(2, 0, 0)
@@ -61,42 +60,10 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             requirements.VersionRequirement(
                 name="pdbutil", component=pdbutil.PDBUtility, version=(1, 0, 0)
             ),
+            requirements.VersionRequirement(
+                name="pe_symbols", component=pe_symbols.PESymbols, version=(3, 0, 0)
+            ),
         ]
-
-    def _get_pefile_obj(
-        self, pe_table_name: str, layer_name: str, base_address: int
-    ) -> pefile.PE:
-        """
-        Attempts to pefile object from the bytes of the PE file
-
-        Args:
-            pe_table_name: name of the pe types table
-            layer_name: name of the lsass.exe process layer
-            base_address: base address of cryptdll.dll in lsass.exe
-
-        Returns:
-            the constructed pefile object
-        """
-        pe_data = io.BytesIO()
-
-        try:
-            dos_header = self.context.object(
-                pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
-                offset=base_address,
-                layer_name=layer_name,
-            )
-
-            for offset, data in dos_header.reconstruct():
-                pe_data.seek(offset)
-                pe_data.write(data)
-
-            pe_ret = pefile.PE(data=pe_data.getvalue(), fast_load=True)
-
-        except exceptions.InvalidAddressException:
-            vollog.debug("Unable to reconstruct cryptdll.dll in memory")
-            pe_ret = None
-
-        return pe_ret
 
     def _check_for_skeleton_key_vad(
         self,
@@ -172,9 +139,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         except exceptions.InvalidAddressException:
             vollog.debug(
-                "Unable to construct cSystems array at given offset: {:x}".format(
-                    array_start
-                )
+                f"Unable to construct cSystems array at given offset: {array_start:x}"
             )
             array = None
 
@@ -284,16 +249,13 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         for proc in proc_list:
             try:
-                proc_id = proc.UniqueProcessId
                 proc_layer_name = proc.add_process_layer()
 
                 return proc, proc_layer_name
 
             except exceptions.InvalidAddressException as excp:
                 vollog.debug(
-                    "Process {}: invalid address {} in layer {}".format(
-                        proc_id, excp.invalid_address, excp.layer_name
-                    )
+                    f"Invalid address {excp.invalid_address} in layer {excp.layer_name}"
                 )
 
         return None, None
@@ -435,15 +397,20 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
                     # we do not want to fail just because the count is not in memory
                     # 16 was the size on samples I tested, so I chose it as the default
+                    count = 16
+
                     if target_address:
-                        count = int.from_bytes(
-                            self.context.layers[proc_layer_name].read(
-                                target_address, 4
-                            ),
-                            "little",
-                        )
-                    else:
-                        count = 16
+                        try:
+                            count = int.from_bytes(
+                                self.context.layers[proc_layer_name].read(
+                                    target_address, 4
+                                ),
+                                "little",
+                            )
+                        except exceptions.InvalidAddressException:
+                            vollog.debug(
+                                "Unable to read `cCsystems`. Defaulting to 16."
+                            )
 
                     found_count = True
 
@@ -497,7 +464,9 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             self.context, self.config_path, "windows", "pe", class_types=pe.class_types
         )
 
-        cryptdll = self._get_pefile_obj(pe_table_name, proc_layer_name, cryptdll_base)
+        cryptdll = pe_symbols.PESymbols.get_pefile_obj(
+            self.context, pe_table_name, proc_layer_name, cryptdll_base
+        )
         if not cryptdll:
             return None
 
@@ -599,7 +568,9 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         """
         kernel = self.context.modules[self.config["kernel"]]
 
-        if not symbols.symbol_table_is_64bit(self.context, kernel.symbol_table_name):
+        if not symbols.symbol_table_is_64bit(
+            context=self.context, symbol_table_name=kernel.symbol_table_name
+        ):
             vollog.info("This plugin only supports 64bit Windows memory samples")
             return None
 
@@ -691,8 +662,6 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         return process_name != "lsass.exe"
 
     def run(self):
-        kernel = self.context.modules[self.config["kernel"]]
-
         return renderers.TreeGrid(
             [
                 ("PID", int),
@@ -704,8 +673,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             self._generator(
                 pslist.PsList.list_processes(
                     context=self.context,
-                    layer_name=kernel.layer_name,
-                    symbol_table=kernel.symbol_table_name,
+                    kernel_module_name=self.config["kernel"],
                     filter_func=self._lsass_proc_filter,
                 )
             ),

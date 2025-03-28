@@ -57,6 +57,10 @@ class VmwareLayer(segmented.SegmentedLayer):
             )
 
         meta_layer = self.context.layers.get(self._meta_layer, None)
+        if meta_layer is None:
+            raise exceptions.LayerException(
+                self._meta_layer, "VMware: Meta layer not found"
+            )
         header_size = struct.calcsize(self.header_structure)
         data = meta_layer.read(0, header_size)
         magic, unknown, groupCount = struct.unpack(self.header_structure, data)

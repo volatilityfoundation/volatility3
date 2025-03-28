@@ -71,8 +71,8 @@ class Kevents(interfaces.plugins.PluginInterface):
                 description="Kernel module for the OS",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="macutils", component=mac.MacUtilities, version=(1, 2, 0)
@@ -119,8 +119,7 @@ class Kevents(interfaces.plugins.PluginInterface):
             return None
 
         for klist in klist_array:
-            for kn in mac.MacUtilities.walk_slist(klist, "kn_link"):
-                yield kn
+            yield from mac.MacUtilities.walk_slist(klist, "kn_link")
 
     @classmethod
     def _get_task_kevents(cls, kernel, task):

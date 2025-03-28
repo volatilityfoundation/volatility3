@@ -11,7 +11,7 @@ expect to be in the context (such as particular layers or symboltables).
 import abc
 import logging
 import os
-from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type
+from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Type
 from urllib import parse, request
 
 from volatility3.framework import constants, interfaces
@@ -111,7 +111,7 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
 
         Args:
             element_type: The (requirement) type of each element within the list
-            max_elements; The maximum number of acceptable elements this list can contain
+            max_elements: The maximum number of acceptable elements this list can contain
             min_elements: The minimum number of acceptable elements this list can contain
         """
         super().__init__(*args, **kwargs)
@@ -161,7 +161,7 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
                 "TypeError - Too many values provided to list option.",
             )
             return {config_path: self}
-        if not all([isinstance(element, self.element_type) for element in value]):
+        if not all(isinstance(element, self.element_type) for element in value):
             vollog.log(
                 constants.LOGLEVEL_V,
                 "TypeError - At least one element in the list is not of the correct type.",
@@ -181,7 +181,7 @@ class ChoiceRequirement(interfaces.configuration.RequirementInterface):
         """
         super().__init__(*args, **kwargs)
         if not isinstance(choices, list) or any(
-            [not isinstance(choice, str) for choice in choices]
+            not isinstance(choice, str) for choice in choices
         ):
             raise TypeError("ChoiceRequirement takes a list of strings as choices")
         self.choices = choices
@@ -314,11 +314,11 @@ class TranslationLayerRequirement(
     def __init__(
         self,
         name: str,
-        description: str = None,
+        description: Optional[str] = None,
         default: interfaces.configuration.ConfigSimpleType = None,
         optional: bool = False,
-        oses: List = None,
-        architectures: List = None,
+        oses: Optional[List] = None,
+        architectures: Optional[List[str]] = None,
     ) -> None:
         """Constructs a Translation Layer Requirement.
 
@@ -410,11 +410,9 @@ class TranslationLayerRequirement(
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [
-                subreq.unsatisfied(context, config_path)
-                for subreq in self.requirements.values()
-                if not subreq.optional
-            ]
+            subreq.unsatisfied(context, config_path)
+            for subreq in self.requirements.values()
+            if not subreq.optional
         ):
             return None
 
@@ -485,11 +483,9 @@ class SymbolTableRequirement(
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [
-                subreq.unsatisfied(context, config_path)
-                for subreq in self.requirements.values()
-                if not subreq.optional
-            ]
+            subreq.unsatisfied(context, config_path)
+            for subreq in self.requirements.values()
+            if not subreq.optional
         ):
             return None
 
@@ -527,32 +523,70 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
     def __init__(
         self,
         name: str,
-        description: str = None,
+        description: Optional[str] = None,
         default: bool = False,
         optional: bool = False,
-        component: Type[interfaces.configuration.VersionableInterface] = None,
+        component: Optional[Type[interfaces.configuration.VersionableInterface]] = None,
         version: Optional[Tuple[int, ...]] = None,
     ) -> None:
+        if version is None:
+            raise TypeError("Version cannot be None")
+        if component is None:
+            raise TypeError("Component cannot be None")
+        if description is None:
+            description = f"Version {'.'.join(str(x) for x in version)} dependency on {component.__module__}.{component.__name__} unmet"
         super().__init__(
             name=name, description=description, default=default, optional=optional
         )
-        if component is None:
-            raise TypeError("Component cannot be None")
         self._component: Type[interfaces.configuration.VersionableInterface] = component
-        if version is None:
-            raise TypeError("Version cannot be None")
         self._version = version
 
     def unsatisfied(
-        self, context: interfaces.context.ContextInterface, config_path: str
+        self,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        accumulator: Optional[
+            Set[interfaces.configuration.VersionableInterface]
+        ] = None,
     ) -> Dict[str, interfaces.configuration.RequirementInterface]:
         # Mypy doesn't appreciate our classproperty implementation, self._plugin.version has no type
         config_path = interfaces.configuration.path_join(config_path, self.name)
         if not self.matches_required(self._version, self._component.version):
             return {config_path: self}
+
+        recurse = True
+        if accumulator is None:
+            accumulator = set([self._component])
+        else:
+            if self._component in accumulator:
+                recurse = False
+            else:
+                accumulator.add(self._component)
+
+        # Check for child requirements
+        if (
+            issubclass(self._component, interfaces.configuration.ConfigurableInterface)
+            and recurse
+        ):
+            result = {}
+            for requirement in self._component.get_requirements():
+                if not requirement.optional and isinstance(
+                    requirement, VersionRequirement
+                ):
+                    result.update(
+                        requirement.unsatisfied(
+                            context, config_path, accumulator.copy()
+                        )
+                    )
+
+            if result:
+                result[config_path] = self
+                return result
+
         context.config[interfaces.configuration.path_join(config_path, self.name)] = (
             True
         )
+
         return {}
 
     @classmethod
@@ -570,10 +604,10 @@ class PluginRequirement(VersionRequirement):
     def __init__(
         self,
         name: str,
-        description: str = None,
+        description: Optional[str] = None,
         default: bool = False,
         optional: bool = False,
-        plugin: Type[interfaces.plugins.PluginInterface] = None,
+        plugin: Optional[Type[interfaces.plugins.PluginInterface]] = None,
         version: Optional[Tuple[int, ...]] = None,
     ) -> None:
         super().__init__(
@@ -593,7 +627,7 @@ class ModuleRequirement(
     def __init__(
         self,
         name: str,
-        description: str = None,
+        description: Optional[str] = None,
         default: bool = False,
         architectures: Optional[List[str]] = None,
         optional: bool = False,
@@ -630,9 +664,7 @@ class ModuleRequirement(
         if value is not None:
             vollog.log(
                 constants.LOGLEVEL_V,
-                "TypeError - Module Requirement only accepts string labels: {}".format(
-                    repr(value)
-                ),
+                f"TypeError - Module Requirement only accepts string labels: {repr(value)}",
             )
             return {config_path: self}
 
@@ -672,11 +704,9 @@ class ModuleRequirement(
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [
-                subreq.unsatisfied(context, config_path)
-                for subreq in self.requirements.values()
-                if not subreq.optional
-            ]
+            subreq.unsatisfied(context, config_path)
+            for subreq in self.requirements.values()
+            if not subreq.optional
         ):
             return None
 

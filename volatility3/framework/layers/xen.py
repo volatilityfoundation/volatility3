@@ -5,6 +5,7 @@ from typing import Optional
 from volatility3.framework import constants, interfaces, exceptions
 from volatility3.framework.layers import elf
 from volatility3.framework.symbols import intermed
+from volatility3.framework.constants.linux import ELF_CLASS
 
 vollog = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ class XenCoreDumpLayer(elf.Elf64Layer):
 
     _header_struct = struct.Struct("<IBBB")
     MAGIC = 0x464C457F  # "\x7fELF"
-    ELF_CLASS = 2
+    ELF_CLASS = ELF_CLASS.ELFCLASS64
 
     def __init__(
         self, context: interfaces.context.ContextInterface, config_path: str, name: str
@@ -53,6 +54,7 @@ class XenCoreDumpLayer(elf.Elf64Layer):
 
         segments = []
         self._segment_headers = []
+        segment_names = None
 
         for sindex in range(ehdr.e_shnum):
             shdr = self.context.object(
@@ -115,12 +117,10 @@ class XenCoreDumpLayer(elf.Elf64Layer):
                         )
                     )
         elif p2m_data and pfn_data:
-            raise elf.ElfFormatException(
-                self.name, f"Both P2M and PFN in Xen Core Dump"
-            )
+            raise elf.ElfFormatException(self.name, "Both P2M and PFN in Xen Core Dump")
         else:
             raise elf.ElfFormatException(
-                self.name, f"Neither P2M nor PFN in Xen Core Dump"
+                self.name, "Neither P2M nor PFN in Xen Core Dump"
             )
 
         if len(segments) == 0:

@@ -58,7 +58,7 @@ class GetSIDs(interfaces.plugins.PluginInterface):
             )
 
         # Get all the sids from the json file.
-        with open(sids_json_file_name, "r") as file_handle:
+        with open(sids_json_file_name) as file_handle:
             sids_json_data = json.load(file_handle)
             self.servicesids = sids_json_data["service sids"]
             self.well_known_sids = sids_json_data["well known"]
@@ -83,11 +83,11 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                 element_type=int,
                 optional=True,
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="hivelist", component=hivelist.HiveList, version=(2, 0, 0)
             ),
         ]
 
@@ -101,28 +101,33 @@ class GetSIDs(interfaces.plugins.PluginInterface):
 
         key = "Microsoft\\Windows NT\\CurrentVersion\\ProfileList"
         val = "ProfileImagePath"
-        kernel = self.context.modules[self.config["kernel"]]
 
         sids = {}
         for hive in hivelist.HiveList.list_hives(
             context=self.context,
             base_config_path=self.config_path,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            kernel_module_name=self.config["kernel"],
             filter_string="config\\software",
             hive_offsets=None,
         ):
             try:
                 for subkey in hive.get_key(key).get_subkeys():
-                    sid = str(subkey.get_name())
+                    try:
+                        sid = str(subkey.get_name())
+                    except (
+                        exceptions.InvalidAddressException,
+                        layers.registry.RegistryException,
+                    ):
+                        continue
+
                     path = ""
                     for node in subkey.get_values():
                         try:
                             value_node_name = node.get_name() or "(Default)"
                         except (
                             exceptions.InvalidAddressException,
-                            layers.registry.RegistryFormatException,
-                        ) as excp:
+                            layers.registry.RegistryException,
+                        ):
                             continue
                         try:
                             value_data = node.decode_data()
@@ -155,10 +160,14 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                         except (
                             ValueError,
                             exceptions.InvalidAddressException,
-                            layers.registry.RegistryFormatException,
-                        ) as excp:
+                            layers.registry.RegistryException,
+                        ):
                             continue
-            except (KeyError, exceptions.InvalidAddressException):
+            except (
+                KeyError,
+                exceptions.InvalidAddressException,
+                layers.registry.RegistryException,
+            ):
                 continue
 
         return sids
@@ -174,12 +183,14 @@ class GetSIDs(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 token = False
 
+            task_name = objects.utility.array_to_string(task.ImageFileName)
+
             if not token or not isinstance(token, interfaces.objects.ObjectInterface):
                 yield (
                     0,
                     [
                         int(task.UniqueProcessId),
-                        str(task.ImageFileName),
+                        task_name,
                         "Token unreadable",
                         "",
                     ],
@@ -205,7 +216,7 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                     0,
                     (
                         task.UniqueProcessId,
-                        objects.utility.array_to_string(task.ImageFileName),
+                        task_name,
                         sid_string,
                         sid_name,
                     ),
@@ -213,15 +224,13 @@ class GetSIDs(interfaces.plugins.PluginInterface):
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
-        kernel = self.context.modules[self.config["kernel"]]
 
         return renderers.TreeGrid(
             [("PID", int), ("Process", str), ("SID", str), ("Name", str)],
             self._generator(
                 pslist.PsList.list_processes(
                     context=self.context,
-                    layer_name=kernel.layer_name,
-                    symbol_table=kernel.symbol_table_name,
+                    kernel_module_name=self.config["kernel"],
                     filter_func=filter_func,
                 )
             ),

@@ -14,7 +14,8 @@ from volatility3.plugins.linux import pslist
 class PsAux(plugins.PluginInterface):
     """Lists processes with their command line arguments"""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (2, 13, 0)
+    _version = (1, 1, 1)
 
     @classmethod
     def get_requirements(cls):
@@ -25,8 +26,8 @@ class PsAux(plugins.PluginInterface):
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -77,7 +78,7 @@ class PsAux(plugins.PluginInterface):
                 return renderers.UnreadableValue()
 
             # the arguments are null byte terminated, replace the nulls with spaces
-            s = argv.decode().split("\x00")
+            s = argv.decode(encoding="utf8", errors="replace").split("\x00")
             args = " ".join(s)
         else:
             # kernel thread
@@ -97,14 +98,8 @@ class PsAux(plugins.PluginInterface):
         # walk the process list and report the arguments
         for task in tasks:
             pid = task.pid
-
-            try:
-                ppid = task.parent.pid
-            except exceptions.InvalidAddressException:
-                ppid = 0
-
+            ppid = task.get_parent_pid()
             name = utility.array_to_string(task.comm)
-
             args = self._get_command_line_args(task, name)
 
             yield (0, (pid, ppid, name, args))

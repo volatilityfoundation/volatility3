@@ -236,7 +236,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                     if self._architecture is None:
                         vollog.log(
                             constants.LOGLEVEL_VV,
-                            f"QEVM architecture could not be determined",
+                            "QEVM architecture could not be determined",
                         )
 
                 # Once all segments have been read, determine the PCI hole if any

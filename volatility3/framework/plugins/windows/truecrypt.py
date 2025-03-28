@@ -2,6 +2,8 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
+import logging
+
 from typing import Iterable, Generator, List, Tuple
 
 from volatility3.framework import constants, interfaces, renderers
@@ -16,6 +18,8 @@ from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
 
 from volatility3.plugins.windows import modules
+
+vollog = logging.getLogger(__name__)
 
 
 class Passphrase(interfaces.plugins.PluginInterface):
@@ -33,7 +37,7 @@ class Passphrase(interfaces.plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="modules", component=modules.Modules, version=(1, 1, 0)
+                name="modules", component=modules.Modules, version=(3, 0, 0)
             ),
             requirements.IntRequirement(
                 name="min-length",
@@ -121,13 +125,20 @@ class Passphrase(interfaces.plugins.PluginInterface):
     def _generator(self):
         kernel = self.context.modules[self.config["kernel"]]
         mods: Iterable[ObjectInterface] = modules.Modules.list_modules(
-            self.context, kernel.layer_name, kernel.symbol_table_name
+            self.context, self.config["kernel"]
         )
-        truecrypt_module_base = next(
-            mod.DllBase
-            for mod in mods
-            if mod.BaseDllName.get_string().lower() == "truecrypt.sys"
-        )
+        try:
+            truecrypt_module_base = next(
+                mod.DllBase
+                for mod in mods
+                if mod.BaseDllName.get_string().lower() == "truecrypt.sys"
+            )
+        except StopIteration:
+            vollog.warning(
+                "Truecrypt module not found in the modules list. Unable to proceed."
+            )
+            return
+
         for offset, password in self.scan_module(
             truecrypt_module_base, kernel.layer_name
         ):

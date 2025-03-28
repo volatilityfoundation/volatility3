@@ -18,8 +18,11 @@ vollog = logging.getLogger(__name__)
 class Strings(interfaces.plugins.PluginInterface):
     """Reads output from the strings command and indicates which process(es) each string belongs to."""
 
-    _version = (1, 2, 0)
     _required_framework_version = (2, 0, 0)
+
+    # 2.0.0 - change signature of `generate_mapping`
+    _version = (2, 0, 0)
+
     strings_pattern = re.compile(rb"^(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)\n?")
 
     @classmethod
@@ -30,8 +33,8 @@ class Strings(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -68,12 +71,10 @@ class Strings(interfaces.plugins.PluginInterface):
             except ValueError:
                 vollog.error(f"Line in unrecognized format: line {count}")
             line = strings_fp.readline()
-        kernel = self.context.modules[self.config["kernel"]]
 
         revmap = self.generate_mapping(
-            self.context,
-            kernel.layer_name,
-            kernel.symbol_table_name,
+            context=self.context,
+            kernel_module_name=self.config["kernel"],
             progress_callback=self._progress_callback,
             pid_list=self.config["pid"],
         )
@@ -122,8 +123,7 @@ class Strings(interfaces.plugins.PluginInterface):
     def generate_mapping(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         progress_callback: constants.ProgressCallback = None,
         pid_list: Optional[List[int]] = None,
     ) -> Dict[int, Set[Tuple[str, int]]]:
@@ -132,8 +132,7 @@ class Strings(interfaces.plugins.PluginInterface):
 
         Args:
             context: the context for the method to run against
-            layer_name: the layer to map against the string lines
-            symbol_table: the name of the symbol table for the provided layer
+            kernel_module_name: the name of the module forthe kernel
             progress_callback: an optional callable to display progress
             pid_list: a lit of process IDs to consider when generating the reverse map
 
@@ -142,7 +141,9 @@ class Strings(interfaces.plugins.PluginInterface):
         """
         filter = pslist.PsList.create_pid_filter(pid_list)
 
-        layer = context.layers[layer_name]
+        kernel = context.modules[kernel_module_name]
+
+        layer = context.layers[kernel.layer_name]
         reverse_map: Dict[int, Set[Tuple[str, int]]] = dict()
         if isinstance(layer, intel.Intel):
             # We don't care about errors, we just wanted chunks that map correctly
@@ -161,7 +162,7 @@ class Strings(interfaces.plugins.PluginInterface):
             # TODO: Include kernel modules
 
             for process in pslist.PsList.list_processes(
-                context, layer_name, symbol_table
+                context=context, kernel_module_name=kernel_module_name
             ):
                 if not filter(process):
                     proc_id = "Unknown"
@@ -170,9 +171,7 @@ class Strings(interfaces.plugins.PluginInterface):
                         proc_layer_name = process.add_process_layer()
                     except exceptions.InvalidAddressException as excp:
                         vollog.debug(
-                            "Process {}: invalid address {} in layer {}".format(
-                                proc_id, excp.invalid_address, excp.layer_name
-                            )
+                            f"Process {proc_id}: invalid address {excp.invalid_address} in layer {excp.layer_name}"
                         )
                         continue
 
@@ -181,7 +180,7 @@ class Strings(interfaces.plugins.PluginInterface):
                         for mapval in proc_layer.mapping(
                             0x0, proc_layer.maximum_address, ignore_errors=True
                         ):
-                            mapped_offset, _, offset, mapped_size, maplayer = mapval
+                            mapped_offset, _, offset, mapped_size, _maplayer = mapval
                             for val in range(
                                 mapped_offset, mapped_offset + mapped_size, 0x1000
                             ):

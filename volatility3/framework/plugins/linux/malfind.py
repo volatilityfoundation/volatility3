@@ -2,10 +2,10 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from typing import List
+from typing import List, Tuple, Optional
 import logging
-from volatility3.framework import constants, interfaces
-from volatility3.framework import renderers
+from volatility3.framework import interfaces
+from volatility3.framework import renderers, symbols
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
@@ -18,6 +18,7 @@ class Malfind(interfaces.plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code."""
 
     _required_framework_version = (2, 0, 0)
+    _version = (1, 0, 2)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -27,8 +28,8 @@ class Malfind(interfaces.plugins.PluginInterface):
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -38,7 +39,9 @@ class Malfind(interfaces.plugins.PluginInterface):
             ),
         ]
 
-    def _list_injections(self, task):
+    def _list_injections(
+        self, task
+    ) -> Tuple[interfaces.objects.ObjectInterface, Optional[str], bytes]:
         """Generate memory regions for a process that may contain injected
         code."""
 
@@ -53,30 +56,21 @@ class Malfind(interfaces.plugins.PluginInterface):
             vollog.debug(
                 f"Injections : processing PID {task.pid} : VMA {vma_name} : {hex(vma.vm_start)}-{hex(vma.vm_end)}"
             )
-            if (
-                vma.is_suspicious(proc_layer)
-                and vma.get_name(self.context, task) != "[vdso]"
-            ):
+            if vma.is_suspicious(proc_layer) and vma_name != "[vdso]":
                 data = proc_layer.read(vma.vm_start, 64, pad=True)
-                yield vma, data
+                yield vma, vma_name, data
 
     def _generator(self, tasks):
         # determine if we're on a 32 or 64 bit kernel
         vmlinux = self.context.modules[self.config["kernel"]]
-        if (
-            self.context.symbol_space.get_type(
-                vmlinux.symbol_table_name + constants.BANG + "pointer"
-            ).size
-            == 4
-        ):
-            is_32bit_arch = True
-        else:
-            is_32bit_arch = False
+        is_32bit_arch = not symbols.symbol_table_is_64bit(
+            context=self.context, symbol_table_name=vmlinux.symbol_table_name
+        )
 
         for task in tasks:
             process_name = utility.array_to_string(task.comm)
 
-            for vma, data in self._list_injections(task):
+            for vma, vma_name, data in self._list_injections(task):
                 if is_32bit_arch:
                     architecture = "intel"
                 else:
@@ -93,6 +87,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                         process_name,
                         format_hints.Hex(vma.vm_start),
                         format_hints.Hex(vma.vm_end),
+                        vma_name or renderers.NotAvailableValue(),
                         vma.get_protection(),
                         format_hints.HexBytes(data),
                         disasm,
@@ -108,6 +103,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                 ("Process", str),
                 ("Start", format_hints.Hex),
                 ("End", format_hints.Hex),
+                ("Path", str),
                 ("Protection", str),
                 ("Hexdump", format_hints.HexBytes),
                 ("Disasm", interfaces.renderers.Disassembly),

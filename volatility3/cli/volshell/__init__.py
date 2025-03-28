@@ -21,6 +21,14 @@ from volatility3.framework import (
     plugins,
 )
 
+try:
+    import argcomplete
+
+    HAS_ARGCOMPLETE = True
+except ImportError:
+    HAS_ARGCOMPLETE = False
+
+
 # Make sure we log everything
 
 rootlog = logging.getLogger()
@@ -41,7 +49,7 @@ class VolShell(cli.CommandLine):
     python terminal with all the volatility support calls available.
     """
 
-    CLI_NAME = "volshell"
+    CLI_NAME = os.path.basename(sys.argv[0])  # volshell
 
     def __init__(self):
         super().__init__()
@@ -151,11 +159,20 @@ class VolShell(cli.CommandLine):
             default=constants.CACHE_PATH,
             type=str,
         )
-        parser.add_argument(
+        isf_group = parser.add_mutually_exclusive_group()
+        isf_group.add_argument(
             "--offline",
             help="Do not search online for additional JSON files",
             default=False,
             action="store_true",
+        )
+        isf_group.add_argument(
+            "-u",
+            "--remote-isf-url",
+            metavar="URL",
+            help="Search online for ISF json files",
+            default=constants.REMOTE_ISF_URL,
+            type=str,
         )
 
         # Volshell specific flags
@@ -197,10 +214,11 @@ class VolShell(cli.CommandLine):
             vollog.addHandler(file_logger)
             vollog.info("Logging started")
 
+        self.order_extra_verbose_levels()
         if partial_args.verbosity < 3:
-            console.setLevel(30 - (partial_args.verbosity * 10))
+            console.setLevel(logging.WARNING - (partial_args.verbosity * 10))
         else:
-            console.setLevel(10 - (partial_args.verbosity - 2))
+            console.setLevel(logging.DEBUG - (partial_args.verbosity - 2))
 
         for level, msg in delayed_logs:
             vollog.log(level, msg)
@@ -227,6 +245,8 @@ class VolShell(cli.CommandLine):
 
         if partial_args.offline:
             constants.OFFLINE = partial_args.offline
+        elif partial_args.remote_isf_url:
+            constants.REMOTE_ISF_URL = partial_args.remote_isf_url
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
@@ -262,9 +282,7 @@ class VolShell(cli.CommandLine):
         for plugin in volshell_plugin_list:
             subparser = parser.add_argument_group(
                 title=plugin.capitalize(),
-                description="Configuration options based on {} options".format(
-                    plugin.capitalize()
-                ),
+                description=f"Configuration options based on {plugin.capitalize()} options",
             )
             self.populate_requirements_argparse(subparser, volshell_plugin_list[plugin])
             configurables_list[plugin] = volshell_plugin_list[plugin]
@@ -275,6 +293,10 @@ class VolShell(cli.CommandLine):
         # Hand the plugin requirements over to the CLI (us) and let it construct the config tree
 
         # Run the argparser
+        if HAS_ARGCOMPLETE:
+            # The autocompletion line must be after the partial_arg handling, so that it doesn't trip it
+            # before all the plugins have been added
+            argcomplete.autocomplete(parser)
         args = parser.parse_args()
 
         vollog.log(
@@ -307,7 +329,7 @@ class VolShell(cli.CommandLine):
 
         # UI fills in the config, here we load it from the config file and do it before we process the CL parameters
         if args.config:
-            with open(args.config, "r") as f:
+            with open(args.config) as f:
                 json_val = json.load(f)
                 ctx.config.splice(
                     plugin_config_path,

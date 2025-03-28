@@ -104,10 +104,11 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         for subclazz in framework.class_subclasses(IdentifierProcessor):
             self._classifiers[subclazz.operating_system] = subclazz
 
+    @abstractmethod
     def add_identifier(self, location: str, operating_system: str, identifier: str):
         """Adds an identifier to the store"""
-        pass
 
+    @abstractmethod
     def find_location(
         self, identifier: bytes, operating_system: Optional[str]
     ) -> Optional[str]:
@@ -120,19 +121,19 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         Returns:
             The location of the symbols file that matches the identifier
         """
-        pass
 
+    @abstractmethod
     def get_local_locations(self) -> Iterable[str]:
         """Returns a list of all the local locations"""
-        pass
 
+    @abstractmethod
     def update(self):
         """Locates all files under the symbol directories.  Updates the cache with additions, modifications and removals.
         This also updates remote locations based on a cache timeout.
 
         """
-        pass
 
+    @abstractmethod
     def get_identifier_dictionary(
         self, operating_system: Optional[str] = None, local_only: bool = False
     ) -> Dict[bytes, str]:
@@ -145,16 +146,16 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         Returns:
             A dictionary of identifiers mapped to a location
         """
-        pass
 
+    @abstractmethod
     def get_identifier(self, location: str) -> Optional[bytes]:
         """Returns an identifier based on a specific location or None"""
-        pass
 
+    @abstractmethod
     def get_identifiers(self, operating_system: Optional[str]) -> List[bytes]:
         """Returns all identifiers for a particular operating system"""
-        pass
 
+    @abstractmethod
     def get_location_statistics(
         self, location: str
     ) -> Optional[Tuple[int, int, int, int]]:
@@ -164,6 +165,7 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
             A tuple of base_types, types, enums, symbols, or None is location not found
         """
 
+    @abstractmethod
     def get_hash(self, location: str) -> Optional[str]:
         """Returns the hash of the JSON from within a location ISF"""
 
@@ -299,6 +301,13 @@ class SqliteCache(CacheManagerInterface):
         This also updates remote locations based on a cache timeout.
 
         """
+        if progress_callback is None:
+
+            def dummy_progress(*args, **kargs) -> None:
+                return None
+
+            progress_callback = dummy_progress
+
         on_disk_locations = set(
             [
                 filename
@@ -492,6 +501,21 @@ class SqliteCache(CacheManagerInterface):
         return output
 
 
+def load_cache_manager(cache_file: Optional[str] = None) -> CacheManagerInterface:
+    """Loads a cache manager based on a specific cache file"""
+    if cache_file is None:
+        cache_file = os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME)
+    # Different implementations of cache
+    if not os.path.exists(cache_file):
+        raise ValueError("Non-existant cache file provided")
+    with open(cache_file, "rb") as fp:
+        header = fp.read(4)
+        if header not in [b"SQLi"]:
+            raise ValueError("Identifier file not in recognized format")
+    # Currently only one choice, so use that
+    return SqliteCache(cache_file)
+
+
 ### Automagic
 
 
@@ -557,6 +581,6 @@ class RemoteIdentifierFormat:
                 try:
                     subrbf = RemoteIdentifierFormat(location)
                     yield from subrbf.process(identifiers, operating_system)
-                except IOError:
+                except OSError:
                     vollog.debug(f"Remote file not found: {location}")
         return identifiers

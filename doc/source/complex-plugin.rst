@@ -13,7 +13,7 @@ There is scope for this, in order to run multiple plugins (see `Writing plugins 
 is to provide a parameterized `classmethod` within the plugin, which will allow the method to yield whatever kind of output it will
 generate and take whatever parameters it might need.
 
-This is how processes are listed, which is an often used function.  The code lives within the
+As an example, an often used function is listing processes.  The code lives within the
 :py:class:`~volatility3.plugins.windows.pslist.PsList` plugin but can be used by other plugins by providing the
 appropriate parameters (see
 :py:meth:`~volatility3.plugins.windows.pslist.PsList.list_processes`).
@@ -36,8 +36,8 @@ each plugin in order to populate the context's configuration correctly based on 
 between plugins).  Once the automagics have been constructed, the plugin can be instantiated using the helper function
 :py:func:`~volatility3.framework.plugins.construct_plugin` providing:
 
- * the base context (containing the configuration and any already loaded layers or symbol tables),
- * the plugin class to run,
+ * the base context (containing the configuration and any already loaded layers or symbol tables)
+ * the plugin class to run
  * the configuration path within the context for the plugin
  * any callback to determine progress in lengthy operations
  * an open method for the plugin to create files during the run
@@ -58,7 +58,7 @@ ContextManager, so it can be used by the python `with` keyword).  This is set on
 that can be set on the filename, and a :py:class:`~volatility3.framework.interfaces.plugins.FileHandlerInterface` is the result.
 This mimics an `IO[bytes]` object, which closely mimics a standard python file-like object.
 
-As such code for outputting to a file would be expected to look something like:
+As such, code for outputting to a file would be expected to look something like:
 
 .. code-block:: python
 
@@ -77,7 +77,7 @@ Scanners are objects that adhere to the :py:class:`~volatility3.framework.interf
 passed to the :py:meth:`~volatility3.framework.interfaces.layers.TranslationLayerInterface.scan` method on layers which will
 divide the provided range of sections (or the entire layer
 if none are provided) and call the :py:meth:`~volatility3.framework.interfaces.layers.ScannerInterface`'s call method
-method with each chunk as a parameter, ensuring a suitable amount of overlap (as defined by the scanner).
+with each chunk as a parameter, ensuring a suitable amount of overlap (as defined by the scanner).
 The offset of the chunk, within the layer, is also provided as a parameter.
 
 Scanners can technically maintain state, but it is not recommended since the ordering that the chunks are scanned is
@@ -92,18 +92,18 @@ Empirically it was found that scanners are typically not the most time intensive
 extensive scanning) and so parallelism does not offer significant gains.  As such, parallelism is not enabled by default
 but interfaces can easily enable parallelism when desired.
 
-Writing/Using Intermediate Symbol Format Files
-----------------------------------------------
+Writing / Using Intermediate Symbol Format Files
+------------------------------------------------
 
 It can occasionally be useful to create a data file containing the static structures that can create a
 :py:class:`~volatility3.framework.interfaces.objects.Template` to be instantiated on a layer.
 Volatility has all the machinery necessary to construct these for you from properly formatted JSON data.
 
-The JSON format is documented by the JSON schema files located in schemas.  These are versioned using standard .so
+The JSON format is documented by the JSON schema files located in the schemas directory.  These are versioned using standard .so
 library versioning, so they may not increment as expected.  Each schema lists an available version that can be used,
 which specifies five different sections:
 
-* Base_types - These are the basic type names that will make up the native/primitive types
+* Base_types - These are the basic type names that will make up the native / primitive types
 * User_types - These are the standard definitions of type structures, most will go here
 * Symbols - These list offsets that are associated with specific names (and can be associated with specific type names)
 * Enums - Enumerations that offer a number of choices
@@ -180,7 +180,7 @@ of data.  Each chunk contains the following information, in order:
 **layer_name**
     the layer that this data comes from
 
-An example (and the most common layer encountered in memory forensics) would be an Intel layer, which models the intel
+An example (and the most common layer encountered in memory forensics) would be an Intel layer, which models the Intel
 page mapping system.  Based on a series of tables stored within the layer itself, an intel layer can convert a virtual
 address to a physical address.  It should be noted that intel layers allow multiple virtual addresses to map to the
 same physical address (but a single virtual address cannot ever map to more than one physical address).
@@ -195,7 +195,7 @@ like `abcdr`, requesting `mapping(5, 4)` would return:
      (7,2,0,2, 'physical_layer')
     ]
 
-This mapping mechanism allows for great flexibility in that chunks making up a virtual layer can come from multiple
+This mapping mechanism allows for great flexibility because chunks making up a virtual layer can come from multiple
 different range layers, allowing for swap space to be used to construct the virtual layer, for example.  Also, by
 defining the mapping method, the read and write methods (which read and write into the domain layer) are defined for you
 to write to the lower layers (which in turn can write to layers even lower than that) until eventually they arrive at a
@@ -264,7 +264,7 @@ so it therefore populates the `metadata` property.  This is defined as a read-on
 includes data from every underlying layer.  As such, CrashDumpLayer would actually specify this value by setting it
 in the protected dictionary by `self._direct_metadata['page_map_offset']`.
 
-There is, unfortunately, no easy way to form consensus between a particular layer may want and what a particular layer
+There is, unfortunately, no easy way to form consensus between what a particular layer may want and what a particular layer
 may be able to provide.  At the moment, the main information that layers may populate are:
 
 * `os` with values of `Windows`, `Linux`, `Mac` or `unknown`

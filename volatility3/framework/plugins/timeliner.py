@@ -25,9 +25,13 @@ class TimeLinerType(enum.IntEnum):
     CHANGED = 4
 
 
-class TimeLinerInterface(metaclass=abc.ABCMeta):
+class TimeLinerInterface(
+    interfaces.configuration.VersionableInterface, metaclass=abc.ABCMeta
+):
     """Interface defining methods that timeliner will use to generate a body
     file."""
+
+    _version = (1, 0, 0)
 
     @abc.abstractmethod
     def generate_timeline(
@@ -41,10 +45,11 @@ class TimeLinerInterface(metaclass=abc.ABCMeta):
 
 
 class Timeliner(interfaces.plugins.PluginInterface):
-    """Runs all relevant plugins that provide time related information and
-    orders the results by time."""
+    """Runs all relevant plugins that provide time related information and \
+orders the results by time."""
 
     _required_framework_version = (2, 0, 0)
+    _version = (1, 1, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -53,7 +58,9 @@ class Timeliner(interfaces.plugins.PluginInterface):
         self.automagics: Optional[List[interfaces.automagic.AutomagicInterface]] = None
 
     @classmethod
-    def get_usable_plugins(cls, selected_list: List[str] = None) -> List[Type]:
+    def get_usable_plugins(
+        cls, selected_list: Optional[List[str]] = None
+    ) -> List[Type]:
         # Initialize for the run
         plugin_list = list(framework.class_subclasses(TimeLinerInterface))
 
@@ -65,7 +72,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
         if selected_list:
 
             def filter_plugins(name: str, selected: List[str]) -> bool:
-                return any([s in name for s in selected])
+                return any(s in name for s in selected)
 
             filter_func = filter_plugins
         else:
@@ -105,7 +112,9 @@ class Timeliner(interfaces.plugins.PluginInterface):
         data = item[1]
 
         def sortable(timestamp):
-            max_date = datetime.datetime(day=1, month=12, year=datetime.MAXYEAR)
+            max_date = datetime.datetime(
+                day=1, month=12, year=datetime.MAXYEAR, tzinfo=datetime.timezone.utc
+            )
             if isinstance(timestamp, interfaces.renderers.BaseAbsentValue):
                 return max_date
             return timestamp
@@ -140,9 +149,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                     times = self.timeline.get((plugin_name, item), {})
                     if times.get(timestamp_type, None) is not None:
                         vollog.debug(
-                            "Multiple timestamps for the same plugin/file combination found: {} {}".format(
-                                plugin_name, item
-                            )
+                            f"Multiple timestamps for the same plugin/file combination found: {plugin_name} {item}"
                         )
                     times[timestamp_type] = timestamp
                     self.timeline[(plugin_name, item)] = times
@@ -183,27 +190,27 @@ class Timeliner(interfaces.plugins.PluginInterface):
                                     plugin_name,
                                     self._sanitize_body_format(item),
                                     self._text_format(
-                                        times.get(TimeLinerType.ACCESSED, "")
+                                        times.get(TimeLinerType.ACCESSED, "0")
                                     ),
                                     self._text_format(
-                                        times.get(TimeLinerType.MODIFIED, "")
+                                        times.get(TimeLinerType.MODIFIED, "0")
                                     ),
                                     self._text_format(
-                                        times.get(TimeLinerType.CHANGED, "")
+                                        times.get(TimeLinerType.CHANGED, "0")
                                     ),
                                     self._text_format(
-                                        times.get(TimeLinerType.CREATED, "")
+                                        times.get(TimeLinerType.CREATED, "0")
                                     ),
                                 )
                             )
-            except Exception:
+            except Exception as e:
                 vollog.log(
-                    logging.INFO, f"Exception occurred running plugin: {plugin_name}"
+                    logging.INFO,
+                    f"Exception occurred running plugin: {plugin_name}: {e}",
                 )
                 vollog.log(logging.DEBUG, traceback.format_exc())
 
-        for data_item in sorted(data, key=self._sort_function):
-            yield data_item
+        yield from sorted(data, key=self._sort_function)
 
         # Write out a body file if necessary
         if self.config.get("create-bodyfile", True):
@@ -243,6 +250,16 @@ class Timeliner(interfaces.plugins.PluginInterface):
         filter_list = self.config["plugin-filter"]
         # Identify plugins that we can run which output datetimes
         for plugin_class in self.usable_plugins:
+            if not issubclass(plugin_class, TimeLinerInterface):
+                # get_usable_plugins() should filter this, but adding a safeguard just in case
+                continue
+
+            if filter_list and not any(
+                filter in plugin_class.__module__ + "." + plugin_class.__name__
+                for filter in filter_list
+            ):
+                continue
+
             try:
                 automagics = automagic.choose_automagic(self.automagics, plugin_class)
 
@@ -274,15 +291,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
                                 config_value,
                             )
 
-                if isinstance(plugin, TimeLinerInterface):
-                    if not len(filter_list) or any(
-                        [
-                            filter
-                            in plugin.__module__ + "." + plugin.__class__.__name__
-                            for filter in filter_list
-                        ]
-                    ):
-                        plugins_to_run.append(plugin)
+                plugins_to_run.append(plugin)
+
             except exceptions.UnsatisfiedException as excp:
                 # Remove the failed plugin from the list and continue
                 vollog.debug(

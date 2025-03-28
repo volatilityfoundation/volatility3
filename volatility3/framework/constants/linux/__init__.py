@@ -5,11 +5,11 @@
 
 Linux-specific values that aren't found in debug symbols
 """
+import enum
+from dataclasses import dataclass
 
 KERNEL_NAME = "__kernel__"
 
-# arch/x86/include/asm/page_types.h
-PAGE_SHIFT = 12
 """The value hard coded from the Linux Kernel (hence not extracted from the layer itself)"""
 
 # include/linux/sched.h
@@ -281,3 +281,231 @@ CAPABILITIES = (
 )
 
 ELF_MAX_EXTRACTION_SIZE = 1024 * 1024 * 1024 * 4 - 1
+
+# For IFA_* below - Ref: include/net/ipv6.h
+IPV6_ADDR_LOOPBACK = 0x0010
+IPV6_ADDR_LINKLOCAL = 0x0020
+IPV6_ADDR_SITELOCAL = 0x0040
+# For inet6_ifaddr - Ref: include/net/if_inet6.h
+IFA_HOST = IPV6_ADDR_LOOPBACK
+IFA_LINK = IPV6_ADDR_LINKLOCAL
+IFA_SITE = IPV6_ADDR_SITELOCAL
+
+# Only for kernels < 3.15 when the net_device_flags enum didn't exist
+# ref include/uapi/linux/if.h
+NET_DEVICE_FLAGS = {
+    "IFF_UP": 0x1,
+    "IFF_BROADCAST": 0x2,
+    "IFF_DEBUG": 0x4,
+    "IFF_LOOPBACK": 0x8,
+    "IFF_POINTOPOINT": 0x10,
+    "IFF_NOTRAILERS": 0x20,
+    "IFF_RUNNING": 0x40,
+    "IFF_NOARP": 0x80,
+    "IFF_PROMISC": 0x100,
+    "IFF_ALLMULTI": 0x200,
+    "IFF_MASTER": 0x400,
+    "IFF_SLAVE": 0x800,
+    "IFF_MULTICAST": 0x1000,
+    "IFF_PORTSEL": 0x2000,
+    "IFF_AUTOMEDIA": 0x4000,
+    "IFF_DYNAMIC": 0x8000,
+    "IFF_LOWER_UP": 0x10000,
+    "IFF_DORMANT": 0x20000,
+    "IFF_ECHO": 0x40000,
+}
+
+
+# Kernels >= 2.6.17. See IF_OPER_* in include/uapi/linux/if.h
+class IF_OPER_STATES(enum.Enum):
+    """RFC 2863 - Network interface operational status"""
+
+    UNKNOWN = 0
+    NOTPRESENT = 1
+    DOWN = 2
+    LOWERLAYERDOWN = 3
+    TESTING = 4
+    DORMANT = 5
+    UP = 6
+
+
+class ELF_IDENT(enum.IntEnum):
+    """ELF header e_ident indexes"""
+
+    EI_MAG0 = 0
+    EI_MAG1 = 1
+    EI_MAG2 = 2
+    EI_MAG3 = 3
+    EI_CLASS = 4
+    EI_DATA = 5
+    EI_VERSION = 6
+    EI_OSABI = 7
+    EI_PAD = 8
+
+
+class ELF_CLASS(enum.IntEnum):
+    """ELF header class types"""
+
+    ELFCLASSNONE = 0
+    ELFCLASS32 = 1
+    ELFCLASS64 = 2
+
+
+# PTrace
+PT_OPT_FLAG_SHIFT = 3
+
+PTRACE_EVENT_FORK = 1
+PTRACE_EVENT_VFORK = 2
+PTRACE_EVENT_CLONE = 3
+PTRACE_EVENT_EXEC = 4
+PTRACE_EVENT_VFORK_DONE = 5
+PTRACE_EVENT_EXIT = 6
+PTRACE_EVENT_SECCOMP = 7
+
+PTRACE_O_EXITKILL = 1 << 20
+PTRACE_O_SUSPEND_SECCOMP = 1 << 21
+
+
+class PT_FLAGS(enum.Flag):
+    "PTrace flags"
+
+    PT_PTRACED = 0x00001
+    PT_SEIZED = 0x10000
+
+    PT_TRACESYSGOOD = 1 << (PT_OPT_FLAG_SHIFT + 0)
+    PT_TRACE_FORK = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_FORK)
+    PT_TRACE_VFORK = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_VFORK)
+    PT_TRACE_CLONE = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_CLONE)
+    PT_TRACE_EXEC = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_EXEC)
+    PT_TRACE_VFORK_DONE = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_VFORK_DONE)
+    PT_TRACE_EXIT = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_EXIT)
+    PT_TRACE_SECCOMP = 1 << (PT_OPT_FLAG_SHIFT + PTRACE_EVENT_SECCOMP)
+
+    PT_EXITKILL = PTRACE_O_EXITKILL << PT_OPT_FLAG_SHIFT
+    PT_SUSPEND_SECCOMP = PTRACE_O_SUSPEND_SECCOMP << PT_OPT_FLAG_SHIFT
+
+    @property
+    def flags(self) -> str:
+        """Returns the ptrace flags string"""
+        return str(self).replace(self.__class__.__name__ + ".", "")
+
+
+# Boot time
+NSEC_PER_SEC = 1e9
+
+
+# Valid sizes for modules. Note that the Linux kernel does not define these values; they
+# are based on empirical observations of typical memory allocations for kernel modules.
+# We use this to verify that the found module falls within reasonable limits.
+MODULE_MAXIMUM_CORE_SIZE = 20000000
+MODULE_MAXIMUM_CORE_TEXT_SIZE = 20000000
+MODULE_MINIMUM_SIZE = 4096
+
+# Kallsyms
+KSYM_NAME_LEN = 512
+NM_TYPES_DESC = {
+    "a": "Symbol is absolute and doesn't change during linking",
+    "b": "Symbol in the BSS section, typically holding zero-initialized or uninitialized data",
+    "c": "Symbol is common, typically holding uninitialized data",
+    "d": "Symbol is in the initialized data section",
+    "g": "Symbol is in an initialized data section for small objects",
+    "i": "Symbol is an indirect reference to another symbol",
+    "N": "Symbol is a debugging symbol",
+    "n": "Symbol is in a non-data, non-code, non-debug read-only section",
+    "p": "Symbol is in a stack unwind section",
+    "r": "Symbol is in a read only data section",
+    "s": "Symbol is in an uninitialized or zero-initialized data section for small objects",
+    "t": "Symbol is in the text (code) section",
+    "U": "Symbol is undefined",
+    "u": "Symbol is a unique global symbol",
+    "V": "Symbol is a weak object, with a default value",
+    "v": "Symbol is a weak object",
+    "W": "Symbol is a weak symbol but not marked as a weak object symbol, with a default value",
+    "w": "Symbol is a weak symbol but not marked as a weak object symbol",
+    "?": "Symbol type is unknown",
+}
+
+# VMCOREINFO
+VMCOREINFO_MAGIC = b"VMCOREINFO\x00"
+# Aligned to 4 bytes. See storenote() in kernels < 4.19 or append_kcore_note() in kernels >= 4.19
+VMCOREINFO_MAGIC_ALIGNED = VMCOREINFO_MAGIC + b"\x00"
+OSRELEASE_TAG = b"OSRELEASE="
+
+
+@dataclass
+class TaintFlag:
+    shift: int
+    desc: str
+    when_present: bool
+    module: bool
+
+
+TAINT_FLAGS = {
+    "P": TaintFlag(
+        shift=1 << 0, desc="PROPRIETARY_MODULE", when_present=True, module=True
+    ),
+    "G": TaintFlag(
+        shift=1 << 0, desc="PROPRIETARY_MODULE", when_present=False, module=True
+    ),
+    "F": TaintFlag(shift=1 << 1, desc="FORCED_MODULE", when_present=True, module=False),
+    "S": TaintFlag(
+        shift=1 << 2, desc="CPU_OUT_OF_SPEC", when_present=True, module=False
+    ),
+    "R": TaintFlag(shift=1 << 3, desc="FORCED_RMMOD", when_present=True, module=False),
+    "M": TaintFlag(shift=1 << 4, desc="MACHINE_CHECK", when_present=True, module=False),
+    "B": TaintFlag(shift=1 << 5, desc="BAD_PAGE", when_present=True, module=False),
+    "U": TaintFlag(shift=1 << 6, desc="USER", when_present=True, module=False),
+    "D": TaintFlag(shift=1 << 7, desc="DIE", when_present=True, module=False),
+    "A": TaintFlag(
+        shift=1 << 8, desc="OVERRIDDEN_ACPI_TABLE", when_present=True, module=False
+    ),
+    "W": TaintFlag(shift=1 << 9, desc="WARN", when_present=True, module=False),
+    "C": TaintFlag(shift=1 << 10, desc="CRAP", when_present=True, module=True),
+    "I": TaintFlag(
+        shift=1 << 11, desc="FIRMWARE_WORKAROUND", when_present=True, module=False
+    ),
+    "O": TaintFlag(shift=1 << 12, desc="OOT_MODULE", when_present=True, module=True),
+    "E": TaintFlag(
+        shift=1 << 13, desc="UNSIGNED_MODULE", when_present=True, module=True
+    ),
+    "L": TaintFlag(shift=1 << 14, desc="SOFTLOCKUP", when_present=True, module=False),
+    "K": TaintFlag(shift=1 << 15, desc="LIVEPATCH", when_present=True, module=True),
+    "X": TaintFlag(shift=1 << 16, desc="AUX", when_present=True, module=True),
+    "T": TaintFlag(shift=1 << 17, desc="RANDSTRUCT", when_present=True, module=True),
+    "N": TaintFlag(shift=1 << 18, desc="TEST", when_present=True, module=True),
+}
+"""Flags used to taint kernel and modules, for debugging purposes.
+
+Map based on 6.12-rc5.
+
+Documentation :
+    - https://www.kernel.org/doc/Documentation/admin-guide/sysctl/kernel.rst#:~:text=guide/sysrq.rst.-,tainted,-%3D%3D%3D%3D%3D%3D%3D%0A%0ANon%2Dzero%20if
+    - https://www.kernel.org/doc/Documentation/admin-guide/tainted-kernels.rst#:~:text=More%20detailed%20explanation%20for%20tainting
+    - taint_flag kernel struct
+    - taint_flags kernel constant
+"""
+
+## ELF related constants
+
+# Elf Symbol Bindings
+STB_LOCAL = 0
+STB_GLOBAL = 1
+
+# Elf Symbol Types
+STT_NOTYPE = 0
+STT_OBJECT = 1
+STT_FUNC = 2
+STT_SECTION = 3
+
+# Elf Section Types
+SHT_NULL = 0
+SHT_PROGBITS = 1
+SHT_SYMTAB = 2
+SHT_STRTAB = 3
+SHT_RELA = 4
+SHT_NOTE = 7
+
+# Elf Section Attributes
+SHF_WRITE = 1
+SHF_ALLOC = 2
+SHF_EXECINSTR = 4

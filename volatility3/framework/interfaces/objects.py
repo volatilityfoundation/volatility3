@@ -133,7 +133,7 @@ class ObjectInterface(metaclass=abc.ABCMeta):
 
     def __getattr__(self, attr: str) -> Any:
         """Method for ensuring volatility members can be returned."""
-        raise AttributeError
+        raise AttributeError(f"Unable to find {attr} for type {type(self)}")
 
     @property
     def vol(self) -> ReadOnlyMapping:
@@ -216,7 +216,7 @@ class ObjectInterface(metaclass=abc.ABCMeta):
         Args:
             member_names: List of names to test as to members with those names validity
         """
-        return all([self.has_valid_member(member_name) for member_name in member_names])
+        return all(self.has_valid_member(member_name) for member_name in member_names)
 
     class VolTemplateProxy(metaclass=abc.ABCMeta):
         """A container for proxied methods that the ObjectTemplate of this
@@ -374,6 +374,7 @@ class Template:
             f"{self.__class__.__name__} object has no attribute {attr}"
         )
 
+    @abc.abstractmethod
     def __call__(
         self,
         context: "interfaces.context.ContextInterface",

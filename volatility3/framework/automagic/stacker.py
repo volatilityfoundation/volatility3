@@ -166,7 +166,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         cls,
         context: interfaces.context.ContextInterface,
         initial_layer: str,
-        stack_set: List[Type[interfaces.automagic.StackerLayerInterface]] = None,
+        stack_set: Optional[
+            List[Type[interfaces.automagic.StackerLayerInterface]]
+        ] = None,
         progress_callback: constants.ProgressCallback = None,
     ):
         """Stacks as many possible layers on top of the initial layer as can be done.

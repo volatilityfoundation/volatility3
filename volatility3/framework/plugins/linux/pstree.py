@@ -2,17 +2,21 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
+import logging
+
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins.linux import pslist
 
+vollog = logging.getLogger(__name__)
+
 
 class PsTree(interfaces.plugins.PluginInterface):
-    """Plugin for listing processes in a tree based on their parent process
-    ID."""
+    """Plugin for listing processes in a tree based on their parent process ID."""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (2, 13, 0)
+    _version = (1, 1, 1)
 
     @classmethod
     def get_requirements(cls):
@@ -23,8 +27,8 @@ class PsTree(interfaces.plugins.PluginInterface):
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 2, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -52,19 +56,41 @@ class PsTree(interfaces.plugins.PluginInterface):
         Args:
             pid: PID to find the level in the hierarchy
         """
-        seen = set([pid])
+        seen_ppids = set()
+        seen_offsets = set()
+
         level = 0
         proc = self._tasks.get(pid)
-        while proc and proc.parent and proc.parent.pid not in seen:
+
+        while proc:
+            # we don't want swapper in the tree
+            if proc.pid == 0:
+                break
+
             if proc.is_thread_group_leader:
-                parent_pid = proc.parent.pid
+                parent_pid = proc.get_parent_pid()
             else:
                 parent_pid = proc.tgid
+
+            if parent_pid in seen_ppids or proc.vol.offset in seen_offsets:
+                break
+
+            # only pid 1 (init/systemd) or 2 (kthreadd) should have swapper as a parent
+            # any other process with a ppid of 0 is smeared or terminated
+            if parent_pid == 0 and proc.pid > 2:
+                vollog.debug(
+                    "Smeared process with parent PID of 0 and PID greater than 2 ({proc.pid}) is being skipped."
+                )
+                break
+
+            seen_ppids.add(parent_pid)
+            seen_offsets.add(proc.vol.offset)
 
             child_list = self._children.setdefault(parent_pid, set())
             child_list.add(proc.pid)
 
             proc = self._tasks.get(parent_pid)
+
             level += 1
 
         self._levels[pid] = level
@@ -100,20 +126,36 @@ class PsTree(interfaces.plugins.PluginInterface):
         def yield_processes(pid):
             task = self._tasks[pid]
 
-            row = pslist.PsList.get_task_fields(task, decorate_comm)
-            # update the first element, the offset, in the row tuple to use format_hints.Hex
-            # as a simple int is returned from get_task_fields.
-            row = (format_hints.Hex(row[0]),) + row[1:]
+            task_fields = pslist.PsList.get_task_fields(task, decorate_comm)
+            fields = (
+                format_hints.Hex(task_fields.offset),
+                task_fields.user_pid,
+                task_fields.user_tid,
+                task_fields.user_ppid,
+                task_fields.name,
+            )
+            yield (self._levels[task_fields.user_tid] - 1, fields)
 
-            tid = task.pid
-            yield (self._levels[tid] - 1, row)
+            seen_children = set()
 
-            for child_pid in sorted(self._children.get(tid, [])):
+            for child_pid in sorted(self._children.get(task_fields.user_tid, [])):
+                if child_pid in seen_children:
+                    break
+                seen_children.add(child_pid)
+
                 yield from yield_processes(child_pid)
+
+        seen_processes = set()
 
         for pid, level in self._levels.items():
             if level == 1:
-                yield from yield_processes(pid)
+                for fields in yield_processes(pid):
+                    pid = fields[1]
+                    if pid in seen_processes:
+                        break
+                    seen_processes.add(pid)
+
+                    yield fields
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))

@@ -209,17 +209,13 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             try:
                 kvp = vlayer.mapping(kvo, 0)
                 if any(
-                    [
-                        (p == kernel["mz_offset"] and layer_name == physical_layer_name)
-                        for (_, _, p, _, layer_name) in kvp
-                    ]
+                    (p == kernel["mz_offset"] and layer_name == physical_layer_name)
+                    for (_, _, p, _, layer_name) in kvp
                 ):
                     return (virtual_layer_name, kvo, kernel)
                 else:
                     vollog.debug(
-                        "Potential kernel_virtual_offset did not map to expected location: {}".format(
-                            hex(kvo)
-                        )
+                        f"Potential kernel_virtual_offset did not map to expected location: {hex(kvo)}"
                     )
             except exceptions.InvalidAddressException:
                 vollog.debug(
@@ -272,6 +268,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             progress_callback=progress_callback,
         )
         for kernel in kernels:
+            vollog.log(
+                constants.LOGLEVEL_VVVV,
+                f"Testing potential kernel for {kernel.get('pdb_name', 'Unknown')} at {kernel.get('signature_offset', -1):x} with MZ offset at {(kernel.get('mz_offset', -1) or -1):x}",
+            )
             valid_kernel = test_kernel(physical_layer_name, virtual_layer_name, kernel)
             if valid_kernel is not None:
                 break
@@ -376,8 +376,74 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     valid_kernel = (virtual_layer_name, address, res[0])
         return valid_kernel
 
+    def method_low_stub_offset(
+        self,
+        context: interfaces.context.ContextInterface,
+        vlayer: layers.intel.Intel,
+        progress_callback: constants.ProgressCallback = None,
+    ) -> Optional[ValidKernelType]:
+        # This method is only valid for x64 systems
+        if not isinstance(vlayer, intel.Intel32e):
+            return None
+        kernel_hint = 0
+        kernel_base = 0
+        physical_layer = context.layers.get("memory_layer")
+
+        # Try locating kernel base via x64 Low Stub in lower 1MB starting from second page (4KB)
+        # If "Discard Low Memory" setting is disabled in BIOS, the Low Stub may be at the third/fourth or further pages
+        for offset in range(0x1000, 0x100000, 0x1000):
+            try:
+                jmp_and_completion_values = int.from_bytes(
+                    physical_layer.read(offset, 0x8), "little"
+                )
+                if (
+                    0xFFFFFFFFFFFF00FF & jmp_and_completion_values
+                    != constants.windows.JMP_AND_COMPLETION_SIGNATURE
+                ):
+                    continue
+                cr3_value = int.from_bytes(
+                    physical_layer.read(
+                        offset + constants.windows.PROCESSOR_START_BLOCK_CR3_OFFSET, 0x8
+                    ),
+                    "little",
+                )
+
+                # Compare previously observed valid page table address that's stored in vlayer._initial_entry
+                # with PROCESSOR_START_BLOCK->ProcessorState->SpecialRegisters->Cr3
+                # which was observed to be an invalid page address, so add 1 (to make it valid too)
+                if (cr3_value + 1) != vlayer._initial_entry:
+                    continue
+                potential_kernel_hint = int.from_bytes(
+                    physical_layer.read(
+                        offset
+                        + constants.windows.PROCESSOR_START_BLOCK_LM_TARGET_OFFSET,
+                        0x8,
+                    ),
+                    "little",
+                )
+                if 0x3 & potential_kernel_hint:
+                    continue
+                kernel_hint = potential_kernel_hint & 0xFFFFFFFFFFFF
+                kernel_base = kernel_hint & (~0x1FFFFF) & 0xFFFFFFFFFFFF
+                break
+            except exceptions.InvalidAddressException:
+                continue
+
+        if kernel_base:
+            # Scanning 32mb in 2mb chunks for the 'ntoskrnl' base address
+            while (kernel_base + 0x2000000) > kernel_hint:
+                for i in range(0, 0x200000, 0x1000):
+                    valid_kernel = self.check_kernel_offset(
+                        context, vlayer, kernel_base, progress_callback
+                    )
+                    if valid_kernel:
+                        return valid_kernel
+                kernel_base -= 0x200000
+        return None
+
     # List of methods to be run, in order, to determine the valid kernels
     methods = [
+        method_low_stub_offset,
         method_kdbg_offset,
         method_module_offset,
         method_fixed_mapping,

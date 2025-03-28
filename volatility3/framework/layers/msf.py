@@ -194,7 +194,7 @@ class PdbMSFStream(linear.LinearlyMappedLayer):
     ) -> None:
         super().__init__(context, config_path, name, metadata)
         self._base_layer = self.config["base_layer"]
-        self._pages = self.config.get("pages", None)
+        self._pages = self.config.get("pages", [])
         self._pages_len = len(self._pages)
         if not self._pages:
             raise PDBFormatException(name, "Invalid/no pages specified")
@@ -225,7 +225,7 @@ class PdbMSFStream(linear.LinearlyMappedLayer):
         returned = 0
         page_size = self._pdb_layer.page_size
         while length > 0:
-            page = math.floor((offset + returned) / page_size)
+            page = (offset + returned) // page_size
             page_position = (offset + returned) % page_size
             chunk_size = min(page_size - page_position, length)
             if page >= self._pages_len:

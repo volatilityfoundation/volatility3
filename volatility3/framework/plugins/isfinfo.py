@@ -7,6 +7,7 @@ import os
 import pathlib
 import zipfile
 from typing import Generator, List
+from importlib.util import find_spec
 
 from volatility3 import schemas, symbols
 from volatility3.framework import constants, interfaces, renderers
@@ -96,16 +97,12 @@ class IsfInfo(plugins.PluginInterface):
                     if filter_item in isf_file:
                         filtered_list.append(isf_file)
 
-        try:
-            import jsonschema
-
-            if not self.config["validate"]:
-                raise ImportError  # Act as if we couldn't import if validation is turned off
+        if find_spec("jsonschema") and self.config["validate"]:
 
             def check_valid(data):
                 return "True" if schemas.validate(data, True) else "False"
 
-        except ImportError:
+        else:
 
             def check_valid(data):
                 return "Unknown"
@@ -135,6 +132,7 @@ class IsfInfo(plugins.PluginInterface):
                         valid = check_valid(data)
                     except (UnicodeDecodeError, json.decoder.JSONDecodeError):
                         vollog.warning(f"Invalid ISF: {entry}")
+                        continue
                 yield (
                     0,
                     (

@@ -11,18 +11,42 @@ from typing import Union
 from volatility3.framework import interfaces, renderers
 
 
+# FIXME: Move wintime_to_datetime() and unixtime_to_datetime() out of renderers, possibly framework.objects.utility
 def wintime_to_datetime(
     wintime: int,
 ) -> Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]:
     unix_time = wintime // 10000000
     if unix_time == 0:
         return renderers.NotApplicableValue()
-    unix_time = unix_time - 11644473600
+    unix_time -= 11644473600
     try:
-        return datetime.datetime.utcfromtimestamp(unix_time)
-        # Windows sometimes throws OSErrors rather than ValueErrors when it can't convert a value
-    except (ValueError, OSError):
+        return datetime.datetime.fromtimestamp(unix_time, datetime.timezone.utc)
+        # Windows sometimes throws OSErrors rather than ValueError/OverflowError when it can't convert a value
+        # Since Python 3.3, this should raise OverflowError instead of ValueError. However, it was observed
+        # that even in Python 3.7.17, ValueError is still being raised.
+    except (ValueError, OverflowError, OSError):
         return renderers.UnparsableValue()
+
+
+def windows_bytes_to_guid(buf: bytes) -> str:
+    """
+    Converts 16 raw bytes to a windows GUID.
+
+    Raises ValueError if the provided buffer is not exactly 16 bytes.
+    """
+    if len(buf) != 16:
+        raise ValueError("Expected 16 bytes for GUID")
+
+    head_components = [format(v, "x") for v in struct.unpack("<IHH", buf[:8])]
+    tail_component = [
+        format(v, "x")
+        for v in struct.unpack(
+            ">HQ",
+            buf[8:10] + b"\x00\x00" + buf[10:16],
+        )
+    ]
+    combined = head_components + tail_component
+    return "{" + "-".join(combined) + "}"
 
 
 def unixtime_to_datetime(
@@ -33,8 +57,10 @@ def unixtime_to_datetime(
     )
 
     if unixtime > 0:
-        with contextlib.suppress(ValueError):
-            ret = datetime.datetime.utcfromtimestamp(unixtime)
+        # Since Python 3.3, this should raise OverflowError instead of ValueError. However, it was observed
+        # that even in Python 3.7.17, ValueError is still being raised. OSError is also raised on Linux
+        with contextlib.suppress(ValueError, OverflowError, OSError):
+            ret = datetime.datetime.fromtimestamp(unixtime, datetime.timezone.utc)
 
     return ret
 
@@ -45,7 +71,7 @@ def round(addr: int, align: int, up: bool = False) -> int:
     Args:
         addr: the address
         align: the alignment value
-        up: Whether to round up or not
+        up: whether to round up or not
 
     Returns:
         The aligned address
@@ -96,11 +122,12 @@ def convert_port(port_as_integer):
 
 
 def convert_network_four_tuple(family, four_tuple):
-    """Converts the connection four_tuple: (source ip, source port, dest ip,
-    dest port)
+    """Converts the connection four_tuple:
+
+    (source ip, source port, dest ip, dest port)
 
     into their string equivalents. IP addresses are expected as a tuple
-    of unsigned shorts Ports are converted to proper endianness as well
+    of unsigned shorts. Ports are converted to proper endianness as well.
     """
 
     if family == socket.AF_INET:

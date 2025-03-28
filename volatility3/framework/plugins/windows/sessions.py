@@ -27,8 +27,13 @@ class Sessions(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -39,16 +44,14 @@ class Sessions(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
         ]
 
     def _generator(self):
-        kernel = self.context.modules[self.config["kernel"]]
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
         # Collect all the values as we will want to group them later
         sessions = {}
 
         for proc in pslist.PsList.list_processes(
-            self.context,
-            kernel.layer_name,
-            kernel.symbol_table_name,
+            context=self.context,
+            kernel_module_name=self.config["kernel"],
             filter_func=filter_func,
         ):
             session_id = proc.get_session_id()

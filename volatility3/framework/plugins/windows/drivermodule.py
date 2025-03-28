@@ -5,7 +5,7 @@ from typing import Iterator, List, Tuple
 from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
-from volatility3.plugins.windows import ssdt, driverscan
+from volatility3.plugins.windows import ssdt, driverscan, modules
 
 # built in Windows-components that trigger false positives
 KNOWN_DRIVERS = ["ACPI_HAL", "PnpManager", "RAW", "WMIxWDM", "Win32k", "Fs_Rec"]
@@ -25,11 +25,14 @@ class DriverModule(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="ssdt", plugin=ssdt.SSDT, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="ssdt", component=ssdt.SSDT, version=(2, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="driverscan", plugin=driverscan.DriverScan, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="driverscan", component=driverscan.DriverScan, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="modules", component=modules.Modules, version=(3, 0, 0)
             ),
         ]
 
@@ -39,15 +42,24 @@ class DriverModule(interfaces.plugins.PluginInterface):
         A common rootkit technique is to register drivers from modules that are hidden,
         which allows us to detect the disconnect between a malicious driver and its hidden module.
         """
-        kernel = self.context.modules[self.config["kernel"]]
-
         collection = ssdt.SSDT.build_module_collection(
-            self.context, kernel.layer_name, kernel.symbol_table_name
+            context=self.context,
+            kernel_module_name=self.config["kernel"],
+        )
+
+        kernel_space_start = modules.Modules.get_kernel_space_start(
+            self.context, self.config["kernel"]
         )
 
         for driver in driverscan.DriverScan.scan_drivers(
-            self.context, kernel.layer_name, kernel.symbol_table_name
+            self.context,
+            self.config["kernel"],
         ):
+            # We want starts of 0 as rootkits often set this value
+            # greater than 0 but less than the kernel space start is smear/terminated though
+            if 0 < driver.DriverStart < kernel_space_start:
+                continue
+
             # we do not care about actual symbol names, we just want to know if the driver points to a known module
             module_symbols = list(
                 collection.get_module_symbols_by_absolute_location(driver.DriverStart)
@@ -59,6 +71,10 @@ class DriverModule(interfaces.plugins.PluginInterface):
                     name,
                 ) = driverscan.DriverScan.get_names_for_driver(driver)
 
+                # drivers without any names will not produce useful output
+                if not driver_name and not service_key and not name:
+                    continue
+
                 known_exception = driver_name in KNOWN_DRIVERS
 
                 yield (
@@ -66,9 +82,9 @@ class DriverModule(interfaces.plugins.PluginInterface):
                     (
                         format_hints.Hex(driver.vol.offset),
                         known_exception,
-                        driver_name,
-                        service_key,
-                        name,
+                        driver_name or renderers.NotAvailableValue(),
+                        service_key or renderers.NotAvailableValue(),
+                        name or renderers.NotAvailableValue(),
                     ),
                 )
 

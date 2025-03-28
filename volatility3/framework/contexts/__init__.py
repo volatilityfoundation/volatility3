@@ -11,7 +11,8 @@ without them interfering with each other.
 import functools
 import hashlib
 import logging
-from typing import Callable, Iterable, List, Optional, Set, Tuple, Union
+import re
+from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from volatility3.framework import constants, interfaces, symbols, exceptions
 from volatility3.framework.objects import templates
@@ -229,7 +230,7 @@ class Module(interfaces.context.ModuleInterface):
     def object(
         self,
         object_type: str,
-        offset: int = None,
+        offset: Optional[int] = None,
         native_layer_name: Optional[str] = None,
         absolute: bool = False,
         **kwargs,
@@ -245,7 +246,7 @@ class Module(interfaces.context.ModuleInterface):
         """
         if constants.BANG not in object_type:
             object_type = self.symbol_table_name + constants.BANG + object_type
-        else:
+        elif not object_type.startswith(self.symbol_table_name + constants.BANG):
             raise ValueError(
                 "Cannot reference another module when constructing an object"
             )
@@ -256,12 +257,13 @@ class Module(interfaces.context.ModuleInterface):
         if not absolute:
             offset += self._offset
 
-        # Ensure we don't use a layer_name other than the module's, why would anyone do that?
-        if "layer_name" in kwargs:
-            del kwargs["layer_name"]
+        # We have to allow using an alternative layer name due to pool scanners switching
+        # to the memory layer for scanning samples prior to Windows 10.
+        layer_name = kwargs.pop("layer_name", self._layer_name)
+
         return self._context.object(
             object_type=object_type,
-            layer_name=self._layer_name,
+            layer_name=layer_name,
             offset=offset,
             native_layer_name=native_layer_name or self._native_layer_name,
             **kwargs,
@@ -336,7 +338,7 @@ class Module(interfaces.context.ModuleInterface):
         )
 
     @property
-    def symbols(self):
+    def symbols(self) -> Iterable[str]:
         return self.context.symbol_space[self.symbol_table_name].symbols
 
     get_symbol = get_module_wrapper("get_symbol")
@@ -355,7 +357,7 @@ class SizedModule(Module):
         return size or 0
 
     @property  # type: ignore # FIXME: mypy #5107
-    @functools.lru_cache()
+    @functools.lru_cache
     def hash(self) -> str:
         """Hashes the module for equality checks.
 
@@ -385,10 +387,8 @@ class ModuleCollection(interfaces.context.ModuleContainer):
     """Class to contain a collection of SizedModules and reason about their
     contents."""
 
-    def __init__(
-        self, modules: Optional[List[interfaces.context.ModuleInterface]] = None
-    ) -> None:
-        self._prefix_count = {}
+    def __init__(self, modules: Optional[List[SizedModule]] = None) -> None:
+        self._modules: Dict[str, SizedModule] = {}
         super().__init__(modules)
 
     def deduplicate(self) -> "ModuleCollection":
@@ -401,20 +401,19 @@ class ModuleCollection(interfaces.context.ModuleContainer):
         new_modules = []
         seen: Set[str] = set()
         for mod in self._modules:
-            if mod.hash not in seen or mod.size == 0:
+            if self._modules[mod].hash not in seen or self._modules[mod].size == 0:
                 new_modules.append(mod)
-                seen.add(mod.hash)  # type: ignore # FIXME: mypy #5107
+                seen.add(self._modules[mod].hash)
         return ModuleCollection(new_modules)
 
     def free_module_name(self, prefix: str = "module") -> str:
         """Returns an unused module name"""
-        if prefix not in self._prefix_count:
-            self._prefix_count[prefix] = 1
+        existing_names = [name for name in self if re.match(rf"^{prefix}[0-9]*$", name)]
+        if not existing_names:
             return prefix
-        count = self._prefix_count[prefix]
+        count = len(existing_names)
         while prefix + str(count) in self:
             count += 1
-        self._prefix_count[prefix] = count
         return prefix + str(count)
 
     @property

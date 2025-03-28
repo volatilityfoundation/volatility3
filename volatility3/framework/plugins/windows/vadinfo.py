@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Callable, List, Generator, Iterable, Type, Optional
+from typing import Callable, List, Generator, Iterable, Type, Optional, Tuple
 
 from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
@@ -34,7 +34,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
     """Lists process memory ranges."""
 
     _required_framework_version = (2, 4, 0)
-    _version = (2, 0, 0)
+    _version = (2, 0, 1)
     MAXSIZE_DEFAULT = 1024 * 1024 * 1024  # 1 Gb
 
     def __init__(self, *args, **kwargs):
@@ -63,8 +63,8 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 element_type=int,
                 optional=True,
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.BooleanRequirement(
                 name="dump",
@@ -99,7 +99,11 @@ class VadInfo(interfaces.plugins.PluginInterface):
             symbol_table: The name of the table containing the kernel symbols
         """
 
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
+        kvo = context.layers[layer_name].config.get("kernel_virtual_offset", None)
+        if not kvo:
+            raise ValueError(
+                "Intel layer does not have an associated kernel virtual offset, failing"
+            )
         ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
         addr = ntkrnlmp.get_symbol("MmProtectToValue").address
         values = ntkrnlmp.object(
@@ -169,9 +173,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
             proc_layer_name = proc.add_process_layer()
         except exceptions.InvalidAddressException as excp:
             vollog.debug(
-                "Process {}: invalid address {} in layer {}".format(
-                    proc_id, excp.invalid_address, excp.layer_name
-                )
+                f"Process {proc_id}: invalid address {excp.invalid_address} in layer {excp.layer_name}"
             )
             return None
 
@@ -196,11 +198,31 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
         return file_handle
 
-    def _generator(self, procs):
+    def _generator(self, procs: List[interfaces.objects.ObjectInterface]) -> Generator[
+        Tuple[
+            int,
+            Tuple[
+                int,
+                str,
+                format_hints.Hex,
+                format_hints.Hex,
+                format_hints.Hex,
+                str,
+                str,
+                int,
+                int,
+                format_hints.Hex,
+                str,
+                str,
+            ],
+        ],
+        None,
+        None,
+    ]:
         kernel = self.context.modules[self.config["kernel"]]
         kernel_layer = self.context.layers[kernel.layer_name]
 
-        def passthrough(_: interfaces.objects.ObjectInterface) -> bool:
+        def passthrough(x: interfaces.objects.ObjectInterface) -> bool:
             return False
 
         filter_func = passthrough
@@ -250,9 +272,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
                     ),
                 )
 
-    def run(self):
-        kernel = self.context.modules[self.config["kernel"]]
-
+    def run(self) -> renderers.TreeGrid:
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
         return renderers.TreeGrid(
@@ -273,8 +293,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
             self._generator(
                 pslist.PsList.list_processes(
                     context=self.context,
-                    layer_name=kernel.layer_name,
-                    symbol_table=kernel.symbol_table_name,
+                    kernel_module_name=self.config["kernel"],
                     filter_func=filter_func,
                 )
             ),

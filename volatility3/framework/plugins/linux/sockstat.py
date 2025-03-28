@@ -12,6 +12,8 @@ from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import linux
 from volatility3.plugins.linux import lsof
+from volatility3.plugins.linux import pslist
+from volatility3.framework.symbols.linux import network
 
 
 vollog = logging.getLogger(__name__)
@@ -20,13 +22,24 @@ vollog = logging.getLogger(__name__)
 class SockHandlers(interfaces.configuration.VersionableInterface):
     """Handles several socket families extracting the sockets information."""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (2, 22, 0)
+    _version = (4, 0, 0)
+    _net_version_required = (1, 0, 0)
 
-    _version = (1, 0, 0)
-
-    def __init__(self, vmlinux, task):
-        self._vmlinux = vmlinux
+    def __init__(self, context, vmlinux_name, task, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._vmlinux = context.modules[vmlinux_name]
+        self._symbol_table = context.symbol_space[self._vmlinux.symbol_table_name]
         self._task = task
+
+        if not requirements.VersionRequirement.matches_required(
+            network.NetSymbols.version, self._net_version_required
+        ):
+            raise ValueError(
+                f"Version mismatch of volatility library NetSymbols version ({network.NetSymbols.version}) and needed version ({self._net_version_required})"
+            )
+
+        network.NetSymbols.apply(self._symbol_table)
 
         try:
             netns_id = task.nsproxy.net_ns.get_inode()
@@ -83,7 +96,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             sock: Kernel generic `sock` object
 
         Returns a tuple with:
-            sock: The respective kernel's \*_sock object for that socket family
+            sock: The respective kernel's \\*_sock object for that socket family
             sock_stat: A tuple with the source and destination (address and port) along with its state string
             socket_filter: A dictionary with information about the socket filter
         """
@@ -151,17 +164,15 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         bpfprog = sock_filter.prog
 
-        BPF_PROG_TYPE_UNSPEC = 0  # cBPF filter
-        try:
-            bpfprog_type = bpfprog.get_type()
-            if bpfprog_type == BPF_PROG_TYPE_UNSPEC:
-                return  # cBPF filter
-        except AttributeError:
+        bpfprog_type = bpfprog.get_type()
+        if not bpfprog_type:
             # kernel < 3.18.140, it's a cBPF filter
             return None
 
-        BPF_PROG_TYPE_SOCKET_FILTER = 1  # eBPF filter
-        if bpfprog_type != BPF_PROG_TYPE_SOCKET_FILTER:
+        if bpfprog_type == "BPF_PROG_TYPE_UNSPEC":
+            return None  # cBPF filter
+
+        if bpfprog_type != "BPF_PROG_TYPE_SOCKET_FILTER":
             socket_filter["bpf_filter_type"] = f"UNK({bpfprog_type})"
             vollog.warning(f"Unexpected BPF type {bpfprog_type} for a socket")
             return None
@@ -373,7 +384,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         bt_sock = sock.cast("bt_sock")
 
         def bt_addr(addr):
-            return ":".join(reversed(["%02x" % x for x in addr.b]))
+            return ":".join(reversed([f"{x:02x}" for x in addr.b]))
 
         src_addr = src_port = dst_addr = dst_port = None
         bt_protocol = bt_sock.get_protocol()
@@ -439,8 +450,7 @@ class Sockstat(plugins.PluginInterface):
     """Lists all network connections for all processes."""
 
     _required_framework_version = (2, 0, 0)
-
-    _version = (1, 0, 0)
+    _version = (3, 0, 4)
 
     @classmethod
     def get_requirements(cls):
@@ -451,13 +461,19 @@ class Sockstat(plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="SockHandlers", component=SockHandlers, version=(1, 0, 0)
+                name="SockHandlers", component=SockHandlers, version=(4, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="lsof", plugin=lsof.Lsof, version=(1, 1, 0)
+            requirements.VersionRequirement(
+                name="lsof", component=lsof.Lsof, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="linuxutils", component=linux.LinuxUtilities, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="linux_net", component=network.NetSymbols, version=(1, 0, 0)
             ),
             requirements.BooleanRequirement(
                 name="unix",
@@ -501,7 +517,7 @@ class Sockstat(plugins.PluginInterface):
             family: Socket family string (AF_UNIX, AF_INET, etc)
             sock_type: Socket type string (STREAM, DGRAM, etc)
             protocol: Protocol string (UDP, TCP, etc)
-            sock_fields: A tuple with the \*_sock object, the sock stats and the extended info dictionary
+            sock_fields: A tuple with the \\*_sock object, the sock stats and the extended info dictionary
         """
         vmlinux = context.modules[symbol_table]
 
@@ -509,35 +525,42 @@ class Sockstat(plugins.PluginInterface):
         dfop_addr = vmlinux.object_from_symbol("sockfs_dentry_operations").vol.offset
 
         fd_generator = lsof.Lsof.list_fds(context, vmlinux.name, filter_func)
-        for _pid, _task_comm, task, fd_fields in fd_generator:
-            fd_num, filp, _full_path = fd_fields
+        for fd_internal in fd_generator:
+            fd_num, filp, _full_path = fd_internal.fd_fields
+            task = fd_internal.task
+
+            if not (filp.f_op and filp.f_op.is_readable()):
+                continue
 
             if filp.f_op not in (sfop_addr, dfop_addr):
                 continue
 
             dentry = filp.get_dentry()
-            if not dentry:
+            if not (dentry and dentry.is_readable()):
                 continue
 
             d_inode = dentry.d_inode
-            if not d_inode:
+            if not (d_inode and d_inode.is_readable()):
                 continue
 
             socket_alloc = linux.LinuxUtilities.container_of(
                 d_inode, "socket_alloc", "vfs_inode", vmlinux
             )
-            socket = socket_alloc.socket
-
-            if not (socket and socket.sk):
+            if not socket_alloc:
                 continue
-
+            socket = socket_alloc.socket
+            if not (socket.sk and socket.sk.is_readable()):
+                continue
             sock = socket.sk.dereference()
 
-            sock_type = sock.get_type()
-            family = sock.get_family()
+            try:
+                sock_type = sock.get_type()
+                family = sock.get_family()
+                sock_handler = SockHandlers(context, vmlinux.name, task)
+                sock_fields = sock_handler.process_sock(sock)
+            except exceptions.InvalidAddressException:
+                continue
 
-            sock_handler = SockHandlers(vmlinux, task)
-            sock_fields = sock_handler.process_sock(sock)
             if not sock_fields:
                 continue
 
@@ -570,7 +593,7 @@ class Sockstat(plugins.PluginInterface):
 
         return tuple(sock_stat), protocol
 
-    def _generator(self, pids: List[int], netns_id_arg: int, symbol_table: str):
+    def _generator(self, pids: List[int], netns_id_arg: int, kernel_module_name: str):
         """Enumerate tasks sockets. Each row represents a kernel socket.
 
         Args:
@@ -591,9 +614,13 @@ class Sockstat(plugins.PluginInterface):
             tasks: String with a list of tasks and FDs using a socket. It can also have
                    extended information such as socket filters, bpf info, etc.
         """
-        filter_func = lsof.pslist.PsList.create_pid_filter(pids)
+        vmlinux = self.context.modules[kernel_module_name]
+        symbol_table = self.context.symbol_space[vmlinux.symbol_table_name]
+        network.NetSymbols.apply(symbol_table)
+
+        filter_func = pslist.PsList.create_pid_filter(pids)
         socket_generator = self.list_sockets(
-            self.context, symbol_table, filter_func=filter_func
+            self.context, kernel_module_name, filter_func=filter_func
         )
 
         for (
@@ -617,8 +644,12 @@ class Sockstat(plugins.PluginInterface):
                 else NotAvailableValue()
             )
 
+            task_comm = utility.array_to_string(task.comm)
+
             fields = (
                 netns_id,
+                task_comm,
+                task.tgid,
                 task.pid,
                 fd_num,
                 format_hints.Hex(sock.vol.offset),
@@ -634,11 +665,13 @@ class Sockstat(plugins.PluginInterface):
     def run(self):
         pids = self.config.get("pids")
         netns_id = self.config["netns"]
-        symbol_table = self.config["kernel"]
+        kernel_module_name = self.config["kernel"]
 
         tree_grid_args = [
             ("NetNS", int),
-            ("Pid", int),
+            ("Process Name", str),
+            ("PID", int),
+            ("TID", int),
             ("FD", int),
             ("Sock Offset", format_hints.Hex),
             ("Family", str),
@@ -652,4 +685,6 @@ class Sockstat(plugins.PluginInterface):
             ("Filter", str),
         ]
 
-        return TreeGrid(tree_grid_args, self._generator(pids, netns_id, symbol_table))
+        return TreeGrid(
+            tree_grid_args, self._generator(pids, netns_id, kernel_module_name)
+        )

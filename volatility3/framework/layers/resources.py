@@ -29,7 +29,7 @@ except ImportError:
 
 try:
     # Import so that the handler is found by the framework.class_subclasses callc
-    import smb.SMBHandler  # lgtm [py/unused-import]
+    from smb import SMBHandler as SMBHandler  # lgtm [py/unused-import]
 except ImportError:
     # If we fail to import this, it means that SMB handling won't be available
     pass
@@ -57,7 +57,7 @@ def cascadeCloseFile(new_fp: IO[bytes], original_fp: IO[bytes]) -> IO[bytes]:
     return new_fp
 
 
-class ResourceAccessor(object):
+class ResourceAccessor:
     """Object for opening URLs as files (downloading locally first if
     necessary)"""
 
@@ -151,6 +151,12 @@ class ResourceAccessor(object):
                     raise excp
             else:
                 raise excp
+        except ValueError as excp:
+            # Reraise errors such as proxy auth errors as offline exception errors
+            # Example Proxy auth error - ValueError: AbstractDigestAuthHandler does not support the following scheme: 'Negotiate'
+            vollog.info(f"Cannot access {url} due to {excp} - Setting OFFLINE")
+            constants.OFFLINE = True
+            raise exceptions.OfflineException(url)
         except exceptions.OfflineException:
             vollog.info(f"Not accessing {url} in offline mode")
             raise
@@ -171,32 +177,46 @@ class ResourceAccessor(object):
                     + ".cache",
                 )
 
+                try:
+                    content_length = int(fp.info().get("Content-Length", -1))
+                except (AttributeError, ValueError):
+                    # If our fp doesn't have an info member, carry on gracefully
+                    content_length = -1
+
                 if not os.path.exists(temp_filename):
                     vollog.debug(f"Caching file at: {temp_filename}")
+                    cache_file_size = -1
 
                     try:
-                        content_length = fp.info().get("Content-Length", -1)
-                    except AttributeError:
-                        # If our fp doesn't have an info member, carry on gracefully
-                        content_length = -1
-                    with open(temp_filename, "wb") as cache_file:
-                        count = 0
-                        block = fp.read(block_size)
-                        while block:
-                            count += len(block)
-                            if self._progress_callback:
-                                self._progress_callback(
-                                    count * 100 / max(count, int(content_length)),
-                                    f"Reading file {url}",
-                                )
-                            cache_file.write(block)
+                        with open(temp_filename, "wb") as cache_file:
+                            count = 0
                             block = fp.read(block_size)
+                            while block:
+                                count += len(block)
+                                if self._progress_callback:
+                                    self._progress_callback(
+                                        count * 100 / max(count, int(content_length)),
+                                        f"Reading file {url}",
+                                    )
+                                cache_file.write(block)
+                                block = fp.read(block_size)
+                            cache_file.seek(0, os.SEEK_END)
+                            cache_file_size = cache_file.tell()
+                    finally:
+                        if cache_file_size < content_length:
+                            os.remove(temp_filename)
+                            raise ValueError("Cached file did not download completely")
                 else:
-                    vollog.debug(f"Using already cached file at: {temp_filename}")
+                    vollog.debug(
+                        f"Trying to use already cached file at: {temp_filename}"
+                    )
+
                 # Re-open the cache with a different mode
                 # Since we don't want people thinking they're able to save to the cache file,
                 # open it in read mode only and allow breakages to happen if they wanted to write
                 curfile = open(temp_filename, mode="rb")
+
+        # Validate the hash or delete the temp_filename and report an error
 
         # Determine whether the file is a particular type of file, and if so, open it as such
         IMPORTED_MAGIC = False

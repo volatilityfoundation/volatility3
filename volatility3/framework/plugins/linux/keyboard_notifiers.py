@@ -4,11 +4,11 @@
 
 import logging
 
+import volatility3.framework.symbols.linux.utilities.modules as linux_utilities_modules
 from volatility3.framework import interfaces, renderers, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import linux
-from volatility3.plugins.linux import lsmod
 
 vollog = logging.getLogger(__name__)
 
@@ -26,8 +26,15 @@ class Keyboard_notifiers(interfaces.plugins.PluginInterface):
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="lsmod", plugin=lsmod.Lsmod, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="linux_utilities_modules",
+                component=linux_utilities_modules.Modules,
+                version=(3, 0, 0),
+            ),
+            requirements.VersionRequirement(
+                name="linux_utilities_module_gatherers",
+                component=linux_utilities_modules.ModuleGatherers,
+                version=(1, 0, 0),
             ),
             requirements.VersionRequirement(
                 name="linuxutils", component=linux.LinuxUtilities, version=(2, 0, 0)
@@ -36,12 +43,6 @@ class Keyboard_notifiers(interfaces.plugins.PluginInterface):
 
     def _generator(self):
         vmlinux = self.context.modules[self.config["kernel"]]
-
-        modules = lsmod.Lsmod.list_modules(self.context, vmlinux.name)
-
-        handlers = linux.LinuxUtilities.generate_kernel_handler_info(
-            self.context, vmlinux.name, modules
-        )
 
         try:
             knl_addr = vmlinux.object_from_symbol("keyboard_notifier_list")
@@ -55,6 +56,16 @@ class Keyboard_notifiers(interfaces.plugins.PluginInterface):
                 "This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
             )
 
+        if not self.context.layers[vmlinux.layer_name].is_valid(knl_addr.vol.offset):
+            vollog.error("The head of the keyboard notifier list is paged out.")
+            return
+
+        known_modules = linux_utilities_modules.Modules.run_modules_scanners(
+            context=self.context,
+            kernel_module_name=self.config["kernel"],
+            caller_wanted_gatherers=linux_utilities_modules.ModuleGatherers.all_gatherers_identifier,
+        )
+
         knl = vmlinux.object(
             object_type="atomic_notifier_head",
             offset=knl_addr.vol.offset,
@@ -66,11 +77,25 @@ class Keyboard_notifiers(interfaces.plugins.PluginInterface):
         ):
             call_addr = call_back.notifier_call
 
-            module_name, symbol_name = linux.LinuxUtilities.lookup_module_address(
-                vmlinux, handlers, call_addr
+            module_info, symbol_name = (
+                linux_utilities_modules.Modules.module_lookup_by_address(
+                    self.context, vmlinux.name, known_modules, call_addr
+                )
             )
 
-            yield (0, [format_hints.Hex(call_addr), module_name, symbol_name])
+            if module_info:
+                module_name = module_info.name
+            else:
+                module_name = renderers.NotAvailableValue()
+
+            yield (
+                0,
+                [
+                    format_hints.Hex(call_addr),
+                    module_name,
+                    symbol_name or renderers.NotAvailableValue(),
+                ],
+            )
 
     def run(self):
         return renderers.TreeGrid(

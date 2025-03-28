@@ -28,8 +28,8 @@ class List_Files(plugins.PluginInterface):
                 description="Kernel module for the OS",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="mount", plugin=mount.Mount, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="mount", component=mount.Mount, version=(2, 0, 0)
             ),
         ]
 

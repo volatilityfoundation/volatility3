@@ -1,0 +1,36 @@
+{
+    "WINDOWS10_GENERIC": [
+        {
+            "Create Time": "2025-03-06T17:48:02+00:00",
+            "Process": "System",
+            "Process ID": 4
+        },
+        {
+            "Create Time": "2025-03-06T17:48:37+00:00",
+            "Process": "lsass.exe",
+            "Process ID": 696,
+            "Session ID": 0,
+            "Session Type": null,
+            "User Name": "/SYSTEM",
+            "__children": []
+        },
+        {
+            "Create Time": "2025-03-06T17:49:03+00:00",
+            "Process": "MsMpEng.exe",
+            "Process ID": 1956,
+            "Session ID": 0,
+            "Session Type": null,
+            "User Name": "WORKGROUP/Windows-generic$",
+            "__children": []
+        },
+        {
+            "Create Time": "2025-03-06T17:50:08+00:00",
+            "Process": "rdpclip.exe",
+            "Process ID": 4180,
+            "Session ID": 2,
+            "Session Type": null,
+            "User Name": "Windows-generic/generic-user",
+            "__children": []
+        }
+    ]
+}

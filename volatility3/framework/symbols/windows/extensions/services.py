@@ -14,13 +14,16 @@ class SERVICE_RECORD(objects.StructType):
 
     def is_valid(self) -> bool:
         """Determine if the structure is valid."""
-        if self.Order < 0 or self.Order > 0xFFFF:
-            return False
-
         try:
-            _ = self.State.description
-            _ = self.Start.description
-        except ValueError:
+            if self.Order < 0 or self.Order > 0xFFFF:
+                return False
+
+            try:
+                _ = self.State.description
+                _ = self.Start.description
+            except ValueError:
+                return False
+        except exceptions.InvalidAddressException:
             return False
 
         return True

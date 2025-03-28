@@ -18,7 +18,7 @@ class proc(generic.GenericIntelProcess):
         return self.task.dereference().cast("task")
 
     def add_process_layer(
-        self, config_prefix: str = None, preferred_name: str = None
+        self, config_prefix: Optional[str] = None, preferred_name: Optional[str] = None
     ) -> Optional[str]:
         """Constructs a new layer based on the process's DTB.
 
@@ -237,7 +237,7 @@ class vm_map_entry(objects.StructType):
     def get_path(self, context, config_prefix):
         node = self.get_vnode(context, config_prefix)
 
-        if type(node) == str and node == "sub_map":
+        if type(node) is str and node == "sub_map":
             ret = node
         elif node:
             path = []
@@ -490,22 +490,24 @@ class queue_entry(objects.StructType):
 
         for attr in ["next", "prev"]:
             with contextlib.suppress(exceptions.InvalidAddressException):
-                n = getattr(self, attr).dereference().cast(type_name)
-
-                while n is not None and n.vol.offset != list_head:
-                    if n.vol.offset in seen:
+                queue_element = getattr(self, attr).dereference().cast(type_name)
+                while (
+                    queue_element is not None
+                    and queue_element.vol.offset != list_head.vol.offset
+                ):
+                    if queue_element.vol.offset in seen:
                         break
 
-                    yield n
+                    yield queue_element
 
-                    seen.add(n.vol.offset)
+                    seen.add(queue_element.vol.offset)
 
                     yielded = yielded + 1
                     if yielded == max_size:
                         return None
 
-                    n = (
-                        getattr(n.member(attr=member_name), attr)
+                    queue_element = (
+                        getattr(queue_element.member(attr=member_name), attr)
                         .dereference()
                         .cast(type_name)
                     )
