@@ -9,7 +9,7 @@ import random
 import string
 import sys
 from functools import wraps
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 from volatility3.cli import text_filter
 
 from volatility3.framework import exceptions, interfaces, renderers
@@ -149,12 +149,18 @@ class CLITypeRenderer(interfaces.renderers.TypeRendererInterface):
 class LayerDataRenderer(CLITypeRenderer):
     """Renders a LayerData object into data/bytes"""
 
-    def __init__(self):
-        self.context_byte_len = 0
-        self.width = 16
-        self.display_offset = False
-        self.display_hex = True
-        self.display_ascii = True
+    def __init__(
+        self,
+        render_func: Optional[Callable] = None,
+        options: Optional[dict[str, Any]] = None,
+    ):
+        if options is None:
+            options = {}
+        self.context_byte_len = options.get("context_byte_len", 0)
+        self.width = options.get("width", 16)
+        self.display_offset = options.get("display_offset", False)
+        self.display_hex = options.get("display_hex", True)
+        self.display_ascii = options.get("display_ascii", True)
 
         def render(data: Union[renderers.LayerData, BaseAbsentValue]):
             if isinstance(data, BaseAbsentValue):

@@ -51,6 +51,7 @@ class Column(NamedTuple):
 
 
 RenderOption = Any
+"""RenderOption is intentionally unrestricted to allow UIs to define whatever format they wish"""
 
 T = TypeVar("T")
 
@@ -63,6 +64,11 @@ class TypeRendererInterface:
     ):
         self._options = options or {}
         setattr(self, "render", func)
+
+    @classmethod
+    @abstractmethod
+    def get_render_options(cls) -> List[RenderOption]:
+        """Opaque method for TypeRenders to ask for options"""
 
     @property
     def options(self):
@@ -87,8 +93,9 @@ class Renderer(metaclass=ABCMeta):
         """Accepts an options object to configure the renderers."""
         # FIXME: Once the config option objects are in place, put the _type_check in place
 
+    @classmethod
     @abstractmethod
-    def get_render_options(self) -> List[RenderOption]:
+    def get_render_options(cls) -> List[RenderOption]:
         """Returns a list of rendering options."""
 
     @abstractmethod
