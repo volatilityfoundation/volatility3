@@ -343,7 +343,7 @@ class PoolScanner(plugins.PluginInterface):
                 type_name=symbol_table + constants.BANG + "_OBJECT_SYMBOLIC_LINK",
                 object_type="SymbolicLink",
                 size=(72, None),
-                page_type=PoolType.NONPAGED | PoolType.FREE,
+                page_type=PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE,
             ),
             # symlinks on windows starting with windows 8
             PoolConstraint(
@@ -351,7 +351,7 @@ class PoolScanner(plugins.PluginInterface):
                 type_name=symbol_table + constants.BANG + "_OBJECT_SYMBOLIC_LINK",
                 object_type="SymbolicLink",
                 size=(72, None),
-                page_type=PoolType.NONPAGED | PoolType.FREE,
+                page_type=PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE,
             ),
             # registry hives
             PoolConstraint(
