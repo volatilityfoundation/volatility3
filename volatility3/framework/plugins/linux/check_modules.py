@@ -51,7 +51,7 @@ class Check_modules(plugins.PluginInterface):
             requirements.VersionRequirement(
                 name="modules",
                 component=linux_utilities_modules.Modules,
-                version=(3, 0, 1),
+                version=(4, 0, 0),
             ),
             requirements.VersionRequirement(
                 name="linux_utilities_modules_module_display_plugin",

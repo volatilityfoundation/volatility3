@@ -33,7 +33,7 @@ class Check_idt(interfaces.plugins.PluginInterface):
             requirements.VersionRequirement(
                 name="linux_utilities_modules",
                 component=linux_utilities_modules.Modules,
-                version=(3, 0, 0),
+                version=(4, 0, 0),
             ),
             requirements.VersionRequirement(
                 name="linux_utilities_module_gatherers",

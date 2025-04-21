@@ -72,7 +72,7 @@ class ModuleGathererInterface(
 class Modules(interfaces.configuration.VersionableInterface):
     """Kernel modules related utilities."""
 
-    _version = (3, 0, 1)
+    _version = (4, 0, 0)
     _required_framework_version = (2, 0, 0)
 
     framework.require_interface_version(*_required_framework_version)
@@ -942,7 +942,7 @@ class ModuleDisplayPlugin(interfaces.configuration.VersionableInterface):
             requirements.VersionRequirement(
                 name="linux_utilities_modules",
                 component=Modules,
-                version=(3, 0, 1),
+                version=(4, 0, 0),
             ),
             requirements.VersionRequirement(
                 name="linux-tainting", component=tainting.Tainting, version=(1, 0, 0)
