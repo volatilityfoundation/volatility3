@@ -508,7 +508,7 @@ class Modules(interfaces.configuration.VersionableInterface):
 
         try:
             module_kset = vmlinux.object_from_symbol("module_kset")
-        except exceptions.SymbolError:
+        except (exceptions.SymbolError, exceptions.InvalidAddressException):
             module_kset = None
 
         if not module_kset:
