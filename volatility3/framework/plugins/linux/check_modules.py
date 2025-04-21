@@ -3,14 +3,14 @@
 #
 
 import logging
-from typing import List, Dict, Generator
+from typing import Dict, Generator, List
 
 import volatility3.framework.symbols.linux.utilities.modules as linux_utilities_modules
-from volatility3.framework import interfaces, deprecation
+from volatility3.framework import deprecation, interfaces
 from volatility3.framework.configuration import requirements
+from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols.linux import extensions
-from volatility3.framework.interfaces import plugins
 
 vollog = logging.getLogger(__name__)
 
@@ -23,10 +23,12 @@ class Check_modules(plugins.PluginInterface):
 
     @classmethod
     def compare_kset_and_lsmod(
-        cls, context: str, vmlinux_name: str
+        cls, context: interfaces.context.ContextInterface, vmlinux_name: str
     ) -> Generator[extensions.module, None, None]:
-        kset_modules = linux_utilities_modules.Modules.get_kset_modules(
-            context=context, vmlinux_name=vmlinux_name
+        kset_modules = dict(
+            linux_utilities_modules.Modules.get_kset_modules(
+                context=context, vmlinux_name=vmlinux_name
+            )
         )
 
         lsmod_modules = set(
@@ -67,4 +69,6 @@ class Check_modules(plugins.PluginInterface):
     def get_kset_modules(
         cls, context: interfaces.context.ContextInterface, vmlinux_name: str
     ) -> Dict[str, extensions.module]:
-        return linux_utilities_modules.Modules.get_kset_modules(context, vmlinux_name)
+        return dict(
+            linux_utilities_modules.Modules.get_kset_modules(context, vmlinux_name)
+        )

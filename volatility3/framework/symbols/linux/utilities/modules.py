@@ -818,7 +818,9 @@ class ModuleGathererSysFs(ModuleGathererInterface):
     ) -> ModuleGathererInterface.gatherer_return_type:
         kernel = context.modules[kernel_module_name]
 
-        sysfs_modules: dict = Modules.get_kset_modules(context, kernel_module_name)
+        sysfs_modules: Dict[str, extensions.module] = dict(
+            Modules.get_kset_modules(context, kernel_module_name)
+        )
 
         for m_offset in sysfs_modules.values():
             yield kernel.object(object_type="module", offset=m_offset, absolute=True)
