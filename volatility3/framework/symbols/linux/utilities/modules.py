@@ -53,7 +53,7 @@ class ModuleGathererInterface(
 
     framework.require_interface_version(*_required_framework_version)
 
-    gatherer_return_type = Generator[Union[ModuleInfo, "extensions.module"], None, None]
+    gatherer_return_type = Iterator[Union[ModuleInfo, "extensions.module"]]
 
     # Must be set to a unique, descriptive name of the gathering technique or data structure source
     name = None
@@ -817,11 +817,7 @@ class ModuleGathererSysFs(ModuleGathererInterface):
     ) -> ModuleGathererInterface.gatherer_return_type:
         kernel = context.modules[kernel_module_name]
 
-        sysfs_modules: Dict[str, extensions.module] = dict(
-            Modules.get_kset_modules(context, kernel_module_name)
-        )
-
-        for m_offset in sysfs_modules.values():
+        for _, m_offset in Modules.get_kset_modules(context, kernel_module_name):
             yield kernel.object(object_type="module", offset=m_offset, absolute=True)
 
 
