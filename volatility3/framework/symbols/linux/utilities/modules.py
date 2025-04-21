@@ -503,20 +503,26 @@ class Modules(interfaces.configuration.VersionableInterface):
     @classmethod
     def get_kset_modules(
         cls, context: interfaces.context.ContextInterface, vmlinux_name: str
-    ) -> Dict[str, extensions.module]:
+    ) -> Iterator[Tuple[str, extensions.module]]:
+        """
+        Returns an iterator of (module name, module) tuples for all modules in the module_kset structure.
+
+        Raises:
+            TypeError if module_kset is not in the supplied symbol table
+        """
         vmlinux = context.modules[vmlinux_name]
 
         try:
             module_kset = vmlinux.object_from_symbol("module_kset")
-        except (exceptions.SymbolError, exceptions.InvalidAddressException):
-            module_kset = None
-
-        if not module_kset:
+        except exceptions.SymbolError:
             raise TypeError(
                 "This plugin requires the module_kset structure. This structure is not present in the supplied symbol table. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
             )
-
-        ret = {}
+        except exceptions.InvalidAddressException as exc:
+            vollog.warning(
+                f"Failed to initialize `module_kset` at {exc.invalid_address:#x} due to invalid address exception"
+            )
+            return
 
         kobj_off = vmlinux.get_type("module_kobject").relative_child_offset("kobj")
 
@@ -537,9 +543,7 @@ class Modules(interfaces.configuration.VersionableInterface):
                 continue
 
             if kobj.name and kobj.reference_count() > 2:
-                ret[name] = mod
-
-        return ret
+                yield name, mod
 
     @staticmethod
     def validate_alignment_patterns(
