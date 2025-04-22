@@ -2,9 +2,9 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from typing import Generator, Iterable, List, Optional, Dict, Tuple
+from typing import Dict, Generator, Iterable, List, Optional, Tuple
 
-from volatility3.framework import symbols, constants, exceptions, interfaces, renderers
+from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
@@ -342,7 +342,24 @@ class Modules(interfaces.plugins.PluginInterface):
             object_type=type_name, offset=list_entry.vol.offset - reloff, absolute=True
         )
 
-        yield from module.InLoadOrderLinks
+        seen = set()
+        for mod in module.InLoadOrderLinks.to_list(
+            symbol_type=ldr_entry_type.vol.type_name, member="InLoadOrderLinks"
+        ):
+            if mod.vol.offset not in seen:
+                seen.add(mod.vol.offset)
+
+            yield mod
+
+        for mod in module.InLoadOrderLinks.to_list(
+            symbol_type=ldr_entry_type.vol.type_name,
+            member="InLoadOrderLinks",
+            forward=False,
+        ):
+            if mod.vol.offset not in seen:
+                seen.add(mod.vol.offset)
+
+            yield mod
 
     def run(self):
         return renderers.TreeGrid(
