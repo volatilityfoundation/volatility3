@@ -304,7 +304,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     if vproc is not None:
                         offset = vproc.vol.offset
                     else:
-                        offset = renderers.UnreadableValue()
+                        offset = None
 
             if self.config["dump"]:
                 file_handle = pslist.PsList.process_dump(
@@ -318,12 +318,11 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 if file_handle:
                     file_output = file_handle.preferred_filename
 
-            # format offset for display, but catch errors when UnreadableValue
-            # cannot be formatted
-            try:
+            # format offset for display
+            if offset is None:
+                display_offset = renderers.UnreadableValue()
+            else:
                 display_offset = format_hints.Hex(offset)
-            except TypeError:
-                display_offset = offset
 
             try:
                 yield (
