@@ -336,6 +336,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                             errors="replace",
                         ),
                         display_offset,
+                        display_offset,
                         proc.ActiveThreads,
                         proc.get_handle_count(),
                         proc.get_session_id(),
