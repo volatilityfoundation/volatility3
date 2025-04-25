@@ -271,9 +271,8 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             file_output = "Disabled"
 
             # windows 10 objects (maybe others in the future) are already in virtual memory
-            # if the proc is built on the same layer as the kernel then it is already
-            # in 'virtual' memory.
-            if proc.vol.layer_name == kernel.layer_name:
+            # if the proc native_layer_name and layer_name match then it is in 'virtual' memory.
+            if proc.vol.layer_name == proc.vol.native_layer_name:
                 # proc is already in a virtual mem, so a new object is not needed. it means
                 # that if physical addresses are requested in the output then proc.vol.offset
                 # cannot be used because it will be virtual, so the mapping is needed.
