@@ -75,7 +75,11 @@ class TestWindowsPsscan:
     def test_windows_specific_psscan_physical(self, volatility, python):
         image = WindowsSamples.WINDOWSXP_GENERIC.value.path
         rc, out, _err = test_volatility.runvol_plugin(
-            "windows.psscan.PsScan", image, volatility, python,pluginargs=("--physical"")
+            "windows.psscan.PsScan",
+            image,
+            volatility,
+            python,
+            pluginargs=("--physical"),
         )
         assert rc == 0
         out = out.lower()
@@ -83,6 +87,7 @@ class TestWindowsPsscan:
         assert out.find(b"csrss.exe") != -1
         assert out.find(b"svchost.exe") != -1
         assert out.count(b"\n") > 10
+
 
 class TestWindowsDlllist:
     def test_windows_generic_dlllist(self, volatility, python, image):
@@ -783,19 +788,19 @@ class TestWindowsSymlinkScan:
         assert test_volatility.count_entries_flat(json_out) > 5
         expected_rows = [
             {
-              "CreateTime": "2005-06-25T16:47:28+00:00",
-              "From Name": "AUX",
-              "Offset": 453082584,
-              "To Name": "\\DosDevices\\COM1",
-              "__children": []
+                "CreateTime": "2005-06-25T16:47:28+00:00",
+                "From Name": "AUX",
+                "Offset": 453082584,
+                "To Name": "\\DosDevices\\COM1",
+                "__children": [],
             },
             {
-              "CreateTime": "2005-06-25T16:47:28+00:00",
-              "From Name": "UNC",
-              "Offset": 453176664,
-              "To Name": "\\Device\\Mup",
-              "__children": []
-            }
+                "CreateTime": "2005-06-25T16:47:28+00:00",
+                "From Name": "UNC",
+                "Offset": 453176664,
+                "To Name": "\\Device\\Mup",
+                "__children": [],
+            },
         ]
 
         for expected_row in expected_rows:
