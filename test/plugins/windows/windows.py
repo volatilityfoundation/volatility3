@@ -79,7 +79,7 @@ class TestWindowsPsscan:
             image,
             volatility,
             python,
-            pluginargs=("--physical"),
+            pluginargs=("--physical",),
         )
         assert rc == 0
         out = out.lower()
