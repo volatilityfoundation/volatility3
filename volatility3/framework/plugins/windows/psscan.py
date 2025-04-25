@@ -281,7 +281,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 if self.config["physical"]:
                     # the display should be physical addresses, so proc cannot be used. The
                     # mappings are needed to find where it would be physically.
-                    offset = (_, _, offset, _, _) = list(
+                    _, _, offset, _, _ = list(
                         memory.mapping(offset=proc.vol.offset, length=0)
                     )[0]
                 else:
@@ -292,7 +292,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             else:
                 # proc is in virtual mem, so a new object needs to be creatd.
                 vproc = self.virtual_process_from_physical(
-                    self.context, kernel.layer_name, kernel.symbol_table_name, proc
+                    self.context, self.config["kernel"], proc
                 )
                 if self.config["physical"]:
                     # the display should be physical addresses, so proc can be used
