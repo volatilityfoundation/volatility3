@@ -84,8 +84,12 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                                         renderers.LayerData(
                                             self.context,
                                             proc_layer_name,
-                                            instance.offset + start,
-                                            instance.matched_length,
+                                            instance.offset
+                                            + start
+                                            - abs(self.config["context_before"]),
+                                            instance.matched_length
+                                            + abs(self.config["context_before"])
+                                            + abs(self.config["context_after"]),
                                         ),
                                     )
                         else:
@@ -98,8 +102,12 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                                     renderers.LayerData(
                                         self.context,
                                         proc_layer_name,
-                                        offset + start,
-                                        len(value),
+                                        offset
+                                        + start
+                                        - abs(self.config["context_before"]),
+                                        len(value)
+                                        + abs(self.config["context_before"])
+                                        + abs(self.config["context_after"]),
                                     ),
                                 )
                 else:
@@ -114,8 +122,12 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                                     renderers.LayerData(
                                         self.context,
                                         proc_layer_name,
-                                        instance.offset + start,
-                                        instance.length,
+                                        instance.offset
+                                        + start
+                                        - abs(self.config["context_before"]),
+                                        instance.length
+                                        + abs(self.config["context_before"])
+                                        + abs(self.config["context_after"]),
                                     ),
                                 )
 
