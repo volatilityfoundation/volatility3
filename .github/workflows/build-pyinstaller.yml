@@ -4,47 +4,48 @@ on:
     branches:
       - stable
       - develop
-      - 'release/**'
+      - "release/**"
   pull_request:
     branches:
       - stable
-      - 'release/**'
+      - "release/**"
+  workflow_dispatch:
 
 jobs:
-
   exe:
     runs-on: windows-latest
     strategy:
       matrix:
         python-version: ["3.11"]
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pyinstaller
-    
-    - name: Pyinstall executable
-      run: |
-        pyinstaller --clean -y vol.spec
-        pyinstaller --clean -y volshell.spec
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -e .[full,cloud]
 
-    - name: Move files
-      run: |
-        mv dist/vol.exe vol.exe
-        mv dist/volshell.exe volshell.exe
+      - name: Pyinstall executable
+        run: |
+          pyinstaller --clean -y vol.spec
+          pyinstaller --clean -y volshell.spec
 
-    - name: Archive 
-      uses: actions/upload-artifact@v4
-      with:
-        name: volatility3-pyinstaller
-        path: |
-          vol.exe
-          volshell.exe
-          README.md
-          LICENSE.txt
+      - name: Move files
+        run: |
+          mv dist/vol.exe vol.exe
+          mv dist/volshell.exe volshell.exe
+
+      - name: Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: volatility3-pyinstaller
+          path: |
+            vol.exe
+            volshell.exe
+            README.md
+            LICENSE.txt
