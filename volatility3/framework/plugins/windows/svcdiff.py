@@ -1,15 +1,13 @@
 # This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
-# This module attempts to locate skeleton-key like function hooks.
-# It does this by locating the CSystems array through a variety of methods,
-# and then validating the entry for RC4 HMAC (0x17 / 23)
+# This module compares services found through list walking versus scanning,
+# with the aim of finding hidden services.
 #
-# For a thorough walkthrough on how the R&D was performed to develop this plugin,
-# please see our blogpost here:
+# For background of hidden services and a real-world example of the use of this plugin,
+# please see our blogpost:
 #
-# https://volatility-labs.blogspot.com/2021/10/memory-forensics-r-illustrated.html
+# https://volatilityfoundation.org/memory-forensics-rd-illustrated-detecting-hidden-windows-services/
 
 import logging
 

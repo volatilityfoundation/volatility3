@@ -169,6 +169,16 @@ class YaraScan(plugins.PluginInterface):
                 description="Set the maximum size (default is 1GB)",
                 optional=True,
             ),
+            requirements.IntRequirement(
+                name="context_before",
+                optional=True,
+                default=0,
+            ),
+            requirements.IntRequirement(
+                name="context_after",
+                optional=True,
+                default=0,
+            ),
         ]
 
     @classmethod
@@ -208,9 +218,11 @@ class YaraScan(plugins.PluginInterface):
         ):
             layer_data = renderers.LayerData(
                 context=self.context,
-                offset=offset,
+                offset=offset - abs(self.config["context_before"]),
                 layer_name=layer.name,
-                length=len(value),
+                length=len(value)
+                + abs(self.config["context_before"])
+                + abs(self.config["context_after"]),
             )
             yield 0, (format_hints.Hex(offset), rule_name, name, layer_data)
 

@@ -6,13 +6,13 @@ import datetime
 import logging
 from typing import Callable, Iterator, List, Optional, Type
 
-from volatility3.framework import renderers, interfaces, layers, exceptions, constants
+from volatility3.framework import constants, exceptions, interfaces, layers, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
-from volatility3.framework.symbols.windows.extensions import pe
 from volatility3.framework.symbols.windows import extensions
+from volatility3.framework.symbols.windows.extensions import pe
 from volatility3.plugins import timeliner
 
 vollog = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     _required_framework_version = (2, 0, 0)
 
     # 3.0.0 - changed signature for `list_processes`
-    _version = (3, 0, 0)
+    _version = (3, 0, 1)
     PHYSICAL_DEFAULT = False
 
     @classmethod
@@ -261,9 +261,18 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             absolute=True,
         )
 
-        for proc in eproc.ActiveProcessLinks:
-            if not filter_func(proc):
-                yield proc
+        seen = set()
+        for forward in (True, False):
+            for proc in eproc.ActiveProcessLinks.to_list(
+                symbol_type=eproc.vol.type_name,
+                member="ActiveProcessLinks",
+                forward=forward,
+            ):
+                if proc.vol.offset in seen:
+                    continue
+                seen.add(proc.vol.offset)
+                if not filter_func(proc):
+                    yield proc
 
     def _generator(self):
         kernel = self.context.modules[self.config["kernel"]]

@@ -505,6 +505,9 @@ class CommandLine:
         try:
             # Construct and run the plugin
             if constructed:
+                vollog.debug(
+                    f"Successfully constructed {args.plugin} {constructed.version}"
+                )
                 grid = constructed.run()
                 renderer = renderers[args.renderer]()
                 renderer.filter = text_filter.CLIFilter(grid, args.filters)

@@ -95,9 +95,11 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 ):
                     layer_data = renderers.LayerData(
                         context=self.context,
-                        offset=offset,
+                        offset=offset - abs(self.config["context_before"]),
                         layer_name=layer.name,
-                        length=len(value),
+                        length=len(value)
+                        + abs(self.config["context_before"])
+                        + abs(self.config["context_after"]),
                     )
                     yield 0, (
                         format_hints.Hex(offset),

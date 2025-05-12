@@ -281,7 +281,7 @@ class MountInfo(plugins.PluginInterface):
 
             if sb_ptr in seen_sb_ptr:
                 continue
-            seen_sb_ptr.add(sb_ptr)
+            seen_sb_ptr.add(int(sb_ptr))
 
             superblock = sb_ptr.dereference()
 

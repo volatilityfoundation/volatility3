@@ -746,6 +746,51 @@ class TestWindowsKPCRs:
         assert test_volatility.count_entries_flat(json.loads(out)) > 0
 
 
+class TestWindowsSymlinkScan:
+    def test_windows_generic_symlinkscan(self, volatility, python, image):
+        rc, out, _err = test_volatility.runvol_plugin(
+            "windows.symlinkscan.SymlinkScan",
+            image,
+            volatility,
+            python,
+            globalargs=("-r", "json"),
+        )
+        assert rc == 0
+        assert test_volatility.count_entries_flat(json.loads(out)) > 0
+
+    def test_windows_specific_symlinkscan(self, volatility, python):
+        image = WindowsSamples.WINDOWSXP_GENERIC.value.path
+        rc, out, _err = test_volatility.runvol_plugin(
+            "windows.symlinkscan.SymlinkScan",
+            image,
+            volatility,
+            python,
+            globalargs=("-r", "json"),
+        )
+        assert rc == 0
+        json_out = json.loads(out)
+        assert test_volatility.count_entries_flat(json_out) > 5
+        expected_rows = [
+            {
+              "CreateTime": "2005-06-25T16:47:28+00:00",
+              "From Name": "AUX",
+              "Offset": 453082584,
+              "To Name": "\\DosDevices\\COM1",
+              "__children": []
+            },
+            {
+              "CreateTime": "2005-06-25T16:47:28+00:00",
+              "From Name": "UNC",
+              "Offset": 453176664,
+              "To Name": "\\Device\\Mup",
+              "__children": []
+            }
+        ]
+
+        for expected_row in expected_rows:
+            assert test_volatility.match_output_row(expected_row, json_out)
+
+
 class TestWindowsLdrModules:
     def test_windows_specific_ldrmodules(self, volatility, python):
         image = WindowsSamples.WINDOWSXP_GENERIC.value.path

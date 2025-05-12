@@ -85,13 +85,16 @@ class Volshell(interfaces.plugins.PluginInterface):
         return reqs
 
     def run(
-        self, additional_locals: Dict[str, Any] = {}
+        self, additional_locals: Dict[str, Any] = None
     ) -> interfaces.renderers.TreeGrid:
         """Runs the interactive volshell plugin.
 
         Returns:
             Return a TreeGrid but this is always empty since the point of this plugin is to run interactively
         """
+
+        if additional_locals is None:
+            additional_locals = {}
 
         # Try to enable tab completion
         if not has_ipython:

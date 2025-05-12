@@ -740,9 +740,10 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
         return True
 
+    @functools.lru_cache
     def add_process_layer(
         self, config_prefix: Optional[str] = None, preferred_name: Optional[str] = None
-    ):
+    ) -> str:
         """Constructs a new layer based on the process's DirectoryTableBase."""
 
         parent_layer = self._context.layers[self.vol.layer_name]

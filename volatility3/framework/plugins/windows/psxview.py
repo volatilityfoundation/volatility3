@@ -9,12 +9,7 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols.windows import extensions
-from volatility3.plugins.windows import (
-    handles,
-    pslist,
-    psscan,
-    thrdscan,
-)
+from volatility3.plugins.windows import handles, pslist, psscan, thrdscan
 
 vollog = logging.getLogger(__name__)
 
@@ -58,7 +53,7 @@ We recommend using -r pretty if you are looking at this plugin's output in a ter
                 name="thrdscan", component=thrdscan.ThrdScan, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="handles", component=handles.Handles, version=(3, 0, 0)
+                name="handles", component=handles.Handles, version=(4, 0, 0)
             ),
             requirements.BooleanRequirement(
                 name="physical-offsets",
@@ -144,15 +139,11 @@ We recommend using -r pretty if you are looking at this plugin's output in a ter
     ) -> Dict[int, extensions.EPROCESS]:
         ret: List[extensions.EPROCESS] = []
 
-        handles_plugin = handles.Handles(
-            context=self.context, config_path=self.config_path
-        )
-
-        type_map = handles_plugin.get_type_map(
+        type_map = handles.Handles.get_type_map(
             context=self.context, kernel_module_name=self.config["kernel"]
         )
 
-        cookie = handles_plugin.find_cookie(
+        cookie = handles.Handles.find_cookie(
             context=self.context, kernel_module_name=self.config["kernel"]
         )
 
@@ -164,7 +155,11 @@ We recommend using -r pretty if you are looking at this plugin's output in a ter
             try:
                 ret += [
                     handle.Body.cast("_EPROCESS")
-                    for handle in handles_plugin.handles(p.ObjectTable)
+                    for handle in handles.Handles.handles(
+                        context=self.context,
+                        kernel_module_name=self.config["kernel"],
+                        handle_table=p.ObjectTable,
+                    )
                     if handle.get_object_type(type_map, cookie) == "Process"
                 ]
             except exceptions.InvalidAddressException:

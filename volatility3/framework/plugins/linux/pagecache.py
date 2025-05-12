@@ -283,9 +283,14 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 continue
 
             # Inode already processed?
+            # Store a primitive int (instead of the pointer value) to track
+            # addresses we've already seen. Storing the full `objects.Pointer`
+            # uses too much memory, and we don't need all of the information
+            # that it contains.
             if root_inode_ptr in seen_inodes:
                 continue
-            seen_inodes.add(root_inode_ptr)
+
+            seen_inodes.add(int(root_inode_ptr))
 
             root_path = mountpoint
 
@@ -318,9 +323,13 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
                     continue
 
                 # Inode already processed?
+                # Store a primitive int (instead of the pointer value) to track
+                # addresses we've already seen. Storing the full `objects.Pointer`
+                # uses too much memory, and we don't need all of the information
+                # that it contains.
                 if file_inode_ptr in seen_inodes:
                     continue
-                seen_inodes.add(file_inode_ptr)
+                seen_inodes.add(int(file_inode_ptr))
 
                 if follow_symlinks:
                     file_path = cls._follow_symlink(file_inode_ptr, file_path)

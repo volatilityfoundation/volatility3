@@ -174,6 +174,8 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
                     vad.get_start() + SHIM_NUM_ENTRIES_OFFSET,
                 )
 
+                vollog.debug(f"Found {num_entries} shimcache entries")
+
                 if num_entries > SHIM_MAX_ENTRIES:
                     continue
 
@@ -204,7 +206,6 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
 
                     if physical_addr in seen:
                         continue
-                    seen.add(physical_addr)
 
                     shim_entry = proc_layer.context.object(
                         shimcache_symbol_table + constants.BANG + "SHIM_CACHE_ENTRY",
@@ -215,6 +216,8 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
                         continue
                     if not shim_entry.is_valid():
                         continue
+
+                    seen.add(physical_addr)
 
                     yield shim_entry
 
@@ -579,13 +582,19 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         :return: The offset and size of the module, if found; Otherwise, returns `None`
         """
 
-        try:
-            krnl_mod = next(
-                module
-                for module in modules.Modules.list_modules(context, kernel_module_name)
-                if module.BaseDllName.String in module_list
-            )
-        except StopIteration:
+        krnl_mod = None
+        for module in modules.Modules.list_modules(context, kernel_module_name):
+            try:
+                if module.BaseDllName.String in module_list:
+                    krnl_mod = module
+                    break
+            except exceptions.InvalidAddressException as exc:
+                vollog.warning(
+                    f"Failed to get kernel module due to {exc.__class__.__name__}: {exc.invalid_address:#x}"
+                )
+
+        if krnl_mod is None:
+            vollog.warning("Failed to find kernel module")
             return None
 
         kernel = context.modules[kernel_module_name]
