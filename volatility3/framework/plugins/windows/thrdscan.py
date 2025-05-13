@@ -190,6 +190,9 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
                 row_dict["PID"],
                 row_dict["TID"],
                 row_dict["StartAddress"],
+                row_dict["StartPath"],
+                row_dict["Win32StartAddress"],
+                row_dict["Win32StartPath"],
                 row_dict["CreateTime"],
                 row_dict["ExitTime"],
             ) = row_data
