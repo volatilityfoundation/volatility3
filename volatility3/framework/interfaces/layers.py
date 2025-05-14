@@ -358,6 +358,10 @@ class DataLayerInterface(
         for layer_name, address, chunk_size in data_to_scan:
             try:
                 data += self.context.layers[layer_name].read(address, chunk_size)
+                try:
+                    self.context.layers[layer_name].read.cache_clear()
+                except AttributeError:
+                    pass
             except exceptions.InvalidAddressException:
                 vollog.debug(
                     f"Invalid address in layer {layer_name} found scanning {self.name} at address {address:x}"
