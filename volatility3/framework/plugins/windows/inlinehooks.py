@@ -42,6 +42,9 @@ class InlineHooks(interfaces.plugins.PluginInterface):
                 component=modules.Modules,
                 version=(3, 0, 0),  # Updated from 2.0.0 to 3.0.0
             ),
+            requirements.VersionRequirement(
+                name="pe_symbols", component=pe_symbols.PESymbols, version=(3, 0, 0)
+            ),
             requirements.ListRequirement(
                 name="pid",
                 description="Filter on specific process IDs",
