@@ -159,15 +159,15 @@ class InlineHooks(interfaces.plugins.PluginInterface):
         try:
             # Create IAT plugin instance to reuse its functionality
             iat_plugin = iat.IAT(self.context, self.config_path)
-            
-            # Get IAT entries for this specific process  
+
+            # Get IAT entries for this specific process
             iat_entries = list(iat_plugin._generator([proc]))
             # print(f"Found {len(iat_entries)} IAT entries for process {proc.UniqueProcessId}")  # Commented out debug print
-            
+
             # Get process layer for module bounds checking
             proc_layer_name = proc.add_process_layer()
             proc_layer = self.context.layers[proc_layer_name]
-            
+
             # Build a map of loaded modules and their bounds
             module_bounds = {}
             for mod in proc.load_order_modules():
@@ -176,32 +176,32 @@ class InlineHooks(interfaces.plugins.PluginInterface):
                     module_bounds[module_name] = (mod.DllBase, mod.DllBase + mod.SizeOfImage)
                 except:
                     continue
-            
+
             # Check each IAT entry for suspicious redirections
             for _, (pid, proc_name, dll_name, bound, function_name, function_address) in iat_entries:
                 try:
                     if function_address:
                         addr = int(function_address) if hasattr(function_address, '__int__') else function_address
-                        
+
                         # Check if this address is within the expected module bounds
                         is_within_bounds = False
-                        
+
                         # Check against all loaded modules (not just the declaring DLL)
                         for mod_name, (mod_start, mod_end) in module_bounds.items():
                             if mod_start <= addr < mod_end:
                                 is_within_bounds = True
                                 break
-                        
+
                         if not is_within_bounds:
                             hooked_imports.append((
                                 f"{dll_name}::{function_name}",
                                 addr,
                                 "IAT entry points outside any loaded module (hooked)"
                             ))
-                        
+
                 except (exceptions.InvalidAddressException, ValueError, TypeError):
                     continue
-                    
+
         except Exception as e:
             vollog.debug(f"Error in IAT hook detection: {e}")
 
@@ -214,7 +214,7 @@ class InlineHooks(interfaces.plugins.PluginInterface):
         try:
             module_start = module.DllBase
             module_end = module.DllBase + module.SizeOfImage
-            
+
             # Walk the EAT
             for export in export_dir.entries():
                 try:
@@ -233,7 +233,7 @@ class InlineHooks(interfaces.plugins.PluginInterface):
                         ))
                 except exceptions.InvalidAddressException:
                     continue
-                    
+
         except exceptions.InvalidAddressException:
             pass
 
