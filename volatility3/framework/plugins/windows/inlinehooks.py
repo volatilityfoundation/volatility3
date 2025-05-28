@@ -43,14 +43,14 @@ class InlineHooks(interfaces.plugins.PluginInterface):
             requirements.VersionRequirement(
                 name="modules",
                 component=modules.Modules,
-                version=(3, 0, 0),  # Updated from 2.0.0 to 3.0.0
+                version=(3, 0, 0),
             ),
             requirements.VersionRequirement(
                 name="pe_symbols", component=pe_symbols.PESymbols, version=(3, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
-                description="Filter on specific process IDs",
+                description="Process IDs to include (all other processes are excluded)",
                 element_type=int,
                 optional=True,
             ),
@@ -59,15 +59,18 @@ class InlineHooks(interfaces.plugins.PluginInterface):
     def _count_until_padding(self, data: bytes) -> int:
         # Check for padding sequences
         for i in range(len(data)):
+
             # Double int3 (CC CC)
             if i + 1 < len(data) and data[i] == 0xCC and data[i + 1] == 0xCC:
                 return i
+
             # 11-byte NOP (66 66 66 0f 1f 84 00 00 00 00 00)
             if (
                 i + 11 <= len(data)
                 and data[i : i + 11] == b"\x66\x66\x66\x0f\x1f\x84\x00\x00\x00\x00\x00"
             ):
                 return i
+
             # 2-byte NOP (66 66)
             if i + 2 <= len(data) and data[i : i + 2] == b"\x66\x66":
                 return i
@@ -139,16 +142,31 @@ class InlineHooks(interfaces.plugins.PluginInterface):
                 ):
                     return (data, "Early RET")
 
-            # Check for JMP relative hooks
-            if disasm[0].bytes[0] == 0xE9 and func_insn_count >= MIN_FUNC_SIZE_FOR_JMP:
-                return (data, "JMP relative")
+            # Check for JMP relative/Register JMP hooks
+            if func_insn_count >= MIN_FUNC_SIZE_FOR_JMP:
+                if (disasm[0].bytes[0] == 0xE9) or (
+                    func_insn_count >= 2
+                    and disasm[0].mnemonic == "mov"
+                    and disasm[0].operands[0].type == capstone.x86.X86_OP_REG
+                    and disasm[0].operands[1].type == capstone.x86.X86_OP_IMM
+                    and disasm[1].mnemonic == "jmp"
+                    and disasm[1].operands[0].type == capstone.x86.X86_OP_REG
+                    and disasm[1].operands[0].reg == disasm[0].operands[0].reg
+                ):
+                    return (data, "Early JMP")
 
-            # Check for Early CALL hooks
-            if (
-                func_insn_count >= MIN_FUNC_SIZE_FOR_CALL
-                and disasm[0].mnemonic == "call"
-            ):
-                return (data, "Early CALL")
+            # Check for Early CALL/Register CALL hooks
+            if func_insn_count >= MIN_FUNC_SIZE_FOR_CALL:
+                if (disasm[0].mnemonic == "call") or (
+                    func_insn_count >= 2
+                    and disasm[0].mnemonic == "mov"
+                    and disasm[0].operands[0].type == capstone.x86.X86_OP_REG
+                    and disasm[0].operands[1].type == capstone.x86.X86_OP_IMM
+                    and disasm[1].mnemonic == "call"
+                    and disasm[1].operands[0].type == capstone.x86.X86_OP_REG
+                    and disasm[1].operands[0].reg == disasm[0].operands[0].reg
+                ):
+                    return (data, "Early CALL")
 
         except Exception as e:
             vollog.debug(f"Error during disassembly at {addr:#x}: {e}")
