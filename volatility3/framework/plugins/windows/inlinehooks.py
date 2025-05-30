@@ -85,6 +85,7 @@ class InlineHooks(interfaces.plugins.PluginInterface):
         # This is important to avoid false positives on stub functions
         MIN_FUNC_SIZE_FOR_JMP = 2
         MIN_FUNC_SIZE_FOR_RET = 2
+        MIN_FUNC_SIZE_FOR_XOR_RET = 3
         MIN_FUNC_SIZE_FOR_CALL = 2
 
         if len(data) < 1:
@@ -137,6 +138,13 @@ class InlineHooks(interfaces.plugins.PluginInterface):
                     or (
                         func_insn_count >= 2
                         and disasm[0].mnemonic == "jmp"
+                        and disasm[1].id == capstone.x86.X86_INS_RET
+                    )
+                    or (
+                        func_insn_count >= MIN_FUNC_SIZE_FOR_XOR_RET
+                        and disasm[0].mnemonic == "xor"
+                        and disasm[0].operands[0].type == capstone.x86.X86_OP_REG
+                        and disasm[0].operands[1].type == capstone.x86.X86_OP_REG
                         and disasm[1].id == capstone.x86.X86_INS_RET
                     )
                 ):
