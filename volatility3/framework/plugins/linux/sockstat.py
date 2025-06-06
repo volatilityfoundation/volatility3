@@ -23,7 +23,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
     """Handles several socket families extracting the sockets information."""
 
     _required_framework_version = (2, 22, 0)
-    _version = (4, 0, 0)
+    _version = (4, 1, 0)
     _net_version_required = (1, 0, 0)
 
     def __init__(self, context, vmlinux_name, task, *args, **kwargs):
@@ -481,6 +481,12 @@ class Sockstat(plugins.PluginInterface):
                 default=False,
                 optional=True,
             ),
+            requirements.BooleanRequirement(
+                name="inet",
+                description=("Show INET/INET6 domain Sockets only"),
+                default=False,
+                optional=True,
+            ),
             requirements.ListRequirement(
                 name="pids",
                 description="Filter results by process IDs. "
@@ -502,6 +508,8 @@ class Sockstat(plugins.PluginInterface):
         context: interfaces.context.ContextInterface,
         symbol_table: str,
         filter_func: Callable[[int], bool] = lambda _: False,
+        unix_only: bool = False,
+        inet_only: bool = False,
     ):
         """Returns every single socket descriptor
 
@@ -509,6 +517,8 @@ class Sockstat(plugins.PluginInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             symbol_table: The name of the kernel module on which to operate
             filter_func: A function which takes a task object and returns True if the task should be ignored/filtered
+            unix_only: If True, only show UNIX domain sockets (AF_UNIX)
+            inet_only: If True, only show INET/INET6 domain sockets (AF_INET, AF_INET6)
 
         Yields:
             task: Kernel's task object
@@ -564,6 +574,12 @@ class Sockstat(plugins.PluginInterface):
             if not sock_fields:
                 continue
 
+            if unix_only and family != "AF_UNIX":
+                continue
+            
+            if inet_only and family not in ("AF_INET", "AF_INET6"):
+                continue
+
             child_sock = sock_fields[0]
             protocol = child_sock.get_protocol()
 
@@ -594,13 +610,15 @@ class Sockstat(plugins.PluginInterface):
 
         return tuple(sock_stat), protocol
 
-    def _generator(self, pids: List[int], netns_id_arg: int, kernel_module_name: str):
+    def _generator(self, pids: List[int], netns_id_arg: int, kernel_module_name: str, unix_only: bool, inet_only: bool):
         """Enumerate tasks sockets. Each row represents a kernel socket.
 
         Args:
             pids: List of PIDs to filter. If a empty list or
             netns_id_arg: If a network namespace ID is set, it will only show this namespace.
-            symbol_table: The name of the kernel module on which to operate
+            kernel_module_name: The name of the kernel module on which to operate
+            unix_only: If True, only show UNIX domain sockets (AF_UNIX)
+            inet_only: If True, only show INET/INET6 domain sockets (AF_INET, AF_INET6)
 
         Yields:
             netns_id: Network namespace ID
@@ -621,7 +639,7 @@ class Sockstat(plugins.PluginInterface):
 
         filter_func = pslist.PsList.create_pid_filter(pids)
         socket_generator = self.list_sockets(
-            self.context, kernel_module_name, filter_func=filter_func
+            self.context, kernel_module_name, filter_func=filter_func, unix_only=unix_only, inet_only=inet_only
         )
 
         for (
@@ -666,6 +684,8 @@ class Sockstat(plugins.PluginInterface):
     def run(self):
         pids = self.config.get("pids")
         netns_id = self.config["netns"]
+        unix_only = self.config["unix"]
+        inet_only = self.config["inet"]
         kernel_module_name = self.config["kernel"]
 
         tree_grid_args = [
@@ -687,5 +707,5 @@ class Sockstat(plugins.PluginInterface):
         ]
 
         return renderers.TreeGrid(
-            tree_grid_args, self._generator(pids, netns_id, kernel_module_name)
+            tree_grid_args, self._generator(pids, netns_id, kernel_module_name, unix_only, inet_only)
         )
