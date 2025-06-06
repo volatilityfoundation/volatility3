@@ -576,7 +576,7 @@ class Sockstat(plugins.PluginInterface):
 
             if unix_only and family != "AF_UNIX":
                 continue
-            
+
             if inet_only and family not in ("AF_INET", "AF_INET6"):
                 continue
 
@@ -610,7 +610,14 @@ class Sockstat(plugins.PluginInterface):
 
         return tuple(sock_stat), protocol
 
-    def _generator(self, pids: List[int], netns_id_arg: int, kernel_module_name: str, unix_only: bool, inet_only: bool):
+    def _generator(
+        self,
+        pids: List[int],
+        netns_id_arg: int,
+        kernel_module_name: str,
+        unix_only: bool,
+        inet_only: bool,
+    ):
         """Enumerate tasks sockets. Each row represents a kernel socket.
 
         Args:
@@ -639,7 +646,11 @@ class Sockstat(plugins.PluginInterface):
 
         filter_func = pslist.PsList.create_pid_filter(pids)
         socket_generator = self.list_sockets(
-            self.context, kernel_module_name, filter_func=filter_func, unix_only=unix_only, inet_only=inet_only
+            self.context,
+            kernel_module_name,
+            filter_func=filter_func,
+            unix_only=unix_only,
+            inet_only=inet_only,
         )
 
         for (
@@ -707,5 +718,6 @@ class Sockstat(plugins.PluginInterface):
         ]
 
         return renderers.TreeGrid(
-            tree_grid_args, self._generator(pids, netns_id, kernel_module_name, unix_only, inet_only)
+            tree_grid_args,
+            self._generator(pids, netns_id, kernel_module_name, unix_only, inet_only),
         )
