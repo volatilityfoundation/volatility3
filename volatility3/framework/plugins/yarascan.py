@@ -101,6 +101,13 @@ class YaraScanner(interfaces.layers.ScannerInterface):
                 return yara_x.compile(fp.read().decode())
             return yara.compile(file=fp)
 
+    @classmethod
+    def from_text(cls, rule):
+        formatted_rule = rule.replace("\n", "")
+        if USE_YARA_X:
+            return yara_x.compile(source=formatted_rule)
+        return yara.compile(source=formatted_rule)
+
 
 class YaraScan(plugins.PluginInterface):
     """Scans kernel memory using yara rules (string or file)."""
