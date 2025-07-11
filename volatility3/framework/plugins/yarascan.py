@@ -102,8 +102,20 @@ class YaraScanner(interfaces.layers.ScannerInterface):
             return yara.compile(file=fp)
 
     @classmethod
-    def from_text(cls, rule):
-        formatted_rule = rule.replace("\n", "")
+    def from_text(cls, rule) -> yara.Rules:
+        """Initialize a Yara Rules object from one or more rules in string format.
+
+        You can provide rules in single-line or multi-line:
+        rule = "rule dummy { condition: true }"
+        rules = '''
+            rule dummy {
+                condition: true
+            }
+            rule dummy2 {
+                condition: true
+            }
+        '''
+        """
         if USE_YARA_X:
             return yara_x.compile(source=formatted_rule)
         return yara.compile(source=formatted_rule)
