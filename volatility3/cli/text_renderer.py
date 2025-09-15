@@ -540,6 +540,11 @@ class JsonRenderer(CLIRenderer):
             if not isinstance(x, interfaces.renderers.BaseAbsentValue)
             else "N/A"
         ),
+        format_hints.Hex: lambda x: (
+            f"0x{x:x}"
+            if not isinstance(x, interfaces.renderers.BaseAbsentValue)
+            else None
+        ),
         renderers.Disassembly: quoted_optional(display_disassembly),
         format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
         renderers.LayerData: lambda x: (
