@@ -1,15 +1,16 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
 import re
-from typing import Dict, Generator, List, Set, Tuple, Optional
+from dataclasses import dataclass
+from typing import Generator
 
-from volatility3.framework import interfaces, renderers, exceptions, constants
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework.layers import intel, resources, linear
+from volatility3.framework.layers import intel, linear, resources
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins.windows import pslist
 
@@ -18,45 +19,41 @@ vollog = logging.getLogger(__name__)
 
 @dataclass
 class MappingNode:
-    def __init__(
-        self,
-        physical_addr_start,
-        physical_addr_end,
-        virtual_addr_start,
-        virtual_addr_end,
-        process_id,
-        region,
-    ) -> None:
-        self.physical_addr_start = physical_addr_start
-        self.physical_addr_end = physical_addr_end
-        self.virtual_addr_start = virtual_addr_start
-        self.virtual_addr_end = virtual_addr_end
-        self.process_id = process_id
-        self.region = region
+    physical_addr_start: int
+    physical_addr_end: int
+    virtual_addr_start: int
+    virtual_addr_end: int
+    process_id: int | str
+    region: str
 
 
+@dataclass
 class MappingTree:
-    def __init__(self, root=None) -> None:
-        self.root = root
-        self.left = None
-        self.right = None
+    root: MappingNode | None = None
+    left: MappingTree | None = None
+    right: MappingTree | None = None
 
-    def add(self, node):
-        if isinstance(node, MappingNode):
-            if self.root == None:
-                self.root = node
-            elif node.physical_addr_start < self.root.physical_addr_start:
-                if self.left == None:
-                    self.left = MappingTree(node)
+    def add(self, node: MappingNode, depth: int = 0) -> None:
+        # Iteratively add to avoid recursion issues
+        if not isinstance(node, MappingNode):
+            raise TypeError
+        parent_node: MappingTree | None = self
+        while parent_node is not None:
+            if parent_node.root is None:
+                parent_node.root = node
+                parent_node = None
+            elif node.physical_addr_start < parent_node.root.physical_addr_start:
+                if parent_node.left is None:
+                    parent_node.left = MappingTree(node)
+                    parent_node = None
                 else:
-                    self.left.add(node)
+                    parent_node = parent_node.left
             else:
-                if self.right == None:
-                    self.right = MappingTree(node)
+                if parent_node.right is None:
+                    parent_node.right = MappingTree(node)
+                    parent_node = None
                 else:
-                    self.right.add(node)
-        else:
-            raise TypeError()
+                    parent_node = parent_node.right
 
     def at(self, point):
         if self.root:
@@ -80,7 +77,7 @@ class Strings(interfaces.plugins.PluginInterface):
     strings_pattern = re.compile(rb"^(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)\n?")
 
     @classmethod
-    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> list[interfaces.configuration.RequirementInterface]:
         return [
             requirements.ModuleRequirement(
                 name="kernel",
@@ -113,13 +110,14 @@ class Strings(interfaces.plugins.PluginInterface):
             self._generator(),
         )
 
-    def _generator(self) -> Generator[Tuple, None, None]:
+    def _generator(self) -> Generator[tuple, None, None]:
         """Generates results from a strings file."""
-        string_list: List[Tuple[int, bytes]] = []
+        string_list: list[tuple[int, bytes]] = []
 
         # Test strings file format is accurate
-        accessor = resources.ResourceAccessor()
-        strings_fp = accessor.open(self.config["strings_file"], "rb")
+        strings_fp = resources.ResourceAccessor().open(
+            self.config["strings_file"], "rb"
+        )
         line = strings_fp.readline()
         count: float = 0
         while line:
@@ -140,9 +138,9 @@ class Strings(interfaces.plugins.PluginInterface):
             pid_list=self.config["pid"],
         )
 
-        last_prog: float = 0
+        _last_prog: float = 0
         line_count: float = 0
-        num_strings = len(string_list)
+        _num_strings = len(string_list)
 
         for phys_offset, string in string_list:
             line_count += 1
@@ -177,7 +175,7 @@ class Strings(interfaces.plugins.PluginInterface):
                     ),
                 )
 
-    def _parse_line(self, line: bytes) -> Tuple[int, bytes]:
+    def _parse_line(self, line: bytes) -> tuple[int, bytes]:
         """Parses a single line from a strings file.
 
         Args:
@@ -200,8 +198,8 @@ class Strings(interfaces.plugins.PluginInterface):
         layer_name: str,
         symbol_table: str,
         progress_callback: constants.ProgressCallback = None,
-        pid_list: Optional[List[int]] = None,
-    ) -> Dict[int, Set[Tuple[str, int]]]:
+        pid_list: list[int] | None = None,
+    ) -> MappingTree:
         """Creates a reverse mapping between virtual addresses and physical
         addresses.
 
@@ -219,7 +217,7 @@ class Strings(interfaces.plugins.PluginInterface):
         revmap_tree = MappingTree()
 
         # start with kernel mappings
-        layer = context.layers[layer_name]
+        layer: intel.Intel = context.layers[layer_name]
         min_kernel_addr = 2 ** (layer._maxvirtaddr - 1)
         if isinstance(layer, intel.Intel):
             # We don't care about errors, we just wanted chunks that map correctly
@@ -247,7 +245,7 @@ class Strings(interfaces.plugins.PluginInterface):
                 if progress_callback:
                     progress_callback(
                         (virt_offset * 100) / layer.maximum_address,
-                        f"Creating custom tree mapping for kernel",
+                        f"Creating custom tree mapping for kernel at offset : {virt_offset:x}",
                     )
 
         # now process normal processes, ignoring kernel addrs
@@ -259,13 +257,11 @@ class Strings(interfaces.plugins.PluginInterface):
                     proc_layer_name = process.add_process_layer()
                 except exceptions.InvalidAddressException as excp:
                     vollog.debug(
-                        "Process {}: invalid address {} in layer {}".format(
-                            proc_id, excp.invalid_address, excp.layer_name
-                        )
+                        f"Process {proc_id}: invalid address {excp.invalid_address} in layer {excp.layer_name}"
                     )
                     continue
 
-                proc_layer = context.layers[proc_layer_name]
+                proc_layer: intel.Intel = context.layers[proc_layer_name]
                 max_proc_addr = (2 ** (proc_layer._maxvirtaddr - 1)) - 1
                 if isinstance(proc_layer, linear.LinearlyMappedLayer):
                     for mapval in proc_layer.mapping(
@@ -284,14 +280,14 @@ class Strings(interfaces.plugins.PluginInterface):
                             phy_offset + phy_mapping_size,
                             virt_offset,
                             virt_offset + virt_size,
-                            proc_id,
-                            "Process",
+                            process_id=proc_id,
+                            region="Process",
                         )
                         revmap_tree.add(node)
 
                         if progress_callback:
                             progress_callback(
                                 (virt_offset * 100) / max_proc_addr,
-                                f"Creating custom tree mapping for task {proc_id}",
+                                f"Creating custom tree mapping for task {proc_id}: {virt_offset:x}",
                             )
         return revmap_tree
