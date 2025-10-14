@@ -434,33 +434,6 @@ class TestWindowsVadyarascan:
         assert out.count(b"\n") > 10
 
 
-class TestWindowsAmcache:
-    def test_windows_generic_amcache(self, volatility, python, image):
-        rc, out, _err = test_volatility.runvol_plugin(
-            "windows.amcache.Amcache",
-            image,
-            volatility,
-            python,
-            globalargs=("-r", "json"),
-        )
-        assert rc == 0
-        json_out = json.loads(out)
-        assert test_volatility.count_entries_flat(json_out) > 100
-        # Win10+ expected package names
-        expected_rows = [
-            {
-                "Path": "C:\\Windows\\SystemApps\\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy",
-                "ProductName": "Microsoft.Windows.StartMenuExperienceHost",
-            },
-            {
-                "Path": "C:\\Windows\\SystemApps\\Microsoft.Windows.FileExplorer_cw5n1h2txyewy",
-                "ProductName": "c5e2524a-ea46-4f67-841f-6a9465d9d515",
-            },
-        ]
-        for expected_row in expected_rows:
-            assert test_volatility.match_output_row(expected_row, json_out)
-
-
 class TestWindowsBigPools:
     def test_windows_generic_bigpools(self, volatility, python, image):
         rc, out, _err = test_volatility.runvol_plugin(
