@@ -128,6 +128,11 @@ class PSParent(interfaces.plugins.PluginInterface):
             'confidence': 'HIGH'
         }
         
+        # First check if this is a known legitimate relationship
+        legitimate_check = self._is_known_legitimate_relationship(proc_info, processes)
+        if legitimate_check:
+            return legitimate_check
+        
         # Rule 1: Check if parent process exists
         if not self._is_valid_parent(ppid, processes):
             analysis.update({
@@ -152,10 +157,15 @@ class PSParent(interfaces.plugins.PluginInterface):
             })
             return analysis
         
-        # Rule 3: Check integrity level inheritance (ONLY if both are available)
-        integrity_violation = self._check_integrity_violation(proc_info, parent_info)
-        if integrity_violation:
-            analysis.update(integrity_violation)
+        # Rule 3: Check integrity level inheritance
+        if not self._is_integrity_consistent(proc_info, parent_info):
+            analysis.update({
+                'status': 'SUSPICIOUS', 
+                'severity': 'HIGH',
+                'evidence': 'Integrity level violation',
+                'technique': 'Token Manipulation',
+                'confidence': 'HIGH'
+            })
             return analysis
         
         # Rule 4: Check creation time consistency
@@ -169,10 +179,15 @@ class PSParent(interfaces.plugins.PluginInterface):
             })
             return analysis
         
-        # Rule 5: Check protected process violations (ONLY if detection is reliable)
-        protection_violation = self._check_protection_violation(proc_info, parent_info)
-        if protection_violation:
-            analysis.update(protection_violation)
+        # Rule 5: Check protected process violations
+        if not self._is_protection_consistent(proc_info, parent_info):
+            analysis.update({
+                'status': 'SUSPICIOUS',
+                'severity': 'CRITICAL',
+                'evidence': 'Protected process spawned by unprotected parent',
+                'technique': 'Protected Process Bypass',
+                'confidence': 'HIGH'
+            })
             return analysis
         
         # Rule 6: Check for system process anomalies
@@ -181,7 +196,427 @@ class PSParent(interfaces.plugins.PluginInterface):
             analysis.update(system_anomaly)
             return analysis
         
+        # Rule 7: Check for common malware patterns
+        malware_pattern = self._check_malware_patterns(proc_info, parent_info)
+        if malware_pattern:
+            analysis.update(malware_pattern)
+            return analysis
+        
         return analysis
+    
+    def _is_known_legitimate_relationship(self, child_info: Dict, processes: Dict) -> Optional[Dict[str, Any]]:
+        """Check if this is a known legitimate Windows process relationship"""
+        child_name = child_info['name'].lower()
+        ppid = child_info['ppid']
+        parent_name = child_info.get('parent_name', '').lower()
+        
+        # Comprehensive database of legitimate Windows process relationships
+        legitimate_relationships = {
+            # ===== CORE SYSTEM PROCESSES =====
+            'smss.exe': {'system', 'smss.exe'},
+            'csrss.exe': {'smss.exe'},
+            'wininit.exe': {'smss.exe'},
+            'services.exe': {'wininit.exe'},
+            'lsass.exe': {'wininit.exe'},
+            'winlogon.exe': {'smss.exe'},
+            'system': {'system'},
+            
+            # ===== SESSION MANAGER SUBSYSTEM =====
+            'conhost.exe': {'csrss.exe', 'svchost.exe', 'explorer.exe', 'cmd.exe', 'powershell.exe'},
+            'dwm.exe': {'services.exe'},
+            'fontdrvhost.exe': {'services.exe'},
+            
+            # ===== SERVICE HOST PROCESSES =====
+            'svchost.exe': {'services.exe', 'svchost.exe'},
+            
+            # ===== WINDOWS LOGON PROCESSES =====
+            'userinit.exe': {'winlogon.exe'},
+            'explorer.exe': {'userinit.exe'},
+            'taskhost.exe': {'services.exe'},
+            'taskhostw.exe': {'services.exe'},
+            'runtimebroker.exe': {'svchost.exe'},
+            'applicationframehost.exe': {'svchost.exe'},
+            'sihost.exe': {'services.exe'},
+            'ctfmon.exe': {'services.exe'},
+            'textinputhost.exe': {'svchost.exe'},
+            
+            # ===== WINDOWS SERVICES =====
+            'spoolsv.exe': {'services.exe'},
+            'taskeng.exe': {'services.exe'},
+            'msdtc.exe': {'services.exe'},
+            'lsm.exe': {'services.exe'},
+            'samss.exe': {'services.exe'},
+            'dns.exe': {'services.exe'},
+            'dhcp.exe': {'services.exe'},
+            'wmpnetwk.exe': {'services.exe'},
+            'sqlservr.exe': {'services.exe'},
+            'mysqld.exe': {'services.exe'},
+            'oracle.exe': {'services.exe'},
+            'java.exe': {'services.exe'},
+            'tomcat.exe': {'services.exe'},
+            'httpd.exe': {'services.exe'},
+            'nginx.exe': {'services.exe'},
+            'postgres.exe': {'services.exe'},
+            'mongod.exe': {'services.exe'},
+            'redis-server.exe': {'services.exe'},
+            
+            # ===== SECURITY PROCESSES =====
+            'audiodg.exe': {'services.exe'},
+            'wisptis.exe': {'services.exe'},
+            'tabtip.exe': {'services.exe'},
+            
+            # ===== WINDOWS APPLICATIONS =====
+            'notepad.exe': {'explorer.exe'},
+            'calc.exe': {'explorer.exe'},
+            'mspaint.exe': {'explorer.exe'},
+            'write.exe': {'explorer.exe'},
+            'charmap.exe': {'explorer.exe'},
+            'snippingtool.exe': {'explorer.exe'},
+            'stikynot.exe': {'explorer.exe'},
+            'wordpad.exe': {'explorer.exe'},
+            
+            # ===== COMMAND LINE AND SHELL =====
+            'cmd.exe': {'explorer.exe', 'cmd.exe', 'svchost.exe', 'services.exe'},
+            'powershell.exe': {'explorer.exe', 'svchost.exe', 'services.exe', 'cmd.exe'},
+            'pwsh.exe': {'explorer.exe', 'svchost.exe', 'services.exe', 'cmd.exe'},
+            'wscript.exe': {'explorer.exe', 'svchost.exe', 'cmd.exe'},
+            'cscript.exe': {'explorer.exe', 'svchost.exe', 'cmd.exe'},
+            'mshta.exe': {'explorer.exe', 'svchost.exe'},
+            
+            # ===== SYSTEM MANAGEMENT =====
+            'mmc.exe': {'explorer.exe'},
+            'regedit.exe': {'explorer.exe'},
+            'services.msc': {'mmc.exe'},
+            'compmgmt.msc': {'mmc.exe'},
+            'eventvwr.msc': {'mmc.exe'},
+            'devmgmt.msc': {'mmc.exe'},
+            'diskmgmt.msc': {'mmc.exe'},
+            'taskmgr.exe': {'winlogon.exe', 'explorer.exe'},
+            'msconfig.exe': {'explorer.exe'},
+            'systempropertiesadvanced.exe': {'explorer.exe'},
+            
+            # ===== BROWSERS =====
+            'iexplore.exe': {'explorer.exe'},
+            'chrome.exe': {'explorer.exe'},
+            'firefox.exe': {'explorer.exe'},
+            'msedge.exe': {'explorer.exe'},
+            'opera.exe': {'explorer.exe'},
+            'safari.exe': {'explorer.exe'},
+            'browser_broker.exe': {'svchost.exe'},
+            
+            # ===== MICROSOFT OFFICE =====
+            'winword.exe': {'explorer.exe'},
+            'excel.exe': {'explorer.exe'},
+            'powerpnt.exe': {'explorer.exe'},
+            'outlook.exe': {'explorer.exe'},
+            'msaccess.exe': {'explorer.exe'},
+            'mspub.exe': {'explorer.exe'},
+            'onenote.exe': {'explorer.exe'},
+            'lync.exe': {'explorer.exe'},
+            'teams.exe': {'explorer.exe'},
+            'msteams.exe': {'explorer.exe'},
+            'officeclicktorun.exe': {'svchost.exe'},
+            
+            # ===== DEVELOPMENT TOOLS =====
+            'devenv.exe': {'explorer.exe'},
+            'code.exe': {'explorer.exe'},
+            'pycharm.exe': {'explorer.exe'},
+            'intellij.exe': {'explorer.exe'},
+            'eclipse.exe': {'explorer.exe'},
+            'netbeans.exe': {'explorer.exe'},
+            'atom.exe': {'explorer.exe'},
+            'sublime_text.exe': {'explorer.exe'},
+            'notepad++.exe': {'explorer.exe'},
+            'vim.exe': {'explorer.exe'},
+            'git-bash.exe': {'explorer.exe'},
+            'tortoisegit.exe': {'explorer.exe'},
+            'sourceTree.exe': {'explorer.exe'},
+            
+            # ===== SYSTEM UTILITIES =====
+            'wuauclt.exe': {'svchost.exe'},
+            'wermgr.exe': {'svchost.exe'},
+            'werfault.exe': {'svchost.exe'},
+            'dllhst3g.exe': {'svchost.exe'},
+            'backgroundtaskhost.exe': {'svchost.exe'},
+            'searchui.exe': {'svchost.exe'},
+            'startmenuexperiencehost.exe': {'svchost.exe'},
+            'shellexperiencehost.exe': {'svchost.exe'},
+            'gamebar.exe': {'explorer.exe'},
+            'gamebarftserver.exe': {'svchost.exe'},
+            
+            # ===== WINDOWS DEFENDER =====
+            'msmpeng.exe': {'services.exe'},
+            'nissrv.exe': {'services.exe'},
+            'securityhealthservice.exe': {'services.exe'},
+            'securityhealthsystray.exe': {'explorer.exe'},
+            'windowsdefender://': {'services.exe'},
+            'smartscreen.exe': {'svchost.exe'},
+            
+            # ===== PRINT SPOOLER =====
+            'splwow64.exe': {'spoolsv.exe'},
+            
+            # ===== .NET AND RUNTIME =====
+            'dotnet.exe': {'explorer.exe', 'svchost.exe'},
+            'vstest.console.exe': {'explorer.exe', 'cmd.exe'},
+            'msbuild.exe': {'explorer.exe', 'cmd.exe', 'svchost.exe'},
+            
+            # ===== WINDOWS UPDATE =====
+            'tiworker.exe': {'svchost.exe'},
+            'usoclient.exe': {'svchost.exe'},
+            'musnotification.exe': {'svchost.exe'},
+            'musnotificationux.exe': {'svchost.exe'},
+            
+            # ===== WINDOWS ERROR REPORTING =====
+            'wermgr.exe': {'svchost.exe'},
+            'werfault.exe': {'svchost.exe'},
+            
+            # ===== COM AND DCOM =====
+            'comsurrogate.exe': {'dllhost.exe', 'svchost.exe'},
+            'dllhost.exe': {'services.exe', 'svchost.exe', 'explorer.exe'},
+            
+            # ===== VIRTUALIZATION AND CONTAINERS =====
+            'vmware-tray.exe': {'explorer.exe'},
+            'vmtoolsd.exe': {'services.exe', 'explorer.exe'},
+            'vboxservice.exe': {'services.exe'},
+            'vboxtray.exe': {'explorer.exe'},
+            'docker.exe': {'services.exe', 'explorer.exe'},
+            'kubelet.exe': {'services.exe'},
+            'containerd.exe': {'services.exe'},
+            
+            # ===== DATABASE SERVICES =====
+            'sqlservr.exe': {'services.exe'},
+            'mysqld.exe': {'services.exe'},
+            'postgres.exe': {'services.exe'},
+            'mongod.exe': {'services.exe'},
+            'oracle.exe': {'services.exe'},
+            'redis-server.exe': {'services.exe'},
+            
+            # ===== WEB SERVERS =====
+            'httpd.exe': {'services.exe'},
+            'nginx.exe': {'services.exe'},
+            'iisexpress.exe': {'explorer.exe', 'svchost.exe'},
+            'w3wp.exe': {'services.exe'},
+            
+            # ===== NETWORKING =====
+            'svchost.exe': {'services.exe'},  # Network-related services
+            'dns.exe': {'services.exe'},
+            'dhcp.exe': {'services.exe'},
+            'rasman.exe': {'services.exe'},
+            'rastls.exe': {'services.exe'},
+            'ikeext.exe': {'services.exe'},
+            'bfe.exe': {'services.exe'},
+            
+            # ===== ANTIVIRUS AND SECURITY SOFTWARE =====
+            'avp.exe': {'services.exe', 'explorer.exe'},  # Kaspersky
+            'bdagent.exe': {'services.exe', 'explorer.exe'},  # BitDefender
+            'ccsvchst.exe': {'services.exe'},  # Norton
+            'mcshield.exe': {'services.exe'},  # McAfee
+            'msseces.exe': {'explorer.exe'},  # Microsoft Security
+            'sbamtray.exe': {'explorer.exe'},  # VIPRE
+            'avguard.exe': {'services.exe'},  # Avira
+            'avgui.exe': {'explorer.exe'},  # AVG
+            'avastui.exe': {'explorer.exe'},  # Avast
+            
+            # ===== BACKUP SOFTWARE =====
+            'sbiesvc.exe': {'services.exe'},  # Sandboxie
+            'vssvc.exe': {'services.exe'},  # Volume Shadow Copy
+            'backupexec.exe': {'services.exe', 'explorer.exe'},
+            'arcserve.exe': {'services.exe'},
+            
+            # ===== MONITORING AND MANAGEMENT =====
+            'teamviewer.exe': {'services.exe', 'explorer.exe'},
+            'teamviewer_service.exe': {'services.exe'},
+            'solarwinds.exe': {'services.exe'},
+            'nagios.exe': {'services.exe'},
+            'zabbix_agent.exe': {'services.exe'},
+            'prtg.exe': {'services.exe'},
+            
+            # ===== REMOTE ACCESS =====
+            'rdpclip.exe': {'services.exe'},
+            'rdpinit.exe': {'services.exe'},
+            'mstsc.exe': {'explorer.exe'},
+            'termsrv.exe': {'services.exe'},
+            
+            # ===== FILE SHARING AND SYNC =====
+            'dropbox.exe': {'explorer.exe'},
+            'googledrivesync.exe': {'explorer.exe'},
+            'onedrive.exe': {'explorer.exe'},
+            'boxsync.exe': {'explorer.exe'},
+            'megasync.exe': {'explorer.exe'},
+            
+            # ===== MEDIA PLAYERS =====
+            'wmplayer.exe': {'explorer.exe'},
+            'itunes.exe': {'explorer.exe'},
+            'spotify.exe': {'explorer.exe'},
+            'vlc.exe': {'explorer.exe'},
+            'potplayer.exe': {'explorer.exe'},
+            'winamp.exe': {'explorer.exe'},
+            
+            # ===== ARCHIVE TOOLS =====
+            'winrar.exe': {'explorer.exe'},
+            '7z.exe': {'explorer.exe'},
+            'winzip.exe': {'explorer.exe'},
+            'winzip64.exe': {'explorer.exe'},
+            
+            # ===== PDF READERS =====
+            'acrobat.exe': {'explorer.exe'},
+            'acrord32.exe': {'explorer.exe'},
+            'foxitreader.exe': {'explorer.exe'},
+            'sumatrapdf.exe': {'explorer.exe'},
+            
+            # ===== IMAGE VIEWERS =====
+            'photos.exe': {'explorer.exe'},
+            'mspview.exe': {'explorer.exe'},
+            'irfanview.exe': {'explorer.exe'},
+            'xnview.exe': {'explorer.exe'},
+            
+            # ===== SYSTEM CLEANING AND OPTIMIZATION =====
+            'ccleaner.exe': {'explorer.exe'},
+            'ccleaner64.exe': {'explorer.exe'},
+            'defraggler.exe': {'explorer.exe'},
+            'recuva.exe': {'explorer.exe'},
+            'glaryutilities.exe': {'explorer.exe'},
+            'iobituninstaller.exe': {'explorer.exe'},
+            
+            # ===== GAMING =====
+            'steam.exe': {'explorer.exe'},
+            'steamservice.exe': {'services.exe'},
+            'epicgameslauncher.exe': {'explorer.exe'},
+            'battlenet.exe': {'explorer.exe'},
+            'origin.exe': {'explorer.exe'},
+            'galaxyclient.exe': {'explorer.exe'},
+            
+            # ===== COMMUNICATION =====
+            'skype.exe': {'explorer.exe'},
+            'discord.exe': {'explorer.exe'},
+            'slack.exe': {'explorer.exe'},
+            'zoom.exe': {'explorer.exe'},
+            'teams.exe': {'explorer.exe'},
+            'whatsapp.exe': {'explorer.exe'},
+            'telegram.exe': {'explorer.exe'},
+            
+            # ===== CLOUD STORAGE =====
+            'amazon drive.exe': {'explorer.exe'},
+            'icloud.exe': {'explorer.exe'},
+            'pcloud.exe': {'explorer.exe'},
+            'sync.com.exe': {'explorer.exe'},
+            
+            # ===== VIRTUAL MACHINES =====
+            'virtualbox.exe': {'explorer.exe'},
+            'vmware.exe': {'explorer.exe'},
+            'hyper-v.exe': {'services.exe'},
+            'qemu.exe': {'explorer.exe'},
+            
+            # ===== PROGRAMMING LANGUAGES =====
+            'python.exe': {'explorer.exe', 'cmd.exe', 'powershell.exe'},
+            'pythonw.exe': {'explorer.exe', 'svchost.exe'},
+            'node.exe': {'explorer.exe', 'cmd.exe'},
+            'npm.exe': {'cmd.exe'},
+            'java.exe': {'explorer.exe', 'services.exe', 'cmd.exe'},
+            'javaw.exe': {'explorer.exe'},
+            'perl.exe': {'explorer.exe', 'cmd.exe'},
+            'ruby.exe': {'explorer.exe', 'cmd.exe'},
+            'php.exe': {'explorer.exe', 'cmd.exe'},
+            'go.exe': {'explorer.exe', 'cmd.exe'},
+            'rustc.exe': {'explorer.exe', 'cmd.exe'},
+            
+            # ===== BUILD TOOLS =====
+            'make.exe': {'cmd.exe'},
+            'cmake.exe': {'cmd.exe'},
+            'gradle.exe': {'cmd.exe'},
+            'maven.exe': {'cmd.exe'},
+            'ant.exe': {'cmd.exe'},
+            'scons.exe': {'cmd.exe'},
+            
+            # ===== VERSION CONTROL =====
+            'git.exe': {'cmd.exe', 'explorer.exe'},
+            'svn.exe': {'cmd.exe'},
+            'hg.exe': {'cmd.exe'},
+            'tfs.exe': {'cmd.exe'},
+        }
+        
+        # Check if this child process has known legitimate parents
+        if child_name in legitimate_relationships:
+            valid_parents = legitimate_relationships[child_name]
+            
+            # Check if current parent is in the valid set
+            if parent_name in valid_parents:
+                return {
+                    'status': 'LEGITIMATE',
+                    'severity': 'INFO',
+                    'evidence': f'Known legitimate relationship: {child_info["name"]} -> {child_info["parent_name"]}',
+                    'technique': 'Normal Execution',
+                    'confidence': 'HIGH'
+                }
+            
+            # Special case: svchost.exe can be parent to many legitimate children
+            if parent_name == 'svchost.exe' and child_name not in ['explorer.exe', 'winlogon.exe', 'csrss.exe', 'smss.exe']:
+                return {
+                    'status': 'LEGITIMATE',
+                    'severity': 'INFO',
+                    'evidence': 'Legitimate service host child process',
+                    'technique': 'Normal Execution',
+                    'confidence': 'HIGH'
+                }
+            
+            # Special case: services.exe can spawn many legitimate processes
+            if parent_name == 'services.exe' and not child_name.endswith('.exe'):
+                return {
+                    'status': 'LEGITIMATE',
+                    'severity': 'INFO',
+                    'evidence': 'Legitimate service child process',
+                    'technique': 'Normal Execution',
+                    'confidence': 'HIGH'
+                }
+            
+            # Special case: explorer.exe spawning user applications
+            if parent_name == 'explorer.exe' and child_name.endswith('.exe'):
+                return {
+                    'status': 'LEGITIMATE',
+                    'severity': 'INFO',
+                    'evidence': 'User-launched application',
+                    'technique': 'Normal Execution',
+                    'confidence': 'HIGH'
+                }
+        
+        return None
+    
+    def _check_malware_patterns(self, child_info: Dict, parent_info: Dict) -> Optional[Dict[str, Any]]:
+        """Check for common malware parent-child patterns"""
+        child_name = child_info['name'].lower()
+        parent_name = parent_info['name'].lower()
+        
+        # Common malware patterns
+        suspicious_patterns = [
+            # System processes spawning unusual children
+            ('lsass.exe', ['cmd.exe', 'powershell.exe', 'wscript.exe']),
+            ('services.exe', ['rundll32.exe', 'regsvr32.exe', 'mshta.exe']),
+            ('svchost.exe', ['cmd.exe', 'powershell.exe', 'wscript.exe', 'mshta.exe']),
+            ('explorer.exe', ['rundll32.exe', 'regsvr32.exe', 'mshta.exe']),
+            
+            # Unusual parents for common processes
+            ('winword.exe', ['cmd.exe', 'powershell.exe', 'wscript.exe']),
+            ('excel.exe', ['cmd.exe', 'powershell.exe', 'wscript.exe']),
+            ('powerpnt.exe', ['cmd.exe', 'powershell.exe', 'wscript.exe']),
+            ('outlook.exe', ['cmd.exe', 'powershell.exe', 'wscript.exe']),
+            
+            # Script hosts spawning unusual children
+            ('wscript.exe', ['cmd.exe', 'powershell.exe']),
+            ('cscript.exe', ['cmd.exe', 'powershell.exe']),
+            ('mshta.exe', ['cmd.exe', 'powershell.exe']),
+        ]
+        
+        for suspicious_parent, suspicious_children in suspicious_patterns:
+            if parent_name == suspicious_parent and child_name in suspicious_children:
+                return {
+                    'status': 'SUSPICIOUS',
+                    'severity': 'HIGH',
+                    'evidence': f'Suspicious pattern: {parent_info["name"]} -> {child_info["name"]}',
+                    'technique': 'Living Off The Land (LOLBins)',
+                    'confidence': 'MEDIUM'
+                }
+        
+        return None
     
     def _is_valid_parent(self, ppid: int, processes: Dict) -> bool:
         """Check if parent process exists and is valid"""
@@ -201,66 +636,36 @@ class PSParent(interfaces.plugins.PluginInterface):
         if child_session == -1 or parent_session == -1:
             return True
         
-        child_name = child_info['name'].lower()
-        parent_name = parent_info['name'].lower()
-        
         # Services can create processes in different sessions
-        if parent_name in ['services.exe', 'svchost.exe', 'wininit.exe']:
+        if parent_info['name'].lower() in ['services.exe', 'svchost.exe']:
             return True
         
         # Winlogon can create processes in user sessions
-        if parent_name in ['winlogon.exe', 'userinit.exe']:
+        if parent_info['name'].lower() == 'winlogon.exe':
             return True
         
-        # smss.exe creates session-specific processes
-        if parent_name == 'smss.exe':
-            return True
-        
-        # Per-session system processes
-        if child_name in ['dwm.exe', 'csrss.exe', 'winlogon.exe', 'logonui.exe']:
-            return True
-        
-        # Task Scheduler can launch processes in different sessions
-        if parent_name in ['taskeng.exe', 'taskhostw.exe', 'taskhostt.exe']:
-            return True
-        
-        # COM surrogate and DLL host processes
-        if parent_name in ['dllhost.exe', 'rundll32.exe']:
+        # Session Manager can create processes across sessions
+        if parent_info['name'].lower() == 'smss.exe':
             return True
         
         # Normally, child should be in same session as parent
         return child_session == parent_session
     
-    def _check_integrity_violation(self, child_info: Dict, parent_info: Dict) -> Optional[Dict[str, Any]]:
-        """Check integrity level consistency - only flag if we have reliable data"""
+    def _is_integrity_consistent(self, child_info: Dict, parent_info: Dict) -> bool:
+        """Check integrity level consistency"""
         child_integrity = child_info.get('integrity', 'Unknown')
         parent_integrity = parent_info.get('integrity', 'Unknown')
         
-        # Skip entirely if integrity info unavailable or unreliable
+        # Skip if integrity info unavailable
         if child_integrity == 'Unknown' or parent_integrity == 'Unknown':
-            return None
+            return True
         
-        # Define integrity hierarchy
+        # Child should not have higher integrity than parent
         integrity_levels = {'Low': 0, 'Medium': 1, 'High': 2, 'System': 3}
-        child_level = integrity_levels.get(child_integrity, -1)
-        parent_level = integrity_levels.get(parent_integrity, -1)
+        child_level = integrity_levels.get(child_integrity, 0)
+        parent_level = integrity_levels.get(parent_integrity, 0)
         
-        # Skip if we couldn't parse levels
-        if child_level == -1 or parent_level == -1:
-            return None
-        
-        # Allow same level or lower (child inheriting or being lowered)
-        if child_level <= parent_level:
-            return None
-        
-        # Child has higher integrity than parent - suspicious
-        return {
-            'status': 'SUSPICIOUS', 
-            'severity': 'HIGH',
-            'evidence': f'Integrity violation: Child({child_integrity}) > Parent({parent_integrity})',
-            'technique': 'Token Manipulation',
-            'confidence': 'HIGH'
-        }
+        return child_level <= parent_level
     
     def _is_time_consistent(self, child_info: Dict, parent_info: Dict) -> bool:
         """Check process creation time consistency"""
@@ -274,217 +679,42 @@ class PSParent(interfaces.plugins.PluginInterface):
         # Child should never be created before parent
         return child_time >= parent_time
     
-    def _check_protection_violation(self, child_info: Dict, parent_info: Dict) -> Optional[Dict[str, Any]]:
-        """Check protected process consistency - only flag if detection is reliable"""
+    def _is_protection_consistent(self, child_info: Dict, parent_info: Dict) -> bool:
+        """Check protected process consistency"""
         child_protected = child_info.get('is_protected', False)
         parent_protected = parent_info.get('is_protected', False)
         
-        # Only flag if we're certain the child is protected and parent is not
-        # Since our detection may be unreliable, be conservative
+        # Protected process should not be spawned by unprotected process
         if child_protected and not parent_protected:
-            # Additional validation: check if this is a known legitimate scenario
-            child_name = child_info['name'].lower()
-            parent_name = parent_info['name'].lower()
-            
-            # Some protected processes legitimately spawned by unprotected parents
-            # (e.g., services.exe spawning protected services)
-            if parent_name in ['services.exe', 'wininit.exe', 'smss.exe']:
-                return None
-            
-            return {
-                'status': 'SUSPICIOUS',
-                'severity': 'CRITICAL',
-                'evidence': f'Protected process {child_name} spawned by unprotected {parent_name}',
-                'technique': 'Protected Process Bypass',
-                'confidence': 'MEDIUM'  # Lower confidence due to detection reliability
-            }
+            return False
         
-        return None
+        return True
     
     def _check_system_process_anomaly(self, child_info: Dict, parent_info: Dict) -> Optional[Dict[str, Any]]:
         """Check for system process anomalies using dynamic rules"""
         child_name = child_info['name'].lower()
         parent_name = parent_info['name'].lower()
         
-        # Critical system processes with strict parent requirements
-        critical_system_processes = {
-            'csrss.exe': {'smss.exe'},
-            'wininit.exe': {'smss.exe'},
-            'smss.exe': {'system', 'ntoskrnl.exe'},
-        }
-        
-        # Important system processes with known valid parents
-        # Comprehensive list of Windows system processes and their legitimate parents
+        # System processes that should only have specific parents
         system_processes = {
-            # Core Windows processes
             'lsass.exe': {'wininit.exe'},
+            'csrss.exe': {'smss.exe'}, 
+            'wininit.exe': {'smss.exe'},
             'services.exe': {'wininit.exe'},
-            'winlogon.exe': {'smss.exe'},
-            
-            # Session Manager and related
-            'lsm.exe': {'wininit.exe'},  # Local Session Manager
-            'lsaiso.exe': {'wininit.exe'},  # LSA Isolated
-            
-            # User session processes
-            'userinit.exe': {'winlogon.exe'},
-            'dwm.exe': {'svchost.exe', 'winlogon.exe'},  # Desktop Window Manager
-            'logonui.exe': {'winlogon.exe'},
-            'consent.exe': {'svchost.exe'},  # UAC consent UI
-            
-            # Explorer and shell
-            'explorer.exe': {'userinit.exe', 'explorer.exe'},  # Can spawn itself
-            'sihost.exe': {'svchost.exe'},  # Shell Infrastructure Host
-            'shellexperiencehost.exe': {'svchost.exe'},
-            'startmenuexperiencehost.exe': {'svchost.exe'},
-            'searchindexer.exe': {'services.exe'},
-            'searchprotocolhost.exe': {'searchindexer.exe'},
-            'searchfilterhost.exe': {'searchindexer.exe'},
-            
-            # Service hosts and related
-            'svchost.exe': {'services.exe'},
-            'taskhost.exe': {'svchost.exe'},
-            'taskhostw.exe': {'svchost.exe'},
-            'taskhostt.exe': {'svchost.exe'},
-            
-            # Task Scheduler
-            'taskeng.exe': {'services.exe'},  # Task Scheduler Engine (older)
-            'schedule.exe': {'services.exe'},
-            
-            # Windows Update and maintenance
-            'wuauclt.exe': {'svchost.exe'},
-            'trustedinstaller.exe': {'services.exe'},
-            'tiworker.exe': {'svchost.exe'},
-            'musnotification.exe': {'svchost.exe'},
-            
-            # Security and protection
-            'msmpeng.exe': {'services.exe', 'svchost.exe'},  # Windows Defender
-            'mssense.exe': {'services.exe', 'svchost.exe'},  # Defender ATP
-            'securityhealthservice.exe': {'services.exe', 'svchost.exe'},
-            'smartscreen.exe': {'svchost.exe'},
-            
-            # Audio and multimedia
-            'audiodg.exe': {'svchost.exe'},  # Windows Audio Device Graph
-            
-            # Network and connectivity
-            'dashost.exe': {'svchost.exe'},  # Device Association Framework
-            'ngen.exe': {'mscorsvw.exe', 'services.exe'},
-            'mscorsvw.exe': {'services.exe'},
-            
-            # Runtime and hosting
-            'runtimebroker.exe': {'svchost.exe'},
-            'dllhost.exe': {'svchost.exe', 'explorer.exe'},
-            'com.surrogate': {'svchost.exe', 'dllhost.exe'},
-            
-            # System utilities
-            'spoolsv.exe': {'services.exe'},  # Print Spooler
-            'sppsvc.exe': {'services.exe'},  # Software Protection Platform
-            'ctfmon.exe': {'explorer.exe', 'svchost.exe'},  # Text Input
-            
-            # Windows Management
-            'wmiprvse.exe': {'svchost.exe'},  # WMI Provider Host
-            'wmiapsrv.exe': {'svchost.exe'},
-            'unsecapp.exe': {'svchost.exe'},
-            
-            # Registry
-            'conhost.exe': {'csrss.exe', 'explorer.exe', 'cmd.exe', 'powershell.exe', 'services.exe'},
-            
-            # Fonts and display
-            'fontdrvhost.exe': {'dwm.exe', 'csrss.exe'},
-            
-            # Application Frame Host
-            'applicationframehost.exe': {'svchost.exe'},
-            
-            # System Settings and Configuration
-            'systemsettings.exe': {'explorer.exe', 'sihost.exe'},
-            'systemsettingsbroker.exe': {'svchost.exe'},
-            
-            # User Account Control
-            'consent.exe': {'svchost.exe'},
-            
-            # Windows Store and Apps
-            'wsappx': {'svchost.exe'},
-            
-            # Background Task Host
-            'backgroundtaskhost.exe': {'svchost.exe'},
-            
-            # Compatibility Telemetry
-            'compattelrunner.exe': {'svchost.exe'},
-            
-            # Windows Error Reporting
-            'werfault.exe': {'svchost.exe', 'services.exe'},
-            'wermgr.exe': {'svchost.exe'},
-            
-            # Memory Compression
-            'system': {''},  # Special case for System process
-            
-            # Modern Apps and UWP
-            'mobsync.exe': {'svchost.exe'},
-            
-            # TPM and Security
-            'tpautomatsvc.exe': {'services.exe'},
-            
-            # BitLocker
-            'fvenotify.exe': {'explorer.exe'},
-            
-            # Windows Time Service
-            'vssvc.exe': {'services.exe'},  # Volume Shadow Copy
-            
-            # BITS (Background Intelligent Transfer)
-            'bitsadmin.exe': {'svchost.exe'},
-            
-            # Certificate Services
-            'csrss.exe': {'smss.exe'},
-            
-            # Delivery Optimization
-            'dosvc.exe': {'services.exe'},
-            
-            # Microsoft Edge WebView
-            'msedgewebview2.exe': {'explorer.exe', 'svchost.exe'},
-            
-            # Phone Link / Your Phone
-            'yourphone.exe': {'explorer.exe', 'sihost.exe'},
-            
-            # Windows Installer
-            'msiexec.exe': {'services.exe', 'explorer.exe'},
-            
-            # Group Policy
-            'gpscript.exe': {'svchost.exe'},
-            
-            # Windows Licensing
-            'licensingui.exe': {'explorer.exe'},
-            
-            # Cloud Experience Host
-            'cloudexperiencehostbroker.exe': {'svchost.exe'},
+            'smss.exe': {'system', 'smss.exe'},  # Can be self-spawned
+            'winlogon.exe': {'smss.exe'}
         }
         
-        # Check critical processes first (high confidence)
-        for sys_proc, valid_parents in critical_system_processes.items():
-            if child_name == sys_proc:
+        for sys_proc, valid_parents in system_processes.items():
+            if child_name == sys_proc.lower():
                 valid_parents_lower = {p.lower() for p in valid_parents}
                 if parent_name not in valid_parents_lower:
                     return {
                         'status': 'MALICIOUS',
                         'severity': 'CRITICAL',
-                        'evidence': f'Critical system process {child_info["name"]} has invalid parent {parent_info["name"]}',
+                        'evidence': f'System process {child_info["name"]} has invalid parent {parent_info["name"]}',
                         'technique': 'PPID Spoofing / Process Hollowing',
                         'confidence': 'HIGH'
-                    }
-        
-        # Check standard system processes (medium confidence)
-        for sys_proc, valid_parents in system_processes.items():
-            if child_name == sys_proc:
-                valid_parents_lower = {p.lower() for p in valid_parents}
-                # Skip empty parent set (like for 'system')
-                if not valid_parents_lower or '' in valid_parents_lower:
-                    continue
-                if parent_name not in valid_parents_lower:
-                    # Lower severity for less critical processes
-                    return {
-                        'status': 'SUSPICIOUS',
-                        'severity': 'HIGH',
-                        'evidence': f'System process {child_info["name"]} has unexpected parent {parent_info["name"]}',
-                        'technique': 'Possible PPID Spoofing',
-                        'confidence': 'MEDIUM'
                     }
         
         return None
@@ -522,34 +752,23 @@ class PSParent(interfaces.plugins.PluginInterface):
         return -1
     
     def _get_integrity_level(self, proc) -> str:
-        """Get process integrity level - returns Unknown if unreliable"""
+        """Get process integrity level"""
         try:
-            # Attempt to get integrity level from token
-            # This is a simplified version - real implementation needs token parsing
-            if hasattr(proc, 'Token') and proc.Token:
-                # Without proper token parsing, we cannot reliably determine integrity
-                # Return Unknown to avoid false positives
-                return "Unknown"
+            # This would require token parsing - simplified for example
+            if hasattr(proc, 'Token'):
+                return "Medium"  # Default assumption
         except:
             pass
         return "Unknown"
     
     def _is_protected_process(self, proc) -> bool:
-        """Check if process is protected - conservative detection"""
+        """Check if process is protected"""
         try:
             # Check for protected process flags
-            if hasattr(proc, 'Protection'):
-                # Parse PS_PROTECTION structure if available
-                protection = proc.Protection
-                if hasattr(protection, 'Level') and int(protection.Level) > 0:
-                    return True
-            
-            # Alternative: Check Flags field (correct field name)
             if hasattr(proc, 'Flags'):
-                flags = int(proc.Flags)
-                # Check PS_PROCESS_FLAGS for protected process bit
-                # This is simplified - actual flag values depend on Windows version
-                return flags & 0x00000800 != 0  # PS_PROTECTED_PROCESS flag
+                flags = int(proc.Fields)
+                # Simplified check - real implementation would parse PS_PROTECTION
+                return flags & 0x00000001 != 0  # Basic flag check
         except:
             pass
         return False
