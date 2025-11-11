@@ -152,15 +152,10 @@ class PSParent(interfaces.plugins.PluginInterface):
             })
             return analysis
         
-        # Rule 3: Check integrity level inheritance
-        if not self._is_integrity_consistent(proc_info, parent_info):
-            analysis.update({
-                'status': 'SUSPICIOUS', 
-                'severity': 'HIGH',
-                'evidence': 'Integrity level violation',
-                'technique': 'Token Manipulation',
-                'confidence': 'HIGH'
-            })
+        # Rule 3: Check integrity level inheritance (ONLY if both are available)
+        integrity_violation = self._check_integrity_violation(proc_info, parent_info)
+        if integrity_violation:
+            analysis.update(integrity_violation)
             return analysis
         
         # Rule 4: Check creation time consistency
@@ -174,15 +169,10 @@ class PSParent(interfaces.plugins.PluginInterface):
             })
             return analysis
         
-        # Rule 5: Check protected process violations
-        if not self._is_protection_consistent(proc_info, parent_info):
-            analysis.update({
-                'status': 'SUSPICIOUS',
-                'severity': 'CRITICAL',
-                'evidence': 'Protected process spawned by unprotected parent',
-                'technique': 'Protected Process Bypass',
-                'confidence': 'HIGH'
-            })
+        # Rule 5: Check protected process violations (ONLY if detection is reliable)
+        protection_violation = self._check_protection_violation(proc_info, parent_info)
+        if protection_violation:
+            analysis.update(protection_violation)
             return analysis
         
         # Rule 6: Check for system process anomalies
@@ -211,32 +201,66 @@ class PSParent(interfaces.plugins.PluginInterface):
         if child_session == -1 or parent_session == -1:
             return True
         
+        child_name = child_info['name'].lower()
+        parent_name = parent_info['name'].lower()
+        
         # Services can create processes in different sessions
-        if parent_info['name'].lower() == 'services.exe':
+        if parent_name in ['services.exe', 'svchost.exe', 'wininit.exe']:
             return True
         
         # Winlogon can create processes in user sessions
-        if parent_info['name'].lower() == 'winlogon.exe':
+        if parent_name in ['winlogon.exe', 'userinit.exe']:
+            return True
+        
+        # smss.exe creates session-specific processes
+        if parent_name == 'smss.exe':
+            return True
+        
+        # Per-session system processes
+        if child_name in ['dwm.exe', 'csrss.exe', 'winlogon.exe', 'logonui.exe']:
+            return True
+        
+        # Task Scheduler can launch processes in different sessions
+        if parent_name in ['taskeng.exe', 'taskhostw.exe', 'taskhostt.exe']:
+            return True
+        
+        # COM surrogate and DLL host processes
+        if parent_name in ['dllhost.exe', 'rundll32.exe']:
             return True
         
         # Normally, child should be in same session as parent
         return child_session == parent_session
     
-    def _is_integrity_consistent(self, child_info: Dict, parent_info: Dict) -> bool:
-        """Check integrity level consistency"""
+    def _check_integrity_violation(self, child_info: Dict, parent_info: Dict) -> Optional[Dict[str, Any]]:
+        """Check integrity level consistency - only flag if we have reliable data"""
         child_integrity = child_info.get('integrity', 'Unknown')
         parent_integrity = parent_info.get('integrity', 'Unknown')
         
-        # Skip if integrity info unavailable
+        # Skip entirely if integrity info unavailable or unreliable
         if child_integrity == 'Unknown' or parent_integrity == 'Unknown':
-            return True
+            return None
         
-        # Child should not have higher integrity than parent
+        # Define integrity hierarchy
         integrity_levels = {'Low': 0, 'Medium': 1, 'High': 2, 'System': 3}
-        child_level = integrity_levels.get(child_integrity, 0)
-        parent_level = integrity_levels.get(parent_integrity, 0)
+        child_level = integrity_levels.get(child_integrity, -1)
+        parent_level = integrity_levels.get(parent_integrity, -1)
         
-        return child_level <= parent_level
+        # Skip if we couldn't parse levels
+        if child_level == -1 or parent_level == -1:
+            return None
+        
+        # Allow same level or lower (child inheriting or being lowered)
+        if child_level <= parent_level:
+            return None
+        
+        # Child has higher integrity than parent - suspicious
+        return {
+            'status': 'SUSPICIOUS', 
+            'severity': 'HIGH',
+            'evidence': f'Integrity violation: Child({child_integrity}) > Parent({parent_integrity})',
+            'technique': 'Token Manipulation',
+            'confidence': 'HIGH'
+        }
     
     def _is_time_consistent(self, child_info: Dict, parent_info: Dict) -> bool:
         """Check process creation time consistency"""
@@ -250,42 +274,217 @@ class PSParent(interfaces.plugins.PluginInterface):
         # Child should never be created before parent
         return child_time >= parent_time
     
-    def _is_protection_consistent(self, child_info: Dict, parent_info: Dict) -> bool:
-        """Check protected process consistency"""
+    def _check_protection_violation(self, child_info: Dict, parent_info: Dict) -> Optional[Dict[str, Any]]:
+        """Check protected process consistency - only flag if detection is reliable"""
         child_protected = child_info.get('is_protected', False)
         parent_protected = parent_info.get('is_protected', False)
         
-        # Protected process should not be spawned by unprotected process
+        # Only flag if we're certain the child is protected and parent is not
+        # Since our detection may be unreliable, be conservative
         if child_protected and not parent_protected:
-            return False
+            # Additional validation: check if this is a known legitimate scenario
+            child_name = child_info['name'].lower()
+            parent_name = parent_info['name'].lower()
+            
+            # Some protected processes legitimately spawned by unprotected parents
+            # (e.g., services.exe spawning protected services)
+            if parent_name in ['services.exe', 'wininit.exe', 'smss.exe']:
+                return None
+            
+            return {
+                'status': 'SUSPICIOUS',
+                'severity': 'CRITICAL',
+                'evidence': f'Protected process {child_name} spawned by unprotected {parent_name}',
+                'technique': 'Protected Process Bypass',
+                'confidence': 'MEDIUM'  # Lower confidence due to detection reliability
+            }
         
-        return True
+        return None
     
     def _check_system_process_anomaly(self, child_info: Dict, parent_info: Dict) -> Optional[Dict[str, Any]]:
         """Check for system process anomalies using dynamic rules"""
         child_name = child_info['name'].lower()
         parent_name = parent_info['name'].lower()
         
-        # System processes that should only have specific parents
-        system_processes = {
-            'lsass.exe': {'wininit.exe'},
-            'csrss.exe': {'smss.exe'}, 
+        # Critical system processes with strict parent requirements
+        critical_system_processes = {
+            'csrss.exe': {'smss.exe'},
             'wininit.exe': {'smss.exe'},
-            'services.exe': {'wininit.exe'},
-            'smss.exe': {'system'},
-            'winlogon.exe': {'smss.exe'}
+            'smss.exe': {'system', 'ntoskrnl.exe'},
         }
         
-        for sys_proc, valid_parents in system_processes.items():
-            if child_name == sys_proc.lower():
+        # Important system processes with known valid parents
+        # Comprehensive list of Windows system processes and their legitimate parents
+        system_processes = {
+            # Core Windows processes
+            'lsass.exe': {'wininit.exe'},
+            'services.exe': {'wininit.exe'},
+            'winlogon.exe': {'smss.exe'},
+            
+            # Session Manager and related
+            'lsm.exe': {'wininit.exe'},  # Local Session Manager
+            'lsaiso.exe': {'wininit.exe'},  # LSA Isolated
+            
+            # User session processes
+            'userinit.exe': {'winlogon.exe'},
+            'dwm.exe': {'svchost.exe', 'winlogon.exe'},  # Desktop Window Manager
+            'logonui.exe': {'winlogon.exe'},
+            'consent.exe': {'svchost.exe'},  # UAC consent UI
+            
+            # Explorer and shell
+            'explorer.exe': {'userinit.exe', 'explorer.exe'},  # Can spawn itself
+            'sihost.exe': {'svchost.exe'},  # Shell Infrastructure Host
+            'shellexperiencehost.exe': {'svchost.exe'},
+            'startmenuexperiencehost.exe': {'svchost.exe'},
+            'searchindexer.exe': {'services.exe'},
+            'searchprotocolhost.exe': {'searchindexer.exe'},
+            'searchfilterhost.exe': {'searchindexer.exe'},
+            
+            # Service hosts and related
+            'svchost.exe': {'services.exe'},
+            'taskhost.exe': {'svchost.exe'},
+            'taskhostw.exe': {'svchost.exe'},
+            'taskhostt.exe': {'svchost.exe'},
+            
+            # Task Scheduler
+            'taskeng.exe': {'services.exe'},  # Task Scheduler Engine (older)
+            'schedule.exe': {'services.exe'},
+            
+            # Windows Update and maintenance
+            'wuauclt.exe': {'svchost.exe'},
+            'trustedinstaller.exe': {'services.exe'},
+            'tiworker.exe': {'svchost.exe'},
+            'musnotification.exe': {'svchost.exe'},
+            
+            # Security and protection
+            'msmpeng.exe': {'services.exe', 'svchost.exe'},  # Windows Defender
+            'mssense.exe': {'services.exe', 'svchost.exe'},  # Defender ATP
+            'securityhealthservice.exe': {'services.exe', 'svchost.exe'},
+            'smartscreen.exe': {'svchost.exe'},
+            
+            # Audio and multimedia
+            'audiodg.exe': {'svchost.exe'},  # Windows Audio Device Graph
+            
+            # Network and connectivity
+            'dashost.exe': {'svchost.exe'},  # Device Association Framework
+            'ngen.exe': {'mscorsvw.exe', 'services.exe'},
+            'mscorsvw.exe': {'services.exe'},
+            
+            # Runtime and hosting
+            'runtimebroker.exe': {'svchost.exe'},
+            'dllhost.exe': {'svchost.exe', 'explorer.exe'},
+            'com.surrogate': {'svchost.exe', 'dllhost.exe'},
+            
+            # System utilities
+            'spoolsv.exe': {'services.exe'},  # Print Spooler
+            'sppsvc.exe': {'services.exe'},  # Software Protection Platform
+            'ctfmon.exe': {'explorer.exe', 'svchost.exe'},  # Text Input
+            
+            # Windows Management
+            'wmiprvse.exe': {'svchost.exe'},  # WMI Provider Host
+            'wmiapsrv.exe': {'svchost.exe'},
+            'unsecapp.exe': {'svchost.exe'},
+            
+            # Registry
+            'conhost.exe': {'csrss.exe', 'explorer.exe', 'cmd.exe', 'powershell.exe', 'services.exe'},
+            
+            # Fonts and display
+            'fontdrvhost.exe': {'dwm.exe', 'csrss.exe'},
+            
+            # Application Frame Host
+            'applicationframehost.exe': {'svchost.exe'},
+            
+            # System Settings and Configuration
+            'systemsettings.exe': {'explorer.exe', 'sihost.exe'},
+            'systemsettingsbroker.exe': {'svchost.exe'},
+            
+            # User Account Control
+            'consent.exe': {'svchost.exe'},
+            
+            # Windows Store and Apps
+            'wsappx': {'svchost.exe'},
+            
+            # Background Task Host
+            'backgroundtaskhost.exe': {'svchost.exe'},
+            
+            # Compatibility Telemetry
+            'compattelrunner.exe': {'svchost.exe'},
+            
+            # Windows Error Reporting
+            'werfault.exe': {'svchost.exe', 'services.exe'},
+            'wermgr.exe': {'svchost.exe'},
+            
+            # Memory Compression
+            'system': {''},  # Special case for System process
+            
+            # Modern Apps and UWP
+            'mobsync.exe': {'svchost.exe'},
+            
+            # TPM and Security
+            'tpautomatsvc.exe': {'services.exe'},
+            
+            # BitLocker
+            'fvenotify.exe': {'explorer.exe'},
+            
+            # Windows Time Service
+            'vssvc.exe': {'services.exe'},  # Volume Shadow Copy
+            
+            # BITS (Background Intelligent Transfer)
+            'bitsadmin.exe': {'svchost.exe'},
+            
+            # Certificate Services
+            'csrss.exe': {'smss.exe'},
+            
+            # Delivery Optimization
+            'dosvc.exe': {'services.exe'},
+            
+            # Microsoft Edge WebView
+            'msedgewebview2.exe': {'explorer.exe', 'svchost.exe'},
+            
+            # Phone Link / Your Phone
+            'yourphone.exe': {'explorer.exe', 'sihost.exe'},
+            
+            # Windows Installer
+            'msiexec.exe': {'services.exe', 'explorer.exe'},
+            
+            # Group Policy
+            'gpscript.exe': {'svchost.exe'},
+            
+            # Windows Licensing
+            'licensingui.exe': {'explorer.exe'},
+            
+            # Cloud Experience Host
+            'cloudexperiencehostbroker.exe': {'svchost.exe'},
+        }
+        
+        # Check critical processes first (high confidence)
+        for sys_proc, valid_parents in critical_system_processes.items():
+            if child_name == sys_proc:
                 valid_parents_lower = {p.lower() for p in valid_parents}
                 if parent_name not in valid_parents_lower:
                     return {
                         'status': 'MALICIOUS',
                         'severity': 'CRITICAL',
-                        'evidence': f'System process {child_info["name"]} has invalid parent {parent_info["name"]}',
+                        'evidence': f'Critical system process {child_info["name"]} has invalid parent {parent_info["name"]}',
                         'technique': 'PPID Spoofing / Process Hollowing',
                         'confidence': 'HIGH'
+                    }
+        
+        # Check standard system processes (medium confidence)
+        for sys_proc, valid_parents in system_processes.items():
+            if child_name == sys_proc:
+                valid_parents_lower = {p.lower() for p in valid_parents}
+                # Skip empty parent set (like for 'system')
+                if not valid_parents_lower or '' in valid_parents_lower:
+                    continue
+                if parent_name not in valid_parents_lower:
+                    # Lower severity for less critical processes
+                    return {
+                        'status': 'SUSPICIOUS',
+                        'severity': 'HIGH',
+                        'evidence': f'System process {child_info["name"]} has unexpected parent {parent_info["name"]}',
+                        'technique': 'Possible PPID Spoofing',
+                        'confidence': 'MEDIUM'
                     }
         
         return None
@@ -323,23 +522,34 @@ class PSParent(interfaces.plugins.PluginInterface):
         return -1
     
     def _get_integrity_level(self, proc) -> str:
-        """Get process integrity level"""
+        """Get process integrity level - returns Unknown if unreliable"""
         try:
-            # This would require token parsing - simplified for example
-            if hasattr(proc, 'Token'):
-                return "Medium"  # Default assumption
+            # Attempt to get integrity level from token
+            # This is a simplified version - real implementation needs token parsing
+            if hasattr(proc, 'Token') and proc.Token:
+                # Without proper token parsing, we cannot reliably determine integrity
+                # Return Unknown to avoid false positives
+                return "Unknown"
         except:
             pass
         return "Unknown"
     
     def _is_protected_process(self, proc) -> bool:
-        """Check if process is protected"""
+        """Check if process is protected - conservative detection"""
         try:
             # Check for protected process flags
+            if hasattr(proc, 'Protection'):
+                # Parse PS_PROTECTION structure if available
+                protection = proc.Protection
+                if hasattr(protection, 'Level') and int(protection.Level) > 0:
+                    return True
+            
+            # Alternative: Check Flags field (correct field name)
             if hasattr(proc, 'Flags'):
-                flags = int(proc.Fields)
-                # Simplified check - real implementation would parse PS_PROTECTION
-                return flags & 0x00000001 != 0  # Basic flag check
+                flags = int(proc.Flags)
+                # Check PS_PROCESS_FLAGS for protected process bit
+                # This is simplified - actual flag values depend on Windows version
+                return flags & 0x00000800 != 0  # PS_PROTECTED_PROCESS flag
         except:
             pass
         return False
