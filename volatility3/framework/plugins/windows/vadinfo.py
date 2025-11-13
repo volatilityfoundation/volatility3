@@ -84,6 +84,11 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 description="Process offset in the physical address space",
                 optional=True,
             ),
+            requirements.BooleanRequirement(
+                name="physical-offsets",
+                description="List processes with physical offsets instead of virtual offsets.",
+                optional=True,
+            ),
         ]
 
     @classmethod
@@ -203,6 +208,22 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
         return file_handle
 
+    def _translate_offset(self, offset: int) -> int:
+        if not self.config["physical-offsets"]:
+            return offset
+
+        kernel = self.context.modules[self.config["kernel"]]
+        layer_name = kernel.layer_name
+
+        try:
+            _original_offset, _original_length, offset, _length, _layer_name = list(
+                self.context.layers[layer_name].mapping(offset=offset, length=0)
+            )[0]
+        except exceptions.PagedInvalidAddressException:
+            vollog.debug(f"Page fault: unable to translate {offset:0x}")
+
+        return offset
+
     def _generator(self, procs: List[interfaces.objects.ObjectInterface]) -> Generator[
         Tuple[
             int,
@@ -257,7 +278,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
                     (
                         proc.UniqueProcessId,
                         process_name,
-                        format_hints.Hex(kernel_layer.canonicalize(vad.vol.offset)),
+                        format_hints.Hex(kernel_layer.canonicalize(self._translate_offset(vad.vol.offset))),
                         format_hints.Hex(vad.get_start()),
                         format_hints.Hex(vad.get_end()),
                         vad.get_tag(),
