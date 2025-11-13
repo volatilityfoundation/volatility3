@@ -79,6 +79,11 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 default=cls.MAXSIZE_DEFAULT,
                 optional=True,
             ),
+            requirements.IntRequirement(
+                name="offset",
+                description="Process offset in the physical address space",
+                optional=True,
+            ),
         ]
 
     @classmethod
@@ -274,6 +279,24 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
     def run(self) -> renderers.TreeGrid:
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
+        kernel = self.context.modules[self.config["kernel"]]
+
+        if self.config["offset"]:
+            procs = psscan.PsScan.scan_processes(
+                self.context,
+                self.config["kernel"],
+                filter_func=psscan.PsScan.create_offset_filter(
+                    self.context,
+                    kernel.layer_name,
+                    self.config["offset"],
+                ),
+            )
+        else:
+             procs = pslist.PsList.list_processes(
+                context=self.context,
+                kernel_module_name=self.config["kernel"],
+                filter_func=filter_func,
+            )
 
         return renderers.TreeGrid(
             [
@@ -290,11 +313,5 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 ("File", str),
                 ("File output", str),
             ],
-            self._generator(
-                pslist.PsList.list_processes(
-                    context=self.context,
-                    kernel_module_name=self.config["kernel"],
-                    filter_func=filter_func,
-                )
-            ),
+            self._generator(procs=procs),
         )
