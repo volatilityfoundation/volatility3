@@ -9,7 +9,7 @@ from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
-from volatility3.plugins.windows import pslist
+from volatility3.plugins.windows import pslist, psscan
 
 vollog = logging.getLogger(__name__)
 
