@@ -11,7 +11,7 @@ import urllib
 import urllib.parse
 import urllib.request
 from abc import abstractmethod
-from typing import Dict, Generator, Iterable, List, Optional, Tuple
+from typing import Dict, Generator, Iterable, List, Optional, Tuple, Union
 
 from volatility3 import framework, schemas
 from volatility3.framework import constants, interfaces
@@ -242,9 +242,13 @@ class SqliteCache(CacheManagerInterface):
         for row in result:
             yield row["location"]
 
-    def is_url_local(self, url: str) -> bool:
-        """Determines whether an url is local or not"""
+    def is_url_local(
+        self, url: str, prefix: Optional[Union[str, tuple[str, ...]]] = None
+    ) -> bool:
+        """Determines whether an url is local or not (and whether it begins with a specific prefix if specified)"""
         parsed = urllib.parse.urlparse(url)
+        if prefix and not parsed.path.startswith(prefix):
+            return False
         return parsed.scheme in ["file", "jar"]
 
     def get_identifier(self, location: str) -> Optional[bytes]:
@@ -309,9 +313,10 @@ class SqliteCache(CacheManagerInterface):
             for missing_location in missing_locations:
                 parsed_url = urllib.parse(missing_location)
                 if (
-                    parsed_url.scheme == "file"
-                    and parsed_url.host == ""
-                    and not os.path.exists(parsed_url.path)
+                    self.is_url_local(missing_location)
+                    and parsed_url.startswith(
+                        tuple(constants.SYMBOL_BASEPATHS)
+                    )  # Only remove entries that are within the specified basepath
                 ):
                     non_existant_missing.append(missing_location)
             self._database.cursor().execute(
@@ -454,9 +459,9 @@ class SqliteCache(CacheManagerInterface):
     def get_identifier_dictionary(
         self, operating_system: Optional[str] = None, local_only: bool = False
     ) -> Dict[bytes, str]:
-        output = {}
+        output: dict[bytes, str] = {}
         additions = []
-        statement = "SELECT location, identifier FROM cache"
+        statement = "SELECT location, identifier, local FROM cache"
         if local_only:
             additions.append("local = 1")
         if operating_system:
@@ -465,6 +470,11 @@ class SqliteCache(CacheManagerInterface):
             statement += f" WHERE {' AND '.join(additions)}"
         results = self._database.cursor().execute(statement)
         for row in results:
+            if row["local"] and not self.is_url_local(
+                row["location"], tuple(constants.SYMBOL_BASEPATHS)
+            ):
+                # Skip over local entries that *aren't* in our current specified symbol basepaths
+                continue
             if row["identifier"] in output and row["identifier"] and row["location"]:
                 vollog.debug(
                     f"Duplicate entry for identifier {row['identifier']}: {row['location']} and {output[row['identifier']]}"
