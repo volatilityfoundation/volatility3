@@ -243,7 +243,7 @@ class SqliteCache(CacheManagerInterface):
             yield row["location"]
 
     def is_url_local(
-        self, url: str, prefix: Optional[Union[str, tuple[str, ...]]] = None
+        self, url: str, prefix: Optional[Union[str, Tuple[str, ...]]] = None
     ) -> bool:
         """Determines whether an url is local or not (and whether it begins with a specific prefix if specified)"""
         parsed = urllib.parse.urlparse(url)
@@ -312,12 +312,9 @@ class SqliteCache(CacheManagerInterface):
             non_existant_missing: list[str] = []
             for missing_location in missing_locations:
                 parsed_url = urllib.parse(missing_location)
-                if (
-                    self.is_url_local(missing_location)
-                    and parsed_url.startswith(
-                        tuple(constants.SYMBOL_BASEPATHS)
-                    )  # Only remove entries that are within the specified basepath
-                ):
+                if self.is_url_local(missing_location) and parsed_url.startswith(
+                    tuple(constants.SYMBOL_BASEPATHS)
+                ):  # Only remove entries that are within the specified basepath
                     non_existant_missing.append(missing_location)
             self._database.cursor().execute(
                 f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(non_existant_missing))})",
