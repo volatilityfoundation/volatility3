@@ -106,7 +106,6 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
 
     def add_identifier(self, location: str, operating_system: str, identifier: str):
         """Adds an identifier to the store"""
-        pass
 
     def find_location(
         self, identifier: bytes, operating_system: Optional[str]
@@ -120,18 +119,15 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         Returns:
             The location of the symbols file that matches the identifier
         """
-        pass
 
     def get_local_locations(self) -> Iterable[str]:
         """Returns a list of all the local locations"""
-        pass
 
     def update(self):
         """Locates all files under the symbol directories.  Updates the cache with additions, modifications and removals.
         This also updates remote locations based on a cache timeout.
 
         """
-        pass
 
     def get_identifier_dictionary(
         self, operating_system: Optional[str] = None, local_only: bool = False
@@ -145,15 +141,12 @@ class CacheManagerInterface(interfaces.configuration.VersionableInterface):
         Returns:
             A dictionary of identifiers mapped to a location
         """
-        pass
 
     def get_identifier(self, location: str) -> Optional[bytes]:
         """Returns an identifier based on a specific location or None"""
-        pass
 
     def get_identifiers(self, operating_system: Optional[str]) -> List[bytes]:
         """Returns all identifiers for a particular operating system"""
-        pass
 
     def get_location_statistics(
         self, location: str
@@ -312,6 +305,7 @@ class SqliteCache(CacheManagerInterface):
 
         # Missing entries
         if missing_locations:
+            non_existant_missing: list[str] = []
             for missing_location in missing_locations:
                 parsed_url = urllib.parse(missing_location)
                 if (
@@ -319,11 +313,12 @@ class SqliteCache(CacheManagerInterface):
                     and parsed_url.host == ""
                     and not os.path.exists(parsed_url.path)
                 ):
-                    self._database.cursor().execute(
-                        f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(missing_locations))})",
-                        [x for x in missing_locations],
-                    )
-                    self._database.commit()
+                    non_existant_missing.append(missing_location)
+            self._database.cursor().execute(
+                f"DELETE FROM cache WHERE location IN ({','.join(['?'] * len(non_existant_missing))})",
+                [x for x in non_existant_missing],
+            )
+            self._database.commit()
 
         cache_update = set()
         files_to_timestamp = on_disk_locations.intersection(cached_locations)
@@ -564,6 +559,6 @@ class RemoteIdentifierFormat:
                 try:
                     subrbf = RemoteIdentifierFormat(location)
                     yield from subrbf.process(identifiers, operating_system)
-                except IOError:
+                except OSError:
                     vollog.debug(f"Remote file not found: {location}")
         return identifiers
