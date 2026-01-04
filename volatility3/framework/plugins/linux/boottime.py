@@ -15,8 +15,7 @@ class Boottime(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
     """Shows the time the system was started"""
 
     _required_framework_version = (2, 11, 0)
-
-    _version = (1, 0, 0)
+    _version = (1, 0, 2)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -26,8 +25,13 @@ class Boottime(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 3, 0)
+            requirements.VersionRequirement(
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
+            ),
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
             ),
         ]
 

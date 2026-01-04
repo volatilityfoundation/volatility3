@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import Dict, List, NamedTuple, Optional, Tuple, Union, cast
+from typing import Dict, List, NamedTuple, Optional, Tuple, Union, cast, Callable
 
 from volatility3.framework import (
     constants,
@@ -15,31 +15,27 @@ from volatility3.framework import (
     symbols,
 )
 from volatility3.framework.configuration import requirements
-from volatility3.framework.layers import scanners
+from volatility3.framework.layers import scanners, registry
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import versions
 from volatility3.framework.symbols.windows.extensions import services as services_types
-from volatility3.plugins.windows import poolscanner, pslist
+from volatility3.plugins.windows import pslist
 from volatility3.plugins.windows.registry import hivelist
 
 vollog = logging.getLogger(__name__)
 
 
-ServiceBinaryInfo = NamedTuple(
-    "ServiceBinaryInfo",
-    [
-        ("dll", Union[str, interfaces.renderers.BaseAbsentValue]),
-        ("binary", Union[str, interfaces.renderers.BaseAbsentValue]),
-    ],
-)
+class ServiceBinaryInfo(NamedTuple):
+    dll: Union[str, interfaces.renderers.BaseAbsentValue]
+    binary: Union[str, interfaces.renderers.BaseAbsentValue]
 
 
 class SvcScan(interfaces.plugins.PluginInterface):
     """Scans for windows services."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (3, 0, 1)
+    _version = (4, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -54,19 +50,22 @@ class SvcScan(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="poolscanner", plugin=poolscanner.PoolScanner, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="hivelist", component=hivelist.HiveList, version=(2, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="bytes_scanner",
+                component=scanners.BytesScanner,
+                version=(1, 0, 0),
             ),
         ]
 
-    @staticmethod
+    @classmethod
     def get_record_tuple(
+        cls,
         service_record: interfaces.objects.ObjectInterface,
         binary_info: ServiceBinaryInfo,
     ):
@@ -109,7 +108,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
     @staticmethod
     def _create_service_table(
         context: interfaces.context.ContextInterface,
-        symbol_table: str,
+        symbol_table_name: str,
         config_path: str,
     ) -> str:
         """Constructs a symbol table containing the symbols for services
@@ -123,15 +122,17 @@ class SvcScan(interfaces.plugins.PluginInterface):
         Returns:
             A symbol table containing the symbols necessary for services
         """
-        native_types = context.symbol_space[symbol_table].natives
-        is_64bit = symbols.symbol_table_is_64bit(context, symbol_table)
+        native_types = context.symbol_space[symbol_table_name].natives
+        is_64bit = symbols.symbol_table_is_64bit(
+            context=context, symbol_table_name=symbol_table_name
+        )
 
         try:
             symbol_filename = next(
                 filename
                 for version_check, for_64bit, filename in SvcScan._win_version_file_map
                 if is_64bit == for_64bit
-                and version_check(context=context, symbol_table=symbol_table)
+                and version_check(context=context, symbol_table=symbol_table_name)
             )
         except StopIteration:
             raise NotImplementedError("This version of Windows is not supported!")
@@ -147,15 +148,14 @@ class SvcScan(interfaces.plugins.PluginInterface):
 
     @staticmethod
     def _get_service_key(
-        context, config_path: str, layer_name: str, symbol_table: str
+        context, config_path: str, kernel_module_name: str
     ) -> Optional[objects.StructType]:
         for hive in hivelist.HiveList.list_hives(
             context=context,
             base_config_path=interfaces.configuration.path_join(
                 config_path, "hivelist"
             ),
-            layer_name=layer_name,
-            symbol_table=symbol_table,
+            kernel_module_name=kernel_module_name,
             filter_string="machine\\system",
         ):
             # Get ControlSet\Services.
@@ -163,12 +163,20 @@ class SvcScan(interfaces.plugins.PluginInterface):
                 return cast(
                     objects.StructType, hive.get_key(r"CurrentControlSet\Services")
                 )
-            except (KeyError, exceptions.InvalidAddressException):
+            except (
+                KeyError,
+                exceptions.InvalidAddressException,
+                registry.RegistryException,
+            ):
                 try:
                     return cast(
                         objects.StructType, hive.get_key(r"ControlSet001\Services")
                     )
-                except (KeyError, exceptions.InvalidAddressException):
+                except (
+                    KeyError,
+                    exceptions.InvalidAddressException,
+                    registry.RegistryException,
+                ):
                     vollog.log(
                         constants.LOGLEVEL_VVVV,
                         "Could not retrieve any control set from SYSTEM hive",
@@ -273,18 +281,19 @@ class SvcScan(interfaces.plugins.PluginInterface):
     def service_scan(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         service_table_name: str,
         service_binary_dll_map,
         filter_func,
     ):
+        kernel = context.modules[kernel_module_name]
+
         relative_tag_offset = context.symbol_space.get_type(
             service_table_name + constants.BANG + "_SERVICE_RECORD"
         ).relative_child_offset("Tag")
 
         is_vista_or_later = versions.is_vista_or_later(
-            context=context, symbol_table=symbol_table
+            context=context, symbol_table=kernel.symbol_table_name
         )
 
         if is_vista_or_later:
@@ -295,9 +304,8 @@ class SvcScan(interfaces.plugins.PluginInterface):
         seen = []
 
         for task in pslist.PsList.list_processes(
-            context=context,
-            layer_name=layer_name,
-            symbol_table=symbol_table,
+            context,
+            kernel_module_name=kernel_module_name,
             filter_func=filter_func,
         ):
             proc_id = "Unknown"
@@ -306,13 +314,11 @@ class SvcScan(interfaces.plugins.PluginInterface):
                 proc_layer_name = task.add_process_layer()
             except exceptions.InvalidAddressException as excp:
                 vollog.debug(
-                    "Process {}: invalid address {} in layer {}".format(
-                        proc_id, excp.invalid_address, excp.layer_name
-                    )
+                    f"Process {proc_id}: invalid address {excp.invalid_address} in layer {excp.layer_name}"
                 )
                 continue
 
-            layer = context.layers[proc_layer_name]
+            process_layer = context.layers[proc_layer_name]
 
             # get process sections for scanning
             sections = []
@@ -321,7 +327,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
                 if vad.get_size():
                     sections.append((base, vad.get_size()))
 
-            for offset in layer.scan(
+            for offset in process_layer.scan(
                 context=context,
                 scanner=scanners.BytesScanner(needle=service_tag),
                 sections=sections,
@@ -357,18 +363,20 @@ class SvcScan(interfaces.plugins.PluginInterface):
                         yield service_record
 
     @classmethod
-    def get_prereq_info(cls, context, config_path, layer_name: str, symbol_table: str):
+    def get_prereq_info(
+        cls, context, config_path: str, kernel_module_name: str
+    ) -> Tuple[str, Dict, Callable]:
         """
         Data structures and information needed to analyze service information
         """
 
+        kernel = context.modules[kernel_module_name]
+
         service_table_name = cls._create_service_table(
-            context, symbol_table, config_path
+            context, kernel.symbol_table_name, config_path
         )
 
-        services_key = cls._get_service_key(
-            context, config_path, layer_name, symbol_table
-        )
+        services_key = cls._get_service_key(context, config_path, kernel_module_name)
 
         service_binary_dll_map = (
             cls._get_service_binary_map(services_key)
@@ -381,16 +389,13 @@ class SvcScan(interfaces.plugins.PluginInterface):
         return service_table_name, service_binary_dll_map, filter_func
 
     def _generator(self):
-        kernel = self.context.modules[self.config["kernel"]]
-
         service_table_name, service_binary_dll_map, filter_func = self.get_prereq_info(
-            self.context, self.config_path, kernel.layer_name, kernel.symbol_table_name
+            self.context, self.config_path, self.config["kernel"]
         )
 
         for record in self._enumeration_method(
             self.context,
-            kernel.layer_name,
-            kernel.symbol_table_name,
+            self.config["kernel"],
             service_table_name,
             service_binary_dll_map,
             filter_func,

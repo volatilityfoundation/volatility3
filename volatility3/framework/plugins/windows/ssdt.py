@@ -19,7 +19,9 @@ class SSDT(plugins.PluginInterface):
     """Lists the system call table."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+
+    # 2.0.0 - changed the signature of `build_module_collection`
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -29,8 +31,8 @@ class SSDT(plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="modules", plugin=modules.Modules, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="modules", component=modules.Modules, version=(3, 0, 0)
             ),
         ]
 
@@ -38,22 +40,22 @@ class SSDT(plugins.PluginInterface):
     def build_module_collection(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
     ) -> contexts.ModuleCollection:
         """Builds a collection of modules.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: Name of the module for the kernel
 
         Returns:
             A Module collection of available modules based on `Modules.list_modules`
         """
 
-        mods = modules.Modules.list_modules(context, layer_name, symbol_table)
+        mods = modules.Modules.list_modules(context, kernel_module_name)
         context_modules = []
+
+        kernel = context.modules[kernel_module_name]
 
         for mod in mods:
             try:
@@ -64,17 +66,13 @@ class SSDT(plugins.PluginInterface):
 
             module_name = os.path.splitext(module_name_with_ext)[0]
 
-            symbol_table_name = None
-            if module_name in constants.windows.KERNEL_MODULE_NAMES:
-                symbol_table_name = symbol_table
-
             context_module = contexts.SizedModule.create(
                 context=context,
                 module_name=module_name,
-                layer_name=layer_name,
+                layer_name=kernel.layer_name,
                 offset=mod.DllBase,
                 size=mod.SizeOfImage,
-                symbol_table_name=symbol_table_name,
+                symbol_table_name=kernel.symbol_table_name,
             )
 
             context_modules.append(context_module)
@@ -84,15 +82,13 @@ class SSDT(plugins.PluginInterface):
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, int, Any, Any]]]:
         kernel = self.context.modules[self.config["kernel"]]
 
-        layer_name = kernel.layer_name
         collection = self.build_module_collection(
-            self.context, layer_name, kernel.symbol_table_name
+            context=self.context,
+            kernel_module_name=self.config["kernel"],
         )
 
-        kvo = self.context.layers[layer_name].config["kernel_virtual_offset"]
-        ntkrnlmp = self.context.module(
-            kernel.symbol_table_name, layer_name=layer_name, offset=kvo
-        )
+        ntkrnlmp = kernel
+        kvo = kernel.offset
 
         # this is just one way to enumerate the native (NT) service table.
         # to do the same thing for the Win32K service table, we would need Win32K.sys symbol support
@@ -105,7 +101,7 @@ class SSDT(plugins.PluginInterface):
         # on 64-bit systems the indexes are also 32-bits but they're offsets from the
         # base address of the table and can be negative, so we need a signed data type
         is_kernel_64 = symbols.symbol_table_is_64bit(
-            self.context, kernel.symbol_table_name
+            context=self.context, symbol_table_name=kernel.symbol_table_name
         )
         if is_kernel_64:
             array_subtype = "long"

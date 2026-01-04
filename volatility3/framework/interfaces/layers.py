@@ -6,6 +6,7 @@
 One layer may combine other layers, map data based on the data itself,
 or map a procedure (such as decryption) across another layer of data.
 """
+
 import collections.abc
 import functools
 import logging
@@ -136,7 +137,7 @@ class DataLayerInterface(
     def minimum_address(self) -> int:
         """Returns the minimum valid address of the space."""
 
-    @property
+    @functools.cached_property
     def address_mask(self) -> int:
         """Returns a mask which encapsulates all the active bits of an address
         for this layer."""
@@ -188,7 +189,6 @@ class DataLayerInterface(
         the object unreadable (exceptions will be thrown using a
         DataLayer after destruction)
         """
-        pass
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -211,7 +211,7 @@ class DataLayerInterface(
         context: interfaces.context.ContextInterface,
         scanner: ScannerInterface,
         progress_callback: constants.ProgressCallback = None,
-        sections: Iterable[Tuple[int, int]] = None,
+        sections: Optional[Iterable[Tuple[int, int]]] = None,
     ) -> Iterable[Any]:
         """Scans a Translation layer by chunk.
 
@@ -361,9 +361,7 @@ class DataLayerInterface(
                 data += self.context.layers[layer_name].read(address, chunk_size)
             except exceptions.InvalidAddressException:
                 vollog.debug(
-                    "Invalid address in layer {} found scanning {} at address {:x}".format(
-                        layer_name, self.name, address
-                    )
+                    f"Invalid address in layer {layer_name} found scanning {self.name} at address {address:x}"
                 )
 
         if len(data) > scanner.chunk_size + scanner.overlap:
@@ -681,7 +679,7 @@ class LayerContainer(collections.abc.Mapping):
             if name in self._layers[layer].dependencies:
                 raise exceptions.LayerException(
                     self._layers[layer].name,
-                    f"Layer {self._layers[layer].name} is depended upon by {layer}",
+                    f"Layer {name} is depended upon by {layer}",
                 )
         # Otherwise, wipe out the layer
         self._layers[name].destroy()
@@ -721,7 +719,7 @@ class LayerContainer(collections.abc.Mapping):
         raise NotImplementedError("Cycle checking has not yet been implemented")
 
 
-class DummyProgress(object):
+class DummyProgress:
     """A class to emulate Multiprocessing/threading Value objects."""
 
     def __init__(self) -> None:

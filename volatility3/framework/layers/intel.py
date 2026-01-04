@@ -10,7 +10,7 @@ import struct
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from volatility3 import classproperty
-from volatility3.framework import exceptions, interfaces, constants
+from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import linear
 
@@ -22,13 +22,23 @@ INTEL_TRANSLATION_DEBUGGING = False
 class Intel(linear.LinearlyMappedLayer):
     """Translation Layer for the Intel IA32 memory mapping."""
 
+    _PAGE_BIT_PRESENT = 0
+    _PAGE_BIT_PSE = 7  # Page Size Extension: 4 MB (or 2MB) page
+    _PAGE_BIT_PROTNONE = 8
+    _PAGE_BIT_PAT_LARGE = 12  # 2MB or 1GB pages
+
+    _PAGE_PRESENT = 1 << _PAGE_BIT_PRESENT
+    _PAGE_PSE = 1 << _PAGE_BIT_PSE
+    _PAGE_PROTNONE = 1 << _PAGE_BIT_PROTNONE
+    _PAGE_PAT_LARGE = 1 << _PAGE_BIT_PAT_LARGE
+
     _entry_format = "<I"
     _page_size_in_bits = 12
     _bits_per_register = 32
     # NOTE: _maxphyaddr is MAXPHYADDR as defined in the Intel specs *NOT* the maximum physical address
     _maxphyaddr = 32
     _maxvirtaddr = _maxphyaddr
-    _structure = [("page directory", 10, False), ("page table", 10, True)]
+    _structure = [("page directory", 10, True), ("page table", 10, False)]
     _direct_metadata = collections.ChainMap(
         {"architecture": "Intel32"},
         {"mapped": True},
@@ -63,18 +73,16 @@ class Intel(linear.LinearlyMappedLayer):
         )
 
         # These can vary depending on the type of space
-        self._index_shift = int(
-            math.ceil(math.log2(struct.calcsize(self._entry_format)))
-        )
+        self._index_shift = math.ceil(math.log2(struct.calcsize(self._entry_format)))
 
     @classproperty
-    @functools.lru_cache()
+    @functools.lru_cache
     def page_shift(cls) -> int:
         """Page shift for the intel memory layers."""
         return cls._page_size_in_bits
 
     @classproperty
-    @functools.lru_cache()
+    @functools.lru_cache
     def page_size(cls) -> int:
         """Page size for the intel memory layers.
 
@@ -83,25 +91,25 @@ class Intel(linear.LinearlyMappedLayer):
         return 1 << cls._page_size_in_bits
 
     @classproperty
-    @functools.lru_cache()
+    @functools.lru_cache
     def page_mask(cls) -> int:
         """Page mask for the intel memory layers."""
         return ~(cls.page_size - 1)
 
     @classproperty
-    @functools.lru_cache()
+    @functools.lru_cache
     def bits_per_register(cls) -> int:
         """Returns the bits_per_register to determine the range of an
         IntelTranslationLayer."""
         return cls._bits_per_register
 
     @classproperty
-    @functools.lru_cache()
+    @functools.lru_cache
     def minimum_address(cls) -> int:
         return 0
 
     @classproperty
-    @functools.lru_cache()
+    @functools.lru_cache
     def maximum_address(cls) -> int:
         return (1 << cls._maxvirtaddr) - 1
 
@@ -115,7 +123,6 @@ class Intel(linear.LinearlyMappedLayer):
         high_mask = (1 << (high_bit + 1)) - 1
         low_mask = (1 << low_bit) - 1
         mask = high_mask ^ low_mask
-        # print(high_bit, low_bit, bin(mask), bin(value))
         return value & mask
 
     @staticmethod
@@ -129,7 +136,7 @@ class Intel(linear.LinearlyMappedLayer):
         return bool(entry & (1 << 6))
 
     def canonicalize(self, addr: int) -> int:
-        """Canonicalizes an address by performing an appropiate sign extension on the higher addresses"""
+        """Canonicalizes an address by performing an appropriate sign extension on the higher addresses"""
         if self._bits_per_register <= self._maxvirtaddr:
             return addr & self.address_mask
         elif addr < (1 << self._maxvirtaddr - 1):
@@ -137,7 +144,7 @@ class Intel(linear.LinearlyMappedLayer):
         return self._mask(addr, self._maxvirtaddr, 0) + self._canonical_prefix
 
     def decanonicalize(self, addr: int) -> int:
-        """Removes canonicalization to ensure an adress fits within the correct range if it has been canonicalized
+        """Removes canonicalization to ensure an address fits within the correct range if it has been canonicalized
 
         This will produce an address outside the range if the canonicalization is incorrect
         """
@@ -152,7 +159,7 @@ class Intel(linear.LinearlyMappedLayer):
         translated address lives in and the layer_name that the address
         lives in
         """
-        entry, position = self._translate_entry(offset)
+        entry, position = self._translate_entry(offset & self.page_mask)
 
         # Now we're done
         if not self._page_is_valid(entry):
@@ -163,16 +170,26 @@ class Intel(linear.LinearlyMappedLayer):
                 entry,
                 f"Page Fault at entry {hex(entry)} in page entry",
             )
-        page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(
-            offset, position, 0
-        )
+
+        pfn = self._pte_pfn(entry)
+        page_offset = self._mask(offset, position, 0)
+        page = pfn << self.page_shift | page_offset
 
         return page, 1 << (position + 1), self._base_layer
 
-    def _translate_entry(self, offset: int) -> Tuple[int, int]:
-        """Translates a specific offset based on paging tables.
+    def _pte_pfn(self, entry: int) -> int:
+        """Extracts the page frame number (PFN) from the page table entry (PTE) entry"""
+        return self._mask(entry, self._maxphyaddr - 1, 0) >> self.page_shift
 
-        Returns the translated entry value
+    @functools.lru_cache(maxsize=1024)
+    def _translate_entry(self, page_address: int) -> int:
+        """Translates a page address based on paging tables.
+
+        Args:
+            page_address: The page base address
+
+        Returns:
+            the translated entry value
         """
         # Setup the entry and how far we are through the offset
         # Position maintains the number of bits left to process
@@ -181,11 +198,13 @@ class Intel(linear.LinearlyMappedLayer):
         entry = self._initial_entry
 
         if not (
-            self.minimum_address <= (offset & self.address_mask) <= self.maximum_address
+            self.minimum_address
+            <= (page_address & self.address_mask)
+            <= self.maximum_address
         ):
             raise exceptions.PagedInvalidAddressException(
                 self.name,
-                offset,
+                page_address,
                 position + 1,
                 entry,
                 "Entry outside virtual address range: " + hex(entry),
@@ -197,23 +216,11 @@ class Intel(linear.LinearlyMappedLayer):
             if not self._page_is_valid(entry):
                 raise exceptions.PagedInvalidAddressException(
                     self.name,
-                    offset,
+                    page_address,
                     position + 1,
                     entry,
                     "Page Fault at entry " + hex(entry) + " in table " + name,
                 )
-            # Check if we're a large page
-            if large_page and (entry & (1 << 7)):
-                # Mask off the PAT bit
-                if entry & (1 << 12):
-                    entry -= 1 << 12
-                # We're a large page, the rest is finished below
-                # If we want to implement PSE-36, it would need to be done here
-                break
-            # Figure out how much of the offset we should be using
-            start = position
-            position -= size
-            index = self._mask(offset, start, position + 1) >> (position + 1)
 
             # Grab the base address of the table we'll be getting the next entry from
             base_address = self._mask(
@@ -224,42 +231,76 @@ class Intel(linear.LinearlyMappedLayer):
             if table is None:
                 raise exceptions.PagedInvalidAddressException(
                     self.name,
-                    offset,
+                    page_address,
                     position + 1,
                     entry,
                     "Page Fault at entry " + hex(entry) + " in table " + name,
                 )
 
+            # Figure out how much of the offset we should be using
+            start = position
+            position -= size
+            index = self._mask(page_address, start, position + 1) >> (position + 1)
+
             # Read the data for the next entry
-            entry_data = table[
-                (index << self._index_shift) : (index << self._index_shift)
-                + self._entry_size
-            ]
+            entry_data_start = index << self._index_shift
+            entry_data = table[entry_data_start : entry_data_start + self._entry_size]
 
             if INTEL_TRANSLATION_DEBUGGING:
                 vollog.log(
                     constants.LOGLEVEL_VVVV,
-                    "Entry {} at index {} gives data {} as {}".format(
-                        hex(entry),
-                        hex(index),
-                        hex(struct.unpack(self._entry_format, entry_data)[0]),
-                        name,
-                    ),
+                    f"Entry {hex(entry)} at index {hex(index)} gives data {hex(struct.unpack(self._entry_format, entry_data)[0])} as {name}",
                 )
 
             # Read out the new entry from memory
             (entry,) = struct.unpack(self._entry_format, entry_data)
 
+            # Check if we're a large page
+            if large_page and (entry & self._PAGE_PSE):
+                # Mask off the PAT bit
+                if entry & self._PAGE_PAT_LARGE:
+                    entry -= self._PAGE_PAT_LARGE
+                # We're a large page, the rest is finished below
+                # If we want to implement PSE-36, it would need to be done here
+                break
+
         return entry, position
 
-    @functools.lru_cache(1025)
+    @functools.lru_cache(maxsize=1025)
     def _get_valid_table(self, base_address: int) -> Optional[bytes]:
         """Extracts the table, validates it and returns it if it's valid."""
-        table = self._context.layers.read(
-            self._base_layer, base_address, self.page_size
-        )
+        try:
+            table = self._context.layers.read(
+                self._base_layer, base_address, self.page_size
+            )
+        except exceptions.InvalidAddressException:
+            return None
 
+        ####
         # If the table is entirely duplicates, then mark the whole table as bad
+        # This is because Windows 10 onwards has a tendency to map unused pages as present
+        # This had the following consequences:
+        #  - Used very litle physical memory
+        #  - Exploded virtual memory
+        #  - Causes *scan plugins to take multiple hours to complete even on small images
+
+        # Previous versions of volatility would ignore a page during a scan when it matched
+        # the one directly preceding it in physical memory.
+        # This could trip if only two pages were identical and still required enumerating all
+        # the invalid pages (which itself was quite time consuming)
+
+        # For this reason, volatility 3 shifted to looking at entire page tables (1,024 pages)
+        # and if all the pages mapped to the same place the table wouuld be skipped
+        # This could also be applied to the Directory level as well as the Table level, allowing
+        # Volatility to skip huge sections of virtual memory very efficiently, without missing
+        # any pages that were distinct within a particular page table (or directory).
+
+        # In order to work at this level, the logic was moved out of the scanning component and
+        # directly into the layer logic itself.  This does have the side effect of preventing
+        # entirely duplicated page tables from reporting as present, however, the trade off between
+        # Windows 10+ reduced scanning times (common amongst scan plugins) versus incorrectly reporting
+        # entire page tables of identically mapped repeating *valid* data (rare) was accepted in favour
+        # of the more common occurance.
         if table == table[: self._entry_size] * self._entry_number:
             return None
         return table
@@ -278,7 +319,7 @@ class Intel(linear.LinearlyMappedLayer):
 
     def is_dirty(self, offset: int) -> bool:
         """Returns whether the page at offset is marked dirty"""
-        return self._page_is_dirty(self._translate_entry(offset)[0])
+        return self._page_is_dirty(self._translate_entry(offset & self.page_mask)[0])
 
     def mapping(
         self, offset: int, length: int, ignore_errors: bool = False
@@ -303,7 +344,13 @@ class Intel(linear.LinearlyMappedLayer):
             ):
                 # The block isn't contiguous
                 if stashed_offset is not None:
-                    yield stashed_offset, stashed_size, stashed_mapped_offset, stashed_mapped_size, stashed_map_layer
+                    yield (
+                        stashed_offset,
+                        stashed_size,
+                        stashed_mapped_offset,
+                        stashed_mapped_size,
+                        stashed_map_layer,
+                    )
                 # Update all the stashed values after output
                 stashed_offset = offset
                 stashed_mapped_offset = mapped_offset
@@ -322,7 +369,13 @@ class Intel(linear.LinearlyMappedLayer):
             and stashed_mapped_size is not None
             and stashed_map_layer is not None
         ):
-            yield stashed_offset, stashed_size, stashed_mapped_offset, stashed_mapped_size, stashed_map_layer
+            yield (
+                stashed_offset,
+                stashed_size,
+                stashed_mapped_offset,
+                stashed_mapped_size,
+                stashed_map_layer,
+            )
 
     def _mapping(
         self, offset: int, length: int, ignore_errors: bool = False
@@ -347,12 +400,18 @@ class Intel(linear.LinearlyMappedLayer):
             yield offset, length, mapped_offset, length, layer_name
             return None
         while length > 0:
+            skip_mask = None
             try:
                 chunk_offset, page_size, layer_name = self._translate(offset)
-                chunk_size = min(page_size - (chunk_offset % page_size), length)
+                # Page align the chunk size value
+                chunk_size = min(page_size - (offset % page_size), length)
                 if not self._context.layers[layer_name].is_valid(
                     chunk_offset, chunk_size
                 ):
+                    # Virtual -> physical is contiguous in the chunk_size range.
+                    # If we fail, we can jump directly to the end as we know all bytes in between
+                    # aren't mapped (virtually and) physically anyway.
+                    skip_mask = chunk_size - 1
                     raise exceptions.InvalidAddressException(
                         layer_name=layer_name, invalid_address=chunk_offset
                     )
@@ -362,12 +421,13 @@ class Intel(linear.LinearlyMappedLayer):
             ) as excp:
                 if not ignore_errors:
                     raise
-                # We can jump more if we know where the page fault failed
-                if isinstance(excp, exceptions.PagedInvalidAddressException):
-                    mask = (1 << excp.invalid_bits) - 1
-                else:
-                    mask = (1 << self._page_size_in_bits) - 1
-                length_diff = mask + 1 - (offset & mask)
+                if skip_mask is None:
+                    # We can jump more if we know where the page fault occured
+                    if isinstance(excp, exceptions.PagedInvalidAddressException):
+                        skip_mask = (1 << excp.invalid_bits) - 1
+                    else:
+                        skip_mask = (1 << self._page_size_in_bits) - 1
+                length_diff = skip_mask + 1 - (offset & skip_mask)
                 length -= length_diff
                 offset += length_diff
             else:
@@ -405,7 +465,7 @@ class IntelPAE(Intel):
     _structure = [
         ("page directory pointer", 2, False),
         ("page directory", 9, True),
-        ("page table", 9, True),
+        ("page table", 9, False),
     ]
     _direct_metadata = collections.ChainMap({"pae": True}, Intel._direct_metadata)
 
@@ -425,7 +485,7 @@ class Intel32e(Intel):
         ("page map layer 4", 9, False),
         ("page directory pointer", 9, True),
         ("page directory", 9, True),
-        ("page table", 9, True),
+        ("page table", 9, False),
     ]
 
 
@@ -501,3 +561,85 @@ class WindowsIntel32e(WindowsMixin, Intel32e):
 
     def _translate(self, offset: int) -> Tuple[int, int, str]:
         return self._translate_swap(self, offset, self._bits_per_register // 2)
+
+
+class LinuxMixin(Intel):
+    @functools.cached_property
+    def _register_mask(self) -> int:
+        return (1 << self._bits_per_register) - 1
+
+    @functools.cached_property
+    def _physical_mask(self) -> int:
+        # From kernels 4.18 the physical mask is dynamic: See AMD SME, Intel Multi-Key Total
+        # Memory Encryption and CONFIG_DYNAMIC_PHYSICAL_MASK: 94d49eb30e854c84d1319095b5dd0405a7da9362
+        physical_mask = (1 << self._maxphyaddr) - 1
+        # TODO: Come back once SME support is available in the framework
+        return physical_mask
+
+    @functools.cached_property
+    def page_mask(self) -> int:
+        # Note that within the Intel class it's a class method. However, since it uses
+        # complement operations and we are working in Python, it would be more careful to
+        # limit it to the architecture's pointer size.
+        return ~(self.page_size - 1) & self._register_mask
+
+    @functools.cached_property
+    def _physical_page_mask(self) -> int:
+        return self.page_mask & self._physical_mask
+
+    @functools.cached_property
+    def _pte_pfn_mask(self) -> int:
+        return self._physical_page_mask
+
+    @functools.cached_property
+    def _pte_flags_mask(self) -> int:
+        return ~self._pte_pfn_mask & self._register_mask
+
+    def _pte_flags(self, pte) -> int:
+        return pte & self._pte_flags_mask
+
+    def _is_pte_present(self, entry: int) -> bool:
+        return (
+            self._pte_flags(entry) & (self._PAGE_PRESENT | self._PAGE_PROTNONE)
+        ) != 0
+
+    def _page_is_valid(self, entry: int) -> bool:
+        # Overrides the Intel static method with the Linux-specific implementation
+        return self._is_pte_present(entry)
+
+    def _pte_needs_invert(self, entry) -> bool:
+        # Entries that were set to PROT_NONE (PAGE_PRESENT) are inverted
+        # A clear PTE shouldn't be inverted. See f19f5c4
+        return entry and not (entry & self._PAGE_PRESENT)
+
+    def _protnone_mask(self, entry: int) -> int:
+        """Gets a mask to XOR with the page table entry to get the correct PFN"""
+        return self._register_mask if self._pte_needs_invert(entry) else 0
+
+    def _pte_pfn(self, entry: int) -> int:
+        """Extracts the page frame number from the page table entry"""
+        pfn = entry ^ self._protnone_mask(entry)
+        return (pfn & self._pte_pfn_mask) >> self.page_shift
+
+
+class LinuxIntel(LinuxMixin, Intel):
+    pass
+
+
+class LinuxIntelPAE(LinuxMixin, IntelPAE):
+    pass
+
+
+class LinuxIntel32e(LinuxMixin, Intel32e):
+    # In the Linux kernel, the __PHYSICAL_MASK_SHIFT is a mask used to extract the
+    # physical address from a PTE. In Volatility3, this is referred to as _maxphyaddr.
+    #
+    # Until kernel version 4.17, Linux x86-64 used a 46-bit mask. With commit
+    # b83ce5ee91471d19c403ff91227204fb37c95fb2, this was extended to 52 bits,
+    # applying to both 4 and 5-level page tables.
+    #
+    # We initially used 52 bits for all Intel 64-bit systems, but this produced incorrect
+    # results for PROT_NONE pages. Since the mask value is defined by a preprocessor macro,
+    # it's difficult to detect the exact bit shift used in the current kernel.
+    # Using 46 bits has proven reliable for our use case, as seen in tools like crashtool.
+    _maxphyaddr = 46

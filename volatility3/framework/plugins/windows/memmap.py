@@ -27,8 +27,8 @@ class Memmap(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.IntRequirement(
                 name="pid",
@@ -53,9 +53,7 @@ class Memmap(interfaces.plugins.PluginInterface):
                 proc_layer = self.context.layers[proc_layer_name]
             except exceptions.InvalidAddressException as excp:
                 vollog.debug(
-                    "Process {}: invalid address {} in layer {}".format(
-                        pid, excp.invalid_address, excp.layer_name
-                    )
+                    f"Process {pid}: invalid address {excp.invalid_address} in layer {excp.layer_name}"
                 )
                 continue
 
@@ -80,11 +78,7 @@ class Memmap(interfaces.plugins.PluginInterface):
                         except exceptions.InvalidAddressException:
                             file_output = "Error outputting to file"
                             vollog.debug(
-                                "Unable to write {}'s address {} to {}".format(
-                                    proc_layer_name,
-                                    offset,
-                                    file_handle.preferred_filename,
-                                )
+                                f"Unable to write {proc_layer_name}'s address {offset} to {file_handle.preferred_filename}"
                             )
 
                     yield (
@@ -103,7 +97,6 @@ class Memmap(interfaces.plugins.PluginInterface):
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get("pid", None)])
-        kernel = self.context.modules[self.config["kernel"]]
 
         return renderers.TreeGrid(
             [
@@ -116,8 +109,7 @@ class Memmap(interfaces.plugins.PluginInterface):
             self._generator(
                 pslist.PsList.list_processes(
                     context=self.context,
-                    layer_name=kernel.layer_name,
-                    symbol_table=kernel.symbol_table_name,
+                    kernel_module_name=self.config["kernel"],
                     filter_func=filter_func,
                 )
             ),

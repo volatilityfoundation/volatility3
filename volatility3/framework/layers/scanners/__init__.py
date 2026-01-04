@@ -5,11 +5,13 @@ import re
 from typing import Generator, List, Tuple, Dict, Optional
 
 from volatility3.framework.interfaces import layers
-from volatility3.framework.layers.scanners import multiregexp
+from volatility3.framework.layers.scanners import multiregexp as multiregexp
 
 
 class BytesScanner(layers.ScannerInterface):
     thread_safe = True
+
+    _version = (1, 0, 0)
 
     _required_framework_version = (2, 0, 0)
 
@@ -38,6 +40,8 @@ class RegExScanner(layers.ScannerInterface):
 
     thread_safe = True
 
+    _version = (1, 0, 0)
+
     _required_framework_version = (2, 0, 0)
 
     def __init__(self, pattern: bytes, flags: int = re.DOTALL) -> None:
@@ -57,6 +61,7 @@ class RegExScanner(layers.ScannerInterface):
 class MultiStringScanner(layers.ScannerInterface):
     thread_safe = True
 
+    _version = (1, 0, 0)
     _required_framework_version = (2, 0, 0)
 
     def __init__(self, patterns: List[bytes]) -> None:
@@ -72,7 +77,7 @@ class MultiStringScanner(layers.ScannerInterface):
             return None
 
         for char in value:
-            trie[char] = trie.get(char, {})
+            trie.setdefault(char, {})
             trie = trie[char]
 
         # Mark the end of a string

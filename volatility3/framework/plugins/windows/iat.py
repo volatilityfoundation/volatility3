@@ -1,7 +1,9 @@
 # This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 
-import logging, io, pefile
+import logging
+import io
+import pefile
 from volatility3.framework.symbols import intermed
 from volatility3.framework import renderers, interfaces, exceptions, constants
 from volatility3.framework.configuration import requirements
@@ -26,7 +28,7 @@ class IAT(interfaces.plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="pslist", component=pslist.PsList, version=(2, 0, 0)
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -67,11 +69,23 @@ class IAT(interfaces.plugins.PluginInterface):
                     layer_name=proc_layer_name,
                 )
 
-                for offset, data in dos_header.reconstruct():
-                    pe_data.seek(offset)
-                    pe_data.write(data)
+                try:
+                    for offset, data in dos_header.reconstruct():
+                        pe_data.seek(offset)
+                        pe_data.write(data)
+                except (exceptions.InvalidAddressException, ValueError) as excp:
+                    vollog.warning(
+                        f"Exception triggered when reconstructing PE file for process {proc.UniqueProcessId} at address {peb.ImageBaseAddress:#x} due to {excp}. Output file may be corrupt and/or truncated."
+                    )
 
-                pe_obj = pefile.PE(data=pe_data.getvalue(), fast_load=True)
+                try:
+                    pe_obj = pefile.PE(data=pe_data.getvalue(), fast_load=True)
+                except pefile.PEFormatError as excp:
+                    vollog.debug(
+                        f"Exception triggered when creating PE file object for process {proc.UniqueProcessId} at address {peb.ImageBaseAddress:#x} due to {excp}. Unable to extract file."
+                    )
+                    continue
+
                 pe_obj.parse_data_directories(
                     [pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_IMPORT"]]
                 )
@@ -119,15 +133,11 @@ class IAT(interfaces.plugins.PluginInterface):
                             )
             except exceptions.InvalidAddressException as excp:
                 vollog.debug(
-                    "Process {}: invalid address {} in layer {}".format(
-                        proc_id, excp.invalid_address, excp.layer_name
-                    )
+                    f"Process {proc_id}: invalid address {excp.invalid_address} in layer {excp.layer_name}"
                 )
                 continue
 
     def run(self):
-        kernel = self.context.modules[self.config["kernel"]]
-
         return renderers.TreeGrid(
             [
                 ("PID", int),
@@ -140,8 +150,7 @@ class IAT(interfaces.plugins.PluginInterface):
             self._generator(
                 pslist.PsList.list_processes(
                     context=self.context,
-                    layer_name=kernel.layer_name,
-                    symbol_table=kernel.symbol_table_name,
+                    kernel_module_name=self.config["kernel"],
                     filter_func=pslist.PsList.create_pid_filter(
                         self.config.get("pid", None)
                     ),

@@ -12,8 +12,8 @@ from typing import Any, Generator, List, Tuple
 
 from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework.layers.physical import BufferDataLayer
-from volatility3.framework.layers.registry import RegistryHive
+from volatility3.framework.layers import physical
+from volatility3.framework.layers import registry as registry_layer
 from volatility3.framework.renderers import conversion, format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.plugins.windows.registry import hivelist
@@ -39,7 +39,7 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
                 os.path.join(os.path.dirname(__file__), "userassist.json"), "rb"
             ) as fp:
                 self._folder_guids = json.load(fp)
-        except IOError:
+        except OSError:
             vollog.error("Usersassist data file not found")
 
     @classmethod
@@ -53,8 +53,13 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
             requirements.IntRequirement(
                 name="offset", description="Hive Offset", default=None, optional=True
             ),
-            requirements.PluginRequirement(
-                name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="hivelist", component=hivelist.HiveList, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
             ),
         ]
 
@@ -86,7 +91,7 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
             return item
 
         userassist_layer_name = self.context.layers.free_layer_name("userassist_buffer")
-        buffer = BufferDataLayer(
+        buffer = physical.BufferDataLayer(
             self.context, self._config_path, userassist_layer_name, userassist_data
         )
         self.context.add_layer(buffer)
@@ -150,7 +155,7 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
         ).has_member("CookiePad")
 
     def list_userassist(
-        self, hive: RegistryHive
+        self, hive: registry_layer.RegistryHive
     ) -> Generator[Tuple[int, Tuple], None, None]:
         """Generate userassist data for a registry hive."""
 
@@ -167,10 +172,21 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
 
         self._determine_userassist_type()
 
-        userassist_node_path = hive.get_key(
-            "software\\microsoft\\windows\\currentversion\\explorer\\userassist",
-            return_list=True,
-        )
+        try:
+            userassist_node_path = hive.get_key(
+                "software\\microsoft\\windows\\currentversion\\explorer\\userassist",
+                return_list=True,
+            )
+        except registry_layer.RegistryException as e:
+            vollog.warning(
+                f"Error accessing UserAssist key in {hive_name} at {hive.hive_offset:#x}: {e}"
+            )
+            return None
+        except KeyError:
+            vollog.warning(
+                f"UserAssist key not found in {hive_name} at {hive.hive_offset:#x}"
+            )
+            return None
 
         if not userassist_node_path:
             vollog.warning("list_userassist did not find a valid node_path (or None)")
@@ -227,7 +243,14 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
 
                 # output any subkeys under Count
                 for subkey in countkey.get_subkeys():
-                    subkey_name = subkey.get_name()
+                    try:
+                        subkey_name = subkey.get_name()
+                    except (
+                        exceptions.InvalidAddressException,
+                        registry_layer.RegistryException,
+                    ):
+                        subkey_name = renderers.UnreadableValue()
+
                     result = (
                         1,
                         (
@@ -249,7 +272,14 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
 
                 # output any values under Count
                 for value in countkey.get_values():
-                    value_name = value.get_name()
+                    try:
+                        value_name = value.get_name()
+                    except (
+                        exceptions.InvalidAddressException,
+                        registry_layer.RegistryException,
+                    ):
+                        value_name = renderers.UnreadableValue()
+
                     with contextlib.suppress(UnicodeDecodeError):
                         value_name = codecs.encode(value_name, "rot_13")
 
@@ -284,7 +314,6 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
         hive_offsets = None
         if self.config.get("offset", None) is not None:
             hive_offsets = [self.config.get("offset", None)]
-        kernel = self.context.modules[self.config["kernel"]]
 
         self._reg_table_name = intermed.IntermediateSymbolTable.create(
             self.context, self._config_path, "windows", "registry"
@@ -294,8 +323,7 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
         for hive in hivelist.HiveList.list_hives(
             context=self.context,
             base_config_path=self.config_path,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            kernel_module_name=self.config["kernel"],
             filter_string="ntuser.dat",
             hive_offsets=hive_offsets,
         ):
@@ -308,9 +336,7 @@ class UserAssist(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfac
                 )
             except exceptions.InvalidAddressException as excp:
                 vollog.debug(
-                    "Invalid address identified in lower layer {}: {}".format(
-                        excp.layer_name, excp.invalid_address
-                    )
+                    f"Invalid address identified in lower layer {excp.layer_name}: {excp.invalid_address}"
                 )
             except KeyError:
                 vollog.debug(

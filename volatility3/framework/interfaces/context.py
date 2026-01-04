@@ -11,6 +11,7 @@ convenience functions, most notably the object constructor function,
 `object`, which will construct a symbol on a layer at a particular
 offset.
 """
+
 import collections
 import copy
 from abc import ABCMeta, abstractmethod
@@ -85,7 +86,7 @@ class ContextInterface(metaclass=ABCMeta):
         object_type: Union[str, "interfaces.objects.Template"],
         layer_name: str,
         offset: int,
-        native_layer_name: str = None,
+        native_layer_name: Optional[str] = None,
         **arguments,
     ) -> "interfaces.objects.ObjectInterface":
         """Object factory, takes a context, symbol, offset and optional
@@ -114,6 +115,7 @@ class ContextInterface(metaclass=ABCMeta):
         """
         return copy.deepcopy(self)
 
+    @abstractmethod
     def module(
         self,
         module_name: str,
@@ -232,7 +234,7 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
     def object(
         self,
         object_type: str,
-        offset: int = None,
+        offset: Optional[int] = None,
         native_layer_name: Optional[str] = None,
         absolute: bool = False,
         **kwargs,
@@ -266,7 +268,7 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
             symbol_name: The name of a symbol (that must be present in the module's symbol table).  The symbol's associated type will be used to construct an object at the symbol's offset.
             native_layer_name: The native layer for objects that reference a different layer (if not the default provided during module construction)
             absolute: A boolean specifying whether the offset is absolute within the layer, or relative to the start of the module
-            object_type: Override for the type from the symobl to use (or if the symbol type is missing)
+            object_type: Override for the type from the symbol to use (or if the symbol type is missing)
 
         Returns:
             The constructed object
@@ -277,27 +279,37 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
         symbol = self.get_symbol(name)
         return self.offset + symbol.address
 
+    @abstractmethod
     def get_type(self, name: str) -> "interfaces.objects.Template":
         """Returns a type from the module's symbol table."""
 
+    @abstractmethod
     def get_symbol(self, name: str) -> "interfaces.symbols.SymbolInterface":
         """Returns a symbol object from the module's symbol table."""
 
+    @abstractmethod
     def get_enumeration(self, name: str) -> "interfaces.objects.Template":
         """Returns an enumeration from the module's symbol table."""
 
+    @abstractmethod
     def has_type(self, name: str) -> bool:
         """Determines whether a type is present in the module's symbol table."""
 
+    @abstractmethod
     def has_symbol(self, name: str) -> bool:
         """Determines whether a symbol is present in the module's symbol table."""
 
+    @abstractmethod
     def has_enumeration(self, name: str) -> bool:
         """Determines whether an enumeration is present in the module's symbol table."""
 
-    def symbols(self) -> List:
-        """Lists the symbols contained in the symbol table for this module"""
+    @property
+    @abstractmethod
+    def symbols(self) -> Iterable[str]:
+        """Returns an iterable of the symbols contained in the symbol table for this module"""
+        raise NotImplementedError("Symbols property has not been implemented.")
 
+    @abstractmethod
     def get_symbols_by_absolute_location(self, offset: int, size: int = 0) -> List[str]:
         """Returns the symbols within table_name (or this module if not specified) that live at the specified
         absolute offset provided."""
@@ -343,6 +355,7 @@ class ModuleContainer(collections.abc.Mapping):
     def __iter__(self):
         return iter(self._modules)
 
+    @abstractmethod
     def free_module_name(self, prefix: str = "module") -> str:
         """Returns an unused table name to ensure no collision occurs when
         inserting a symbol table."""

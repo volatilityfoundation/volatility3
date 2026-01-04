@@ -9,6 +9,7 @@ import struct
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from volatility3.framework import constants, exceptions, interfaces
+from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import scanners, segmented
 from volatility3.framework.symbols import intermed
 
@@ -98,6 +99,16 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         super().__init__(
             context=context, config_path=config_path, name=name, metadata=metadata
         )
+
+    @classmethod
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+        return super().get_requirements() + [
+            requirements.VersionRequirement(
+                name="regex_scanner",
+                component=scanners.RegExScanner,
+                version=(1, 0, 0),
+            ),
+        ]
 
     @classmethod
     def _check_header(
@@ -236,7 +247,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                     if self._architecture is None:
                         vollog.log(
                             constants.LOGLEVEL_VV,
-                            f"QEVM architecture could not be determined",
+                            "QEVM architecture could not be determined",
                         )
 
                 # Once all segments have been read, determine the PCI hole if any

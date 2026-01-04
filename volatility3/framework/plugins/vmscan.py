@@ -26,6 +26,8 @@ class VMCSTest(enum.IntFlag):
 
 
 class PageStartScanner(interfaces.layers.ScannerInterface):
+    _version = (1, 0, 0)
+
     def __init__(self, signatures: List[bytes], page_size: int = 0x1000):
         super().__init__()
         if not len(signatures):
@@ -52,7 +54,7 @@ class PageStartScanner(interfaces.layers.ScannerInterface):
 
 
 class Vmscan(plugins.PluginInterface):
-    """Scans for Intel VT-d structues and generates VM volatility configs for them"""
+    """Scans for Intel VT-d structures and generates VM volatility configs for them"""
 
     _required_framework_version = (2, 2, 0)
     _version = (1, 0, 0)
@@ -68,6 +70,11 @@ class Vmscan(plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name="primary", description="Physical base memory layer"
+            ),
+            requirements.VersionRequirement(
+                name="page_start_scanner",
+                component=PageStartScanner,
+                version=(1, 0, 0),
             ),
             requirements.IntRequirement(
                 name="log-threshold",

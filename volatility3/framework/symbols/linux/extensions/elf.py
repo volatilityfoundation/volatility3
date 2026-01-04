@@ -2,15 +2,11 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from typing import Dict, Tuple
 import logging
+from typing import Dict, Optional, Tuple
 
-from volatility3.framework import constants
-from volatility3.framework.constants.linux import (
-    ELF_IDENT,
-    ELF_CLASS,
-)
-from volatility3.framework import objects, interfaces, exceptions
+from volatility3.framework import constants, exceptions, interfaces, objects
+from volatility3.framework.constants import linux as linux_constants
 
 vollog = logging.getLogger(__name__)
 
@@ -63,13 +59,13 @@ class elf(objects.StructType):
         ei_class = self._context.object(
             symbol_table_name + constants.BANG + "unsigned char",
             layer_name=layer_name,
-            offset=object_info.offset + ELF_IDENT.EI_CLASS,
+            offset=object_info.offset + linux_constants.ELF_IDENT.EI_CLASS,
         )
 
-        if ei_class == ELF_CLASS.ELFCLASS32:
+        if ei_class == linux_constants.ELF_CLASS.ELFCLASS32:
             self._type_prefix = "Elf32_"
             self._ei_class_size = 32
-        elif ei_class == ELF_CLASS.ELFCLASS64:
+        elif ei_class == linux_constants.ELF_CLASS.ELFCLASS64:
             self._type_prefix = "Elf64_"
             self._ei_class_size = 64
         else:
@@ -316,6 +312,8 @@ class elf(objects.StructType):
 class elf_sym(objects.StructType):
     """An elf symbol entry"""
 
+    _MAX_NAME_LENGTH = linux_constants.KSYM_NAME_LEN
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._cached_strtab = None
@@ -328,21 +326,24 @@ class elf_sym(objects.StructType):
     def cached_strtab(self, cached_strtab):
         self._cached_strtab = cached_strtab
 
-    def get_name(self):
-        addr = self._cached_strtab + self.st_name
+    def get_name(self) -> Optional[str]:
+        """Returns the symbol name"""
 
-        # Just get the first 255 characters, it should be enough for a symbol name
-        name_bytes = self._context.layers[self.vol.layer_name].read(addr, 255, pad=True)
-
-        if name_bytes:
-            idx = name_bytes.find(b"\x00")
-            if idx != -1:
-                name_bytes = name_bytes[:idx]
-            return name_bytes.decode("utf-8", errors="ignore")
-        else:
-            # If we cannot read the name from the address space,
-            # we return None.
+        try:
+            addr = self._cached_strtab + self.st_name
+        except exceptions.InvalidAddressException:
             return None
+
+        layer = self._context.layers[self.vol.layer_name]
+        name_bytes = layer.read(addr, self._MAX_NAME_LENGTH, pad=True)
+        if not name_bytes:
+            return None
+
+        idx = name_bytes.find(b"\x00")
+        if idx != -1:
+            name_bytes = name_bytes[:idx]
+
+        return name_bytes.decode("utf-8", errors="replace")
 
 
 class elf_phdr(objects.StructType):
@@ -437,7 +438,7 @@ class elf_linkmap(objects.StructType):
     def get_name(self):
         try:
             buf = self._context.layers.read(self.vol.layer_name, self.l_name, 256)
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             # Protection against memory smear
             vollog.log(
                 constants.LOGLEVEL_VVVV,
@@ -448,7 +449,7 @@ class elf_linkmap(objects.StructType):
         idx = buf.find(b"\x00")
         if idx != -1:
             buf = buf[:idx]
-        return buf.decode()
+        return buf.decode("utf-8", errors="replace")
 
 
 class_types = {

@@ -22,7 +22,12 @@ class Banners(interfaces.plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name="primary", description="Memory layer to scan"
-            )
+            ),
+            requirements.VersionRequirement(
+                name="regex_scanner",
+                component=scanners.RegExScanner,
+                version=(1, 0, 0),
+            ),
         ]
 
     def _generator(self):
@@ -55,8 +60,9 @@ class Banners(interfaces.plugins.PluginInterface):
                     not in b" #()+,;/-.0123456789:@ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
                 ]
                 if not failed:
-                    yield format_hints.Hex(offset), str(
-                        data, encoding="latin-1", errors="?"
+                    yield (
+                        format_hints.Hex(offset),
+                        str(data, encoding="latin-1", errors="?"),
                     )
 
     def run(self):

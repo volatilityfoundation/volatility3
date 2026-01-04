@@ -5,13 +5,15 @@
 import logging
 from typing import Callable, Tuple, List, Dict
 
-from volatility3.framework import interfaces, exceptions, constants, objects
-from volatility3.framework.renderers import TreeGrid, NotAvailableValue, format_hints
+from volatility3.framework import interfaces, exceptions, constants, objects, renderers
+from volatility3.framework.renderers import format_hints
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import linux
 from volatility3.plugins.linux import lsof
+from volatility3.plugins.linux import pslist
+from volatility3.framework.symbols.linux import network
 
 
 vollog = logging.getLogger(__name__)
@@ -20,19 +22,29 @@ vollog = logging.getLogger(__name__)
 class SockHandlers(interfaces.configuration.VersionableInterface):
     """Handles several socket families extracting the sockets information."""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (2, 22, 0)
+    _version = (4, 0, 0)
+    _net_version_required = (1, 0, 0)
 
-    _version = (3, 0, 0)
-
-    def __init__(self, vmlinux, task, *args, **kwargs):
+    def __init__(self, context, vmlinux_name, task, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._vmlinux = vmlinux
+        self._vmlinux = context.modules[vmlinux_name]
+        self._symbol_table = context.symbol_space[self._vmlinux.symbol_table_name]
         self._task = task
+
+        if not requirements.VersionRequirement.matches_required(
+            network.NetSymbols.version, self._net_version_required
+        ):
+            raise ValueError(
+                f"Version mismatch of volatility library NetSymbols version ({network.NetSymbols.version}) and needed version ({self._net_version_required})"
+            )
+
+        network.NetSymbols.apply(self._symbol_table)
 
         try:
             netns_id = task.nsproxy.net_ns.get_inode()
         except AttributeError:
-            netns_id = NotAvailableValue()
+            netns_id = renderers.NotAvailableValue()
 
         self._netdevices = self._build_network_devices_map(netns_id)
 
@@ -67,7 +79,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             )
             for net_dev in net.dev_base_head.to_list(net_device_symname, "dev_list"):
                 if (
-                    isinstance(netns_id, NotAvailableValue)
+                    isinstance(netns_id, renderers.NotAvailableValue)
                     or net.get_inode() != netns_id
                 ):
                     continue
@@ -251,7 +263,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             # Kernel >= 3.7.10
             src_port = netlink_sock.get_portid()
         except AttributeError:
-            src_port = NotAvailableValue()
+            src_port = renderers.NotAvailableValue()
 
         dst_addr = f"group:0x{netlink_sock.dst_group:08x}"
         module = netlink_sock.module
@@ -261,7 +273,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         try:
             dst_port = netlink_sock.get_dst_portid()
         except AttributeError:
-            dst_port = NotAvailableValue()
+            dst_port = renderers.NotAvailableValue()
 
         state = netlink_sock.get_state()
 
@@ -372,7 +384,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         bt_sock = sock.cast("bt_sock")
 
         def bt_addr(addr):
-            return ":".join(reversed(["%02x" % x for x in addr.b]))
+            return ":".join(reversed([f"{x:02x}" for x in addr.b]))
 
         src_addr = src_port = dst_addr = dst_port = None
         bt_protocol = bt_sock.get_protocol()
@@ -438,8 +450,7 @@ class Sockstat(plugins.PluginInterface):
     """Lists all network connections for all processes."""
 
     _required_framework_version = (2, 0, 0)
-
-    _version = (3, 0, 0)
+    _version = (3, 0, 4)
 
     @classmethod
     def get_requirements(cls):
@@ -450,19 +461,19 @@ class Sockstat(plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="SockHandlers", component=SockHandlers, version=(3, 0, 0)
+                name="SockHandlers", component=SockHandlers, version=(4, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="lsof", plugin=lsof.Lsof, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="lsof", component=lsof.Lsof, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="linuxutils", component=linux.LinuxUtilities, version=(2, 0, 0)
             ),
-            requirements.BooleanRequirement(
-                name="unix",
-                description=("Show UNIX domain Sockets only"),
-                default=False,
-                optional=True,
+            requirements.VersionRequirement(
+                name="linux_net", component=network.NetSymbols, version=(1, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pids",
@@ -512,32 +523,38 @@ class Sockstat(plugins.PluginInterface):
             fd_num, filp, _full_path = fd_internal.fd_fields
             task = fd_internal.task
 
+            if not (filp.f_op and filp.f_op.is_readable()):
+                continue
+
             if filp.f_op not in (sfop_addr, dfop_addr):
                 continue
 
             dentry = filp.get_dentry()
-            if not dentry:
+            if not (dentry and dentry.is_readable()):
                 continue
 
             d_inode = dentry.d_inode
-            if not d_inode:
+            if not (d_inode and d_inode.is_readable()):
                 continue
 
             socket_alloc = linux.LinuxUtilities.container_of(
                 d_inode, "socket_alloc", "vfs_inode", vmlinux
             )
-            socket = socket_alloc.socket
-
-            if not (socket and socket.sk):
+            if not socket_alloc:
                 continue
-
+            socket = socket_alloc.socket
+            if not (socket.sk and socket.sk.is_readable()):
+                continue
             sock = socket.sk.dereference()
 
-            sock_type = sock.get_type()
-            family = sock.get_family()
+            try:
+                sock_type = sock.get_type()
+                family = sock.get_family()
+                sock_handler = SockHandlers(context, vmlinux.name, task)
+                sock_fields = sock_handler.process_sock(sock)
+            except exceptions.InvalidAddressException:
+                continue
 
-            sock_handler = SockHandlers(vmlinux, task)
-            sock_fields = sock_handler.process_sock(sock)
             if not sock_fields:
                 continue
 
@@ -548,7 +565,7 @@ class Sockstat(plugins.PluginInterface):
             try:
                 netns_id = net.get_inode()
             except AttributeError:
-                netns_id = NotAvailableValue()
+                netns_id = renderers.NotAvailableValue()
 
             yield task, netns_id, fd_num, family, sock_type, protocol, sock_fields
 
@@ -563,14 +580,15 @@ class Sockstat(plugins.PluginInterface):
             `sock_stat` and `protocol` formatted.
         """
         sock_stat = [
-            NotAvailableValue() if field is None else str(field) for field in sock_stat
+            renderers.NotAvailableValue() if field is None else str(field)
+            for field in sock_stat
         ]
         if protocol is None:
-            protocol = NotAvailableValue()
+            protocol = renderers.NotAvailableValue()
 
         return tuple(sock_stat), protocol
 
-    def _generator(self, pids: List[int], netns_id_arg: int, symbol_table: str):
+    def _generator(self, pids: List[int], netns_id_arg: int, kernel_module_name: str):
         """Enumerate tasks sockets. Each row represents a kernel socket.
 
         Args:
@@ -591,9 +609,13 @@ class Sockstat(plugins.PluginInterface):
             tasks: String with a list of tasks and FDs using a socket. It can also have
                    extended information such as socket filters, bpf info, etc.
         """
-        filter_func = lsof.pslist.PsList.create_pid_filter(pids)
+        vmlinux = self.context.modules[kernel_module_name]
+        symbol_table = self.context.symbol_space[vmlinux.symbol_table_name]
+        network.NetSymbols.apply(symbol_table)
+
+        filter_func = pslist.PsList.create_pid_filter(pids)
         socket_generator = self.list_sockets(
-            self.context, symbol_table, filter_func=filter_func
+            self.context, kernel_module_name, filter_func=filter_func
         )
 
         for (
@@ -614,7 +636,7 @@ class Sockstat(plugins.PluginInterface):
             socket_filter_str = (
                 ",".join(f"{k}={v}" for k, v in extended.items())
                 if extended
-                else NotAvailableValue()
+                else renderers.NotAvailableValue()
             )
 
             task_comm = utility.array_to_string(task.comm)
@@ -638,7 +660,7 @@ class Sockstat(plugins.PluginInterface):
     def run(self):
         pids = self.config.get("pids")
         netns_id = self.config["netns"]
-        symbol_table = self.config["kernel"]
+        kernel_module_name = self.config["kernel"]
 
         tree_grid_args = [
             ("NetNS", int),
@@ -658,4 +680,6 @@ class Sockstat(plugins.PluginInterface):
             ("Filter", str),
         ]
 
-        return TreeGrid(tree_grid_args, self._generator(pids, netns_id, symbol_table))
+        return renderers.TreeGrid(
+            tree_grid_args, self._generator(pids, netns_id, kernel_module_name)
+        )

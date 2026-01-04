@@ -6,7 +6,7 @@ import struct
 from typing import Optional
 
 from volatility3.framework import exceptions, interfaces, constants
-from volatility3.framework.constants.linux import ELF_CLASS
+from volatility3.framework.constants import linux as linux_constants
 from volatility3.framework.layers import segmented
 from volatility3.framework.symbols import intermed
 
@@ -23,7 +23,7 @@ class Elf64Layer(segmented.SegmentedLayer):
 
     _header_struct = struct.Struct("<IBBB")
     MAGIC = 0x464C457F  # "\x7fELF"
-    ELF_CLASS = ELF_CLASS.ELFCLASS64
+    ELF_CLASS = linux_constants.ELF_CLASS.ELFCLASS64
 
     def __init__(
         self, context: interfaces.context.ContextInterface, config_path: str, name: str

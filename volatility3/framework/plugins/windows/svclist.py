@@ -18,7 +18,10 @@ vollog = logging.getLogger(__name__)
 class SvcList(svcscan.SvcScan):
     """Lists services contained with the services.exe doubly linked list of services"""
 
-    _version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
+
+    # 2.0.0 - service_list signature changed
+    _version = (2, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -28,20 +31,28 @@ class SvcList(svcscan.SvcScan):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.PluginRequirement(
-                name="svcscan", plugin=svcscan.SvcScan, version=(3, 0, 0)
+            requirements.VersionRequirement(
+                name="svcscan", component=svcscan.SvcScan, version=(4, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.ModuleRequirement(
                 name="kernel",
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
+            requirements.VersionRequirement(
+                name="bytes_scanner",
+                component=scanners.BytesScanner,
+                version=(1, 0, 0),
+            ),
         ]
 
     @classmethod
     def _get_exe_range(cls, proc) -> Optional[Tuple[int, int]]:
         """
-        Returns a tuple of starting,ending address for
+        Returns a tuple of starting address and size of
         the VAD containing services.exe
         """
 
@@ -59,16 +70,17 @@ class SvcList(svcscan.SvcScan):
     def service_list(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         service_table_name: str,
         service_binary_dll_map,
         filter_func,
     ):
+        kernel = context.modules[kernel_module_name]
+
         if not symbols.symbol_table_is_64bit(
-            context, symbol_table
+            context=context, symbol_table_name=kernel.symbol_table_name
         ) or not versions.is_win10_15063_or_later(
-            context=context, symbol_table=symbol_table
+            context=context, symbol_table=kernel.symbol_table_name
         ):
             vollog.warning(
                 "This plugin only supports Windows 10 version 15063+ 64bit Windows memory samples"
@@ -77,21 +89,18 @@ class SvcList(svcscan.SvcScan):
 
         for proc in pslist.PsList.list_processes(
             context=context,
-            layer_name=layer_name,
-            symbol_table=symbol_table,
+            kernel_module_name=kernel_module_name,
             filter_func=filter_func,
         ):
             try:
-                layer_name = proc.add_process_layer()
+                proc_layer_name = proc.add_process_layer()
             except exceptions.InvalidAddressException:
                 vollog.warning(
-                    "Unable to access memory of services.exe running with PID: {}".format(
-                        proc.UniqueProcessId
-                    )
+                    f"Unable to access memory of services.exe running with PID: {proc.UniqueProcessId}"
                 )
                 continue
 
-            layer = context.layers[layer_name]
+            proc_layer = context.layers[proc_layer_name]
 
             exe_range = cls._get_exe_range(proc)
             if not exe_range:
@@ -100,16 +109,15 @@ class SvcList(svcscan.SvcScan):
                 )
                 continue
 
-            for offset in layer.scan(
+            for offset in proc_layer.scan(
                 context=context,
                 scanner=scanners.BytesScanner(needle=b"Sc27"),
                 sections=exe_range,
             ):
-                for record in cls.enumerate_vista_or_later_header(
+                yield from cls.enumerate_vista_or_later_header(
                     context,
                     service_table_name,
                     service_binary_dll_map,
-                    layer_name,
+                    proc_layer_name,
                     offset,
-                ):
-                    yield record
+                )

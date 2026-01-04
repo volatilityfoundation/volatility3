@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Callable, Iterable, List, Generator
+from typing import Iterable, List, Generator
 
 from volatility3.framework import interfaces, constants
 from volatility3.framework.configuration import requirements
@@ -16,7 +16,7 @@ class Threads(thrdscan.ThrdScan):
     """Lists process threads"""
 
     _required_framework_version = (2, 4, 0)
-    _version = (1, 0, 0)
+    _version = (3, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -31,20 +31,20 @@ class Threads(thrdscan.ThrdScan):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.ListRequirement(
-                name="pid",
-                description="Filter on specific process IDs",
-                element_type=int,
-                optional=True,
+            requirements.VersionRequirement(
+                name="thrdscan", component=thrdscan.ThrdScan, version=(2, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="thrdscan", plugin=thrdscan.ThrdScan, version=(1, 1, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
         ]
 
     @classmethod
     def list_threads(
-        cls, kernel, proc: interfaces.objects.ObjectInterface
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        proc: interfaces.objects.ObjectInterface,
     ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Lists the Threads of a specific process.
 
@@ -54,6 +54,8 @@ class Threads(thrdscan.ThrdScan):
         Returns:
             A list of threads based on the process and filtered based on the filter function
         """
+        kernel = context.modules[kernel_module_name]
+
         seen = set()
         for thread in proc.ThreadListHead.to_list(
             f"{kernel.symbol_table_name}{constants.BANG}_ETHREAD", "ThreadListEntry"
@@ -67,20 +69,14 @@ class Threads(thrdscan.ThrdScan):
     def list_process_threads(
         cls,
         context: interfaces.context.ContextInterface,
-        module_name: str,
+        kernel_module_name: str,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Runs through all processes and lists threads for each process"""
-        module = context.modules[module_name]
-        layer_name = module.layer_name
-        symbol_table_name = module.symbol_table_name
-
         filter_func = pslist.PsList.create_pid_filter(context.config.get("pid", None))
 
         for proc in pslist.PsList.list_processes(
             context=context,
-            layer_name=layer_name,
-            symbol_table=symbol_table_name,
+            kernel_module_name=kernel_module_name,
             filter_func=filter_func,
         ):
-            for thread in cls.list_threads(module, proc):
-                yield thread
+            yield from cls.list_threads(context, kernel_module_name, proc)

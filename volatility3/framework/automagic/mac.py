@@ -3,13 +3,11 @@
 #
 
 import logging
-import os
 import struct
 from typing import Optional
 
 from volatility3.framework import constants, exceptions, interfaces, layers
 from volatility3.framework.automagic import symbol_cache, symbol_finder
-from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, scanners
 from volatility3.framework.symbols import mac
 
@@ -28,16 +26,6 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         progress_callback: constants.ProgressCallback = None,
     ) -> Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to identify mac within this layer."""
-        # Version check the SQlite cache
-        required = (1, 0, 0)
-        if not requirements.VersionRequirement.matches_required(
-            required, symbol_cache.SqliteCache.version
-        ):
-            vollog.info(
-                f"SQLiteCache version not suitable: required {required} found {symbol_cache.SqliteCache.version}"
-            )
-            return None
-
         # Bail out by default unless we can stack properly
         layer = context.layers[layer_name]
         new_layer = None
@@ -48,12 +36,9 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         if isinstance(layer, intel.Intel):
             return None
 
-        identifiers_path = os.path.join(
-            constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME
+        mac_banners = symbol_cache.load_cache_manager().get_identifier_dictionary(
+            operating_system="mac"
         )
-        mac_banners = symbol_cache.SqliteCache(
-            identifiers_path
-        ).get_identifier_dictionary(operating_system="mac")
         # If we have no banners, don't bother scanning
         if not mac_banners:
             vollog.info(
@@ -197,7 +182,7 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         aslr_shift = 0
 
         for offset, banner in offset_generator:
-            banner_major, banner_minor = [int(x) for x in banner[22:].split(b".")[0:2]]
+            banner_major, banner_minor = (int(x) for x in banner[22:].split(b".")[0:2])
 
             tmp_aslr_shift = offset - cls.virtual_to_physical_address(
                 version_json_address

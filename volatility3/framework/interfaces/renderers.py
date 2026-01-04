@@ -10,7 +10,8 @@ suitable output.
 """
 
 import datetime
-from abc import abstractmethod, ABCMeta
+import warnings
+from abc import ABCMeta, abstractmethod
 from collections import abc
 from typing import (
     Any,
@@ -20,20 +21,67 @@ from typing import (
     List,
     NamedTuple,
     Optional,
-    TypeVar,
-    Type,
     Tuple,
+    Type,
+    TypeVar,
     Union,
 )
+from typing import Dict
 
-Column = NamedTuple("Column", [("name", str), ("type", Any)])
+from volatility3.framework import interfaces
+
+
+class BasicType:
+    def __str__(self) -> str:
+        """Fallback method for rendering basic types"""
+        return str(self)
+
+
+class BaseAbsentValue:
+    """Class that represents values which are not present for some reason."""
+
+    def __str__(self) -> str:
+        """Fallback method for rendering basic types"""
+        return "-"
+
+
+class Column(NamedTuple):
+    name: str
+    type: Any
+
 
 RenderOption = Any
+
+T = TypeVar("T")
+
+
+class TypeRendererInterface:
+    type = T
+
+    def __init__(
+        self, func: Optional[Callable] = None, options: Optional[Dict[str, Any]] = None
+    ):
+        self._options = options or {}
+        setattr(self, "render", func)
+
+    @property
+    def options(self):
+        return self._options
+
+    def render(self, data: Union[T, BaseAbsentValue]) -> Any:
+        """Renders a specific datatype"""
+        return ""
+
+    def __call__(self, data: Union[T, BaseAbsentValue]) -> Any:
+        """Shortcut for render"""
+        return self.render(data)
 
 
 class Renderer(metaclass=ABCMeta):
     """Class that defines the interface that all output renderers must
     support."""
+
+    _type_renderers: Dict[Union[Type, str], Callable]
 
     def __init__(self, options: Optional[List[RenderOption]] = None) -> None:
         """Accepts an options object to configure the renderers."""
@@ -98,11 +146,7 @@ class TreeNode(abc.Sequence, metaclass=ABCMeta):
         """
 
 
-class BaseAbsentValue(object):
-    """Class that represents values which are not present for some reason."""
-
-
-class Disassembly(object):
+class Disassembly(BasicType):
     """A class to indicate that the bytes provided should be disassembled
     (based on the architecture)"""
 
@@ -111,6 +155,10 @@ class Disassembly(object):
     def __init__(
         self, data: bytes, offset: int = 0, architecture: str = "intel64"
     ) -> None:
+        warnings.warn(
+            "interfaces.renderers.Disassembly is now renderers.Disassembly",
+            FutureWarning,
+        )
         self.data = data
         self.architecture = None
         if architecture in self.possible_architectures:
@@ -118,6 +166,10 @@ class Disassembly(object):
         if not isinstance(offset, int):
             raise TypeError("Offset must be an integer type")
         self.offset = offset
+
+    def __str__(self) -> str:
+        """Fallback method of rendering"""
+        return str(self.data)
 
 
 # We don't class these off a shared base, because the BaseTypes must only
@@ -131,13 +183,13 @@ BaseTypes = Union[
     Type[bytes],
     Type[datetime.datetime],
     Type[BaseAbsentValue],
-    Type[Disassembly],
+    Type[BasicType],
 ]
 ColumnsType = List[Tuple[str, BaseTypes]]
 VisitorSignature = Callable[[TreeNode, _Type], _Type]
 
 
-class TreeGrid(object, metaclass=ABCMeta):
+class TreeGrid(metaclass=ABCMeta):
     """Class providing the interface for a TreeGrid (which contains TreeNodes)
 
     The structure of a TreeGrid is designed to maintain the structure of the tree in a single object.
@@ -150,16 +202,15 @@ class TreeGrid(object, metaclass=ABCMeta):
     and to create cycles.
     """
 
-    base_types: ClassVar[Tuple] = (
-        int,
-        str,
-        float,
-        bytes,
-        datetime.datetime,
-        Disassembly,
-    )
+    # TODO: Figure out why this isn't just BaseTypes (which includes AbsentValues'
+    base_types: ClassVar[Tuple] = (int, str, float, bytes, datetime.datetime, BasicType)
 
-    def __init__(self, columns: ColumnsType, generator: Generator) -> None:
+    def __init__(
+        self,
+        columns: ColumnsType,
+        generator: Generator,
+        context: Optional["interfaces.context.ContextInterface"] = None,
+    ) -> None:
         """Constructs a TreeGrid object using a specific set of columns.
 
         The TreeGrid itself is a root element, that can have children but no values.
@@ -170,6 +221,15 @@ class TreeGrid(object, metaclass=ABCMeta):
             columns: A list of column tuples made up of (name, type).
             generator: An iterable containing row for a tree grid, each row contains a indent level followed by the values for each column in order.
         """
+        self._context = context
+
+    @property
+    def context(self) -> Optional["interfaces.context.ContextInterface"]:
+        """Returns the context value for the tree grid (to retrieve data items)
+
+        This is a property to ensure the renderers don't try changing the context for any reason
+        """
+        return self._context
 
     @staticmethod
     @abstractmethod
@@ -179,7 +239,7 @@ class TreeGrid(object, metaclass=ABCMeta):
     @abstractmethod
     def populate(
         self,
-        function: VisitorSignature = None,
+        function: Optional[VisitorSignature] = None,
         initial_accumulator: Any = None,
         fail_on_errors: bool = True,
     ) -> Optional[Exception]:
@@ -231,7 +291,7 @@ class TreeGrid(object, metaclass=ABCMeta):
         node: Optional[TreeNode],
         function: VisitorSignature,
         initial_accumulator: _Type,
-        sort_key: ColumnSortKey = None,
+        sort_key: Optional[ColumnSortKey] = None,
     ) -> None:
         """Visits all the nodes in a tree, calling function on each one.
 

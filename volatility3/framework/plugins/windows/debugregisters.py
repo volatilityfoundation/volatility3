@@ -24,7 +24,7 @@ vollog = logging.getLogger(__name__)
 class DebugRegisters(interfaces.plugins.PluginInterface):
     # version 2.6.0 adds support for scanning for 'Ethread' structures by pool tags
     _required_framework_version = (2, 6, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List:
@@ -35,10 +35,13 @@ class DebugRegisters(interfaces.plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="pslist", component=pslist.PsList, version=(2, 0, 0)
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="pe_symbols", component=pe_symbols.PESymbols, version=(1, 0, 0)
+                name="threads", component=threads.Threads, version=(3, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="pe_symbols", component=pe_symbols.PESymbols, version=(3, 0, 0)
             ),
         ]
 
@@ -108,20 +111,18 @@ class DebugRegisters(interfaces.plugins.PluginInterface):
         None,
         None,
     ]:
-        kernel = self.context.modules[self.config["kernel"]]
-
         vads_cache: Dict[int, pe_symbols.ranges_type] = {}
 
         proc_modules = None
 
         procs = pslist.PsList.list_processes(
-            context=self.context,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            context=self.context, kernel_module_name=self.config["kernel"]
         )
 
         for proc in procs:
-            for thread in threads.Threads.list_threads(kernel, proc):
+            for thread in threads.Threads.list_threads(
+                self.context, self.config["kernel"], proc
+            ):
                 debug_info = self._get_debug_info(thread)
                 if not debug_info:
                     continue
@@ -137,7 +138,7 @@ class DebugRegisters(interfaces.plugins.PluginInterface):
                 # this lookup takes a while, so only perform if we need to
                 if not proc_modules:
                     proc_modules = pe_symbols.PESymbols.get_process_modules(
-                        self.context, kernel.layer_name, kernel.symbol_table_name, None
+                        self.context, self.config["kernel"], None
                     )
                     path_and_symbol = partial(
                         pe_symbols.PESymbols.path_and_symbol_for_address,

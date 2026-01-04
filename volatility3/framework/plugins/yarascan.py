@@ -31,13 +31,13 @@ except ImportError:
 
     except ImportError:
         vollog.info(
-            "Neither yara-x nor yara-python (>3.8.0) module not found, plugin (and dependent plugins) not available"
+            "Neither yara-x nor yara-python (>3.8.0) module was found, plugin (and dependent plugins) not available"
         )
         raise
 
 
 class YaraScanner(interfaces.layers.ScannerInterface):
-    _version = (2, 1, 0)
+    _version = (2, 1, 1)
 
     # yara.Rules isn't exposed, so we can't type this properly
     def __init__(self, rules) -> None:
@@ -79,23 +79,23 @@ class YaraScanner(interfaces.layers.ScannerInterface):
                     for offset, name, value in match.strings:
                         yield (offset + data_offset, match.rule, name, value)
 
-    @staticmethod
-    def get_rule(rule):
+    @classmethod
+    def get_rule(cls, rule):
         if USE_YARA_X:
             return yara_x.compile(f"rule r1 {{strings: $a = {rule} condition: $a}}")
         return yara.compile(
             sources={"n": f"rule r1 {{strings: $a = {rule} condition: $a}}"}
         )
 
-    @staticmethod
-    def from_compiled_file(filepath):
+    @classmethod
+    def from_compiled_file(cls, filepath):
         with resources.ResourceAccessor().open(filepath, "rb") as fp:
             if USE_YARA_X:
                 return yara_x.Rules.deserialize_from(file=fp)
             return yara.load(file=fp)
 
-    @staticmethod
-    def from_file(filepath):
+    @classmethod
+    def from_file(cls, filepath):
         with resources.ResourceAccessor().open(filepath, "rb") as fp:
             if USE_YARA_X:
                 return yara_x.compile(fp.read().decode())
@@ -105,8 +105,8 @@ class YaraScanner(interfaces.layers.ScannerInterface):
 class YaraScan(plugins.PluginInterface):
     """Scans kernel memory using yara rules (string or file)."""
 
-    _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+    _required_framework_version = (2, 22, 0)
+    _version = (2, 0, 1)
     _yara_x = USE_YARA_X
 
     @classmethod
@@ -118,7 +118,12 @@ class YaraScan(plugins.PluginInterface):
                 name="primary",
                 description="Memory layer for the kernel",
                 architectures=["Intel32", "Intel64"],
-            )
+            ),
+            requirements.VersionRequirement(
+                name="yarascanner",
+                component=YaraScanner,
+                version=(2, 1, 1),
+            ),
         ]
 
     @classmethod
@@ -177,7 +182,7 @@ class YaraScan(plugins.PluginInterface):
             rule = config["yara_string"]
             if rule[0] not in ["{", "/"]:
                 rule = f'"{rule}"'
-            if config.get("case", False):
+            if config.get("insensitive", False):
                 rule += " nocase"
             if config.get("wide", False):
                 rule += " wide ascii"
@@ -201,7 +206,13 @@ class YaraScan(plugins.PluginInterface):
         for offset, rule_name, name, value in layer.scan(
             context=self.context, scanner=YaraScanner(rules=rules)
         ):
-            yield 0, (format_hints.Hex(offset), rule_name, name, value)
+            layer_data = renderers.LayerData(
+                context=self.context,
+                offset=offset,
+                layer_name=layer.name,
+                length=len(value),
+            )
+            yield 0, (format_hints.Hex(offset), rule_name, name, layer_data)
 
     def run(self):
         return renderers.TreeGrid(
@@ -209,7 +220,7 @@ class YaraScan(plugins.PluginInterface):
                 ("Offset", format_hints.Hex),
                 ("Rule", str),
                 ("Component", str),
-                ("Value", bytes),
+                ("Value", renderers.LayerData),
             ],
             self._generator(),
         )

@@ -8,12 +8,7 @@ from volatility3.framework import objects
 class PARTITION_TABLE(objects.StructType):
     def get_disk_signature(self) -> str:
         """Get Disk Signature (GUID)."""
-        return "{0:02x}-{1:02x}-{2:02x}-{3:02x}".format(
-            self.DiskSignature[0],
-            self.DiskSignature[1],
-            self.DiskSignature[2],
-            self.DiskSignature[3],
-        )
+        return f"{self.DiskSignature[0]:02x}-{self.DiskSignature[1]:02x}-{self.DiskSignature[2]:02x}-{self.DiskSignature[3]:02x}"
 
 
 class PARTITION_ENTRY(objects.StructType):

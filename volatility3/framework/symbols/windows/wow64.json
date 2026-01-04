@@ -1,0 +1,2426 @@
+{
+  "symbols": {
+  },
+  "enums": {
+    "_LDR_DLL_LOAD_REASON": {
+      "base": "int",
+      "constants": {
+        "LoadReasonAsDataLoad": 6,
+        "LoadReasonAsImageLoad": 5,
+        "LoadReasonDelayloadDependency": 3,
+        "LoadReasonDynamicForwarderDependency": 2,
+        "LoadReasonDynamicLoad": 4,
+        "LoadReasonStaticDependency": 0,
+        "LoadReasonStaticForwarderDependency": 1,
+        "LoadReasonUnknown": -1
+      },
+      "size": 4
+    },
+    "_LDR_DDAG_STATE": {
+      "base": "int",
+      "constants": {
+        "LdrModulesCondensed": 6,
+        "LdrModulesInitError": -4,
+        "LdrModulesInitializing": 8,
+        "LdrModulesMapped": 2,
+        "LdrModulesMapping": 1,
+        "LdrModulesMerged": -5,
+        "LdrModulesPlaceHolder": 0,
+        "LdrModulesReadyToInit": 7,
+        "LdrModulesReadyToRun": 9,
+        "LdrModulesSnapError": -3,
+        "LdrModulesSnapped": 5,
+        "LdrModulesSnapping": 4,
+        "LdrModulesUnloaded": -2,
+        "LdrModulesUnloading": -1,
+        "LdrModulesWaitingForDependencies": 3
+      },
+      "size": 4
+    }
+  },    
+    "base_types": {
+        "unsigned long": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "int": {
+            "endian": "little",
+            "kind": "int",
+            "signed": true,
+            "size": 4
+        },
+        "unsigned long long": {
+            "kind": "int",
+            "size": 8,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned char": {
+            "kind": "char",
+            "size": 1,
+            "signed": false,
+            "endian": "little"
+        },
+        "pointer": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned int": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned short": {
+            "kind": "int",
+            "size": 2,
+            "signed": false,
+            "endian": "little"
+        },
+        "long": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "long long": {
+            "endian": "little",
+            "kind": "int",
+            "signed": true,
+            "size": 8
+        },
+        "void": {
+            "endian": "little",
+            "kind": "void",
+            "signed": true,
+            "size": 0
+        }
+    },
+  "metadata": {
+    "format": "4.1.0",
+    "producer": {
+      "datetime": "2024-05-30T17:02:06.755760",
+      "name": "awalters-by-hand",
+      "version": "0.0.2"
+    }
+  },
+  "user_types": {
+    "_LDR_SERVICE_TAG_RECORD": {
+      "fields": {
+        "Next": {
+          "offset": 0,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_LDR_SERVICE_TAG_RECORD"
+            }
+          }
+        },
+        "ServiceTag": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 8
+    },
+    "_KTIMER": {
+      "fields": {
+        "Dpc": {
+          "offset": 32,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_KDPC"
+            }
+          }
+        },
+        "DueTime": {
+          "offset": 16,
+          "type": {
+            "kind": "union",
+            "name": "_ULARGE_INTEGER"
+          }
+        },
+        "Header": {
+          "offset": 0,
+          "type": {
+            "kind": "struct",
+            "name": "_DISPATCHER_HEADER"
+          }
+        },
+        "Period": {
+          "offset": 36,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "TimerListEntry": {
+          "offset": 24,
+          "type": {
+            "kind": "struct",
+            "name": "_LIST_ENTRY"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 40 
+    },
+    "_ERESOURCE": {
+      "fields": {
+        "ActiveCount": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "short"
+          }
+        },
+        "ActiveEntries": {
+          "offset": 32,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "Address": {
+          "offset": 48,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "base",
+              "name": "void"
+            }
+          }
+        },
+        "ContentionCount": {
+          "offset": 36,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "CreatorBackTraceIndex": {
+          "offset": 48,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ExclusiveWaiters": {
+          "offset": 20,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_KEVENT"
+            }
+          }
+        },
+        "Flag": {
+          "offset": 14,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "NumberOfExclusiveWaiters": {
+          "offset": 44,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "NumberOfSharedWaiters": {
+          "offset": 40,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "OwnerEntry": {
+          "offset": 24,
+          "type": {
+            "kind": "struct",
+            "name": "_OWNER_ENTRY"
+          }
+        },
+        "OwnerTable": {
+          "offset": 8,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_OWNER_ENTRY"
+            }
+          }
+        },
+        "ReservedLowFlags": {
+          "offset": 14,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "SharedWaiters": {
+          "offset": 16,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_KSEMAPHORE"
+            }
+          }
+        },
+        "SpinLock": {
+          "offset": 52,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "SystemResourcesList": {
+          "offset": 0,
+          "type": {
+            "kind": "struct",
+            "name": "_LIST_ENTRY"
+          }
+        },
+        "WaiterPriority": {
+          "offset": 15,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 56 
+    },
+    "_LARGE_INTEGER": {
+      "fields": {
+        "HighPart": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        },
+        "LowPart": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "QuadPart": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "long long"
+          }
+        },
+        "u": {
+          "offset": 0,
+          "type": {
+            "kind": "struct",
+            "name": "__unnamed_1083"
+          }
+        }
+      },
+      "kind": "union",
+      "size": 8
+    },
+    "_ETHREAD": {
+      "fields": {
+        "Cid": {
+          "offset": 868,
+          "type": {
+            "kind": "struct",
+            "name": "_CLIENT_ID"
+          }
+        },
+        "CreateTime": {
+          "offset": 824,
+          "type": {
+            "kind": "union",
+            "name": "_LARGE_INTEGER"
+          }
+        },
+        "CrossThreadFlags": {
+          "offset": 952,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ExitTime": {
+          "offset": 832,
+          "type": {
+            "kind": "union",
+            "name": "_LARGE_INTEGER"
+          }
+        },
+        "Tcb": {
+          "offset": 0,
+          "type": {
+            "kind": "struct",
+            "name": "_KTHREAD"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 1048
+    },
+    "_KTHREAD": {
+      "fields": {
+        "State": {
+          "offset": 144,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "WaitReason": {
+          "offset": 395,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 824 
+    },
+    "_EPROCESS": {
+      "fields": {
+        "CreateTime": {
+          "offset": 168,
+          "type": {
+            "kind": "union",
+            "name": "_LARGE_INTEGER"
+          }
+        },
+        "ExitTime": {
+          "offset": 688,
+          "type": {
+            "kind": "union",
+            "name": "_LARGE_INTEGER"
+          }
+        },
+        "ImageFileName": {
+          "offset": 1080,
+          "type": {
+            "count": 368,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "ObjectTable": {
+          "offset": 336,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_HANDLE_TABLE"
+            }
+          }
+        },
+        "Pcb": {
+          "offset": 0,
+          "type": {
+            "kind": "struct",
+            "name": "_KPROCESS"
+          }
+        },
+        "Peb": {
+          "offset": 320,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_PEB"
+            }
+          }
+        },
+        "Session": {
+          "offset": 324,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "base",
+              "name": "void"
+            }
+          }
+        },
+        "ThreadListHead": {
+          "offset": 404,
+          "type": {
+            "kind": "struct",
+            "name": "_LIST_ENTRY"
+          }
+        },
+        "UniqueProcessId": {
+          "offset": 180,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "base",
+              "name": "void"
+            }
+          }
+        },
+        "VadRoot": {
+          "offset": 628,
+          "type": {
+            "kind": "struct",
+            "name": "_RTL_AVL_TREE"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 760 
+    },
+    "_EX_FAST_REF": {
+      "fields": {
+        "Object": {
+          "offset": 0,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "base",
+              "name": "void"
+            }
+          }
+        },
+        "RefCnt": {
+          "offset": 0,
+          "type": {
+            "bit_length": 4,
+            "bit_position": 0,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "Value": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 4
+    },
+    "_TOKEN": {
+      "fields": {
+        "Privileges": {
+          "offset": 64,
+          "type": {
+            "kind": "struct",
+            "name": "_SEP_TOKEN_PRIVILEGES"
+          }
+        },
+        "UserAndGroupCount": {
+          "offset": 124,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "UserAndGroups": {
+          "offset": 148,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_SID_AND_ATTRIBUTES"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 656
+    },
+    "_OBJECT_HEADER": {
+      "fields": {
+        "Body": {
+          "offset": 24,
+          "type": {
+            "kind": "struct",
+            "name": "_QUAD"
+          }
+        },
+        "InfoMask": {
+          "offset": 14,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "PointerCount": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        },
+        "TypeIndex": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 32
+    },
+    "_FILE_OBJECT": {
+      "fields": {
+        "DeleteAccess": {
+          "offset": 40,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "DeviceObject": {
+          "offset": 4,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_DEVICE_OBJECT"
+            }
+          }
+        },
+        "FileName": {
+          "offset": 48,
+          "type": {
+            "kind": "struct",
+            "name": "_UNICODE_STRING"
+          }
+        },
+        "ReadAccess": {
+          "offset": 38,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "SharedDelete": {
+          "offset": 43,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "SharedRead": {
+          "offset": 41,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "SharedWrite": {
+          "offset": 42,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "WriteAccess": {
+          "offset": 39,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 128
+    },
+    "_DEVICE_OBJECT": {
+      "fields": {
+        "AttachedDevice": {
+          "offset": 16,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_DEVICE_OBJECT"
+            }
+          }
+        },
+        "Flags": {
+          "offset": 48,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "NextDevice": {
+          "offset": 12,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_DEVICE_OBJECT"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 184
+    },
+    "_CM_KEY_BODY": {
+      "fields": {
+        "KeyControlBlock": {
+          "offset": 4,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_CM_KEY_CONTROL_BLOCK"
+            }
+          }
+        },
+        "Type": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 44
+    },
+    "_CMHIVE": {
+      "fields": {
+        "FileFullPath": {
+          "offset": 1136,
+          "type": {
+            "kind": "struct",
+            "name": "_UNICODE_STRING"
+          }
+        },
+        "FileUserName": {
+          "offset": 1144,
+          "type": {
+            "kind": "struct",
+            "name": "_UNICODE_STRING"
+          }
+        },
+        "Hive": {
+          "offset": 0,
+          "type": {
+            "kind": "struct",
+            "name": "_HHIVE"
+          }
+        },
+        "HiveRootPath": {
+          "offset": 1160,
+          "type": {
+            "kind": "struct",
+            "name": "_UNICODE_STRING"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 3104
+    },
+    "_CM_KEY_NODE": {
+      "fields": {
+        "Name": {
+          "offset": 76,
+          "type": {
+            "count": 1,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "wchar"
+            }
+          }
+        },
+        "NameLength": {
+          "offset": 72,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "Parent": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "SubKeyLists": {
+          "offset": 28,
+          "type": {
+            "count": 2,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "ValueList": {
+          "offset": 36,
+          "type": {
+            "kind": "struct",
+            "name": "_CHILD_LIST"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 80
+    },
+    "_CM_KEY_VALUE": {
+      "fields": {
+        "Data": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "DataLength": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "Flags": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "Name": {
+          "offset": 20,
+          "type": {
+            "count": 1,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "wchar"
+            }
+          }
+        },
+        "NameLength": {
+          "offset": 2,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "Signature": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "Spare": {
+          "offset": 18,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "Type": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 24
+    },
+    "_HMAP_ENTRY": {
+      "fields": {
+        "BinAddress": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "BlockAddress": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "MemAlloc": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 12 
+    },
+    "_MMVAD_SHORT": {
+      "fields": {
+        "EndingVpn": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "NextVad": {
+          "offset": 0,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_MMVAD_SHORT"
+            }
+          }
+        },
+        "StartingVpn": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "VadNode": {
+          "offset": 0,
+          "type": {
+            "kind": "struct",
+            "name": "_RTL_BALANCED_NODE"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 40
+    },
+    "_MMVAD": {
+      "fields": {
+        "Core": {
+          "offset": 0,
+          "type": {
+            "kind": "struct",
+            "name": "_MMVAD_SHORT"
+          }
+        },
+        "Subsection": {
+          "offset": 44,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_SUBSECTION"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 72
+    },
+    "_KSYSTEM_TIME": {
+      "fields": {
+        "High1Time": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        },
+        "High2Time": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        },
+        "LowPart": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 12
+    },
+    "_KMUTANT": {
+      "fields": {
+        "Header": {
+          "offset": 0,
+          "type": {
+            "kind": "struct",
+            "name": "_DISPATCHER_HEADER"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 32
+    },
+    "_DRIVER_OBJECT": {
+      "fields": {
+        "DeviceObject": {
+          "offset": 4,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_DEVICE_OBJECT"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 168
+    },
+    "_OBJECT_SYMBOLIC_LINK": {
+      "fields": {
+        "CreationTime": {
+          "offset": 0,
+          "type": {
+            "kind": "union",
+            "name": "_LARGE_INTEGER"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 24
+    },
+    "_CONTROL_AREA": {
+      "fields": {
+        "FilePointer": {
+          "offset": 32,
+          "type": {
+            "kind": "struct",
+            "name": "_EX_FAST_REF"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 80
+    },
+    "_SHARED_CACHE_MAP": {
+      "fields": {
+        "FileSize": {
+          "offset": 8,
+          "type": {
+            "kind": "union",
+            "name": "_LARGE_INTEGER"
+          }
+        },
+        "InitialVacbs": {
+          "offset": 48,
+          "type": {
+            "count": 4,
+            "kind": "array",
+            "subtype": {
+              "kind": "pointer",
+              "subtype": {
+                "kind": "struct",
+                "name": "_VACB"
+              }
+            }
+          }
+        },
+        "Section": {
+          "offset": 108,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "base",
+              "name": "void"
+            }
+          }
+        },
+        "SectionSize": {
+          "offset": 24,
+          "type": {
+            "kind": "union",
+            "name": "_LARGE_INTEGER"
+          }
+        },
+        "Vacbs": {
+          "offset": 64,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "pointer",
+              "subtype": {
+                "kind": "struct",
+                "name": "_VACB"
+              }
+            }
+          }
+        },
+        "ValidDataLength": {
+          "offset": 32,
+          "type": {
+            "kind": "union",
+            "name": "_LARGE_INTEGER"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 368
+    },
+    "_VACB": {
+      "fields": {
+        "ArrayHead": {
+          "offset": 16,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_VACB_ARRAY_HEADER"
+            }
+          }
+        },
+        "BaseAddress": {
+          "offset": 0,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "base",
+              "name": "void"
+            }
+          }
+        },
+        "Overlay": {
+          "offset": 8,
+          "type": {
+            "kind": "union",
+            "name": "__unnamed_1971"
+          }
+        },
+        "SharedCacheMap": {
+          "offset": 4,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_SHARED_CACHE_MAP"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 24
+    },
+    "_POOL_TRACKER_BIG_PAGES": {
+      "fields": {
+        "Key": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "NumberOfBytes": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "PoolType": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "Va": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 16
+    },
+    "_IMAGE_DOS_HEADER": {
+      "fields": {
+        "e_cblp": {
+          "offset": 2,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_cp": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_cparhdr": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_crlc": {
+          "offset": 6,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_cs": {
+          "offset": 22,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_csum": {
+          "offset": 18,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_ip": {
+          "offset": 20,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_lfanew": {
+          "offset": 60,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        },
+        "e_lfarlc": {
+          "offset": 24,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_magic": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_maxalloc": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_minalloc": {
+          "offset": 10,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_oemid": {
+          "offset": 36,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_oeminfo": {
+          "offset": 38,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_ovno": {
+          "offset": 26,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_res": {
+          "offset": 28,
+          "type": {
+            "count": 4,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "e_res2": {
+          "offset": 40,
+          "type": {
+            "count": 10,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "e_sp": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_ss": {
+          "offset": 14,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 64
+    },
+    "_SINGLE_LIST_ENTRY": {
+      "fields": {
+        "Next": {
+          "offset": 0,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_SINGLE_LIST_ENTRY"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 4
+    },
+    "_LDRP_CSLIST": {
+      "fields": {
+        "Tail": {
+          "offset": 0,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_SINGLE_LIST_ENTRY"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 4
+    },
+    "_RTL_BALANCED_NODE": {
+      "fields": {
+        "Balance": {
+          "offset": 8,
+          "type": {
+            "bit_length": 2,
+            "bit_position": 0,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "Children": {
+          "offset": 0,
+          "type": {
+            "count": 2,
+            "kind": "array",
+            "subtype": {
+              "kind": "pointer",
+              "subtype": {
+                "kind": "struct",
+                "name": "_RTL_BALANCED_NODE"
+              }
+            }
+          }
+        },
+        "Left": {
+          "offset": 0,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_RTL_BALANCED_NODE"
+            }
+          }
+        },
+        "ParentValue": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "Red": {
+          "offset": 8,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 0,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "Right": {
+          "offset": 4,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_RTL_BALANCED_NODE"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 12
+    },
+    "_LIST_ENTRY": {
+      "fields": {
+        "Blink": {
+          "offset": 4,
+          "type": {
+             "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_LIST_ENTRY"
+            }
+          }
+        },
+        "Flink": {
+          "offset": 0,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_LIST_ENTRY"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 8
+    },
+    "LIST_ENTRY32": {
+      "fields": {
+        "Blink": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "Flink": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 8
+    },
+    "_PEB_LDR_DATA": {
+      "fields": {
+        "EntryInProgress": {
+          "offset": 36,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "base",
+              "name": "void"
+            }
+          }
+        },
+        "InInitializationOrderModuleList": {
+          "offset": 28,
+          "type": {
+            "kind": "struct",
+            "name": "_LIST_ENTRY"
+          }
+        },
+        "InLoadOrderModuleList": {
+          "offset": 12,
+          "type": {
+            "kind": "struct",
+            "name": "_LIST_ENTRY"
+          }
+        },
+        "InMemoryOrderModuleList": {
+          "offset": 20,
+          "type": {
+            "kind": "struct",
+            "name": "_LIST_ENTRY"
+          }
+        },
+        "Initialized": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "Length": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ShutdownInProgress": {
+          "offset": 40,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "ShutdownThreadId": {
+          "offset": 44,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "base",
+              "name": "void"
+            }
+          }
+        },
+        "SsHandle": {
+          "offset": 8,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "base",
+              "name": "void"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 48
+    },
+    "_LDR_DATA_TABLE_ENTRY": {
+      "fields": {
+        "BaseDllName": {
+          "offset": 44,
+          "type": {
+            "kind": "struct",
+            "name": "_UNICODE_STRING"
+          } 
+        }, 
+        "FullDllName": {
+          "offset": 36,
+          "type": {
+            "kind": "struct",
+            "name": "_UNICODE_STRING"
+          }
+        },
+        "LoadTime": {
+          "offset": 256,
+          "type": {
+            "kind": "union",
+            "name": "_LARGE_INTEGER"
+          } 
+        },
+        "DllBase": {
+          "offset": 24,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "base",
+              "name": "void"
+            }
+          }
+        },
+        "SizeOfImage": {
+          "offset": 32, 
+          "type": { 
+            "kind": "base",
+            "name": "unsigned long"
+          } 
+        },  
+        "InInitializationOrderLinks": {
+          "offset": 16,
+          "type": {
+            "kind": "struct",
+            "name": "_LIST_ENTRY"
+          }
+        },
+        "InLoadOrderLinks": {
+          "offset": 0,
+          "type": {
+            "kind": "struct",
+            "name": "_LIST_ENTRY"
+          }
+        },
+        "InMemoryOrderLinks": {
+          "offset": 8,
+          "type": {
+            "kind": "struct",
+            "name": "_LIST_ENTRY"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 160 
+    },
+    "_PEB32": {
+      "fields": {
+        "ActivationContextData": {
+          "offset": 504,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ActiveProcessAffinityMask": {
+          "offset": 192,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "AnsiCodePageData": {
+          "offset": 88,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ApiSetMap": {
+          "offset": 56,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "AppCompatFlags": {
+          "offset": 472,
+          "type": {
+            "kind": "union",
+            "name": "_ULARGE_INTEGER"
+          }
+        },
+        "AppCompatFlagsUser": {
+          "offset": 480,
+          "type": {
+            "kind": "union",
+            "name": "_ULARGE_INTEGER"
+          }
+        },
+        "AppCompatInfo": {
+          "offset": 492,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "AtlThunkSListPtr": {
+          "offset": 32,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "AtlThunkSListPtr32": {
+          "offset": 52,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "BeingDebugged": {
+          "offset": 2,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "BitField": {
+          "offset": 3,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "CSDVersion": {
+          "offset": 496,
+          "type": {
+            "kind": "struct",
+            "name": "_STRING32"
+          }
+        },
+        "CritSecTracingEnabled": {
+          "offset": 576,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 1,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "CriticalSectionTimeout": {
+          "offset": 112,
+          "type": {
+            "kind": "union",
+            "name": "_LARGE_INTEGER"
+          }
+        },
+        "CrossProcessFlags": {
+          "offset": 40,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "CsrServerReadOnlySharedMemoryBase": {
+          "offset": 584,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "FastPebLock": {
+          "offset": 28,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "FlsBitmap": {
+          "offset": 536,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "FlsBitmapBits": {
+          "offset": 540,
+          "type": {
+            "count": 4,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "FlsCallback": {
+          "offset": 524,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "FlsHighIndex": {
+          "offset": 556,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "FlsListHead": {
+          "offset": 528,
+          "type": {
+            "kind": "struct",
+            "name": "LIST_ENTRY32"
+          }
+        },
+        "GdiDCAttributeList": {
+          "offset": 156,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "GdiHandleBuffer": {
+          "offset": 196,
+          "type": {
+            "count": 34,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "GdiSharedHandleTable": {
+          "offset": 148,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "HeapDeCommitFreeBlockThreshold": {
+          "offset": 132,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "HeapDeCommitTotalFreeThreshold": {
+          "offset": 128,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "HeapSegmentCommit": {
+          "offset": 124,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "HeapSegmentReserve": {
+          "offset": 120,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "HeapTracingEnabled": {
+          "offset": 576,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 0,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "IFEOKey": {
+          "offset": 36,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ImageBaseAddress": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ImageSubsystem": {
+          "offset": 180,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ImageSubsystemMajorVersion": {
+          "offset": 184,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ImageSubsystemMinorVersion": {
+          "offset": 188,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ImageUsesLargePages": {
+          "offset": 3,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 0,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "InheritedAddressSpace": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "IsAppContainer": {
+          "offset": 3,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 5,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "IsImageDynamicallyRelocated": {
+          "offset": 3,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 2,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "IsPackagedProcess": {
+          "offset": 3,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 4,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "IsProtectedProcess": {
+          "offset": 3,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 1,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "IsProtectedProcessLight": {
+          "offset": 3,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 6,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "KernelCallbackTable": {
+          "offset": 44,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "Ldr": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "LibLoaderTracingEnabled": {
+          "offset": 576,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 2,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "LoaderLock": {
+          "offset": 160,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "MaximumNumberOfHeaps": {
+          "offset": 140,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "MinimumStackCommit": {
+          "offset": 520,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "Mutant": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "NtGlobalFlag": {
+          "offset": 104,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "NumberOfHeaps": {
+          "offset": 136,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "NumberOfProcessors": {
+          "offset": 100,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "OSBuildNumber": {
+          "offset": 172,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "OSCSDVersion": {
+          "offset": 174,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "OSMajorVersion": {
+          "offset": 164,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "OSMinorVersion": {
+          "offset": 168,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "OSPlatformId": {
+          "offset": 176,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "OemCodePageData": {
+          "offset": 92,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "PostProcessInitRoutine": {
+          "offset": 332,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ProcessAssemblyStorageMap": {
+          "offset": 508,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ProcessHeap": {
+          "offset": 24,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ProcessHeaps": {
+          "offset": 144,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ProcessInJob": {
+          "offset": 40,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 0,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "ProcessInitializing": {
+          "offset": 40,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 1,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "ProcessParameters": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ProcessStarterHelper": {
+          "offset": 152,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ProcessUsingFTH": {
+          "offset": 40,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 4,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "ProcessUsingVCH": {
+          "offset": 40,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 3,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "ProcessUsingVEH": {
+          "offset": 40,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 2,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "ReadImageFileExecOptions": {
+          "offset": 1,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "ReadOnlySharedMemoryBase": {
+          "offset": 76,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ReadOnlyStaticServerData": {
+          "offset": 84,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ReservedBits0": {
+          "offset": 40,
+          "type": {
+            "bit_length": 27,
+            "bit_position": 5,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "SessionId": {
+          "offset": 468,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "SkipPatchingUser32Forwarders": {
+          "offset": 3,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 3,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "SpareBits": {
+          "offset": 3,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 7,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "SparePvoid0": {
+          "offset": 80,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "SpareTracingBits": {
+          "offset": 576,
+          "type": {
+            "bit_length": 29,
+            "bit_position": 3,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "SubSystemData": {
+          "offset": 20,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "SystemAssemblyStorageMap": {
+          "offset": 516,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "SystemDefaultActivationContextData": {
+          "offset": 512,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "SystemReserved": {
+          "offset": 48,
+          "type": {
+            "count": 1,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "TlsBitmap": {
+          "offset": 64,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "TlsBitmapBits": {
+          "offset": 68,
+          "type": {
+            "count": 2,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "TlsExpansionBitmap": {
+          "offset": 336,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "TlsExpansionBitmapBits": {
+          "offset": 340,
+          "type": {
+            "count": 32,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "TlsExpansionCounter": {
+          "offset": 60,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "TracingFlags": {
+          "offset": 576,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "UnicodeCaseTableData": {
+          "offset": 96,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "UserSharedInfoPtr": {
+          "offset": 44,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "WerRegistrationData": {
+          "offset": 560,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "WerShipAssertPtr": {
+          "offset": 564,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "pImageHeaderHash": {
+          "offset": 572,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "pShimData": {
+          "offset": 488,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "pUnused": {
+          "offset": 568,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 592
+    },
+    "_UNICODE_STRING": {
+      "fields": {
+        "Buffer": {
+          "offset": 4,
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "Length": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "MaximumLength": {
+          "offset": 2,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 8
+    }
+  }
+}

@@ -153,8 +153,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 constructor(context, config_path, requirement)
 
                 # Stash the changed config items
-                self._cached = context.config.get(path, None), context.config.branch(
-                    path
+                self._cached = (
+                    context.config.get(path, None),
+                    context.config.branch(path),
                 )
         vollog.debug(
             f"physical_layer maximum_address: {physical_layer.maximum_address}"
@@ -166,7 +167,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         cls,
         context: interfaces.context.ContextInterface,
         initial_layer: str,
-        stack_set: List[Type[interfaces.automagic.StackerLayerInterface]] = None,
+        stack_set: Optional[
+            List[Type[interfaces.automagic.StackerLayerInterface]]
+        ] = None,
         progress_callback: constants.ProgressCallback = None,
     ):
         """Stacks as many possible layers on top of the initial layer as can be done.

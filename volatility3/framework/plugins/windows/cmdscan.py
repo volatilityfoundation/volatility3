@@ -24,7 +24,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
     """Looks for Windows Command History lists"""
 
     _required_framework_version = (2, 4, 0)
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -36,10 +36,15 @@ class CmdScan(interfaces.plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="pslist", component=pslist.PsList, version=(2, 0, 0)
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="consoles", plugin=consoles.Consoles, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="consoles", component=consoles.Consoles, version=(3, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="bytes_scanner",
+                component=scanners.BytesScanner,
+                version=(1, 0, 0),
             ),
             requirements.BooleanRequirement(
                 name="no_registry",
@@ -67,6 +72,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
 
         Args:
             conhost_proc: the process object for conhost.exe
+            size_filter: size above which vads will not be returned
 
         Returns:
             A list of tuples of:
@@ -82,9 +88,8 @@ class CmdScan(interfaces.plugins.PluginInterface):
     def get_command_history(
         cls,
         context: interfaces.context.ContextInterface,
-        kernel_layer_name: str,
-        kernel_symbol_table_name: str,
         config_path: str,
+        kernel_module_name: str,
         procs: Generator[interfaces.objects.ObjectInterface, None, None],
         max_history: Set[int],
     ) -> Tuple[
@@ -96,11 +101,9 @@ class CmdScan(interfaces.plugins.PluginInterface):
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            kernel_layer_name: The name of the layer on which to operate
-            kernel_symbol_table_name: The name of the table containing the kernel symbols
             config_path: The config path where to find symbol files
-            procs: list of process objects
-            max_history: an initial set of CommandHistorySize values
+            procs: List of process objects
+            max_history: An initial set of CommandHistorySize values
 
         Returns:
             The conhost process object, the command history structure, a dictionary of properties for
@@ -134,9 +137,8 @@ class CmdScan(interfaces.plugins.PluginInterface):
             if conhost_symbol_table is None:
                 conhost_symbol_table = consoles.Consoles.create_conhost_symbol_table(
                     context,
-                    kernel_layer_name,
-                    kernel_symbol_table_name,
                     config_path,
+                    kernel_module_name,
                     proc_layer_name,
                     conhostexe_base,
                 )
@@ -227,7 +229,6 @@ class CmdScan(interfaces.plugins.PluginInterface):
                                 "data": command_history.CommandCountMax,
                             }
                         )
-
                         command_history_properties.append(
                             {
                                 "level": 1,
@@ -236,6 +237,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
                                 "data": "",
                             }
                         )
+
                         for (
                             cmd_index,
                             bucket_cmd,
@@ -278,19 +280,16 @@ class CmdScan(interfaces.plugins.PluginInterface):
             procs: the process list filtered to conhost.exe instances
         """
 
-        kernel = self.context.modules[self.config["kernel"]]
-
         max_history = set(self.config.get("max_history", [50]))
         no_registry = self.config.get("no_registry")
 
         if no_registry is False:
             max_history, _ = consoles.Consoles.get_console_settings_from_registry(
-                self.context,
-                self.config_path,
-                kernel.layer_name,
-                kernel.symbol_table_name,
-                max_history,
-                [],
+                context=self.context,
+                config_path=self.config_path,
+                kernel_module_name=self.config["kernel"],
+                max_history=max_history,
+                max_buffers=[],
             )
 
         vollog.debug(f"Possible CommandHistorySize values: {max_history}")
@@ -302,9 +301,8 @@ class CmdScan(interfaces.plugins.PluginInterface):
             command_history_properties,
         ) in self.get_command_history(
             self.context,
-            kernel.layer_name,
-            kernel.symbol_table_name,
             self.config_path,
+            self.config["kernel"],
             procs,
             max_history,
         ):
@@ -352,15 +350,13 @@ class CmdScan(interfaces.plugins.PluginInterface):
 
     def _conhost_proc_filter(self, proc: interfaces.objects.ObjectInterface):
         """
-        Used to filter to only conhost.exe processes
+        Used to filter only conhost.exe processes
         """
         process_name = utility.array_to_string(proc.ImageFileName)
 
         return process_name != "conhost.exe"
 
     def run(self):
-        kernel = self.context.modules[self.config["kernel"]]
-
         return renderers.TreeGrid(
             [
                 ("PID", int),
@@ -373,8 +369,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
             self._generator(
                 pslist.PsList.list_processes(
                     context=self.context,
-                    layer_name=kernel.layer_name,
-                    symbol_table=kernel.symbol_table_name,
+                    kernel_module_name=self.config["kernel"],
                     filter_func=self._conhost_proc_filter,
                 )
             ),

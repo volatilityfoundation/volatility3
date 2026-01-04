@@ -1,0 +1,96 @@
+{
+    "WINDOWS10_GENERIC": [
+        {
+            "Value": "0xf8043601f000",
+            "Variable": "Kernel Base"
+        },
+        {
+            "Value": "0x6d4000",
+            "Variable": "DTB"
+        },
+        {
+            "Value": "True",
+            "Variable": "Is64Bit"
+        },
+        {
+            "Value": "False",
+            "Variable": "IsPAE"
+        },
+        {
+            "Value": "0 WindowsIntel32e",
+            "Variable": "layer_name"
+        },
+        {
+            "Value": "1 WindowsCrashDump64Layer",
+            "Variable": "memory_layer"
+        },
+        {
+            "Value": "2 FileLayer",
+            "Variable": "base_layer"
+        },
+        {
+            "Value": "0xf80436c1fb20",
+            "Variable": "KdDebuggerDataBlock"
+        },
+        {
+            "Value": "19041.1.amd64fre.vb_release.1912",
+            "Variable": "NTBuildLab"
+        },
+        {
+            "Value": "0",
+            "Variable": "CSDVersion"
+        },
+        {
+            "Value": "0xf80436c2e420",
+            "Variable": "KdVersionBlock"
+        },
+        {
+            "Value": "15.19041",
+            "Variable": "Major/Minor"
+        },
+        {
+            "Value": "34404",
+            "Variable": "MachineType"
+        },
+        {
+            "Value": "1",
+            "Variable": "KeNumberProcessors"
+        },
+        {
+            "Value": "2025-03-06 17:59:20+00:00",
+            "Variable": "SystemTime"
+        },
+        {
+            "Value": "C:\\Windows",
+            "Variable": "NtSystemRoot"
+        },
+        {
+            "Value": "NtProductWinNt",
+            "Variable": "NtProductType"
+        },
+        {
+            "Value": "10",
+            "Variable": "NtMajorVersion"
+        },
+        {
+            "Value": "0",
+            "Variable": "NtMinorVersion"
+        },
+        {
+            "Value": "10",
+            "Variable": "PE MajorOperatingSystemVersion"
+        },
+        {
+            "Value": "0",
+            "Variable": "PE MinorOperatingSystemVersion"
+        },
+        {
+            "Value": "34404",
+            "Variable": "PE Machine"
+        },
+        {
+            "Value": "Tue Sep 26 06:53:33 2023",
+            "Variable": "PE TimeDateStamp"
+        }
+    ]
+}

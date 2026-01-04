@@ -19,7 +19,7 @@ class Ptrace(plugins.PluginInterface):
     """Enumerates ptrace's tracer and tracee tasks"""
 
     _required_framework_version = (2, 10, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 2)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -29,8 +29,8 @@ class Ptrace(plugins.PluginInterface):
                 description="Linux kernel",
                 architectures=architectures.LINUX_ARCHS,
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 2, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
             ),
         ]
 

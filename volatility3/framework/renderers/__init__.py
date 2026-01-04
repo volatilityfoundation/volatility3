@@ -6,8 +6,10 @@
 Renderers display the unified output format in some manner (be it text
 or file or graphical output
 """
+
 import collections
 import collections.abc
+import dataclasses
 import datetime
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
@@ -22,15 +24,27 @@ class UnreadableValue(interfaces.renderers.BaseAbsentValue):
     """Class that represents values which are empty because the data cannot be
     read."""
 
+    def __str__(self) -> str:
+        """Fallback method for rendering basic types"""
+        return "-"
+
 
 class UnparsableValue(interfaces.renderers.BaseAbsentValue):
     """Class that represents values which are empty because the data cannot be
     interpreted correctly."""
 
+    def __str__(self) -> str:
+        """Fallback method for rendering basic types"""
+        return "-"
+
 
 class NotApplicableValue(interfaces.renderers.BaseAbsentValue):
     """Class that represents values which are empty because they don't make
     sense for this node."""
+
+    def __str__(self) -> str:
+        """Fallback method for rendering basic types"""
+        return "N/A"
 
 
 class NotAvailableValue(interfaces.renderers.BaseAbsentValue):
@@ -44,6 +58,70 @@ class NotAvailableValue(interfaces.renderers.BaseAbsentValue):
     unreadable or unparsable). Unreadable and Unparsable should be used
     in preference, and only if neither fits should this be used.
     """
+
+    def __str__(self) -> str:
+        """Fallback method for rendering basic types"""
+        return "N/A"
+
+
+##########
+### Basic Types
+
+
+class Disassembly(interfaces.renderers.BasicType):
+    """A class to indicate that the bytes provided should be disassembled
+    (based on the architecture)"""
+
+    possible_architectures = ["intel", "intel64", "arm", "arm64"]
+
+    def __init__(
+        self, data: bytes, offset: int = 0, architecture: str = "intel64"
+    ) -> None:
+        self.data = data
+        self.architecture = None
+        if architecture in self.possible_architectures:
+            self.architecture = architecture
+        if not isinstance(offset, int):
+            raise TypeError("Offset must be an integer type")
+        self.offset = offset
+
+    def __str__(self) -> str:
+        """Fallback method of rendering"""
+        return str(self.data)
+
+
+@dataclasses.dataclass
+class LayerData(interfaces.renderers.BasicType):
+    """Layer data
+
+    This requires the context to be passed in, in case plugins want to use multiple contexts
+    and to ensure the TreeGrid interface doesn't change, since this would break all existing plugins
+    """
+
+    context: "interfaces.context.ContextInterface"
+    layer_name: str
+    offset: int
+    length: int
+    no_surrounding: bool = False
+
+    @staticmethod
+    def from_object(
+        object: "interfaces.objects.ObjectInterface",
+        size: Optional[int] = None,
+        no_surrounding: bool = True,
+    ):
+        return LayerData(
+            context=object._context,
+            layer_name=object.vol.layer_name,
+            offset=object.vol.offset,
+            length=size or object.vol.size,
+            no_surrounding=no_surrounding,
+        )
+
+    def __str__(self) -> str:
+        """Fallback method of rendering"""
+        data = self.context.layers[self.layer_name].read(self.offset, self.length, True)
+        return str(data)
 
 
 class TreeNode(interfaces.renderers.TreeNode):
@@ -83,14 +161,11 @@ class TreeNode(interfaces.renderers.TreeNode):
             raise TypeError(
                 "Values must be a list of objects made up of simple types and number the same as the columns"
             )
-        for index in range(len(self._treegrid.columns)):
-            column = self._treegrid.columns[index]
+        for index, column in enumerate(self._treegrid.columns):
             val = values[index]
             if not isinstance(val, (column.type, interfaces.renderers.BaseAbsentValue)):
                 raise TypeError(
-                    "Values item with index {} is the wrong type for column {} (got {} but expected {})".format(
-                        index, column.name, type(val), column.type
-                    )
+                    f"Values item with index {index} is the wrong type for column {column.name} (got {type(val)} but expected {column.type})"
                 )
             # TODO: Consider how to deal with timezone naive/aware datetimes (and alert plugin uses to be precise)
             # if isinstance(val, datetime.datetime):
@@ -189,9 +264,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
             is_simple_type = issubclass(column_type, self.base_types)
             if not is_simple_type:
                 raise TypeError(
-                    "Column {}'s type is not a simple type: {}".format(
-                        name, column_type.__class__.__name__
-                    )
+                    f"Column {name}'s type is not a simple type: {column_type.__class__.__name__}"
                 )
             converted_columns.append(interfaces.renderers.Column(name, column_type))
         self.RowStructure = RowStructureConstructor(
@@ -218,7 +291,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 
     def populate(
         self,
-        function: interfaces.renderers.VisitorSignature = None,
+        function: Optional[interfaces.renderers.VisitorSignature] = None,
         initial_accumulator: Any = None,
         fail_on_errors: bool = True,
     ) -> Optional[Exception]:
@@ -417,8 +490,7 @@ class ColumnSortKey(interfaces.renderers.ColumnSortKey):
         _index = None
         self._type = None
         self.ascending = ascending
-        for i in range(len(treegrid.columns)):
-            column = treegrid.columns[i]
+        for i, column in enumerate(treegrid.columns):
             if column.name.lower() == column_name.lower():
                 _index = i
                 self._type = column.type
@@ -434,10 +506,10 @@ class ColumnSortKey(interfaces.renderers.ColumnSortKey):
                 value = datetime.datetime.min
             elif self._type in [int, float]:
                 value = -1
-            elif self._type == bool:
+            elif self._type is bool:
                 value = False
             elif self._type in [str, renderers.Disassembly]:
                 value = "-"
-            elif self._type == bytes:
+            elif self._type is bytes:
                 value = b""
         return value

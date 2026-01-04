@@ -3,12 +3,11 @@
 #
 
 import time
-from typing import List, Tuple, Iterable
+from typing import Iterable, List, Tuple
 
-from volatility3.framework import constants, interfaces, layers, symbols
+from volatility3.framework import constants, interfaces, layers, renderers, symbols
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
-from volatility3.framework.renderers import TreeGrid
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import kdbg, pe
 
@@ -17,7 +16,7 @@ class Info(plugins.PluginInterface):
     """Show OS & kernel details of the memory sample being analyzed."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -56,6 +55,9 @@ class Info(plugins.PluginInterface):
             # FileLayer won't have dependencies
             pass
 
+    # FIXME - this needs to be deprecated. This is exactly the same
+    # as getting it from context.modules
+    # Deprecation warning will go once the API is overhauled
     @classmethod
     def get_kernel_module(
         cls,
@@ -68,7 +70,9 @@ class Info(plugins.PluginInterface):
         if not isinstance(virtual_layer, layers.intel.Intel):
             raise TypeError("Virtual Layer is not an intel layer")
 
-        kvo = virtual_layer.config["kernel_virtual_offset"]
+        kvo = virtual_layer.config.get("kernel_virtual_offset", None)
+        if not kvo:
+            raise ValueError("Intel layer has no kernel virtual offset defined")
 
         ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
         return ntkrnlmp
@@ -78,13 +82,12 @@ class Info(plugins.PluginInterface):
         cls,
         context: interfaces.context.ContextInterface,
         config_path: str,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
     ) -> interfaces.objects.ObjectInterface:
         """Returns the KDDEBUGGER_DATA64 structure for a kernel"""
-        ntkrnlmp = cls.get_kernel_module(context, layer_name, symbol_table)
+        ntkrnlmp = context.modules[kernel_module_name]
 
-        native_types = context.symbol_space[symbol_table].natives
+        native_types = context.symbol_space[ntkrnlmp.symbol_table_name].natives
 
         kdbg_offset = ntkrnlmp.get_symbol("KdDebuggerDataBlock").address
 
@@ -100,7 +103,7 @@ class Info(plugins.PluginInterface):
         kdbg_obj = context.object(
             kdbg_table_name + constants.BANG + "_KDDEBUGGER_DATA64",
             offset=ntkrnlmp.offset + kdbg_offset,
-            layer_name=layer_name,
+            layer_name=ntkrnlmp.layer_name,
         )
 
         return kdbg_obj
@@ -109,15 +112,14 @@ class Info(plugins.PluginInterface):
     def get_kuser_structure(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
     ) -> interfaces.objects.ObjectInterface:
         """Returns the _KUSER_SHARED_DATA structure for a kernel"""
-        virtual_layer = context.layers[layer_name]
+        ntkrnlmp = context.modules[kernel_module_name]
+
+        virtual_layer = context.layers[ntkrnlmp.layer_name]
         if not isinstance(virtual_layer, layers.intel.Intel):
             raise TypeError("Virtual Layer is not an intel layer")
-
-        ntkrnlmp = cls.get_kernel_module(context, layer_name, symbol_table)
 
         # this is a hard-coded address in the Windows OS
         if virtual_layer.bits_per_register == 32:
@@ -127,7 +129,6 @@ class Info(plugins.PluginInterface):
 
         kuser = ntkrnlmp.object(
             object_type="_KUSER_SHARED_DATA",
-            layer_name=layer_name,
             offset=kuser_addr,
             absolute=True,
         )
@@ -138,17 +139,15 @@ class Info(plugins.PluginInterface):
     def get_version_structure(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
     ) -> interfaces.objects.ObjectInterface:
         """Returns the KdVersionBlock information from a kernel"""
-        ntkrnlmp = cls.get_kernel_module(context, layer_name, symbol_table)
+        ntkrnlmp = context.modules[kernel_module_name]
 
         vers_offset = ntkrnlmp.get_symbol("KdVersionBlock").address
 
         vers = ntkrnlmp.object(
             object_type="_DBGKD_GET_VERSION64",
-            layer_name=layer_name,
             offset=vers_offset,
         )
 
@@ -166,7 +165,9 @@ class Info(plugins.PluginInterface):
         if not isinstance(virtual_layer, layers.intel.Intel):
             raise TypeError("Virtual Layer is not an intel layer")
 
-        kvo = virtual_layer.config["kernel_virtual_offset"]
+        kvo = virtual_layer.config.get("kernel_virtual_offset", None)
+        if not kvo:
+            raise ValueError("Intel layer has no kernel virtual offset defined")
 
         pe_table_name = intermed.IntermediateSymbolTable.create(
             context,
@@ -189,28 +190,38 @@ class Info(plugins.PluginInterface):
     def _generator(self):
         kernel = self.context.modules[self.config["kernel"]]
 
-        layer_name = kernel.layer_name
-        symbol_table = kernel.symbol_table_name
-        layer = self.context.layers[layer_name]
-        table = self.context.symbol_space[symbol_table]
+        kernel_layer = self.context.layers[kernel.layer_name]
+        symbol_table = self.context.symbol_space[kernel.symbol_table_name]
 
         kdbg = self.get_kdbg_structure(
-            self.context, self.config_path, layer_name, symbol_table
+            self.context,
+            self.config_path,
+            self.config["kernel"],
         )
 
-        yield (0, ("Kernel Base", hex(layer.config["kernel_virtual_offset"])))
-        yield (0, ("DTB", hex(layer.config["page_map_offset"])))
-        yield (0, ("Symbols", table.config["isf_url"]))
+        yield (0, ("Kernel Base", hex(kernel_layer.config["kernel_virtual_offset"])))
+        yield (0, ("DTB", hex(kernel_layer.config["page_map_offset"])))
+        yield (0, ("Symbols", symbol_table.config["isf_url"]))
         yield (
             0,
-            ("Is64Bit", str(symbols.symbol_table_is_64bit(self.context, symbol_table))),
+            (
+                "Is64Bit",
+                str(
+                    symbols.symbol_table_is_64bit(
+                        context=self.context, symbol_table_name=kernel.symbol_table_name
+                    )
+                ),
+            ),
         )
         yield (
             0,
-            ("IsPAE", str(self.context.layers[layer_name].metadata.get("pae", False))),
+            (
+                "IsPAE",
+                str(self.context.layers[kernel.layer_name].metadata.get("pae", False)),
+            ),
         )
 
-        for i, layer in self.get_depends(self.context, layer_name):
+        for i, layer in self.get_depends(self.context, kernel.layer_name):
             yield (0, (layer.name, f"{i} {layer.__class__.__name__}"))
 
         if kdbg.Header.OwnerTag == 0x4742444B:
@@ -218,23 +229,22 @@ class Info(plugins.PluginInterface):
             yield (0, ("NTBuildLab", kdbg.get_build_lab()))
             yield (0, ("CSDVersion", str(kdbg.get_csdversion())))
 
-        vers = self.get_version_structure(self.context, layer_name, symbol_table)
+        vers = self.get_version_structure(self.context, self.config["kernel"])
 
         yield (0, ("KdVersionBlock", hex(vers.vol.offset)))
         yield (0, ("Major/Minor", f"{vers.MajorVersion}.{vers.MinorVersion}"))
         yield (0, ("MachineType", str(vers.MachineType)))
 
-        ntkrnlmp = self.get_kernel_module(self.context, layer_name, symbol_table)
+        cpu_count_offset = kernel.get_symbol("KeNumberProcessors").address
 
-        cpu_count_offset = ntkrnlmp.get_symbol("KeNumberProcessors").address
-
-        cpu_count = ntkrnlmp.object(
-            object_type="unsigned int", layer_name=layer_name, offset=cpu_count_offset
+        cpu_count = kernel.object(
+            object_type="unsigned int",
+            offset=cpu_count_offset,
         )
 
         yield (0, ("KeNumberProcessors", str(cpu_count)))
 
-        kuser = self.get_kuser_structure(self.context, layer_name, symbol_table)
+        kuser = self.get_kuser_structure(self.context, self.config["kernel"])
 
         yield (0, ("SystemTime", str(kuser.SystemTime.get_time())))
         yield (
@@ -255,7 +265,7 @@ class Info(plugins.PluginInterface):
         # yield (0, ("SafeBootMode", "True" if kuser.SafeBootMode else "False"))
 
         nt_header = self.get_ntheader_structure(
-            self.context, self.config_path, layer_name
+            self.context, self.config_path, kernel.layer_name
         )
 
         yield (
@@ -283,4 +293,6 @@ class Info(plugins.PluginInterface):
         )
 
     def run(self):
-        return TreeGrid([("Variable", str), ("Value", str)], self._generator())
+        return renderers.TreeGrid(
+            [("Variable", str), ("Value", str)], self._generator()
+        )

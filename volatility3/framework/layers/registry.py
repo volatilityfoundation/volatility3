@@ -7,23 +7,22 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from volatility3.framework import constants, exceptions, interfaces, objects
 from volatility3.framework.configuration import requirements
-from volatility3.framework.configuration.requirements import (
-    IntRequirement,
-    TranslationLayerRequirement,
-)
-from volatility3.framework.exceptions import InvalidAddressException
 from volatility3.framework.layers import linear
 from volatility3.framework.symbols import intermed
-from volatility3.plugins.windows import pslist
+from volatility3.framework.symbols.windows import extensions
 
 vollog = logging.getLogger(__name__)
 
 
-class RegistryFormatException(exceptions.LayerException):
+class RegistryException(exceptions.LayerException):
+    """Base Registry Exception class for catching Registry layer errors."""
+
+
+class RegistryFormatException(RegistryException):
     """Thrown when an error occurs with the underlying Registry file format."""
 
 
-class RegistryInvalidIndex(exceptions.LayerException):
+class RegistryInvalidIndex(RegistryException):
     """Thrown when an index that doesn't exist or can't be found occurs."""
 
 
@@ -65,16 +64,15 @@ class RegistryHive(linear.LinearlyMappedLayer):
 
         # Win10 17063 introduced the Registry process to map most hives.  Check
         # if it exists and update RegistryHive._base_layer
-        for proc in pslist.PsList.list_processes(
-            self.context, self.config["base_layer"], self.config["nt_symbols"]
-        ):
-            proc_name = proc.ImageFileName.cast(
-                "string", max_length=proc.ImageFileName.vol.count, errors="replace"
+        try:
+            registry_proc = self._find_registry_process()
+            if registry_proc:
+                self._base_layer = registry_proc.add_process_layer()
+        except ValueError:
+            vollog.log(
+                constants.LOGLEVEL_VVVV,
+                "Error walking process list, results may not be valid.",
             )
-            if proc_name == "Registry" and proc.InheritedFromUniqueProcessId == 4:
-                proc_layer_name = proc.add_process_layer()
-                self._base_layer = proc_layer_name
-                break
 
         self._base_block = self.hive.BaseBlock.dereference()
 
@@ -96,6 +94,41 @@ class RegistryHive(linear.LinearlyMappedLayer):
                 f"Exception when setting hive {self.name} max address, using {hex(self._maxaddr)}",
             )
 
+    def _find_registry_process(self) -> Optional[extensions.EPROCESS]:
+        """Walk the active process list and return the Registry process if it exists. Duplicates
+        PsList.list_processes() since pulling in the plugin causes problems.
+
+        Returns:
+            The Registry EPROCESS object if it exists, or None
+        """
+
+        kernel = self.context.modules.get(self.config["kernel_module_name"])
+
+        if not kernel or not kernel.offset:
+            raise ValueError(
+                "Intel layer does not have an associated kernel virtual offset, failing"
+            )
+
+        ps_aph_offset = kernel.get_symbol("PsActiveProcessHead").address
+        list_entry = kernel.object(object_type="_LIST_ENTRY", offset=ps_aph_offset)
+        reloff = kernel.get_type("_EPROCESS").relative_child_offset(
+            "ActiveProcessLinks"
+        )
+        eproc = kernel.object(
+            object_type="_EPROCESS",
+            offset=list_entry.vol.offset - reloff,
+            absolute=True,
+        )
+
+        for proc in eproc.ActiveProcessLinks:
+            proc_name = proc.ImageFileName.cast(
+                "string", max_length=proc.ImageFileName.vol.count, errors="replace"
+            )
+            if proc_name == "Registry" and proc.InheritedFromUniqueProcessId == 4:
+                return proc
+
+        return None
+
     def _get_hive_maxaddr(self, volatile):
         return (
             self._hive_maxaddr_volatile if volatile else self._hive_maxaddr_non_volatile
@@ -116,7 +149,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
     @property
     def root_cell_offset(self) -> int:
         """Returns the offset for the root cell in this hive."""
-        with contextlib.suppress(InvalidAddressException):
+        with contextlib.suppress(exceptions.InvalidAddressException):
             if (
                 self._base_block.Signature.cast(
                     "string", max_length=4, encoding="latin-1"
@@ -140,7 +173,13 @@ class RegistryHive(linear.LinearlyMappedLayer):
         """Returns the appropriate Node, interpreted from the Cell based on its
         Signature."""
         cell = self.get_cell(cell_offset)
-        signature = cell.cast("string", max_length=2, encoding="latin-1")
+        try:
+            signature = cell.cast("string", max_length=2, encoding="latin-1")
+        except (RegistryException, exceptions.InvalidAddressException):
+            vollog.debug(
+                f"Failed to get cell signature for cell (0x{cell.vol.offset:x})"
+            )
+            return cell
         if signature == "nk":
             return cell.u.KeyNode
         elif signature == "sk":
@@ -156,9 +195,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
         else:
             # It doesn't matter that we use KeyNode, we're just after the first two bytes
             vollog.debug(
-                "Unknown Signature {} (0x{:x}) at offset {}".format(
-                    signature, cell.u.KeyNode.Signature, cell_offset
-                )
+                f"Unknown Signature {signature} (0x{cell.u.KeyNode.Signature:x}) at offset {cell_offset}"
             )
             return cell
 
@@ -178,9 +215,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
         if not root_node.vol.type_name.endswith(constants.BANG + "_CM_KEY_NODE"):
             raise RegistryFormatException(
                 self.name,
-                "Encountered {} instead of _CM_KEY_NODE".format(
-                    root_node.vol.type_name
-                ),
+                f"Encountered {root_node.vol.type_name} instead of _CM_KEY_NODE",
             )
         node_key = [root_node]
         if key.endswith("\\"):
@@ -190,9 +225,9 @@ class RegistryHive(linear.LinearlyMappedLayer):
         while key_array and node_key:
             subkeys = node_key[-1].get_subkeys()
             for subkey in subkeys:
-                # registry keys are not case sensitive so compare lowercase
-                # https://msdn.microsoft.com/en-us/library/windows/desktop/ms724946(v=vs.85).aspx
-                if subkey.get_name().lower() == key_array[0].lower():
+                # registry keys are not case sensitive so compare likewise
+                # https://learn.microsoft.com/en-us/windows/win32/sysinfo/structure-of-the-registry
+                if subkey.get_name().casefold() == key_array[0].casefold():
                     node_key = node_key + [subkey]
                     found_key, key_array = found_key + [key_array[0]], key_array[1:]
                     break
@@ -231,7 +266,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            IntRequirement(
+            requirements.IntRequirement(
                 name="hive_offset",
                 description="Offset within the base layer at which the hive lives",
                 default=0,
@@ -240,7 +275,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
             requirements.SymbolTableRequirement(
                 name="nt_symbols", description="Windows kernel symbols"
             ),
-            TranslationLayerRequirement(
+            requirements.TranslationLayerRequirement(
                 name="base_layer",
                 description="Layer in which the registry hive lives",
                 optional=False,
@@ -260,7 +295,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
                     self.name,
                     hex(offset & 0x7FFFFFFF),
                     hex(self._get_hive_maxaddr(volatile)),
-                    "volative" if volatile else "non-volatile",
+                    "volatile" if volatile else "non-volatile",
                     self.get_name(),
                 ),
             )

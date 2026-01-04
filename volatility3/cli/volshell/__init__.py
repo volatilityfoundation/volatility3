@@ -49,7 +49,7 @@ class VolShell(cli.CommandLine):
     python terminal with all the volatility support calls available.
     """
 
-    CLI_NAME = "volshell"
+    CLI_NAME = os.path.basename(sys.argv[0])  # volshell
 
     def __init__(self):
         super().__init__()
@@ -282,9 +282,7 @@ class VolShell(cli.CommandLine):
         for plugin in volshell_plugin_list:
             subparser = parser.add_argument_group(
                 title=plugin.capitalize(),
-                description="Configuration options based on {} options".format(
-                    plugin.capitalize()
-                ),
+                description=f"Configuration options based on {plugin.capitalize()} options",
             )
             self.populate_requirements_argparse(subparser, volshell_plugin_list[plugin])
             configurables_list[plugin] = volshell_plugin_list[plugin]
@@ -331,7 +329,7 @@ class VolShell(cli.CommandLine):
 
         # UI fills in the config, here we load it from the config file and do it before we process the CL parameters
         if args.config:
-            with open(args.config, "r") as f:
+            with open(args.config) as f:
                 json_val = json.load(f)
                 ctx.config.splice(
                     plugin_config_path,
@@ -346,8 +344,9 @@ class VolShell(cli.CommandLine):
                     raise ValueError(
                         "Invalid extension (extensions must be of the format \"conf.path.value='value'\")"
                     )
-                address, value = extension[: extension.find("=")], json.loads(
-                    extension[extension.find("=") + 1 :]
+                address, value = (
+                    extension[: extension.find("=")],
+                    json.loads(extension[extension.find("=") + 1 :]),
                 )
                 ctx.config[address] = value
 

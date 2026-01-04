@@ -35,16 +35,39 @@ def pytest_addoption(parser):
 def pytest_generate_tests(metafunc):
     """Parameterize tests based on image names"""
 
-    images = metafunc.config.getoption("image")
+    images = metafunc.config.getoption("image").copy()
     for image_dir in metafunc.config.getoption("image_dir"):
-        images = images + [
-            os.path.join(image_dir, dir) for dir in os.listdir(image_dir)
+        images += [
+            os.path.join(image_dir, dir_name) for dir_name in os.listdir(image_dir)
         ]
 
-    # tests with "image" parameter are run against images
+    # tests with "image" parameter are run against image
     if "image" in metafunc.fixturenames:
+        filtered_images = []
+        ids = []
+        for image in images:
+            image_base = os.path.basename(image)
+            test_name = metafunc.definition.originalname
+            if test_name.startswith("test_windows_") and not image_base.startswith(
+                "win-"
+            ):
+                continue
+            elif test_name.startswith("test_linux_") and not image_base.startswith(
+                "linux-"
+            ):
+                continue
+            elif test_name.startswith("test_mac_") and not image_base.startswith(
+                "mac-"
+            ):
+                continue
+
+            filtered_images.append(image)
+            ids.append(image_base)
+
         metafunc.parametrize(
-            "image", images, ids=[os.path.basename(image) for image in images]
+            "image",
+            filtered_images,
+            ids=ids,
         )
 
 

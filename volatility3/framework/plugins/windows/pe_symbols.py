@@ -1,7 +1,6 @@
 # This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 
-import copy
 import io
 import logging
 import ntpath
@@ -11,14 +10,14 @@ from typing import Dict, Tuple, Optional, List, Generator, Union, Callable
 import pefile
 
 from volatility3.framework import interfaces, exceptions
-from volatility3.framework import renderers, constants
+from volatility3.framework import renderers, constants, objects
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import pdbutil
 from volatility3.framework.symbols.windows.extensions import pe
 from volatility3.plugins.windows import pslist, modules
-from volatility3.framework.constants.windows import KERNEL_MODULE_NAMES
+from volatility3.framework.constants import windows
 
 vollog = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ filter_modules_type = Dict[str, filter_module_info]
 found_symbols_module = List[Tuple[str, int]]
 found_symbols_type = Dict[str, found_symbols_module]
 
-# used to hold informatin about a range (VAD or kernel module)
+# used to hold information about a range (VAD or kernel module)
 # (start address, size, file path)
 range_type = Tuple[int, int, str]
 ranges_type = List[range_type]
@@ -158,7 +157,7 @@ class PESymbolFinder:
 
 class PDBSymbolFinder(PESymbolFinder):
     """
-    PESymbolFinder implementation for  PDB modules
+    PESymbolFinder implementation for PDB modules
     """
 
     def _do_get_address(self, name: str) -> Optional[int]:
@@ -195,7 +194,7 @@ class PDBSymbolFinder(PESymbolFinder):
 
 class ExportSymbolFinder(PESymbolFinder):
     """
-    PESymbolFinder implementation for  PDB modules
+    PESymbolFinder implementation for PDB modules
     """
 
     def _get_name(self, export: pefile.ExportData) -> Optional[str]:
@@ -230,7 +229,6 @@ class ExportSymbolFinder(PESymbolFinder):
         Returns:
             address: the address of the symbol, if found
         """
-
         for export in self._symbol_module:
             sym_name = self._get_name(export)
             if sym_name and sym_name == name:
@@ -244,7 +242,9 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
     _required_framework_version = (2, 7, 0)
 
-    _version = (1, 0, 0)
+    # 2.0.0 - changed signature of get_kernel_modules, get_all_vads_with_file_paths, addresses_for_process_symbols, get_process_modules
+    # 3.0.0 - find_symbols will now throw a ValueError if the provided wanted symbol information does not follow the spec
+    _version = (3, 0, 0)
 
     # used for special handling of the kernel PDB file. See later notes
     os_module_name = "ntoskrnl.exe"
@@ -259,10 +259,10 @@ class PESymbols(interfaces.plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="pslist", component=pslist.PsList, version=(2, 0, 0)
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="modules", component=modules.Modules, version=(2, 0, 0)
+                name="modules", component=modules.Modules, version=(3, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="pdbutil", component=pdbutil.PDBUtility, version=(1, 0, 0)
@@ -292,19 +292,20 @@ class PESymbols(interfaces.plugins.PluginInterface):
             ),
         ]
 
-    @staticmethod
-    def _get_pefile_obj(
+    @classmethod
+    def get_pefile_obj(
+        cls,
         context: interfaces.context.ContextInterface,
         pe_table_name: str,
-        layer_name: str,
+        process_layer_name: str,
         base_address: int,
     ) -> Optional[pefile.PE]:
         """
-        Attempts to pefile object from the bytes of the PE file
+        Attempts to create a pefile object from the bytes of the PE file
 
         Args:
             pe_table_name: name of the pe types table
-            layer_name: name of the process layer
+            process_layer_name: name of the process layer
             base_address: base address of the module
 
         Returns:
@@ -316,7 +317,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
             dos_header = context.object(
                 pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                 offset=base_address,
-                layer_name=layer_name,
+                layer_name=process_layer_name,
             )
 
             for offset, data in dos_header.reconstruct():
@@ -325,14 +326,14 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
             pe_ret = pefile.PE(data=pe_data.getvalue(), fast_load=True)
 
-        except exceptions.InvalidAddressException:
+        except (exceptions.InvalidAddressException, ValueError):
             pe_ret = None
 
         return pe_ret
 
-    @staticmethod
+    @classmethod
     def range_info_for_address(
-        ranges: ranges_type, address: int
+        cls, ranges: ranges_type, address: int
     ) -> Optional[range_type]:
         """
         Helper for getting the range information for an address.
@@ -351,8 +352,8 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
         return None
 
-    @staticmethod
-    def filepath_for_address(ranges: ranges_type, address: int) -> Optional[str]:
+    @classmethod
+    def filepath_for_address(cls, ranges: ranges_type, address: int) -> Optional[str]:
         """
         Helper to get the file path for an address
 
@@ -369,8 +370,8 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
         return None
 
-    @staticmethod
-    def filename_for_path(filepath: str) -> str:
+    @classmethod
+    def filename_for_path(cls, filepath: str) -> str:
         """
         Consistent way to get the filename regardless of platform
 
@@ -382,12 +383,12 @@ class PESymbols(interfaces.plugins.PluginInterface):
         """
         return ntpath.basename(filepath).lower()
 
-    @staticmethod
+    @classmethod
     def addresses_for_process_symbols(
+        cls,
         context: interfaces.context.ContextInterface,
         config_path: str,
-        layer_name: str,
-        symbol_table_name: str,
+        kernel_module_name: str,
         symbols: filter_modules_type,
     ) -> found_symbols_type:
         """
@@ -403,7 +404,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
             found_symbols_type: The dictionary of symbols that were resolved
         """
         collected_modules = PESymbols.get_process_modules(
-            context, layer_name, symbol_table_name, symbols
+            context, kernel_module_name, symbols
         )
 
         found_symbols, missing_symbols = PESymbols.find_symbols(
@@ -411,13 +412,16 @@ class PESymbols(interfaces.plugins.PluginInterface):
         )
 
         for mod_name, unresolved_symbols in missing_symbols.items():
-            for symbol in unresolved_symbols:
-                vollog.debug(f"Unable to resolve symbol {symbol} in module {mod_name}")
+            for symbol_key, symbols in unresolved_symbols.items():
+                vollog.debug(
+                    f"Unable to resolve symbols {symbols} of type {symbol_key} in module {mod_name}"
+                )
 
         return found_symbols
 
-    @staticmethod
+    @classmethod
     def path_and_symbol_for_address(
+        cls,
         context: interfaces.context.ContextInterface,
         config_path: str,
         collected_modules: collected_modules_type,
@@ -480,12 +484,12 @@ class PESymbols(interfaces.plugins.PluginInterface):
             instance for it
         """
 
-        layer_name = module_info[0]
+        process_layer_name = module_info[0]
         module_start = module_info[1]
 
         # we need a valid PE with an export table
-        pe_module = PESymbols._get_pefile_obj(
-            context, pe_table_name, layer_name, module_start
+        pe_module = PESymbols.get_pefile_obj(
+            context, pe_table_name, process_layer_name, module_start
         )
         if not pe_module:
             return None
@@ -497,7 +501,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
             return None
 
         return ExportSymbolFinder(
-            layer_name,
+            process_layer_name,
             mod_name.lower(),
             module_start,
             pe_module.DIRECTORY_ENTRY_EXPORT.symbols,
@@ -529,7 +533,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         # a `ntoskrnl.exe` can have an internal PDB name of any of the ones in the following list
         # The code attempts to find all possible PDBs to ensure the best chance of recovery
         if mod_name == PESymbols.os_module_name:
-            pdb_names = [fn + ".pdb" for fn in KERNEL_MODULE_NAMES]
+            pdb_names = [fn + ".pdb" for fn in windows.KERNEL_MODULE_NAMES]
 
         # for non-kernel files, replace the exe, sys, or dll extension with pdb
         else:
@@ -629,7 +633,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
     def _get_symbol_value(
         wanted_symbols: filter_module_info,
         symbol_resolver: PESymbolFinder,
-    ) -> Generator[Tuple[str, int, str, int], None, None]:
+    ) -> Generator[Tuple[str, str, int], None, None]:
         """
         Enumerates the symbols specified as wanted by the calling plugin
 
@@ -638,14 +642,14 @@ class PESymbols(interfaces.plugins.PluginInterface):
             symbol_resolver: method in a layer to resolve the symbols
 
         Returns:
-            Tuple[str, int, str, int]: the index and value of the found symbol in the wanted list, and the name and address of resolved symbol
+            Tuple[str, str, int]: the symbol identifier (key) of the found symbol in the wanted list, and the name and address of resolved symbol
         """
         if (
             wanted_names_identifier not in wanted_symbols
             and wanted_addresses_identifier not in wanted_symbols
         ):
             vollog.warning(
-                f"Invalid `wanted_symbols` sent to `find_symbols`. addresses and names keys both misssing."
+                "Invalid `wanted_symbols` sent to `find_symbols`. addresses and names keys both missing."
             )
             return
 
@@ -658,15 +662,70 @@ class PESymbols(interfaces.plugins.PluginInterface):
             # address or name
             if symbol_key in wanted_symbols:
                 # walk each wanted address or name
-                for value_index, wanted_value in enumerate(wanted_symbols[symbol_key]):
-                    symbol_value = symbol_getter(wanted_value)
 
+                # build dict in this function for debugging and tracking
+                all_wanted = []
+                for wanted_value in wanted_symbols[symbol_key]:
+                    all_wanted.append(wanted_value)
+
+                for value_index, wanted_value in enumerate(all_wanted):
+                    symbol_value = symbol_getter(wanted_value)
                     if symbol_value:
-                        # yield out deleteion key, deletion index, symbol name, symbol address
+                        # yield out deletion key, deletion index, symbol name, symbol address
                         if symbol_key == wanted_names_identifier:
-                            yield symbol_key, value_index, wanted_value, symbol_value  # type: ignore
+                            yield symbol_key, wanted_value, symbol_value
                         else:
-                            yield symbol_key, value_index, symbol_value, wanted_value  # type: ignore
+                            yield symbol_key, symbol_value, wanted_value
+
+                for value in all_wanted:
+                    vollog.debug(
+                        f"Unable to resolve value {value} using getter {symbol_getter}"
+                    )
+
+    @classmethod
+    def _validate_wanted_modules(
+        cls,
+        wanted: PESymbolFinder.cached_module_lists,
+    ) -> Optional[PESymbolFinder.cached_module_lists]:
+        """
+        Validates and makes a copy of the address(es) and/or name(s) wanted from a particular module
+        Throws ValueError if invalid values found
+        """
+        remaining: PESymbolFinder.cached_module_lists = {}
+
+        valid_name_types = [str]
+        valid_address_types = [int, objects.Pointer]
+
+        for wanted_type, wanted_symbols in wanted.items():
+            if wanted_type not in [
+                wanted_names_identifier,
+                wanted_addresses_identifier,
+            ]:
+                raise ValueError(
+                    f"The symbol type specified ({wanted_type}) is not valid. Values choices: {wanted_names_identifier}, {wanted_addresses_identifier}"
+                )
+
+            remaining[wanted_type] = []
+
+            # symbol_info will be a symbol name or address requested
+            for symbol_info in wanted_symbols:
+                if wanted_type == wanted_names_identifier and not isinstance(
+                    symbol_info, tuple(valid_name_types)
+                ):
+                    raise ValueError(
+                        f"The requested symbol name has a type of {type(symbol_info)} which is not in the allowed set of {valid_name_types}"
+                    )
+
+                elif wanted_type == wanted_addresses_identifier and not isinstance(
+                    symbol_info, tuple(valid_address_types)
+                ):
+                    raise ValueError(
+                        f"The requested address has a type of {type(symbol_info)} which is not in the allowed set of {valid_address_types}"
+                    )
+
+                remaining[wanted_type].append(symbol_info)
+
+        return remaining
 
     @staticmethod
     def _resolve_symbols_through_methods(
@@ -692,13 +751,13 @@ class PESymbols(interfaces.plugins.PluginInterface):
             PESymbols._find_symbols_through_exports,
         ]
 
-        found: found_symbols_module = []
+        found_symbols: found_symbols_module = []
 
         # the symbols wanted from this module by the caller
         wanted = wanted_modules[mod_name]
 
-        # make a copy to remove from inside this function for returning to the caller
-        remaining = copy.deepcopy(wanted)
+        # The ValueError will pass through to the caller
+        remaining = PESymbols._validate_wanted_modules(wanted)
 
         done_processing = False
 
@@ -710,12 +769,17 @@ class PESymbols(interfaces.plugins.PluginInterface):
                 vollog.debug(f"Have resolver for method {method}")
                 for (
                     symbol_key,
-                    value_index,
                     symbol_name,
                     symbol_address,
                 ) in PESymbols._get_symbol_value(remaining, symbol_resolver):
-                    found.append((symbol_name, symbol_address))
-                    del remaining[symbol_key][value_index]
+                    found_symbols.append((symbol_name, symbol_address))
+
+                    if symbol_key == wanted_names_identifier:
+                        to_remove = symbol_name
+                    else:
+                        to_remove = symbol_address
+
+                    remaining[symbol_key].remove(to_remove)
 
                     # everything was resolved, stop this resolver
                     # remove this key from the remaining symbols to resolve
@@ -731,10 +795,11 @@ class PESymbols(interfaces.plugins.PluginInterface):
             if done_processing:
                 break
 
-        return found, remaining
+        return found_symbols, remaining
 
-    @staticmethod
+    @classmethod
     def find_symbols(
+        cls,
         context: interfaces.context.ContextInterface,
         config_path: str,
         wanted_modules: PESymbolFinder.cached_value_dict,
@@ -743,6 +808,8 @@ class PESymbols(interfaces.plugins.PluginInterface):
         """
         Loops through each method of symbol analysis until each wanted symbol is found
         Returns the resolved symbols as a dictionary that includes the name and runtime address
+
+        `wanted_modules` must be correctly formatted or a ValueError will be thrown
 
         Args:
             wanted_modules: the dictionary of modules and symbols to resolve. Modified to remove symbols as they are resolved.
@@ -759,6 +826,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
             module_instances = collected_modules[mod_name]
 
+            # The ValueError from an invalid wanted_modules will pass through to the caller
             # try to resolve the symbols for `mod_name` through each method (PDB and export table currently)
             (
                 found_in_module,
@@ -775,11 +843,11 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
         return found_symbols, missing_symbols
 
-    @staticmethod
+    @classmethod
     def get_kernel_modules(
+        cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         filter_modules: Optional[filter_modules_type],
     ) -> collected_modules_type:
         """
@@ -799,7 +867,9 @@ class PESymbols(interfaces.plugins.PluginInterface):
             filter_modules_check = None
 
         session_layers = list(
-            modules.Modules.get_session_layers(context, layer_name, symbol_table)
+            modules.Modules.get_session_layers(
+                context=context, kernel_module_name=kernel_module_name
+            )
         )
 
         # special handling for the kernel
@@ -808,7 +878,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         )
 
         for index, mod in enumerate(
-            modules.Modules.list_modules(context, layer_name, symbol_table)
+            modules.Modules.list_modules(context, kernel_module_name)
         ):
             try:
                 mod_name = str(mod.BaseDllName.get_string().lower())
@@ -837,8 +907,9 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
         return found_modules
 
-    @staticmethod
+    @classmethod
     def get_vads_for_process_cache(
+        cls,
         vads_cache: Dict[int, ranges_type],
         owner_proc: interfaces.objects.ObjectInterface,
     ) -> Optional[ranges_type]:
@@ -865,8 +936,9 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
         return vads
 
-    @staticmethod
+    @classmethod
     def get_proc_vads_with_file_paths(
+        cls,
         proc: interfaces.objects.ObjectInterface,
     ) -> ranges_type:
         """
@@ -899,8 +971,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
     def get_all_vads_with_file_paths(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table_name: str,
+        kernel_module_name: str,
     ) -> Generator[
         Tuple[interfaces.objects.ObjectInterface, str, ranges_type],
         None,
@@ -914,8 +985,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
         """
         procs = pslist.PsList.list_processes(
             context=context,
-            layer_name=layer_name,
-            symbol_table=symbol_table_name,
+            kernel_module_name=kernel_module_name,
         )
 
         for proc in procs:
@@ -928,11 +998,11 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
             yield proc, proc_layer_name, vads
 
-    @staticmethod
+    @classmethod
     def get_process_modules(
+        cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         filter_modules: Optional[filter_modules_type],
     ) -> collected_modules_type:
         """
@@ -952,7 +1022,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
             filter_modules_check = None
 
         for _proc, proc_layer_name, vads in PESymbols.get_all_vads_with_file_paths(
-            context, layer_name, symbol_table
+            context, kernel_module_name
         ):
             for vad_start, vad_size, filepath in vads:
                 filename = PESymbols.filename_for_path(filepath)
@@ -969,8 +1039,6 @@ class PESymbols(interfaces.plugins.PluginInterface):
         return proc_modules
 
     def _generator(self) -> Generator[Tuple[int, Tuple[str, str, int]], None, None]:
-        kernel = self.context.modules[self.config["kernel"]]
-
         if self.config["symbols"]:
             filter_module = {
                 self.config["module"].lower(): {
@@ -995,7 +1063,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
             module_resolver = self.get_process_modules
 
         collected_modules = module_resolver(
-            self.context, kernel.layer_name, kernel.symbol_table_name, filter_module
+            self.context, self.config["kernel"], filter_module
         )
 
         found_symbols, _missing_symbols = PESymbols.find_symbols(

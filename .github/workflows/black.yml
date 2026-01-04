@@ -1,4 +1,4 @@
-name: Black python linter
+name: Black python formatter
 
 on: [push, pull_request]
 

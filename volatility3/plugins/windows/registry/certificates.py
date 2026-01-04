@@ -1,11 +1,12 @@
 import contextlib
 import logging
 import struct
-from typing import List, Iterator, Optional, Tuple, Type
+from typing import Iterator, List, Optional, Tuple, Type
 
 from volatility3.framework import exceptions, interfaces, renderers
+from volatility3.framework.layers import registry as registry_layer
 from volatility3.framework.configuration import requirements
-from volatility3.framework.symbols.windows.extensions.registry import RegValueTypes
+from volatility3.framework.symbols.windows.extensions import registry
 from volatility3.plugins.windows.registry import hivelist, printkey
 
 vollog = logging.getLogger(__name__)
@@ -24,11 +25,11 @@ class Certificates(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="hivelist", component=hivelist.HiveList, version=(2, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="printkey", plugin=printkey.PrintKey, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="printkey", component=printkey.PrintKey, version=(1, 0, 0)
             ),
             requirements.BooleanRequirement(
                 name="dump",
@@ -60,7 +61,7 @@ class Certificates(interfaces.plugins.PluginInterface):
         open_method: Type[interfaces.plugins.FileHandlerInterface],
     ) -> Optional[interfaces.plugins.FileHandlerInterface]:
         try:
-            dump_name = "{}-{}-{}.crt".format(hive_offset, reg_section, key_hash)
+            dump_name = f"{hive_offset}-{reg_section}-{key_hash}.crt"
             file_handle = open_method(dump_name)
             file_handle.write(certificate_data)
             return file_handle
@@ -69,19 +70,20 @@ class Certificates(interfaces.plugins.PluginInterface):
         return None
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[str, str, str, str]]]:
-        kernel = self.context.modules[self.config["kernel"]]
-
         for hive in hivelist.HiveList.list_hives(
-            self.context,
+            context=self.context,
             base_config_path=self.config_path,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            kernel_module_name=self.config["kernel"],
         ):
             for top_key in [
                 "Microsoft\\SystemCertificates",
                 "Software\\Microsoft\\SystemCertificates",
             ]:
-                with contextlib.suppress(KeyError, exceptions.InvalidAddressException):
+                with contextlib.suppress(
+                    KeyError,
+                    registry_layer.RegistryException,
+                    exceptions.InvalidAddressException,
+                ):
                     # Walk it
                     node_path = hive.get_key(top_key, return_list=True)
                     for (
@@ -92,7 +94,11 @@ class Certificates(interfaces.plugins.PluginInterface):
                         _volatility,
                         node,
                     ) in printkey.PrintKey.key_iterator(hive, node_path, recurse=True):
-                        if not is_key and RegValueTypes(node.Type).name == "REG_BINARY":
+                        if (
+                            not is_key
+                            and registry.RegValueTypes(node.Type)
+                            == registry.RegValueTypes.REG_BINARY
+                        ):
                             name, certificate_data = self.parse_data(node.decode_data())
                             unique_key_offset = (
                                 key_path.casefold().index(top_key.casefold())
