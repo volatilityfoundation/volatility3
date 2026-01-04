@@ -321,6 +321,7 @@ PTRACE_O_SUSPEND_SECCOMP = 1 << 21
 
 class PT_FLAGS(Flag):
     "PTrace flags"
+
     PT_PTRACED = 0x00001
     PT_SEIZED = 0x10000
 

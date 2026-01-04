@@ -157,7 +157,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
                     continue
 
                 try:
-                    if proc_layer.read(vad.get_start(), 4) != b"\xEF\xBE\xAD\xDE":
+                    if proc_layer.read(vad.get_start(), 4) != b"\xef\xbe\xad\xde":
                         if pid == 624:
                             vollog.debug("VAD magic bytes don't match DEADBEEF")
                         continue

@@ -104,7 +104,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         cls, base_layer: interfaces.layers.DataLayerInterface, name: str = ""
     ):
         header = base_layer.read(0, 8)
-        if header[:4] != b"\x51\x45\x56\x4D":
+        if header[:4] != b"\x51\x45\x56\x4d":
             raise exceptions.LayerException(name, "No QEMU magic bytes")
         if header[4:] != b"\x00\x00\x00\x03":
             raise exceptions.LayerException(name, "Unsupported QEMU version found")

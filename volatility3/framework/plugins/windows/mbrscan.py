@@ -72,7 +72,7 @@ class MBRScan(interfaces.plugins.PluginInterface):
         partition_table_object = symbol_table + constants.BANG + "PARTITION_TABLE"
 
         # Define Signature and Data Length
-        mbr_signature = b"\x55\xAA"
+        mbr_signature = b"\x55\xaa"
         mbr_length = 0x200
         bootcode_length = 0x1B8
 

@@ -169,7 +169,7 @@ class Malfind(interfaces.plugins.PluginInterface):
         # set refined criteria to know when to add to "Notes" column
         refined_criteria = {
             b"MZ": "MZ header",
-            b"\x55\x8B": "PE header",
+            b"\x55\x8b": "PE header",
             b"\x55\x48": "Function prologue",
             b"\x55\x89": "Function prologue",
         }
