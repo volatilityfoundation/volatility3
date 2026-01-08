@@ -1,16 +1,31 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-import math
-import contextlib
-from abc import ABC, abstractmethod
-from typing import Iterator, List, Tuple, Optional, Union
 
+import math
+import string
+import contextlib
+import functools
+import logging
+from abc import ABC, abstractmethod
+from typing import List, Tuple, Optional, Union, Dict, Generator, Iterator
+
+import volatility3.framework.symbols.linux.utilities.modules as linux_utilities_modules
 from volatility3 import framework
-from volatility3.framework import constants, exceptions, interfaces, objects
+from volatility3.framework import (
+    constants,
+    exceptions,
+    deprecation,
+    interfaces,
+    objects,
+)
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux import extensions
+from volatility3.framework.layers import scanners
+from volatility3.framework.constants import linux as linux_constants
+
+vollog = logging.getLogger(__name__)
 
 
 class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
@@ -22,6 +37,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         # Set-up Linux specific types
         self.set_type_class("file", extensions.struct_file)
         self.set_type_class("list_head", extensions.list_head)
+        self.set_type_class("hlist_head", extensions.hlist_head)
         self.set_type_class("mm_struct", extensions.mm_struct)
         self.set_type_class("super_block", extensions.super_block)
         self.set_type_class("task_struct", extensions.task_struct)
@@ -36,12 +52,16 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("idr", extensions.IDR)
         self.set_type_class("address_space", extensions.address_space)
         self.set_type_class("page", extensions.page)
+
         # Might not exist in the current symbols
         self.optional_set_type_class("module", extensions.module)
         self.optional_set_type_class("bpf_prog", extensions.bpf_prog)
         self.optional_set_type_class("bpf_prog_aux", extensions.bpf_prog_aux)
         self.optional_set_type_class("kernel_cap_struct", extensions.kernel_cap_struct)
         self.optional_set_type_class("kernel_cap_t", extensions.kernel_cap_t)
+        self.optional_set_type_class("scatterlist", extensions.scatterlist)
+        self.optional_set_type_class("module_sect_attr", extensions.module_sect_attr)
+        self.optional_set_type_class("bin_attribute", extensions.bin_attribute)
 
         # kernels >= 4.18
         self.optional_set_type_class("timespec64", extensions.timespec64)
@@ -53,29 +73,37 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         # Might not exist in older kernels or the current symbols
         self.optional_set_type_class("mount", extensions.mount)
         self.optional_set_type_class("mnt_namespace", extensions.mnt_namespace)
+        self.optional_set_type_class("rb_root", extensions.rb_root)
 
         # Network
-        self.set_type_class("net", extensions.net)
-        self.set_type_class("socket", extensions.socket)
-        self.set_type_class("sock", extensions.sock)
-        self.set_type_class("inet_sock", extensions.inet_sock)
-        self.set_type_class("unix_sock", extensions.unix_sock)
+        # FIXME: Deprecate all of this once the framework hits version 3
+        self.set_type_class("net", extensions.network.net)
+        self.set_type_class("socket", extensions.network.socket)
+        self.set_type_class("sock", extensions.network.sock)
+        self.set_type_class("inet_sock", extensions.network.inet_sock)
+        self.set_type_class("unix_sock", extensions.network.unix_sock)
+
         # Might not exist in older kernels or the current symbols
-        self.optional_set_type_class("netlink_sock", extensions.netlink_sock)
-        self.optional_set_type_class("vsock_sock", extensions.vsock_sock)
-        self.optional_set_type_class("packet_sock", extensions.packet_sock)
-        self.optional_set_type_class("bt_sock", extensions.bt_sock)
-        self.optional_set_type_class("xdp_sock", extensions.xdp_sock)
+        self.optional_set_type_class("netlink_sock", extensions.network.netlink_sock)
+        self.optional_set_type_class("vsock_sock", extensions.network.vsock_sock)
+        self.optional_set_type_class("packet_sock", extensions.network.packet_sock)
+        self.optional_set_type_class("bt_sock", extensions.network.bt_sock)
+        self.optional_set_type_class("xdp_sock", extensions.network.xdp_sock)
 
         # Only found in 6.1+ kernels
         self.optional_set_type_class("maple_tree", extensions.maple_tree)
+
+        self.optional_set_type_class("latch_tree_root", extensions.latch_tree_root)
+        self.optional_set_type_class("kernel_symbol", extensions.kernel_symbol)
 
 
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""
 
-    _version = (2, 1, 1)
+    _version = (2, 4, 0)
     _required_framework_version = (2, 0, 0)
+    deleted = "(deleted)"
+    smear = "<potentially smeared>"
 
     framework.require_interface_version(*_required_framework_version)
 
@@ -104,8 +132,8 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         Args:
             task (task_struct): A reference task
             mnt (vfsmount or mount): A mounted filesystem or a mount point.
-                - kernels < 3.3.8 type is 'vfsmount'
-                - kernels >= 3.3.8 type is 'mount'
+                - kernels < 3.3 type is 'vfsmount'
+                - kernels >= 3.3 type is 'mount'
 
         Returns:
             str: Pathname of the mount point relative to the task's root directory.
@@ -127,14 +155,30 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             rdentry (dentry *): A pointer to the root dentry
             rmnt (vfsmount *): A pointer to the root vfsmount
             dentry (dentry *): A pointer to the dentry
-            vfsmnt (vfsmount *): A pointer to the vfsmount
+            vfsmnt (vfsmount/vfsmount *): A vfsmount object (kernels >= 3.3) or a
+                vfsmount pointer (kernels < 3.3)
 
         Returns:
             str: Pathname of the mount point or file
         """
 
+        if not (rdentry and rdentry.is_readable() and rmnt and rmnt.is_readable()):
+            return ""
+
+        if isinstance(vfsmnt, objects.Pointer) and not (
+            vfsmnt and vfsmnt.is_readable()
+        ):
+            # vfsmnt can be the vfsmount object itself (>=3.3) or a vfsmount * (<3.3)
+            return ""
+
+        inode = dentry.d_inode
         path_reversed = []
-        while dentry != rdentry or not vfsmnt.is_equal(rmnt):
+        smeared = False
+        while (
+            dentry
+            and dentry.is_readable()
+            and (dentry != rdentry or not vfsmnt.is_equal(rmnt))
+        ):
             if dentry == vfsmnt.get_mnt_root() or dentry.is_root():
                 # Escaped?
                 if dentry != vfsmnt.get_mnt_root():
@@ -151,10 +195,23 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
 
             parent = dentry.d_parent
             dname = dentry.d_name.name_as_str()
+
+            # empty dentry names are most likely
+            # the result of smearing
+            if not dname:
+                smeared = True
             path_reversed.append(dname.strip("/"))
             dentry = parent
 
         path = "/" + "/".join(reversed(path_reversed))
+        if smeared:
+            # if there is smear the missing dname will be empty. e.g. if the normal
+            # path would be /foo/bar/baz, but bar is missing due to smear the results
+            # returned here will show /foo//baz. Note the // for the missing dname.
+            return f"{LinuxUtilities.smear} {path}"
+
+        if inode and inode.is_readable() and inode.is_valid() and inode.i_nlink == 0:
+            path = f" {path} {LinuxUtilities.deleted}"
         return path
 
     @classmethod
@@ -242,7 +299,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
                         ns_ops = ns_common.ops
 
                     pre_name = utility.pointer_to_string(ns_ops.name, 255)
-                except IndexError:
+                except (exceptions.SymbolError, IndexError):
                     pre_name = "<unsupported ns_dname implementation>"
             else:
                 pre_name = f"<unsupported d_op symbol> {sym}"
@@ -252,7 +309,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         return f"{pre_name}:[{inode.i_ino:d}]"
 
     @classmethod
-    def path_for_file(cls, context, task, filp) -> str:
+    def path_for_file(cls, context, task, filp, files_only=False) -> str:
         """Returns a file (or sock pipe) pathname relative to the task's root directory.
 
         A 'file' structure doesn't have enough information to properly restore its
@@ -291,7 +348,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         except exceptions.InvalidAddressException:
             dname_is_valid = False
 
-        if dname_is_valid:
+        if dname_is_valid and not files_only:
             ret = LinuxUtilities._get_new_sock_pipe_path(context, task, filp)
         else:
             ret = LinuxUtilities._get_path_file(task, filp)
@@ -304,16 +361,17 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         context: interfaces.context.ContextInterface,
         symbol_table: str,
         task: interfaces.objects.ObjectInterface,
+        files_only: bool = False,
     ):
-        # task.files can be null
-        if not (task.files and task.files.is_readable()):
-            return None
+        try:
+            files = task.files
+            fd_table = files.get_fds()
+            if fd_table == 0:
+                return None
 
-        fd_table = task.files.get_fds()
-        if fd_table == 0:
+            max_fds = files.get_max_fds()
+        except exceptions.InvalidAddressException:
             return None
-
-        max_fds = task.files.get_max_fds()
 
         # corruption check
         if max_fds > 500000:
@@ -327,11 +385,17 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
 
         for fd_num, filp in enumerate(fds):
             if filp and filp.is_readable():
-                full_path = LinuxUtilities.path_for_file(context, task, filp)
+                full_path = LinuxUtilities.path_for_file(
+                    context, task, filp, files_only
+                )
 
                 yield fd_num, filp, full_path
 
     @classmethod
+    @deprecation.method_being_removed(
+        removal_date="2025-09-25",
+        message="Callers to this method should adapt `linux_utilities_modules.Modules.run_module_scanners`",
+    )
     def mask_mods_list(
         cls,
         context: interfaces.context.ContextInterface,
@@ -339,20 +403,17 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         mods: Iterator[interfaces.objects.ObjectInterface],
     ) -> List[Tuple[str, int, int]]:
         """
+        DEPRECATED: use "volatility3.framework.symbols.linux.utilities.modules.Modules.mask_mods_list" instead.
+
         A helper function to mask the starting and end address of kernel modules
         """
-        mask = context.layers[layer_name].address_mask
-
-        return [
-            (
-                utility.array_to_string(mod.name),
-                mod.get_module_base() & mask,
-                (mod.get_module_base() & mask) + mod.get_core_size(),
-            )
-            for mod in mods
-        ]
+        return linux_utilities_modules.Modules.mask_mods_list(context, layer_name, mods)
 
     @classmethod
+    @deprecation.method_being_removed(
+        removal_date="2025-09-25",
+        message="Callers to this method should adapt `linux_utilities_modules.Modules.run_module_scanners`",
+    )
     def generate_kernel_handler_info(
         cls,
         context: interfaces.context.ContextInterface,
@@ -360,6 +421,8 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         mods_list: Iterator[interfaces.objects.ObjectInterface],
     ) -> List[Tuple[str, int, int]]:
         """
+        This method is being deprecated. Use `linux_utilities_modules.Modules.run_module_scanners` to map kernel pointers to modules")
+
         A helper function that gets the beginning and end address of the kernel module
         """
 
@@ -375,50 +438,84 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
 
         return [
             (constants.linux.KERNEL_NAME, start_addr, end_addr)
-        ] + LinuxUtilities.mask_mods_list(context, kernel.layer_name, mods_list)
+        ] + linux_utilities_modules.Modules.mask_mods_list(
+            context, kernel.layer_name, mods_list
+        )
 
     @classmethod
+    @deprecation.deprecated_method(
+        replacement=linux_utilities_modules.Modules.lookup_module_address,
+        removal_date="2025-09-25",
+        replacement_version=(2, 0, 0),
+    )
     def lookup_module_address(
         cls,
         kernel_module: interfaces.context.ModuleInterface,
         handlers: List[Tuple[str, int, int]],
         target_address: int,
-    ):
+    ) -> Tuple[str, str]:
         """
+        DEPRECATED: use "volatility3.framework.symbols.linux.utilities.modules.Modules.lookup_module_address" instead.
+
         Searches between the start and end address of the kernel module using target_address.
         Returns the module and symbol name of the address provided.
         """
-
-        mod_name = "UNKNOWN"
-        symbol_name = "N/A"
-
-        for name, start, end in handlers:
-            if start <= target_address <= end:
-                mod_name = name
-                if name == constants.linux.KERNEL_NAME:
-                    symbols = list(
-                        kernel_module.get_symbols_by_absolute_location(target_address)
-                    )
-
-                    if len(symbols):
-                        symbol_name = (
-                            symbols[0].split(constants.BANG)[1]
-                            if constants.BANG in symbols[0]
-                            else symbols[0]
-                        )
-
-                break
-
-        return mod_name, symbol_name
+        return linux_utilities_modules.Modules.lookup_module_address(
+            kernel_module.context, kernel_module.name, handlers, target_address
+        )
 
     @classmethod
-    def walk_internal_list(cls, vmlinux, struct_name, list_member, list_start):
+    def walk_internal_list(
+        cls,
+        vmlinux: interfaces.context.ModuleInterface,
+        struct_name: str,
+        list_member: str,
+        list_start: interfaces.objects.ObjectInterface,
+        max_count: int = 4096,
+    ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
+        """
+        An API that provides generic, smear-resistant enumeration of embedded lists
+
+        Args:
+            vmlinux:
+            struct_name: name of the structure of the list elements
+            list_member: name of the list_member holding the internal list
+            list_start: Starting (head) member of the list
+            max_count: Optional maximum amount of list elements that will be yielded
+
+        Returns:
+            Instances of `struct_name`
+        """
+
+        count = 0
+        seen = set()
+
         while list_start:
+            if list_start.vol.offset in seen:
+                vollog.debug(
+                    "walk_internal_list: Repeat entry found. Stopping enumeration"
+                )
+                break
+            seen.add(list_start.vol.offset)
+
+            if not (list_start and list_start.is_readable()):
+                break
+
             list_struct = vmlinux.object(
-                object_type=struct_name, offset=list_start.vol.offset
+                object_type=struct_name, offset=list_start.vol.offset, absolute=True
             )
+
             yield list_struct
+
             list_start = getattr(list_struct, list_member)
+
+            if count == max_count:
+                vollog.debug(
+                    f"walk_internal_list: Breaking list enumeration at maximum allowed count of {count}"
+                )
+                break
+
+            count += 1
 
     @classmethod
     def container_of(
@@ -429,7 +526,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         vmlinux: interfaces.context.ModuleInterface,
     ) -> Optional[interfaces.objects.ObjectInterface]:
         """Cast a member of a structure out to the containing structure.
-        It mimicks the Linux kernel macro container_of() see include/linux.kernel.h
+        It mimics the Linux kernel macro container_of() see include/linux.kernel.h
 
         Args:
             addr: The pointer to the member.
@@ -447,6 +544,10 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         type_dec = vmlinux.get_type(type_name)
         member_offset = type_dec.relative_child_offset(member_name)
         container_addr = addr - member_offset
+        layer = vmlinux.context.layers[vmlinux.layer_name]
+        if not layer.is_valid(container_addr):
+            return None
+
         return vmlinux.object(
             object_type=type_name, offset=container_addr, absolute=True
         )
@@ -480,6 +581,22 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         kernel = context.modules[kernel_module_name]
 
         return kernel
+
+    @classmethod
+    def convert_fourcc_code(cls, code: int) -> str:
+        """Convert a fourcc integer back to its fourcc string representation.
+
+        Args:
+            code: the numerical representation of the fourcc
+
+        Returns:
+            The fourcc code string.
+        """
+
+        code_bytes_length = (code.bit_length() + 7) // 8
+        return "".join(
+            [chr((code >> (i * 8)) & 0xFF) for i in range(code_bytes_length)]
+        )
 
 
 class IDStorage(ABC):
@@ -584,7 +701,7 @@ class IDStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_head_node(self, tree) -> int:
+    def get_head_node(self, tree) -> Optional[int]:
         """Returns a pointer to the tree's head"""
         raise NotImplementedError
 
@@ -594,7 +711,7 @@ class IDStorage(ABC):
         raise NotImplementedError
 
     def nodep_to_node(self, nodep) -> interfaces.objects.ObjectInterface:
-        """Instanciates a tree node from its pointer
+        """Instantiates a tree node from its pointer
 
         Args:
             nodep: Pointer to the XArray/RadixTree node
@@ -613,11 +730,15 @@ class IDStorage(ABC):
 
         return nodep
 
-    def _iter_node(self, nodep, height) -> int:
+    def _iter_node(self, nodep, height) -> Iterator[int]:
         node = self.nodep_to_node(nodep)
         node_slots = node.slots
         for off in range(self.CHUNK_SIZE):
-            slot = node_slots[off]
+            try:
+                slot = node_slots[off]
+            except exceptions.InvalidAddressException:
+                continue
+
             if slot == 0:
                 continue
 
@@ -627,10 +748,9 @@ class IDStorage(ABC):
                 if self.is_valid_node(nodep):
                     yield nodep
             else:
-                for child_node in self._iter_node(nodep, height - 1):
-                    yield child_node
+                yield from self._iter_node(nodep, height - 1)
 
-    def get_entries(self, root: interfaces.objects.ObjectInterface) -> int:
+    def get_entries(self, root: interfaces.objects.ObjectInterface) -> Iterator[int]:
         """Walks the tree data structure
 
         Args:
@@ -642,7 +762,7 @@ class IDStorage(ABC):
         height = self.get_tree_height(root.vol.offset)
 
         nodep = self.get_head_node(root)
-        if not nodep:
+        if not (nodep and nodep.is_readable()):
             return
 
         # Keep the internal flag before untagging it
@@ -657,8 +777,7 @@ class IDStorage(ABC):
             if self.is_valid_node(nodep):
                 yield nodep
         else:
-            for child_node in self._iter_node(nodep, height):
-                yield child_node
+            yield from self._iter_node(nodep, height)
 
 
 class XArray(IDStorage):
@@ -678,10 +797,13 @@ class XArray(IDStorage):
 
     def get_node_height(self, nodep) -> int:
         node = self.nodep_to_node(nodep)
-        return (node.shift / self.CHUNK_SHIFT) + 1
+        return (node.shift // self.CHUNK_SHIFT) + 1
 
-    def get_head_node(self, tree) -> int:
-        return tree.xa_head
+    def get_head_node(self, tree) -> Optional[int]:
+        try:
+            return tree.xa_head
+        except exceptions.InvalidAddressException:
+            return None
 
     def node_is_internal(self, nodep) -> bool:
         return (nodep & self.XARRAY_TAG_MASK) == self.XARRAY_TAG_INTERNAL
@@ -701,6 +823,7 @@ class RadixTree(IDStorage):
     RADIX_TREE_INTERNAL_NODE = 1
     RADIX_TREE_EXCEPTIONAL_ENTRY = 2
     RADIX_TREE_ENTRY_MASK = 3
+    RADIX_TREE_MAP_SHIFT = 6  # CONFIG_BASE_FULL
 
     # Dynamic values. These will be initialized later
     RADIX_TREE_INDEX_BITS = None
@@ -737,45 +860,62 @@ class RadixTree(IDStorage):
     def get_tree_height(self, treep) -> int:
         with contextlib.suppress(exceptions.SymbolError):
             if self.vmlinux.get_type("radix_tree_root").has_member("height"):
-                # kernels < 4.7.10
+                # kernels < 4.7 d0891265bbc988dc91ed8580b38eb3dac128581b
                 radix_tree_root = self.vmlinux.object(
                     "radix_tree_root", offset=treep, absolute=True
                 )
                 return radix_tree_root.height
 
-        # kernels >= 4.7.10
+        # kernels >= 4.7
         return 0
+
+    @functools.cached_property
+    def _max_height_array(self):
+        if self.vmlinux.has_symbol("height_to_maxindex"):
+            # 2.6.24 26fb1589cb0aaec3a0b4418c54f30c1a2b1781f6 <= Kernels < 4.7 d0891265bbc988dc91ed8580b38eb3dac128581b
+            return self.vmlinux.object_from_symbol("height_to_maxindex")
+        elif self.vmlinux.has_symbol("height_to_maxnodes"):
+            # 4.8 c78c66d1ddfdbd2353f3fcfeba0268524537b096 <= kernels < 4.20 8cf2f98411e3a0865026a1061af637161b16d32b
+            return self.vmlinux.object_from_symbol("height_to_maxnodes")
+
+        return None
 
     def _radix_tree_maxindex(self, node, height) -> int:
         """Return the maximum key which can be store into a radix tree with this height."""
 
-        if not self.vmlinux.has_symbol("height_to_maxindex"):
-            # Kernels >= 4.7
-            return (self.CHUNK_SIZE << node.shift) - 1
+        if self._max_height_array:
+            # 2.6.24 <= kernels <= 4.20 See _max_height_array()
+            return self._max_height_array[height]
         else:
-            # Kernels < 4.7
-            height_to_maxindex_array = self.vmlinux.object_from_symbol(
-                "height_to_maxindex"
-            )
-            maxindex = height_to_maxindex_array[height]
-            return maxindex
+            # Kernels >= 4.20
+            return (self.CHUNK_SIZE << node.shift) - 1
 
     def get_node_height(self, nodep) -> int:
         node = self.nodep_to_node(nodep)
         if hasattr(node, "shift"):
             # 4.7 <= Kernels < 4.20
-            return (node.shift / self.CHUNK_SHIFT) + 1
+            height = (node.shift // self.CHUNK_SHIFT) + 1
         elif hasattr(node, "path"):
             # 3.15 <= Kernels < 4.7
-            return node.path & self.RADIX_TREE_HEIGHT_MASK
+            height = node.path & self.RADIX_TREE_HEIGHT_MASK
         elif hasattr(node, "height"):
             # Kernels < 3.15
-            return node.height
+            height = node.height
         else:
             raise exceptions.VolatilityException("Cannot find radix-tree node height")
 
-    def get_head_node(self, tree) -> int:
-        return tree.rnode
+        if self._max_height_array and not (0 <= height < self._max_height_array.count):
+            error_msg = f"Radix Tree node {node.vol.offset:#x} height {height} exceeds max height of {self._max_height_array.count}"
+            vollog.error(error_msg)
+            raise exceptions.LinuxPageCacheException(error_msg)
+
+        return height
+
+    def get_head_node(self, tree) -> Optional[int]:
+        try:
+            return tree.rnode
+        except exceptions.InvalidAddressException:
+            return None
 
     def node_is_internal(self, nodep) -> bool:
         return (nodep & self.RADIX_TREE_INTERNAL_NODE) != 0
@@ -786,17 +926,19 @@ class RadixTree(IDStorage):
     def untag_node(self, nodep) -> int:
         return nodep & (~self.RADIX_TREE_ENTRY_MASK)
 
-    def is_valid_node(self, nodep) -> bool:
+    def _is_exceptional_node(self, nodep) -> bool:
         # In kernels 4.20, exceptional nodes were removed and internal entries took their bitmask
-        if self.vmlinux.has_type("radix_tree_root"):
-            return (
-                nodep & self.RADIX_TREE_ENTRY_MASK
-            ) != self.RADIX_TREE_EXCEPTIONAL_ENTRY
+        return (
+            self.vmlinux.has_type("radix_tree_root")
+            and (nodep & self.RADIX_TREE_ENTRY_MASK)
+            == self.RADIX_TREE_EXCEPTIONAL_ENTRY
+        )
 
-        return True
+    def is_valid_node(self, nodep) -> bool:
+        return not self._is_exceptional_node(nodep)
 
 
-class PageCache(object):
+class PageCache:
     """Linux Page Cache abstraction"""
 
     def __init__(
@@ -816,17 +958,134 @@ class PageCache(object):
         self._page_cache = page_cache
         self._idstorage = IDStorage.choose_id_storage(context, kernel_module_name)
 
-    def get_cached_pages(self) -> interfaces.objects.ObjectInterface:
+    def get_cached_pages(self) -> Iterator[interfaces.objects.ObjectInterface]:
         """Returns all page cache contents
 
         Yields:
             Page objects
         """
-
+        layer = self.vmlinux.context.layers[self.vmlinux.layer_name]
         for page_addr in self._idstorage.get_entries(self._page_cache.i_pages):
-            if not page_addr:
-                continue
+            if not layer.is_valid(page_addr):
+                error_msg = f"Invalid cached page address at {page_addr:#x}, aborting"
+                vollog.error(error_msg)
+                raise exceptions.LinuxPageCacheException(error_msg)
 
             page = self.vmlinux.object("page", offset=page_addr, absolute=True)
-            if page:
-                yield page
+            if not page.is_valid():
+                error_msg = f"Invalid cached page at {page_addr:#x}, aborting"
+                vollog.error(error_msg)
+                raise exceptions.LinuxPageCacheException(error_msg)
+
+            yield page
+
+
+class VMCoreInfo(interfaces.configuration.VersionableInterface):
+    _required_framework_version = (2, 11, 0)
+
+    _version = (1, 0, 0)
+
+    @classmethod
+    def _vmcoreinfo_data_to_dict(
+        cls,
+        vmcoreinfo_data,
+    ) -> Optional[Dict[str, str]]:
+        """Converts the input VMCoreInfo data buffer into a dictionary"""
+
+        # Ensure the whole buffer is printable
+        printable_bytes_set = set(string.printable.encode())
+        if not all(byte in printable_bytes_set for byte in vmcoreinfo_data):
+            # Abort, we are in the wrong place
+            return None
+
+        vmcoreinfo_dict = dict()
+        for line in vmcoreinfo_data.decode().splitlines():
+            if not line:
+                break
+
+            key, value = line.split("=", 1)
+            vmcoreinfo_dict[key] = cls._parse_value(key, value)
+
+        return vmcoreinfo_dict
+
+    @classmethod
+    def _parse_value(cls, key, value):
+        if key.startswith("SYMBOL(") or key == "KERNELOFFSET":
+            return int(value, 16)
+        elif key.startswith(("NUMBER(", "LENGTH(", "SIZE(", "OFFSET(")):
+            return int(value, 0)
+        elif key == "PAGESIZE":
+            return int(value, 0)
+
+        # Default, as string
+        return value
+
+    @classmethod
+    def search_vmcoreinfo_elf_note(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        progress_callback: constants.ProgressCallback = None,
+    ) -> Iterator[Tuple[int, Dict[str, str]]]:
+        """Enumerates each VMCoreInfo ELF note table found in memory along with its offset.
+
+        This approach is independent of any external ISF symbol or type, requiring only the
+        Elf64_Note found in 'elf.json', which is already included in the framework.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The layer within the context in which the module exists
+            progress_callback: A function that takes a percentage (and an optional description) that will be called periodically
+
+        Yields:
+            Tuples with the VMCoreInfo ELF note offset and the VMCoreInfo table parsed in a dictionary.
+        """
+
+        elf_table_name = intermed.IntermediateSymbolTable.create(
+            context, "elf_symbol_table", "linux", "elf"
+        )
+        module = context.module(elf_table_name, layer_name, 0)
+        layer = context.layers[layer_name]
+
+        # Both Elf32_Note and Elf64_Note are of the same size
+        elf_note_size = context.symbol_space[elf_table_name].get_type("Elf64_Note").size
+
+        for vmcoreinfo_offset in layer.scan(
+            scanner=scanners.BytesScanner(linux_constants.VMCOREINFO_MAGIC_ALIGNED),
+            context=context,
+            progress_callback=progress_callback,
+        ):
+            # vmcoreinfo_note kernels >= 2.6.24 fd59d231f81cb02870b9cf15f456a897f3669b4e
+            vmcoreinfo_elf_note_offset = vmcoreinfo_offset - elf_note_size
+
+            # Elf32_Note and Elf64_Note are identical, so either can be used interchangeably here
+            elf_note = module.object(
+                object_type="Elf64_Note",
+                offset=vmcoreinfo_elf_note_offset,
+                absolute=True,
+            )
+
+            # Ensure that we are within an ELF note
+            if (
+                elf_note.n_namesz != len(linux_constants.VMCOREINFO_MAGIC)
+                or elf_note.n_type != 0
+                or elf_note.n_descsz == 0
+            ):
+                continue
+
+            vmcoreinfo_data_offset = vmcoreinfo_offset + len(
+                linux_constants.VMCOREINFO_MAGIC_ALIGNED
+            )
+
+            # Also, confirm this with the first tag, which has consistently been OSRELEASE
+            vmcoreinfo_data = layer.read(vmcoreinfo_data_offset, elf_note.n_descsz)
+            if not vmcoreinfo_data.startswith(linux_constants.OSRELEASE_TAG):
+                continue
+
+            table = cls._vmcoreinfo_data_to_dict(vmcoreinfo_data)
+            if not table:
+                # Wrong VMCoreInfo note offset, keep trying
+                continue
+
+            # A valid VMCoreInfo ELF note exists at 'vmcoreinfo_elf_note_offset'
+            yield vmcoreinfo_elf_note_offset, table

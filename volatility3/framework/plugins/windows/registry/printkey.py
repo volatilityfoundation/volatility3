@@ -4,13 +4,13 @@
 
 import datetime
 import logging
-from typing import List, Sequence, Iterable, Tuple, Union
+from typing import Iterable, List, Optional, Sequence, Tuple, Union
 
-from volatility3.framework import objects, renderers, exceptions, interfaces, constants
+from volatility3.framework import constants, exceptions, interfaces, objects, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework.layers.registry import RegistryHive, RegistryFormatException
-from volatility3.framework.renderers import TreeGrid, conversion, format_hints
-from volatility3.framework.symbols.windows.extensions.registry import RegValueTypes
+from volatility3.framework.layers import registry as registry_layer
+from volatility3.framework.renderers import conversion, format_hints
+from volatility3.framework.symbols.windows.extensions import registry
 from volatility3.plugins.windows.registry import hivelist
 
 vollog = logging.getLogger(__name__)
@@ -30,8 +30,8 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="hivelist", component=hivelist.HiveList, version=(2, 0, 0)
             ),
             requirements.IntRequirement(
                 name="offset", description="Hive Offset", default=None, optional=True
@@ -50,8 +50,8 @@ class PrintKey(interfaces.plugins.PluginInterface):
     @classmethod
     def key_iterator(
         cls,
-        hive: RegistryHive,
-        node_path: Sequence[objects.StructType] = None,
+        hive: registry_layer.RegistryHive,
+        node_path: Optional[Sequence[objects.StructType]] = None,
         recurse: bool = False,
     ) -> Iterable[
         Tuple[
@@ -77,9 +77,19 @@ class PrintKey(interfaces.plugins.PluginInterface):
             return None
         node = node_path[-1]
         key_path_items = [hive] + node_path[1:]
-        key_path = "\\".join([k.get_name() for k in key_path_items])
+        key_path_names = []
+        for k in key_path_items:
+            try:
+                key_path_names.append(k.get_name())
+            except (
+                registry_layer.InvalidAddressException,
+                registry_layer.RegistryException,
+            ):
+                key_path_names.append("-")
+        key_path = "\\".join([k for k in key_path_names])
+
         if node.vol.type_name.endswith(constants.BANG + "_CELL_DATA"):
-            raise RegistryFormatException(
+            raise registry_layer.RegistryFormatException(
                 hive.name, "Encountered _CELL_DATA instead of _CM_KEY_NODE"
             )
         last_write_time = conversion.wintime_to_datetime(node.LastWriteTime.QuadPart)
@@ -99,7 +109,10 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 if key_node.vol.offset not in [x.vol.offset for x in node_path]:
                     try:
                         key_node.get_name()
-                    except exceptions.InvalidAddressException as excp:
+                    except (
+                        exceptions.InvalidAddressException,
+                        registry_layer.RegistryException,
+                    ) as excp:
                         vollog.debug(excp)
                         continue
 
@@ -120,8 +133,8 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
     def _printkey_iterator(
         self,
-        hive: RegistryHive,
-        node_path: Sequence[objects.StructType] = None,
+        hive: registry_layer.RegistryHive,
+        node_path: Optional[Sequence[objects.StructType]] = None,
         recurse: bool = False,
     ):
         """Method that wraps the more generic key_iterator, to provide output
@@ -148,7 +161,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     key_node_name = node.get_name()
                 except (
                     exceptions.InvalidAddressException,
-                    RegistryFormatException,
+                    registry_layer.RegistryException,
                 ) as excp:
                     vollog.debug(excp)
                     key_node_name = renderers.UnreadableValue()
@@ -175,16 +188,16 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     value_node_name = node.get_name() or "(Default)"
                 except (
                     exceptions.InvalidAddressException,
-                    RegistryFormatException,
+                    registry_layer.RegistryException,
                 ) as excp:
                     vollog.debug(excp)
                     value_node_name = renderers.UnreadableValue()
 
                 try:
-                    value_type = RegValueTypes(node.Type).name
+                    value_type = registry.RegValueTypes(node.Type).name
                 except (
                     exceptions.InvalidAddressException,
-                    RegistryFormatException,
+                    registry_layer.RegistryException,
                 ) as excp:
                     vollog.debug(excp)
                     value_type = renderers.UnreadableValue()
@@ -204,11 +217,17 @@ class PrintKey(interfaces.plugins.PluginInterface):
                             value_data = format_hints.MultiTypeData(
                                 value_data, encoding="utf-8"
                             )
-                        elif RegValueTypes(node.Type) == RegValueTypes.REG_BINARY:
+                        elif (
+                            registry.RegValueTypes(node.Type)
+                            == registry.RegValueTypes.REG_BINARY
+                        ):
                             value_data = format_hints.MultiTypeData(
                                 value_data, show_hex=True
                             )
-                        elif RegValueTypes(node.Type) == RegValueTypes.REG_MULTI_SZ:
+                        elif (
+                            registry.RegValueTypes(node.Type)
+                            == registry.RegValueTypes.REG_MULTI_SZ
+                        ):
                             value_data = format_hints.MultiTypeData(
                                 value_data, encoding="utf-16-le", split_nulls=True
                             )
@@ -219,7 +238,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     except (
                         ValueError,
                         exceptions.InvalidAddressException,
-                        RegistryFormatException,
+                        registry_layer.RegistryException,
                     ) as excp:
                         vollog.debug(excp)
                         value_data = renderers.UnreadableValue()
@@ -240,17 +259,14 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
     def _registry_walker(
         self,
-        layer_name: str,
-        symbol_table: str,
-        hive_offsets: List[int] = None,
-        key: str = None,
+        hive_offsets: Optional[List[int]] = None,
+        key: Optional[str] = None,
         recurse: bool = False,
     ):
         for hive in hivelist.HiveList.list_hives(
-            self.context,
-            self.config_path,
-            layer_name=layer_name,
-            symbol_table=symbol_table,
+            context=self.context,
+            base_config_path=self.config_path,
+            kernel_module_name=self.config["kernel"],
             hive_offsets=hive_offsets,
         ):
             try:
@@ -264,13 +280,13 @@ class PrintKey(interfaces.plugins.PluginInterface):
             except (
                 exceptions.InvalidAddressException,
                 KeyError,
-                RegistryFormatException,
+                registry_layer.RegistryException,
             ) as excp:
                 if isinstance(excp, KeyError):
                     vollog.debug(
                         f"Key '{key}' not found in Hive at offset {hex(hive.hive_offset)}."
                     )
-                elif isinstance(excp, RegistryFormatException):
+                elif isinstance(excp, registry_layer.RegistryException):
                     vollog.debug(excp)
                 elif isinstance(excp, exceptions.InvalidAddressException):
                     vollog.debug(
@@ -292,9 +308,8 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
     def run(self):
         offset = self.config.get("offset", None)
-        kernel = self.context.modules[self.config["kernel"]]
 
-        return TreeGrid(
+        return renderers.TreeGrid(
             columns=[
                 ("Last Write Time", datetime.datetime),
                 ("Hive Offset", format_hints.Hex),
@@ -305,8 +320,6 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 ("Volatile", bool),
             ],
             generator=self._registry_walker(
-                kernel.layer_name,
-                kernel.symbol_table_name,
                 hive_offsets=None if offset is None else [offset],
                 key=self.config.get("key", None),
                 recurse=self.config.get("recurse", None),

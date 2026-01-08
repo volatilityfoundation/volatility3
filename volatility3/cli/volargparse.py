@@ -5,7 +5,7 @@
 import argparse
 import gettext
 import re
-from typing import List, Optional, Sequence, Any, Union
+from typing import Optional, Sequence, Any, Union
 
 
 # This effectively overrides/monkeypatches the core argparse module to provide more helpful output around choices

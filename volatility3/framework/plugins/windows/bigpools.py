@@ -21,7 +21,7 @@ class BigPools(interfaces.plugins.PluginInterface):
     """List big page pools."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 1, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -50,8 +50,7 @@ class BigPools(interfaces.plugins.PluginInterface):
     def list_big_pools(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         tags: Optional[list] = None,
         show_free: bool = False,
     ):
@@ -59,15 +58,13 @@ class BigPools(interfaces.plugins.PluginInterface):
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the module for the kernel
             tags: An optional list of pool tags to filter big page pool tags by
 
         Yields:
             A big page pool object
         """
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
-        ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
+        ntkrnlmp = context.modules[kernel_module_name]
 
         big_page_table_offset = ntkrnlmp.get_symbol("PoolBigPageTable").address
         big_page_table = ntkrnlmp.object(
@@ -83,8 +80,10 @@ class BigPools(interfaces.plugins.PluginInterface):
             big_page_table_type = ntkrnlmp.get_type("_POOL_TRACKER_BIG_PAGES")
         except exceptions.SymbolError:
             # We have to manually load a symbol table
-            is_vista_or_later = versions.is_vista_or_later(context, symbol_table)
-            is_win10 = versions.is_win10(context, symbol_table)
+            is_vista_or_later = versions.is_vista_or_later(
+                context, ntkrnlmp.symbol_table_name
+            )
+            is_win10 = versions.is_win10(context, ntkrnlmp.symbol_table_name)
             if is_win10:
                 big_pools_json_filename = "bigpools-win10"
             elif is_vista_or_later:
@@ -92,7 +91,7 @@ class BigPools(interfaces.plugins.PluginInterface):
             else:
                 big_pools_json_filename = "bigpools"
 
-            if symbols.symbol_table_is_64bit(context, symbol_table):
+            if symbols.symbol_table_is_64bit(context, ntkrnlmp.symbol_table_name):
                 big_pools_json_filename += "-x64"
             else:
                 big_pools_json_filename += "-x86"
@@ -100,16 +99,17 @@ class BigPools(interfaces.plugins.PluginInterface):
             new_table_name = intermed.IntermediateSymbolTable.create(
                 context=context,
                 config_path=configuration.path_join(
-                    context.symbol_space[symbol_table].config_path, "bigpools"
+                    context.symbol_space[ntkrnlmp.symbol_table_name].config_path,
+                    "bigpools",
                 ),
                 sub_path=os.path.join("windows", "bigpools"),
                 filename=big_pools_json_filename,
-                table_mapping={"nt_symbols": symbol_table},
+                table_mapping={"nt_symbols": ntkrnlmp.symbol_table_name},
                 class_types={
                     "_POOL_TRACKER_BIG_PAGES": extensions.pool.POOL_TRACKER_BIG_PAGES
                 },
             )
-            module = context.module(new_table_name, layer_name, offset=0)
+            module = context.module(new_table_name, ntkrnlmp.layer_name, offset=0)
             big_page_table_type = module.get_type("_POOL_TRACKER_BIG_PAGES")
 
         big_pools = ntkrnlmp.object(
@@ -132,12 +132,10 @@ class BigPools(interfaces.plugins.PluginInterface):
             tags = [tag for tag in self.config["tags"].split(",")]
         else:
             tags = None
-        kernel = self.context.modules[self.config["kernel"]]
 
         for big_pool in self.list_big_pools(
             context=self.context,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            kernel_module_name=self.config["kernel"],
             tags=tags,
             show_free=self.config.get("show-free"),
         ):

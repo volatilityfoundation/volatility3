@@ -20,8 +20,8 @@ vollog = logging.getLogger(__name__)
 class MBRScan(interfaces.plugins.PluginInterface):
     """Scans for and parses potential Master Boot Records (MBRs)"""
 
-    _required_framework_version = (2, 0, 1)
-    _version = (1, 0, 0)
+    _required_framework_version = (2, 22, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -36,6 +36,11 @@ class MBRScan(interfaces.plugins.PluginInterface):
                 description="It analyzes and provides all the information in the partition entry and bootcode hexdump. (It returns a lot of information, so we recommend you render it in CSV.)",
                 default=False,
                 optional=True,
+            ),
+            requirements.VersionRequirement(
+                name="multi_string_scanner",
+                component=scanners.MultiStringScanner,
+                version=(1, 0, 0),
             ),
         ]
 
@@ -53,7 +58,9 @@ class MBRScan(interfaces.plugins.PluginInterface):
         layer = self.context.layers[physical_layer_name]
         architecture = (
             "intel"
-            if not symbols.symbol_table_is_64bit(self.context, kernel.symbol_table_name)
+            if not symbols.symbol_table_is_64bit(
+                context=self.context, symbol_table_name=kernel.symbol_table_name
+            )
             else "intel64"
         )
 
@@ -72,7 +79,7 @@ class MBRScan(interfaces.plugins.PluginInterface):
         partition_table_object = symbol_table + constants.BANG + "PARTITION_TABLE"
 
         # Define Signature and Data Length
-        mbr_signature = b"\x55\xAA"
+        mbr_signature = b"\x55\xaa"
         mbr_length = 0x200
         bootcode_length = 0x1B8
 
@@ -118,9 +125,7 @@ class MBRScan(interfaces.plugins.PluginInterface):
                                 renderers.NotApplicableValue(),
                                 renderers.NotApplicableValue(),
                                 renderers.NotApplicableValue(),
-                                interfaces.renderers.Disassembly(
-                                    bootcode, 0, architecture
-                                ),
+                                renderers.Disassembly(bootcode, 0, architecture),
                             ),
                         )
                     else:
@@ -144,10 +149,14 @@ class MBRScan(interfaces.plugins.PluginInterface):
                                 renderers.NotApplicableValue(),
                                 renderers.NotApplicableValue(),
                                 renderers.NotApplicableValue(),
-                                interfaces.renderers.Disassembly(
-                                    bootcode, 0, architecture
+                                renderers.Disassembly(bootcode, 0, architecture),
+                                renderers.LayerData(
+                                    context=self.context,
+                                    layer_name=layer.name,
+                                    offset=mbr_start_offset,
+                                    length=bootcode_length,
+                                    no_surrounding=True,
                                 ),
-                                format_hints.HexBytes(bootcode),
                             ),
                         )
 
@@ -230,7 +239,7 @@ class MBRScan(interfaces.plugins.PluginInterface):
                     ("Bootable", bool),
                     ("PartitionType", str),
                     ("SectorInSize", format_hints.Hex),
-                    ("Disasm", interfaces.renderers.Disassembly),
+                    ("Disasm", renderers.Disassembly),
                 ],
                 self._generator(),
             )
@@ -254,8 +263,8 @@ class MBRScan(interfaces.plugins.PluginInterface):
                     ("EndingCHS", int),
                     ("EndingSector", int),
                     ("SectorInSize", format_hints.Hex),
-                    ("Disasm", interfaces.renderers.Disassembly),
-                    ("Bootcode", format_hints.HexBytes),
+                    ("Disasm", renderers.Disassembly),
+                    ("Bootcode", renderers.LayerData),
                 ],
                 self._generator(),
             )

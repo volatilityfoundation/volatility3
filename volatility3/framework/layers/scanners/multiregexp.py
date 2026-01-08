@@ -6,7 +6,7 @@ import re
 from typing import Generator, List, Tuple
 
 
-class MultiRegexp(object):
+class MultiRegexp:
     """Algorithm for multi-string matching."""
 
     def __init__(self) -> None:

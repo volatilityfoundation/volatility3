@@ -48,7 +48,6 @@ class _SHUTDOWN_PACKET(objects.StructType, pool.ExecutiveObject):
             return False
 
         try:
-
             device = self.DeviceObject
             if not device or not (device.DriverObject.DriverStart % 0x1000 == 0):
                 vollog.debug(

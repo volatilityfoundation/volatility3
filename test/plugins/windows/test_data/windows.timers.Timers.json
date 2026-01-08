@@ -1,0 +1,684 @@
+{
+    "WINDOWSXP_GENERIC": [
+        {
+            "DueTime": "0x00000001:0xb6912640",
+            "Module": "ntoskrnl",
+            "Offset": 2180960760,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xe2e5d9fc",
+            "Module": "ks",
+            "Offset": 2181100944,
+            "Period(ms)": 0,
+            "Routine": 4162614588,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x80000001:0x838d66d0",
+            "Module": "ntoskrnl",
+            "Offset": 2180726816,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xbe54efd0",
+            "Module": "NDIS",
+            "Offset": 2182586488,
+            "Period(ms)": 60000,
+            "Routine": 4164630316,
+            "Signaled": "Yes",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x80000000:0x6d915dc0",
+            "Module": "ntoskrnl",
+            "Offset": 2182771520,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xd5616870",
+            "Module": "HTTP",
+            "Offset": 4122586976,
+            "Period(ms)": 0,
+            "Routine": 4122527634,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaa92535f",
+            "Module": "USBPORT",
+            "Offset": 2179614512,
+            "Period(ms)": 0,
+            "Routine": 4163343596,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x80000000:0x28ec7d80",
+            "Module": "ntoskrnl",
+            "Offset": 2167895896,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xd5f1ddd0",
+            "Module": "afd",
+            "Offset": 4289149728,
+            "Period(ms)": 0,
+            "Routine": 4146614848,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xe64e9c50",
+            "Module": "ntoskrnl",
+            "Offset": 4289091536,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000002:0x10691f50",
+            "Module": "BATTC",
+            "Offset": 2182647568,
+            "Period(ms)": 0,
+            "Routine": 4170619626,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000002:0x10691f50",
+            "Module": "BATTC",
+            "Offset": 2184852912,
+            "Period(ms)": 0,
+            "Routine": 4170619626,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xe650bd40",
+            "Module": "ntoskrnl",
+            "Offset": 4289091352,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaf39aa70",
+            "Module": "watchdog",
+            "Offset": 2182133296,
+            "Period(ms)": 10000,
+            "Routine": 4170290884,
+            "Signaled": "Yes",
+            "Symbol": "_imp__KdSave",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaf39aa70",
+            "Module": "watchdog",
+            "Offset": 2181849992,
+            "Period(ms)": 10000,
+            "Routine": 4170290884,
+            "Signaled": "Yes",
+            "Symbol": "_imp__KdSave",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000008:0x61e17090",
+            "Module": "ntoskrnl",
+            "Offset": 2153125248,
+            "Period(ms)": 0,
+            "Routine": 2152824977,
+            "Signaled": "-",
+            "Symbol": "ExpTimeRefreshDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xa9537f40",
+            "Module": "ntoskrnl",
+            "Offset": 2153083360,
+            "Period(ms)": 0,
+            "Routine": 2152814203,
+            "Signaled": "-",
+            "Symbol": "CmpLazyFlushDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xc5addbe0",
+            "Module": "TDI",
+            "Offset": 4147138000,
+            "Period(ms)": 0,
+            "Routine": 4169831408,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaadb3be0",
+            "Module": "netbt",
+            "Offset": 2182155920,
+            "Period(ms)": 0,
+            "Routine": 4146697354,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaadb9040",
+            "Module": "TDI",
+            "Offset": 2182059040,
+            "Period(ms)": 0,
+            "Routine": 4169831408,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xa9537f40",
+            "Module": "ntoskrnl",
+            "Offset": 2153083360,
+            "Period(ms)": 0,
+            "Routine": 2152814203,
+            "Signaled": "-",
+            "Symbol": "CmpLazyFlushDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x80000000:0x19eae820",
+            "Module": "ntoskrnl",
+            "Offset": 2182169704,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaa9b2a20",
+            "Module": "NDIS",
+            "Offset": 2179568032,
+            "Period(ms)": 0,
+            "Routine": 4164628447,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000002:0x1a97a160",
+            "Module": "Ntfs",
+            "Offset": 4164841808,
+            "Period(ms)": 0,
+            "Routine": 4164732734,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x80000000:0x2c5fb7e0",
+            "Module": "ntoskrnl",
+            "Offset": 2180369200,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000002:0x3dcf47a0",
+            "Module": "afd",
+            "Offset": 2183169664,
+            "Period(ms)": 0,
+            "Routine": 4146614848,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xc4906e60",
+            "Module": "rdbss",
+            "Offset": 4146422176,
+            "Period(ms)": 0,
+            "Routine": 4146381701,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaa92535f",
+            "Module": "USBPORT",
+            "Offset": 2179614512,
+            "Period(ms)": 0,
+            "Routine": 4163343596,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaa8619e0",
+            "Module": "TDI",
+            "Offset": 2182064136,
+            "Period(ms)": 0,
+            "Routine": 4169831408,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xc45ec240",
+            "Module": "tcpip",
+            "Offset": 4147157776,
+            "Period(ms)": 100,
+            "Routine": 4146861021,
+            "Signaled": "Yes",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x80000000:0x35b72850",
+            "Module": "ntoskrnl",
+            "Offset": 2180437784,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaad6fab0",
+            "Module": "NDIS",
+            "Offset": 2181321392,
+            "Period(ms)": 1000,
+            "Routine": 4164630316,
+            "Signaled": "Yes",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaadb9040",
+            "Module": "TDI",
+            "Offset": 2182059040,
+            "Period(ms)": 0,
+            "Routine": 4169831408,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xa9537f40",
+            "Module": "ntoskrnl",
+            "Offset": 2153083360,
+            "Period(ms)": 0,
+            "Routine": 2152814203,
+            "Signaled": "-",
+            "Symbol": "CmpLazyFlushDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xe2e5ee70",
+            "Module": "ipsec",
+            "Offset": 4147285920,
+            "Period(ms)": 60000,
+            "Routine": 4147221715,
+            "Signaled": "Yes",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xe2e5ee70",
+            "Module": "ipsec",
+            "Offset": 4147284744,
+            "Period(ms)": 0,
+            "Routine": 4147221577,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xe2e5d9fc",
+            "Module": "ks",
+            "Offset": 2181100944,
+            "Period(ms)": 0,
+            "Routine": 4162614588,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000098:0xa67683e0",
+            "Module": "NDIS",
+            "Offset": 2183038120,
+            "Period(ms)": 0,
+            "Routine": 4164628447,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xa6beb810",
+            "Module": "ntoskrnl",
+            "Offset": 2153086208,
+            "Period(ms)": 1000,
+            "Routine": 2152611575,
+            "Signaled": "Yes",
+            "Symbol": "IopTimerDispatch",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xe2f53650",
+            "Module": "ipnat",
+            "Offset": 4146164320,
+            "Period(ms)": 60000,
+            "Routine": 4146134936,
+            "Signaled": "Yes",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x80000001:0x838d66d0",
+            "Module": "ntoskrnl",
+            "Offset": 2180726816,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xa6c34da0",
+            "Module": "ntoskrnl",
+            "Offset": 2153118912,
+            "Period(ms)": 1000,
+            "Routine": 2152615232,
+            "Signaled": "Yes",
+            "Symbol": "PopScanIdleList",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000098:0xa67683e0",
+            "Module": "NDIS",
+            "Offset": 2183038120,
+            "Period(ms)": 0,
+            "Routine": 4164628447,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xa6d41cb0",
+            "Module": "ntoskrnl",
+            "Offset": 2153080200,
+            "Period(ms)": 0,
+            "Routine": 2152616496,
+            "Signaled": "-",
+            "Symbol": "CcScanDpc",
+            "__children": []
+        },
+        {
+            "DueTime": "0x80000000:0x14500b10",
+            "Module": "ntoskrnl",
+            "Offset": 2182113448,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaba81b20",
+            "Module": "NDIS",
+            "Offset": 2182656416,
+            "Period(ms)": 0,
+            "Routine": 4164628447,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xab110bd0",
+            "Module": "ntoskrnl",
+            "Offset": 2181090272,
+            "Period(ms)": 0,
+            "Routine": 2152754200,
+            "Signaled": "-",
+            "Symbol": "CcPfTraceTimerRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000098:0xa6ad86a0",
+            "Module": "NDIS",
+            "Offset": 2182615456,
+            "Period(ms)": 0,
+            "Routine": 4164628447,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xd56a01e0",
+            "Module": "HTTP",
+            "Offset": 4122576520,
+            "Period(ms)": 60000,
+            "Routine": 4122481076,
+            "Signaled": "Yes",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xd56a7ca0",
+            "Module": "HTTP",
+            "Offset": 4122577120,
+            "Period(ms)": 30000,
+            "Routine": 4122510208,
+            "Signaled": "Yes",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xd56a7ca0",
+            "Module": "HTTP",
+            "Offset": 4122586816,
+            "Period(ms)": 0,
+            "Routine": 4122536296,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x80000000:0x14500b10",
+            "Module": "ntoskrnl",
+            "Offset": 2182113448,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000002:0x10691f50",
+            "Module": "BATTC",
+            "Offset": 2184852912,
+            "Period(ms)": 0,
+            "Routine": 4170619626,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000002:0x10691f50",
+            "Module": "BATTC",
+            "Offset": 2182647568,
+            "Period(ms)": 0,
+            "Routine": 4170619626,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaa90b010",
+            "Module": "sr",
+            "Offset": 2184659528,
+            "Period(ms)": 0,
+            "Routine": 4165384494,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000131:0x3cf80b10",
+            "Module": "NDIS",
+            "Offset": 2181526704,
+            "Period(ms)": 0,
+            "Routine": 4164628447,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaa9b2a20",
+            "Module": "NDIS",
+            "Offset": 2179568032,
+            "Period(ms)": 0,
+            "Routine": 4164628447,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaa9cb150",
+            "Module": "NDIS",
+            "Offset": 2179569720,
+            "Period(ms)": 0,
+            "Routine": 4164628447,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaa9e70c0",
+            "Module": "ntoskrnl",
+            "Offset": 2182248232,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xd56bd340",
+            "Module": "srv",
+            "Offset": 4128143248,
+            "Period(ms)": 0,
+            "Routine": 4128080773,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xbae86a40",
+            "Module": "ntoskrnl",
+            "Offset": 2182222184,
+            "Period(ms)": 0,
+            "Routine": 2152618407,
+            "Signaled": "-",
+            "Symbol": "ExpTimerDpcRoutine",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xacafcdd0",
+            "Module": "Ntfs",
+            "Offset": 4164841712,
+            "Period(ms)": 0,
+            "Routine": 4164719155,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaa92535f",
+            "Module": "USBPORT",
+            "Offset": 2179614512,
+            "Period(ms)": 0,
+            "Routine": 4163343596,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xad54f9d0",
+            "Module": "ntoskrnl",
+            "Offset": 2153085904,
+            "Period(ms)": 60000,
+            "Routine": 2152638914,
+            "Signaled": "Yes",
+            "Symbol": "IopIrpStackProfilerTimer",
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000008:0x73b44670",
+            "Module": "ipsec",
+            "Offset": 4147284848,
+            "Period(ms)": 0,
+            "Routine": 4147221577,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaad6c270",
+            "Module": "NDIS",
+            "Offset": 2179663392,
+            "Period(ms)": 0,
+            "Routine": 4164642677,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000001:0xaad6fab0",
+            "Module": "NDIS",
+            "Offset": 2181321392,
+            "Period(ms)": 1000,
+            "Routine": 4164630316,
+            "Signaled": "Yes",
+            "Symbol": null,
+            "__children": []
+        },
+        {
+            "DueTime": "0x00000008:0x73bef8c0",
+            "Module": "netbt",
+            "Offset": 2182155520,
+            "Period(ms)": 0,
+            "Routine": 4146697354,
+            "Signaled": "-",
+            "Symbol": null,
+            "__children": []
+        }
+    ]
+}

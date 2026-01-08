@@ -2,7 +2,4 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-"""Codecs used for encoding or decoding data should live here
-
-
-"""
+"""Codecs used for encoding or decoding data should live here"""

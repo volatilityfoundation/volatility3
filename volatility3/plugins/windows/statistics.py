@@ -64,9 +64,7 @@ class Statistics(plugins.PluginInterface):
                     other_invalid += 1
                     page_size = expected_page_size
                     vollog.debug(
-                        "A non-page lookup invalid address exception occurred at: {} in layer {}".format(
-                            hex(excp.invalid_address), excp.layer_name
-                        )
+                        f"A non-page lookup invalid address exception occurred at: {hex(excp.invalid_address)} in layer {excp.layer_name}"
                     )
 
                 page_addr += page_size

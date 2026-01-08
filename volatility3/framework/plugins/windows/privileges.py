@@ -39,7 +39,7 @@ class Privs(interfaces.plugins.PluginInterface):
             )
 
         # Get service sids dictionary (we need only the service sids).
-        with open(sids_json_file_name, "r") as file_handle:
+        with open(sids_json_file_name) as file_handle:
             temp_json = json.load(file_handle)["privileges"]
             self.privilege_info = {
                 int(priv_num): temp_json[priv_num] for priv_num in temp_json
@@ -60,8 +60,8 @@ class Privs(interfaces.plugins.PluginInterface):
                 element_type=int,
                 optional=True,
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
         ]
 
@@ -107,7 +107,6 @@ class Privs(interfaces.plugins.PluginInterface):
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
-        kernel = self.context.modules[self.config["kernel"]]
 
         return renderers.TreeGrid(
             [
@@ -121,8 +120,7 @@ class Privs(interfaces.plugins.PluginInterface):
             self._generator(
                 pslist.PsList.list_processes(
                     context=self.context,
-                    layer_name=kernel.layer_name,
-                    symbol_table=kernel.symbol_table_name,
+                    kernel_module_name=self.config["kernel"],
                     filter_func=filter_func,
                 )
             ),

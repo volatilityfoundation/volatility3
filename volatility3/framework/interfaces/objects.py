@@ -3,10 +3,12 @@
 #
 """Objects are the core of volatility, and provide pythonic access to
 interpreted values of data from a layer."""
+
 import abc
 import collections
 import collections.abc
 import contextlib
+import dataclasses
 import logging
 from typing import Any, Dict, List, Mapping, Optional
 
@@ -52,7 +54,8 @@ class ReadOnlyMapping(collections.abc.Mapping):
         return dict(self) == dict(other)
 
 
-class ObjectInformation(ReadOnlyMapping):
+@dataclasses.dataclass
+class ObjectInformation:
     """Contains common information useful/pertinent only to an individual
     object (like an instance)
 
@@ -63,35 +66,20 @@ class ObjectInformation(ReadOnlyMapping):
     in a single place.  These values are based on the :class:`ReadOnlyMapping` class, to prevent their modification.
     """
 
-    def __init__(
-        self,
-        layer_name: str,
-        offset: int,
-        member_name: Optional[str] = None,
-        parent: Optional["ObjectInterface"] = None,
-        native_layer_name: Optional[str] = None,
-        size: Optional[int] = None,
-    ):
-        """Constructs a container for basic information about an object.
+    layer_name: str
+    offset: int
+    native_layer_name: str
+    member_name: Optional[str] = None
+    parent: Optional["ObjectInterface"] = None
+    size: Optional[int] = None
 
-        Args:
-            layer_name: Layer from which the data for the object will be read
-            offset: Offset within the layer at which the data for the object will be read
-            member_name: If the object was accessed as a member of a parent object, this was the name used to access it
-            parent: If the object was accessed as a member of a parent object, this is the parent object
-            native_layer_name: If this object references other objects (such as a pointer), what layer those objects live in
-            size: The size that the whole structure consumes in bytes
-        """
-        super().__init__(
-            {
-                "layer_name": layer_name,
-                "offset": offset,
-                "member_name": member_name,
-                "parent": parent,
-                "native_layer_name": native_layer_name or layer_name,
-                "size": size,
-            }
-        )
+    def __getitem__(self, key):
+        if key in self:
+            return getattr(self, key)
+        raise KeyError(f"No {key} present in ObjectInformation")
+
+    def __contains__(self, key):
+        return key in [field.name for field in dataclasses.fields(self)]
 
 
 class ObjectInterface(metaclass=abc.ABCMeta):
@@ -133,7 +121,7 @@ class ObjectInterface(metaclass=abc.ABCMeta):
 
     def __getattr__(self, attr: str) -> Any:
         """Method for ensuring volatility members can be returned."""
-        raise AttributeError
+        raise AttributeError(f"Unable to find {attr} for type {type(self)}")
 
     @property
     def vol(self) -> ReadOnlyMapping:
@@ -183,7 +171,7 @@ class ObjectInterface(metaclass=abc.ABCMeta):
             offset=self.vol.offset,
             member_name=self.vol.member_name,
             parent=self.vol.parent,
-            native_layer_name=self.vol.native_layer_name,
+            native_layer_name=self.vol.native_layer_name or self.vol.layer_name,
             size=object_template.size,
         )
         return object_template(context=self._context, object_info=object_info)
@@ -374,6 +362,7 @@ class Template:
             f"{self.__class__.__name__} object has no attribute {attr}"
         )
 
+    @abc.abstractmethod
     def __call__(
         self,
         context: "interfaces.context.ContextInterface",

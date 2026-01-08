@@ -12,6 +12,7 @@ are dependent upon, please DO NOT alter or remove this file unless you know the 
 The framework is configured this way to allow plugin developers/users to override any plugin functionality whether
 existing or new.
 """
+
 from volatility3.framework import constants
 
 __path__ = constants.PLUGINS_PATH

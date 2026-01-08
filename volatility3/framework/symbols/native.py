@@ -30,7 +30,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
 
     @property
     def types(self) -> Iterable[str]:
-        """Returns an iterator of the symbol type names."""
+        """Returns an iterable (set) of the available symbol type names."""
         return self._types
 
     def get_type(self, type_name: str) -> interfaces.objects.Template:

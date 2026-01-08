@@ -18,7 +18,7 @@ def wintime_to_datetime(
     unix_time = wintime // 10000000
     if unix_time == 0:
         return renderers.NotApplicableValue()
-    unix_time = unix_time - 11644473600
+    unix_time -= 11644473600
     try:
         return datetime.datetime.fromtimestamp(unix_time, datetime.timezone.utc)
         # Windows sometimes throws OSErrors rather than ValueError/OverflowError when it can't convert a value
@@ -26,6 +26,27 @@ def wintime_to_datetime(
         # that even in Python 3.7.17, ValueError is still being raised.
     except (ValueError, OverflowError, OSError):
         return renderers.UnparsableValue()
+
+
+def windows_bytes_to_guid(buf: bytes) -> str:
+    """
+    Converts 16 raw bytes to a windows GUID.
+
+    Raises ValueError if the provided buffer is not exactly 16 bytes.
+    """
+    if len(buf) != 16:
+        raise ValueError("Expected 16 bytes for GUID")
+
+    head_components = [format(v, "x") for v in struct.unpack("<IHH", buf[:8])]
+    tail_component = [
+        format(v, "x")
+        for v in struct.unpack(
+            ">HQ",
+            buf[8:10] + b"\x00\x00" + buf[10:16],
+        )
+    ]
+    combined = head_components + tail_component
+    return "{" + "-".join(combined) + "}"
 
 
 def unixtime_to_datetime(
@@ -50,7 +71,7 @@ def round(addr: int, align: int, up: bool = False) -> int:
     Args:
         addr: the address
         align: the alignment value
-        up: Whether to round up or not
+        up: whether to round up or not
 
     Returns:
         The aligned address
@@ -101,11 +122,12 @@ def convert_port(port_as_integer):
 
 
 def convert_network_four_tuple(family, four_tuple):
-    """Converts the connection four_tuple: (source ip, source port, dest ip,
-    dest port)
+    """Converts the connection four_tuple:
+
+    (source ip, source port, dest ip, dest port)
 
     into their string equivalents. IP addresses are expected as a tuple
-    of unsigned shorts Ports are converted to proper endianness as well
+    of unsigned shorts. Ports are converted to proper endianness as well.
     """
 
     if family == socket.AF_INET:

@@ -14,8 +14,8 @@ vollog = logging.getLogger(__name__)
 
 
 class ConfigWriter(plugins.PluginInterface):
-    """Runs the automagics and both prints and outputs configuration in the
-    output directory."""
+    """Runs the automagics and both prints and outputs configuration in the \
+output directory."""
 
     _required_framework_version = (2, 0, 0)
 

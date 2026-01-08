@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 """In-memory artifacts from OSX systems."""
+
 from typing import Iterator, Tuple, Any, Generator, List
 
 from volatility3.framework import exceptions, renderers, interfaces
@@ -24,8 +25,8 @@ class Psaux(plugins.PluginInterface):
                 description="Kernel module for the OS",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",

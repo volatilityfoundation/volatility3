@@ -5,7 +5,7 @@ from typing import Optional
 from volatility3.framework import constants, interfaces, exceptions
 from volatility3.framework.layers import elf
 from volatility3.framework.symbols import intermed
-from volatility3.framework.constants.linux import ELF_CLASS
+from volatility3.framework.constants import linux as linux_constants
 
 vollog = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class XenCoreDumpLayer(elf.Elf64Layer):
 
     _header_struct = struct.Struct("<IBBB")
     MAGIC = 0x464C457F  # "\x7fELF"
-    ELF_CLASS = ELF_CLASS.ELFCLASS64
+    ELF_CLASS = linux_constants.ELF_CLASS.ELFCLASS64
 
     def __init__(
         self, context: interfaces.context.ContextInterface, config_path: str, name: str
@@ -54,6 +54,7 @@ class XenCoreDumpLayer(elf.Elf64Layer):
 
         segments = []
         self._segment_headers = []
+        segment_names = None
 
         for sindex in range(ehdr.e_shnum):
             shdr = self.context.object(

@@ -17,6 +17,8 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
 
     _required_framework_version = (2, 0, 0)
 
+    _version = (2, 0, 0)
+
     @classmethod
     def get_requirements(cls):
         return [
@@ -25,14 +27,21 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
+            requirements.VersionRequirement(
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
+            ),
+            requirements.VersionRequirement(
+                name="poolscanner", component=poolscanner.PoolScanner, version=(3, 0, 0)
+            ),
         ]
 
     @classmethod
     def scan_symlinks(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Scans for links using the poolscanner module and constraints.
 
@@ -45,22 +54,20 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
             A list of symlink objects found by scanning memory for the Symlink pool signatures
         """
 
+        kernel = context.modules[kernel_module_name]
+
         constraints = poolscanner.PoolScanner.builtin_constraints(
-            symbol_table, [b"Sym\xe2", b"Symb"]
+            kernel.symbol_table_name, [b"Sym\xe2", b"Symb"]
         )
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
-            context, layer_name, symbol_table, constraints
+            context, kernel_module_name, constraints
         ):
             _constraint, mem_object, _header = result
             yield mem_object
 
     def _generator(self):
-        kernel = self.context.modules[self.config["kernel"]]
-
-        for link in self.scan_symlinks(
-            self.context, kernel.layer_name, kernel.symbol_table_name
-        ):
+        for link in self.scan_symlinks(self.context, self.config["kernel"]):
             try:
                 from_name = link.get_link_name()
             except (ValueError, exceptions.InvalidAddressException):

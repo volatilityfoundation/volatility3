@@ -1,8 +1,8 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-"""A module containing a collection of plugins that produce data typically
-found in Linux's /proc file system."""
+"""A module containing a plugin that recovers bash command history
+from bash process memory."""
 
 import datetime
 import struct
@@ -13,7 +13,7 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.layers import scanners
 from volatility3.framework.objects import utility
-from volatility3.framework.symbols.linux.bash import BashIntermedSymbols
+from volatility3.framework.symbols.linux import bash
 from volatility3.plugins import timeliner
 from volatility3.plugins.linux import pslist
 
@@ -22,6 +22,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Recovers bash command history from memory."""
 
     _required_framework_version = (2, 0, 0)
+    _version = (1, 0, 2)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -31,8 +32,23 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
+            ),
+            requirements.VersionRequirement(
+                name="multi_string_scanner",
+                component=scanners.MultiStringScanner,
+                version=(1, 0, 0),
+            ),
+            requirements.VersionRequirement(
+                name="bytes_scanner",
+                component=scanners.BytesScanner,
+                version=(1, 0, 0),
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -45,7 +61,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
     def _generator(self, tasks):
         vmlinux = self.context.modules[self.config["kernel"]]
         is_32bit = not symbols.symbol_table_is_64bit(
-            self.context, vmlinux.symbol_table_name
+            context=self.context, symbol_table_name=vmlinux.symbol_table_name
         )
         if is_32bit:
             pack_format = "I"
@@ -54,7 +70,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
             pack_format = "Q"
             bash_json_file = "bash64"
 
-        bash_table_name = BashIntermedSymbols.create(
+        bash_table_name = bash.BashIntermedSymbols.create(
             self.context, self.config_path, "linux", bash_json_file
         )
 

@@ -6,21 +6,24 @@
 Stores all the constant values that are generally fixed throughout
 volatility This includes default scanning block sizes, etc.
 """
+
 import enum
 import os.path
 import sys
 import warnings
 from typing import Callable, Optional
 
-import volatility3.framework.constants.linux
-import volatility3.framework.constants.windows
+from volatility3.framework.constants import linux as linux
+from volatility3.framework.constants import windows as windows
 from volatility3.framework.constants._version import (
-    PACKAGE_VERSION,
-    VERSION_MAJOR,
-    VERSION_MINOR,
-    VERSION_PATCH,
-    VERSION_SUFFIX,
+    PACKAGE_VERSION as PACKAGE_VERSION,
+    VERSION_MAJOR as VERSION_MAJOR,
+    VERSION_MINOR as VERSION_MINOR,
+    VERSION_PATCH as VERSION_PATCH,
+    VERSION_SUFFIX as VERSION_SUFFIX,
 )
+
+REQUIRED_PYTHON_VERSION = (3, 8, 0)
 
 PLUGINS_PATH = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "plugins")),
@@ -36,6 +39,8 @@ SYMBOL_BASEPATHS = [
 
 ISF_EXTENSIONS = [".json", ".json.xz", ".json.gz", ".json.bz2"]
 """List of accepted extensions for ISF files"""
+
+SYMBOL_SERVER_URL = "http://msdl.microsoft.com/download/symbols"
 
 if hasattr(sys, "frozen") and sys.frozen:
     # Ensure we include the executable's directory as the base for plugins and symbols
@@ -65,7 +70,11 @@ LOGLEVEL_VVV = 7
 LOGLEVEL_VVVV = 6
 """Logging level for four levels of detail: -vvvvvv"""
 
-CACHE_PATH = os.path.join(os.path.expanduser("~"), ".cache", "volatility3")
+
+CACHE_PATH = os.path.join(
+    os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache"),
+    "volatility3",
+)
 """Default path to store cached data"""
 
 SQLITE_CACHE_PERIOD = "-3 days"
@@ -112,6 +121,9 @@ OFFLINE = False
 
 REMOTE_ISF_URL = None  # 'http://localhost:8000/banners.json'
 """Remote URL to query for a list of ISF addresses"""
+
+DOWNLOAD_TIMEOUT = 30
+"""Length of time (in seconds) to wait for another process to download a resource before using it"""
 
 ###
 # DEPRECATED VALUES

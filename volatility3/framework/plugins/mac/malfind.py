@@ -13,7 +13,7 @@ from volatility3.plugins.mac import pslist
 class Malfind(interfaces.plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code."""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (2, 0, 1)
 
     @classmethod
     def get_requirements(cls):
@@ -23,8 +23,8 @@ class Malfind(interfaces.plugins.PluginInterface):
                 description="Kernel module for the OS",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -68,9 +68,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                 else:
                     architecture = "intel64"
 
-                disasm = interfaces.renderers.Disassembly(
-                    data, vma.links.start, architecture
-                )
+                disasm = renderers.Disassembly(data, vma.links.start, architecture)
 
                 yield (
                     0,
@@ -99,7 +97,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                 ("End", format_hints.Hex),
                 ("Protection", str),
                 ("Hexdump", format_hints.HexBytes),
-                ("Disasm", interfaces.renderers.Disassembly),
+                ("Disasm", renderers.Disassembly),
             ],
             self._generator(
                 list_tasks(self.context, self.config["kernel"], filter_func=filter_func)

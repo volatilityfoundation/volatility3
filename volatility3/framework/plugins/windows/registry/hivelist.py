@@ -41,8 +41,10 @@ class HiveGenerator:
 class HiveList(interfaces.plugins.PluginInterface):
     """Lists the registry hives present in a particular memory image."""
 
-    _version = (1, 0, 0)
     _required_framework_version = (2, 0, 0)
+
+    # 2.0.0 - changed the signature of list_hives
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -58,8 +60,8 @@ class HiveList(interfaces.plugins.PluginInterface):
                 optional=True,
                 default=None,
             ),
-            requirements.PluginRequirement(
-                name="hivescan", plugin=hivescan.HiveScan, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="hivescan", component=hivescan.HiveScan, version=(2, 0, 0)
             ),
             requirements.BooleanRequirement(
                 name="dump",
@@ -93,10 +95,9 @@ class HiveList(interfaces.plugins.PluginInterface):
                 # Construct the hive
                 hive = next(
                     self.list_hives(
-                        self.context,
-                        self.config_path,
-                        layer_name=kernel.layer_name,
-                        symbol_table=kernel.symbol_table_name,
+                        context=self.context,
+                        base_config_path=self.config_path,
+                        kernel_module_name=self.config["kernel"],
                         hive_offsets=[hive_object.vol.offset],
                     )
                 )
@@ -137,8 +138,7 @@ class HiveList(interfaces.plugins.PluginInterface):
         cls,
         context: interfaces.context.ContextInterface,
         base_config_path: str,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         filter_string: Optional[str] = None,
         hive_offsets: Optional[List[int]] = None,
     ) -> Iterator[registry.RegistryHive]:
@@ -148,20 +148,24 @@ class HiveList(interfaces.plugins.PluginInterface):
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             base_config_path: The configuration path for any settings required by the new table
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the module for the kernel
             filter_string: An optional string which must be present in the hive name if specified
             offset: An optional offset to specify a specific hive to iterate over (takes precedence over filter_string)
 
         Yields:
             A registry hive layer name
         """
+        kernel = context.modules[kernel_module_name]
+
         if hive_offsets is None:
             try:
                 hive_offsets = [
                     hive.vol.offset
                     for hive in cls.list_hive_objects(
-                        context, layer_name, symbol_table, filter_string
+                        context=context,
+                        layer_name=kernel.layer_name,
+                        symbol_table=kernel.symbol_table_name,
+                        filter_string=filter_string,
                     )
                 ]
             except ImportError:
@@ -178,8 +182,9 @@ class HiveList(interfaces.plugins.PluginInterface):
                 context=context,
                 base_config_path=base_config_path,
                 hive_offset=hive_offset,
-                base_layer=layer_name,
-                nt_symbols=symbol_table,
+                base_layer=kernel.layer_name,
+                nt_symbols=kernel.symbol_table_name,
+                kernel_module_name=kernel_module_name,
             )
 
             try:
@@ -215,7 +220,11 @@ class HiveList(interfaces.plugins.PluginInterface):
         """
 
         # We only use the object factory to demonstrate how to use one
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
+        kvo = context.layers[layer_name].config.get("kernel_virtual_offset", None)
+        if not kvo:
+            raise ValueError(
+                "Intel layer does not have an associated kernel virtual offset, failing"
+            )
         ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
 
         list_head = ntkrnlmp.get_symbol("CmpHiveListHead").address
@@ -232,10 +241,8 @@ class HiveList(interfaces.plugins.PluginInterface):
         for hive in hg:
             if hive.vol.offset in seen:
                 vollog.debug(
-                    "Hivelist found an already seen offset {} while "
-                    "traversing forwards, this should not occur".format(
-                        hex(hive.vol.offset)
-                    )
+                    f"Hivelist found an already seen offset {hex(hive.vol.offset)} while "
+                    "traversing forwards, this should not occur"
                 )
                 break
             seen.add(hive.vol.offset)
@@ -249,18 +256,14 @@ class HiveList(interfaces.plugins.PluginInterface):
         forward_invalid = hg.invalid
         if forward_invalid:
             vollog.debug(
-                "Hivelist failed traversing the list forwards at {}, traversing backwards".format(
-                    hex(forward_invalid)
-                )
+                f"Hivelist failed traversing the list forwards at {hex(forward_invalid)}, traversing backwards"
             )
             hg = HiveGenerator(cmhive, forward=False)
             for hive in hg:
                 if hive.vol.offset in seen:
                     vollog.debug(
-                        "Hivelist found an already seen offset {} while "
-                        "traversing backwards, list walking met in the middle".format(
-                            hex(hive.vol.offset)
-                        )
+                        f"Hivelist found an already seen offset {hex(hive.vol.offset)} while "
+                        "traversing backwards, list walking met in the middle"
                     )
                     break
                 seen.add(hive.vol.offset)
@@ -281,14 +284,10 @@ class HiveList(interfaces.plugins.PluginInterface):
                 # by walking the list, so revert to scanning, and walk the list forwards and backwards from each
                 # found hive
                 vollog.debug(
-                    "Hivelist failed traversing backwards at {}, a different "
-                    "location from forwards, revert to scanning".format(
-                        hex(backward_invalid)
-                    )
+                    f"Hivelist failed traversing backwards at {hex(backward_invalid)}, a different "
+                    "location from forwards, revert to scanning"
                 )
-                for hive in hivescan.HiveScan.scan_hives(
-                    context, layer_name, symbol_table
-                ):
+                for hive in hivescan.HiveScan.scan_hives(context, ntkrnlmp.name):
                     try:
                         if hive.HiveList.Flink:
                             start_hive_offset = hive.HiveList.Flink - reloff
@@ -320,9 +319,7 @@ class HiveList(interfaces.plugins.PluginInterface):
                                             yield linked_hive
                     except exceptions.InvalidAddressException:
                         vollog.debug(
-                            "InvalidAddressException when traversing hive {} found from scan, skipping".format(
-                                hex(hive.vol.offset)
-                            )
+                            f"InvalidAddressException when traversing hive {hex(hive.vol.offset)} found from scan, skipping"
                         )
 
     def run(self) -> renderers.TreeGrid:

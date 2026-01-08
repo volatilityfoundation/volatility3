@@ -36,16 +36,18 @@ class JobLinks(interfaces.plugins.PluginInterface):
                 optional=True,
             ),
             requirements.VersionRequirement(
-                name="pslist", component=pslist.PsList, version=(2, 0, 0)
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
         ]
 
     def _generator(self) -> Iterator[Tuple]:
         kernel = self.context.modules[self.config["kernel"]]
+
         memory = self.context.layers[kernel.layer_name]
 
         for proc in pslist.PsList.list_processes(
-            self.context, kernel.layer_name, kernel.symbol_table_name
+            context=self.context,
+            kernel_module_name=self.config["kernel"],
         ):
             try:
                 if not self.config["physical"]:

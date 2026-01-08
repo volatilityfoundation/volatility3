@@ -5,7 +5,7 @@ import re
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Generator, Iterator, List, Tuple
+from typing import Generator, Iterator, List, Tuple, Optional
 
 from volatility3.framework import (
     class_subclasses,
@@ -73,7 +73,7 @@ class ABCKmsg(ABC):
         cls,
         context: interfaces.context.ContextInterface,
         config: interfaces.configuration.HierarchicalDict,
-    ) -> Iterator[Tuple[str, str, str, str, str]]:
+    ) -> Iterator[Tuple[str, str, str, Optional[str], str]]:
         """It calls each subclass symtab_checks() to test the required
         conditions to that specific kernel implementation.
 
@@ -108,10 +108,12 @@ class ABCKmsg(ABC):
             break
 
         if kmsg_inst is None:
-            vollog.error("Unsupported kernel ring buffer implementation")
+            vollog.error(
+                "Unsupported kernel ring buffer implementation. Please file a bug on our issue tracker with your specific kernel version."
+            )
 
     @abstractmethod
-    def run(self) -> Iterator[Tuple[str, str, str, str, str]]:
+    def run(self) -> Iterator[Tuple[str, str, str, Optional[str], str]]:
         """Walks through the specific kernel implementation.
 
         Returns:
@@ -135,8 +137,14 @@ class ABCKmsg(ABC):
             bool: True if the kernel being analyzed fulfill the class requirements.
         """
 
-    def get_string(self, addr: int, length: int) -> str:
-        txt = self._context.layers[self.layer_name].read(addr, length)  # type: ignore
+    def get_string(self, addr: int, length: int) -> Optional[str]:
+        layer = self._context.layers[self.layer_name]
+        if not layer.is_valid(addr, length):
+            vollog.warning("Failed to read log record at address 0x%x", addr)
+            return None
+
+        txt = layer.read(addr, length)
+
         return txt.decode(encoding="utf8", errors="replace")
 
     def nsec_to_sec_str(self, nsec: int) -> str:
@@ -149,27 +157,27 @@ class ABCKmsg(ABC):
         #   This might seem insignificant but it could cause some issues
         #   when compared with userland tool results or when used in
         #   timelines.
-        return "%lu.%06lu" % (nsec / 1000000000, (nsec % 1000000000) / 1000)
+        return f"{nsec // 1000000000}.{(nsec % 1000000000) // 1000:06}"
 
     def get_timestamp_in_sec_str(self, obj) -> str:
         # obj could be log, printk_log or printk_info
         return self.nsec_to_sec_str(obj.ts_nsec)
 
-    def get_caller(self, obj):
+    def get_caller(self, obj) -> Optional[str]:
         # In some kernel versions, it's only available if CONFIG_PRINTK_CALLER is defined.
         # caller_id is a member of printk_log struct from 5.1 to the latest 5.9
         # From kernels 5.10 on, it's a member of printk_info struct
         if obj.has_member("caller_id"):
             return self.get_caller_text(obj.caller_id)
-        else:
-            return renderers.NotAvailableValue()
 
-    def get_caller_text(self, caller_id):
+        return None
+
+    def get_caller_text(self, caller_id) -> str:
         caller_name = "CPU" if caller_id & 0x80000000 else "Task"
-        caller = "%s(%u)" % (caller_name, caller_id & ~0x80000000)
+        caller = f"{caller_name}({caller_id & ~0x80000000})"
         return caller
 
-    def get_prefix(self, obj) -> Tuple[int, int, str, str]:
+    def get_prefix(self, obj) -> Tuple[int, int, str, Optional[str]]:
         # obj could be log, printk_log or printk_info
         return (
             obj.facility,
@@ -207,6 +215,7 @@ class Kmsg_pre_3_5(ABCKmsg):
     def symtab_checks(cls, vmlinux) -> bool:
         return (
             vmlinux.has_symbol("log_end")
+            and vmlinux.has_symbol("log_buf_len")
             and not vmlinux.has_symbol("log_first_idx")
             and not (
                 vmlinux.has_type("log")
@@ -214,7 +223,7 @@ class Kmsg_pre_3_5(ABCKmsg):
             )
         )
 
-    def run(self) -> Iterator[Tuple[str, str, str, str, str]]:
+    def run(self) -> Iterator[Tuple[str, str, str, Optional[str], str]]:
         log_buf_ptr = self.vmlinux.object_from_symbol(symbol_name="log_buf")
         log_buf_len = self.vmlinux.object_from_symbol(symbol_name="log_buf_len")
         log_buf = utility.pointer_to_string(log_buf_ptr, count=log_buf_len)
@@ -243,7 +252,7 @@ class Kmsg_pre_3_5(ABCKmsg):
             facility = level_facility >> 3
             level_txt = self.get_level_text(level)
             facility_txt = self.get_facility_text(facility)
-            caller = renderers.NotAvailableValue()
+            caller = None
             yield facility_txt, level_txt, timestamp_str, caller, line
 
 
@@ -260,10 +269,10 @@ class Kmsg_3_5_to_3_11(ABCKmsg):
             and vmlinux.has_symbol("log_first_idx")
         )
 
-    def _get_log_struct_name(self):
+    def _get_log_struct_name(self) -> str:
         return "log"
 
-    def get_text_from_log(self, msg) -> str:
+    def get_text_from_log(self, msg) -> Optional[str]:
         log_struct_name = self._get_log_struct_name()
         log_struct_size = self.vmlinux.get_type(log_struct_name).size
         msg_offset = msg.vol.offset + log_struct_size
@@ -272,22 +281,27 @@ class Kmsg_3_5_to_3_11(ABCKmsg):
     def get_log_lines(self, msg) -> Generator[str, None, None]:
         if msg.text_len > 0:
             text = self.get_text_from_log(msg)
-            yield from text.splitlines()
+            if text:
+                yield from text.splitlines()
 
     def get_dict_lines(self, msg) -> Generator[str, None, None]:
         if msg.dict_len == 0:
-            return None
+            return
 
         log_struct_name = self._get_log_struct_name()
         log_struct_size = self.vmlinux.get_type(log_struct_name).size
         dict_offset = msg.vol.offset + log_struct_size + msg.text_len
-        dict_data = self._context.layers[self.layer_name].read(
-            dict_offset, msg.dict_len
-        )
-        for chunk in dict_data.split(b"\x00"):
-            yield " " + chunk.decode()
+        layer = self._context.layers[self.layer_name]
+        try:
+            dict_data = layer.read(dict_offset, msg.dict_len)
+        except exceptions.InvalidAddressException:
+            vollog.debug("Unable to read kmsg dict from 0x%x", dict_offset)
+            return
 
-    def run(self) -> Iterator[Tuple[str, str, str, str, str]]:
+        for chunk in dict_data.split(b"\x00"):
+            yield " " + chunk.decode(encoding="utf8", errors="replace")
+
+    def run(self) -> Iterator[Tuple[str, str, str, Optional[str], str]]:
         # First, the ring buffer size is determined in the kernel configuration
         # by CONFIG_LOG_BUF_SHIFT. This static buffer is held in the '__log_buf'
         # global variable, with 'log_buf' serving as a pointer to it.
@@ -300,7 +314,13 @@ class Kmsg_3_5_to_3_11(ABCKmsg):
         # remains unused. Therefore, it is crucial to read from 'log_buf' rather
         # than '__log_buf'.
 
-        log_buf_ptr = self.vmlinux.object_from_symbol("log_buf")
+        # This can happen on kernels where log_buf is declared twice
+        try:
+            log_buf_ptr = self.vmlinux.object_from_symbol("log_buf")
+        except exceptions.InvalidAddressException:
+            vollog.debug("Unable to access `log_buf`. Bailing.")
+            return
+
         log_buf_len = self.vmlinux.object_from_symbol("log_buf_len")
 
         log_first_idx = int(self.vmlinux.object_from_symbol("log_first_idx"))
@@ -316,24 +336,31 @@ class Kmsg_3_5_to_3_11(ABCKmsg):
 
         while cur_idx < end_idx:
             msg_offset = log_buf_ptr + cur_idx  # type: ignore
-            msg = self.vmlinux.object(object_type=log_struct_name, offset=msg_offset)
-            if msg.len == 0:
-                # As per kernel/printk.c:
-                # A length == 0 for the next message indicates a wrap-around to
-                # the beginning of the buffer.
-                cur_idx = 0
-                end_idx = log_next_idx
-            else:
-                facility, level, timestamp, caller = self.get_prefix(msg)
-                level_txt = self.get_level_text(level)
-                facility_txt = self.get_facility_text(facility)
+            msg = self.vmlinux.object(
+                object_type=log_struct_name, offset=msg_offset, absolute=True
+            )
 
-                for line in self.get_log_lines(msg):
-                    yield facility_txt, level_txt, timestamp, caller, line
-                for line in self.get_dict_lines(msg):
-                    yield facility_txt, level_txt, timestamp, caller, line
+            try:
+                if msg.len == 0:
+                    # As per kernel/printk.c:
+                    # A length == 0 for the next message indicates a wrap-around to
+                    # the beginning of the buffer.
+                    cur_idx = 0
+                    end_idx = log_next_idx
+                else:
+                    facility, level, timestamp, caller = self.get_prefix(msg)
+                    level_txt = self.get_level_text(level)
+                    facility_txt = self.get_facility_text(facility)
 
-                cur_idx += msg.len
+                    for line in self.get_log_lines(msg):
+                        yield facility_txt, level_txt, timestamp, caller, line
+                    for line in self.get_dict_lines(msg):
+                        yield facility_txt, level_txt, timestamp, caller, line
+
+                    cur_idx += msg.len
+            except exceptions.InvalidAddressException:
+                vollog.warning("Kmsg buffer msg length could not be read")
+                return
 
 
 class Kmsg_3_11_to_5_10(Kmsg_3_5_to_3_11):
@@ -344,9 +371,14 @@ class Kmsg_3_11_to_5_10(Kmsg_3_5_to_3_11):
 
     @classmethod
     def symtab_checks(cls, vmlinux) -> bool:
-        return vmlinux.has_type("printk_log")
+        return (
+            not vmlinux.has_type("printk_ringbuffer")
+            and vmlinux.has_type("printk_log")
+            and vmlinux.get_type("printk_log").has_member("ts_nsec")
+            and vmlinux.has_symbol("log_first_idx")
+        )
 
-    def _get_log_struct_name(self):
+    def _get_log_struct_name(self) -> str:
         return "printk_log"
 
 
@@ -397,9 +429,9 @@ class Kmsg_5_10_to_(ABCKmsg):
 
     @classmethod
     def symtab_checks(cls, vmlinux) -> bool:
-        return vmlinux.has_symbol("prb")
+        return vmlinux.has_symbol("prb") and vmlinux.has_type("printk_ringbuffer")
 
-    def get_text_from_data_ring(self, text_data_ring, desc, info) -> str:
+    def get_text_from_data_ring(self, text_data_ring, desc, info) -> Optional[str]:
         text_data_sz = text_data_ring.size_bits
         text_data_mask = 1 << text_data_sz
 
@@ -408,7 +440,7 @@ class Kmsg_5_10_to_(ABCKmsg):
 
         # This record doesn't contain text
         if begin & 1:
-            return ""
+            return None
 
         # This means a wrap-around to the beginning of the buffer
         if begin > end:
@@ -427,7 +459,8 @@ class Kmsg_5_10_to_(ABCKmsg):
 
     def get_log_lines(self, text_data_ring, desc, info) -> Generator[str, None, None]:
         text = self.get_text_from_data_ring(text_data_ring, desc, info)
-        yield from text.splitlines()
+        if text:
+            yield from text.splitlines()
 
     def get_dict_lines(self, info) -> Generator[str, None, None]:
         dict_text = utility.array_to_string(info.dev_info.subsystem)
@@ -438,7 +471,7 @@ class Kmsg_5_10_to_(ABCKmsg):
         if dict_text:
             yield f" DEVICE={dict_text}"
 
-    def run(self) -> Iterator[Tuple[str, str, str, str, str]]:
+    def run(self) -> Iterator[Tuple[str, str, str, Optional[str], str]]:
         # static struct printk_ringbuffer *prb = &printk_rb_static;
         ringbuffers = self.vmlinux.object_from_symbol("prb").dereference()
 
@@ -500,7 +533,7 @@ class Kmsg(interfaces.plugins.PluginInterface):
 
     _required_framework_version = (2, 6, 0)
 
-    _version = (1, 0, 2)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -512,17 +545,31 @@ class Kmsg(interfaces.plugins.PluginInterface):
             ),
         ]
 
-    def _generator(self) -> Iterator[Tuple[int, Tuple[str, str, str, str, str]]]:
-        for values in ABCKmsg.run_all(context=self.context, config=self.config):
-            yield (0, values)
+    def _generator(
+        self,
+    ) -> Iterator[Tuple[int, Tuple[str, str, str, Optional[str], str]]]:
+        for facility, level, timestamp, caller, line in ABCKmsg.run_all(
+            context=self.context, config=self.config
+        ):
+            yield (
+                0,
+                (
+                    facility,
+                    level,
+                    timestamp,
+                    caller or renderers.NotAvailableValue(),
+                    line,
+                ),
+            )
 
     def run(self):
         if not self.context.symbol_space.verify_table_versions(
             "dwarf2json", lambda version, _: (not version) or version > (0, 4, 1)
         ):
-            raise exceptions.SymbolSpaceError(
+            vollog.info(
                 "Invalid symbol table, please ensure the ISF table produced by dwarf2json was produced using a version > 0.4.1"
             )
+            return
 
         return renderers.TreeGrid(
             [

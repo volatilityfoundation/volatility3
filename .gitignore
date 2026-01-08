@@ -43,3 +43,6 @@ ENV/
 
 # PyTest cache files
 .pytest_cache/
+
+# Coverage cache
+.coverage

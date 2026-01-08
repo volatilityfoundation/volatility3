@@ -1,0 +1,41 @@
+{
+    "WINDOWS10_GENERIC": 
+    [
+      {
+        "Exec Flag": null,
+        "File Path": "C:\\Windows\\System32\\cmdl32.exe",
+        "File Size": null,
+        "Last Modified": "2019-12-07T09:09:07+00:00",
+        "Last Update": null,
+        "Order": 0,
+        "__children": []
+      },
+      {
+        "Exec Flag": null,
+        "File Path": "C:\\Windows\\System32\\cmdkey.exe",
+        "File Size": null,
+        "Last Modified": "2019-12-07T09:09:09+00:00",
+        "Last Update": null,
+        "Order": 1,
+        "__children": []
+      },
+      {
+        "Exec Flag": null,
+        "File Path": "C:\\Windows\\system32\\whoami.exe",
+        "File Size": null,
+        "Last Modified": "2019-12-07T09:09:51+00:00",
+        "Last Update": null,
+        "Order": 2,
+        "__children": []
+      },
+      {
+        "Exec Flag": null,
+        "File Path": null,
+        "File Size": null,
+        "Last Modified": "2023-12-13T16:43:28+00:00",
+        "Last Update": null,
+        "Order": 3,
+        "__children": []
+      }
+    ]
+}    

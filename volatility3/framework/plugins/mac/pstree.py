@@ -10,8 +10,7 @@ from volatility3.plugins.mac import pslist
 
 
 class PsTree(plugins.PluginInterface):
-    """Plugin for listing processes in a tree based on their parent process
-    ID."""
+    """Plugin for listing processes in a tree based on their parent process ID."""
 
     _required_framework_version = (2, 0, 0)
 
@@ -29,8 +28,8 @@ class PsTree(plugins.PluginInterface):
                 description="Kernel module for the OS",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
         ]
 

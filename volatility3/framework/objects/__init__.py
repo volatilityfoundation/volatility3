@@ -35,13 +35,13 @@ def convert_data_to_value(
     data_format: DataFormatInfo,
 ) -> TUnion[int, float, bytes, str, bool]:
     """Converts a series of bytes to a particular type of value."""
-    if struct_type == int:
+    if struct_type is int:
         return int.from_bytes(
             data, byteorder=data_format.byteorder, signed=data_format.signed
         )
-    if struct_type == bool:
+    if struct_type is bool:
         struct_format = "?"
-    elif struct_type == float:
+    elif struct_type is float:
         float_vals = "zzezfzzzd"
         if (
             data_format.length > len(float_vals)
@@ -70,7 +70,7 @@ def convert_value_to_data(
             f"Written value is not of the correct type for {struct_type.__name__}"
         )
 
-    if struct_type == int and isinstance(value, int):
+    if struct_type is int and isinstance(value, int):
         # Doubling up on the isinstance is for mypy
         return int.to_bytes(
             value,
@@ -78,9 +78,9 @@ def convert_value_to_data(
             byteorder=data_format.byteorder,
             signed=data_format.signed,
         )
-    if struct_type == bool:
+    if struct_type is bool:
         struct_format = "?"
-    elif struct_type == float:
+    elif struct_type is float:
         float_vals = "zzezfzzzd"
         if (
             data_format.length > len(float_vals)
@@ -152,7 +152,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
         type_name: str,
         object_info: interfaces.objects.ObjectInformation,
         data_format: DataFormatInfo,
-        new_value: TUnion[int, float, bool, bytes, str] = None,
+        new_value: Optional[TUnion[int, float, bool, bytes, str]] = None,
         **kwargs,
     ) -> "PrimitiveObject":
         """Creates the appropriate class and returns it so that the native type
@@ -356,8 +356,9 @@ class String(PrimitiveObject, str):
             ),
             **params,
         )
-        if value.find("\x00") >= 0:
-            value = value[: value.find("\x00")]
+        index = value.find("\x00")
+        if index >= 0:
+            value = value[:index]
         return value
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
@@ -401,13 +402,35 @@ class Pointer(Integer):
         pointer should be recast.  The "pointer" must always live within
         the space (even if the data provided is invalid).
         """
+        mask = context.layers[object_info.native_layer_name].address_mask
+        new = (
+            cls._get_raw_value(
+                context, data_format, object_info.layer_name, object_info.offset
+            )
+            & mask
+        )
+        return new
+
+    @classmethod
+    def _get_raw_value(
+        cls,
+        context: interfaces.context.ContextInterface,
+        data_format: DataFormatInfo,
+        layer_name: str,
+        offset: int,
+    ) -> int:
         length, endian, signed = data_format
         if signed:
             raise ValueError("Pointers cannot have signed values")
-        mask = context.layers[object_info.native_layer_name].address_mask
-        data = context.layers.read(object_info.layer_name, object_info.offset, length)
+        data = context.layers.read(layer_name, offset, length)
         value = int.from_bytes(data, byteorder=endian, signed=signed)
-        return value & mask
+        return value
+
+    def get_raw_value(self) -> int:
+        raw = self._get_raw_value(
+            self._context, self.vol.data_format, self.vol.layer_name, self.vol.offset
+        )
+        return raw
 
     def dereference(
         self, layer_name: Optional[str] = None
@@ -435,6 +458,7 @@ class Pointer(Integer):
                     offset=offset,
                     parent=self,
                     size=self.vol.subtype.size,
+                    native_layer_name=layer_name,
                 ),
             )
         return self._cache[layer_name]
@@ -601,7 +625,7 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
             inverse_choices[v] = k
         return inverse_choices
 
-    def lookup(self, value: int = None) -> str:
+    def lookup(self, value: Optional[int] = None) -> str:
         """Looks up an individual value and returns the associated name.
 
         If multiple identifiers map to the same value, the first matching identifier will be returned
@@ -690,7 +714,7 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
         type_name: str,
         object_info: interfaces.objects.ObjectInformation,
         count: int = 0,
-        subtype: templates.ObjectTemplate = None,
+        subtype: Optional[templates.ObjectTemplate] = None,
     ) -> None:
         super().__init__(context=context, type_name=type_name, object_info=object_info)
         self._vol["count"] = count
@@ -788,7 +812,7 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
                 layer_name=self.vol.layer_name,
                 offset=mask & (self.vol.offset + (self.vol.subtype.size * index)),
                 parent=self,
-                native_layer_name=self.vol.native_layer_name,
+                native_layer_name=self.vol.native_layer_name or self.vol.layer_name,
                 size=self.vol.subtype.size,
             )
             result += [self.vol.subtype(context=self._context, object_info=object_info)]
@@ -955,7 +979,7 @@ class AggregateType(interfaces.objects.ObjectInterface):
                 offset=mask & (self.vol.offset + relative_offset),
                 member_name=attr,
                 parent=self,
-                native_layer_name=self.vol.native_layer_name,
+                native_layer_name=self.vol.native_layer_name or self.vol.layer_name,
                 size=template.size,
             )
             member = template(context=self._context, object_info=object_info)

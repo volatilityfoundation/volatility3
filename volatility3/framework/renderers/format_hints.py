@@ -8,6 +8,7 @@ These hints allow a plugin to indicate how they would like data from a particula
 
 Text renderers should attempt to honour all hints provided in this module where possible
 """
+
 from typing import Type, Union
 
 from volatility3.framework import interfaces
@@ -70,15 +71,21 @@ class MultiTypeData(bytes):
         )
 
 
-BinOrAbsent = lambda x: (
-    Bin(x) if not isinstance(x, interfaces.renderers.BaseAbsentValue) else x
-)
-HexOrAbsent = lambda x: (
-    Hex(x) if not isinstance(x, interfaces.renderers.BaseAbsentValue) else x
-)
-HexBytesOrAbsent = lambda x: (
-    HexBytes(x) if not isinstance(x, interfaces.renderers.BaseAbsentValue) else x
-)
-MultiTypeDataOrAbsent = lambda x: (
-    MultiTypeData(x) if not isinstance(x, interfaces.renderers.BaseAbsentValue) else x
-)
+def BinOrAbsent(x):
+    return Bin(x) if not isinstance(x, interfaces.renderers.BaseAbsentValue) else x
+
+
+def HexOrAbsent(x):
+    return Hex(x) if not isinstance(x, interfaces.renderers.BaseAbsentValue) else x
+
+
+def HexBytesOrAbsent(x):
+    return HexBytes(x) if not isinstance(x, interfaces.renderers.BaseAbsentValue) else x
+
+
+def MultiTypeDataOrAbsent(x):
+    return (
+        MultiTypeData(x)
+        if not isinstance(x, interfaces.renderers.BaseAbsentValue)
+        else x
+    )

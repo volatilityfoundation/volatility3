@@ -27,19 +27,17 @@ class GetCellRoutine(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="hivelist", component=hivelist.HiveList, version=(2, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="ssdt", plugin=ssdt.SSDT, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="ssdt", component=ssdt.SSDT, version=(2, 0, 0)
             ),
         ]
 
     def _generator(self):
-        kernel = self.context.modules[self.config["kernel"]]
-
         collection = ssdt.SSDT.build_module_collection(
-            self.context, kernel.layer_name, kernel.symbol_table_name
+            context=self.context, kernel_module_name=self.config["kernel"]
         )
 
         # walk each hive and validate that the GetCellRoutine handler
@@ -47,8 +45,7 @@ class GetCellRoutine(interfaces.plugins.PluginInterface):
         for hive_object in hivelist.HiveList.list_hives(
             context=self.context,
             base_config_path=self.config_path,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            kernel_module_name=self.config["kernel"],
         ):
             hive = hive_object.hive
 

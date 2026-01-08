@@ -58,7 +58,7 @@ Options
     EXTEND.  Extensions must be of the form **configuration.item.name=value**
 
 -p PLUGIN_DIRS, --plugin-dirs PLUGIN_DIRS
-    Specified a semi-colon separated list of paths that contain directories
+    Specified as a semi-colon separated list of paths that contain directories
     where plugins may be found.  These paths are searched before the default
     paths when loading python files for plugins.  This can therefore be used
     to override built-in plugins.  NOTE: All python code within this directory
@@ -67,12 +67,12 @@ Options
 -s SYMBOL_DIRS, --symbol-dirs SYMBOL_DIRS
     SYMBOL_DIRS is a semi-colon separated list of paths that contain symbol
     files or symbol zip packs.  Symbols must be within a particular directory
-    structure if they depending on the operating system of the symbols,
+    structure if they depend on the operating system of the symbols,
     whilst symbol packs must be in the root of the directory and named after
-    the after the operating system to which they apply.
+    the operating system to which they apply.
 
 -v, --verbose
-    A flag which can be used multiple times, each time increasing the level of
+    A flag which can be used multiple times (up to six, -vvvvvv), each time increasing the level of
     detail in the logs produced.
 
 -l LOG, --log LOG
@@ -87,7 +87,7 @@ Options
 -q, --quiet
     When present, this flag mutes the progress feedback for operations.  This
     can be beneficial when piping the output directly to a file or another
-    tool.  This also removes the
+    tool.
 
 -r RENDERER, --renderer RENDERER
     Specifies the output format in which to display results.  The default is
@@ -120,9 +120,7 @@ Options
     Change the default path used to store the cache.
 
 --offline
-    Do not search online for additional JSON files.
-    Run offline mode (defaults to false) and for
-    remote windows symbol tables, linux/mac banner repositories. 
+    Run offline mode (defaults to false).  Do not search online for additional JSON files, remote windows symbol tables, nor linux/mac banner repositories.
 
 --single-location SINGLE_LOCATION
     This specifies a URL which will be downloaded if necessary, and built
@@ -152,7 +150,7 @@ but can be overridden by creating a JSON file (`%APPDATA%/volatility3/vol.json` 
 systems, or `~/.config/volatility3/vol.json` or `volshell.json` for all others).
 
 The format of this file is a JSON dictionary, containing the options above and their value.
-It should be noted that the ordering is (`<` means is overridden by):
+It should be noted that the ordering is (`x < y` means `x` is overridden by `y`):
 
 `in-built default value < config file value < command line parameter`
 

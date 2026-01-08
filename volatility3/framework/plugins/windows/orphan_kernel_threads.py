@@ -5,9 +5,9 @@
 import logging
 from typing import List, Generator
 
-from volatility3.framework import interfaces, symbols
+from volatility3.framework import interfaces, exceptions
 from volatility3.framework.configuration import requirements
-from volatility3.plugins.windows import thrdscan, ssdt
+from volatility3.plugins.windows import thrdscan, ssdt, modules
 
 vollog = logging.getLogger(__name__)
 
@@ -16,7 +16,9 @@ class Threads(thrdscan.ThrdScan):
     """Lists process threads"""
 
     _required_framework_version = (2, 4, 0)
-    _version = (1, 0, 0)
+
+    # 2.0.0 - changed the signature of `list_orphan_kernel_threads`
+    _version = (2, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -31,11 +33,14 @@ class Threads(thrdscan.ThrdScan):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="thrdscan", plugin=thrdscan.ThrdScan, version=(1, 1, 0)
+            requirements.VersionRequirement(
+                name="thrdscan", component=thrdscan.ThrdScan, version=(2, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="ssdt", plugin=ssdt.SSDT, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="ssdt", component=ssdt.SSDT, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="modules", component=modules.Modules, version=(3, 0, 0)
             ),
         ]
 
@@ -43,7 +48,7 @@ class Threads(thrdscan.ThrdScan):
     def list_orphan_kernel_threads(
         cls,
         context: interfaces.context.ContextInterface,
-        module_name: str,
+        kernel_module_name: str,
     ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Yields thread objects of kernel threads that do not map to a module
 
@@ -54,41 +59,46 @@ class Threads(thrdscan.ThrdScan):
         Returns:
             A generator of thread objects of orphaned threads
         """
-        module = context.modules[module_name]
-        layer_name = module.layer_name
-        symbol_table = module.symbol_table_name
-
         collection = ssdt.SSDT.build_module_collection(
-            context, layer_name, symbol_table
+            context=context,
+            kernel_module_name=kernel_module_name,
         )
 
-        # FIXME - use a proper constant once established
-        # used to filter out smeared pointers
-        if symbols.symbol_table_is_64bit(context, symbol_table):
-            kernel_start = 0xFFFFF80000000000
-        else:
-            kernel_start = 0x80000000
+        kernel_space_start = modules.Modules.get_kernel_space_start(
+            context, kernel_module_name
+        )
 
-        for thread in thrdscan.ThrdScan.scan_threads(context, module_name):
-            # we don't want smeared or terminated threads
+        for thread in thrdscan.ThrdScan.scan_threads(context, kernel_module_name):
+            # We don't want smeared or terminated threads
+            # So we access the owning process (which could also be terminated or smeared)
+            # Plus check the start address holding page
             try:
                 proc = thread.owning_process()
-            except AttributeError:
+                pid = proc.UniqueProcessId
+                ppid = proc.InheritedFromUniqueProcessId
+
+                thread_start = thread.StartAddress
+            except (AttributeError, exceptions.InvalidAddressException):
                 continue
 
             # we only care about kernel threads, 4 = System
             # previous methods for determining if a thread was a kernel thread
             # such as bit fields and flags are not stable in Win10+
             # so we check if the thread is from the kernel itself or one its child
-            # kernel processes (MemCompression, Regsitry, ...)
-            if proc.UniqueProcessId != 4 and proc.InheritedFromUniqueProcessId != 4:
+            # kernel processes (MemCompression, Registry, ...)
+            if pid != 4 and ppid != 4:
                 continue
 
-            if thread.StartAddress < kernel_start:
+            # if the thread has an exit time or terminated (4) state, then skip it
+            if thread.ExitTime.QuadPart > 0 or thread.Tcb.State == 4:
+                continue
+
+            # threads pointing into userland, which is from smeared or terminated threads
+            if thread_start < kernel_space_start:
                 continue
 
             module_symbols = list(
-                collection.get_module_symbols_by_absolute_location(thread.StartAddress)
+                collection.get_module_symbols_by_absolute_location(thread_start)
             )
 
             # alert on threads that do not map to a module

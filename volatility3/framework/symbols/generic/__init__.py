@@ -5,7 +5,7 @@
 import random
 import string
 import datetime
-from typing import Union
+from typing import Optional, Union
 
 from volatility3.framework import objects, interfaces
 
@@ -49,8 +49,8 @@ class GenericIntelProcess(GenericProcess):
         self,
         context: interfaces.context.ContextInterface,
         dtb: Union[int, interfaces.objects.ObjectInterface],
-        config_prefix: str = None,
-        preferred_name: str = None,
+        config_prefix: Optional[str] = None,
+        preferred_name: Optional[str] = None,
     ) -> str:
         """Constructs a new layer based on the process's DirectoryTableBase."""
 

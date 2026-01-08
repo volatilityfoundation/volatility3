@@ -39,11 +39,11 @@ class Envars(interfaces.plugins.PluginInterface):
                 description="Suppress common and non-persistent variables",
                 optional=True,
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="hivelist", component=hivelist.HiveList, version=(2, 0, 0)
             ),
         ]
 
@@ -58,62 +58,71 @@ class Envars(interfaces.plugins.PluginInterface):
         """
 
         values = []
-        kernel = self.context.modules[self.config["kernel"]]
 
         for hive in hivelist.HiveList.list_hives(
             context=self.context,
             base_config_path=self.config_path,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            kernel_module_name=self.config["kernel"],
             hive_offsets=None,
         ):
-            sys = False
-            ntuser = False
-
             ## The global variables
+            sys = None
             try:
-                key = hive.get_key(
+                sys = hive.get_key(
                     "CurrentControlSet\\Control\\Session Manager\\Environment"
                 )
-                sys = True
-            except KeyError:
-                with contextlib.suppress(KeyError):
-                    key = hive.get_key(
+            except (
+                KeyError,
+                registry.RegistryException,
+            ):
+                with contextlib.suppress(
+                    KeyError,
+                    registry.RegistryException,
+                ):
+                    sys = hive.get_key(
                         "ControlSet001\\Control\\Session Manager\\Environment"
                     )
-                    sys = True
             if sys:
-                with contextlib.suppress(KeyError):
-                    for node in key.get_values():
+                with contextlib.suppress(
+                    KeyError,
+                    registry.RegistryException,
+                ):
+                    for node in sys.get_values():
                         try:
                             value_node_name = node.get_name()
                             if value_node_name:
                                 values.append(value_node_name)
                         except (
                             exceptions.InvalidAddressException,
-                            registry.RegistryFormatException,
-                        ) as excp:
+                            registry.RegistryException,
+                        ):
                             vollog.log(
                                 constants.LOGLEVEL_VVV,
                                 "Error while parsing global environment variables keys (some keys might be excluded)",
                             )
                             continue
 
+            ntuser = None
             ## The user-specific variables
-            with contextlib.suppress(KeyError):
-                key = hive.get_key("Environment")
-                ntuser = True
+            with contextlib.suppress(
+                KeyError,
+                registry.RegistryException,
+            ):
+                ntuser = hive.get_key("Environment")
             if ntuser:
-                with contextlib.suppress(KeyError):
-                    for node in key.get_values():
+                with contextlib.suppress(
+                    KeyError,
+                    registry.RegistryException,
+                ):
+                    for node in ntuser.get_values():
                         try:
                             value_node_name = node.get_name()
                             if value_node_name:
                                 values.append(value_node_name)
                         except (
                             exceptions.InvalidAddressException,
-                            registry.RegistryFormatException,
-                        ) as excp:
+                            registry.RegistryException,
+                        ):
                             vollog.log(
                                 constants.LOGLEVEL_VVV,
                                 "Error while parsing user environment variables keys (some keys might be excluded)",
@@ -123,7 +132,10 @@ class Envars(interfaces.plugins.PluginInterface):
             ## The volatile user variables
             try:
                 key = hive.get_key("Volatile Environment")
-            except KeyError:
+            except (
+                KeyError,
+                registry.RegistryException,
+            ):
                 continue
             try:
                 for node in key.get_values():
@@ -133,8 +145,8 @@ class Envars(interfaces.plugins.PluginInterface):
                             values.append(value_node_name)
                     except (
                         exceptions.InvalidAddressException,
-                        registry.RegistryFormatException,
-                    ) as excp:
+                        registry.RegistryException,
+                    ):
                         vollog.log(
                             constants.LOGLEVEL_VVV,
                             "Error while parsing volatile environment variables keys (some keys might be excluded)",
@@ -200,15 +212,13 @@ class Envars(interfaces.plugins.PluginInterface):
         return values
 
     def _generator(self, data):
-        silent_vars = []
-        if self.config.get("SILENT", None):
-            silent_vars = self._get_silent_vars()
+        silent_vars = self._get_silent_vars() if self.config.get("SILENT") else []
 
         for task in data:
             for var, val in task.environment_variables():
-                if self.config.get("silent", None):
-                    if var in silent_vars:
-                        continue
+                if var in silent_vars:
+                    continue
+
                 yield (
                     0,
                     (
@@ -222,7 +232,6 @@ class Envars(interfaces.plugins.PluginInterface):
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
-        kernel = self.context.modules[self.config["kernel"]]
 
         return renderers.TreeGrid(
             [
@@ -235,8 +244,7 @@ class Envars(interfaces.plugins.PluginInterface):
             self._generator(
                 pslist.PsList.list_processes(
                     context=self.context,
-                    layer_name=kernel.layer_name,
-                    symbol_table=kernel.symbol_table_name,
+                    kernel_module_name=self.config["kernel"],
                     filter_func=filter_func,
                 )
             ),

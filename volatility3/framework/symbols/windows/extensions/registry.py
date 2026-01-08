@@ -8,11 +8,7 @@ import struct
 from typing import Iterator, Optional, Union, cast
 
 from volatility3.framework import constants, exceptions, interfaces, objects
-from volatility3.framework.layers.registry import (
-    RegistryFormatException,
-    RegistryHive,
-    RegistryInvalidIndex,
-)
+from volatility3.framework.layers import registry
 
 vollog = logging.getLogger(__name__)
 
@@ -103,7 +99,9 @@ class CMHIVE(objects.StructType):
 
         for attr in ["FileFullPath", "FileUserName", "HiveRootPath"]:
             with contextlib.suppress(
-                AttributeError, exceptions.InvalidAddressException
+                AttributeError,
+                exceptions.InvalidAddressException,
+                registry.RegistryException,
             ):
                 name = getattr(self, attr)
                 if name.Length > 0:
@@ -133,8 +131,17 @@ class CM_KEY_BODY(objects.StructType):
 
     def get_full_key_name(self) -> str:
         output = []
+        seen = set()
+
         kcb = self.KeyControlBlock
         while kcb.ParentKcb:
+            if kcb.ParentKcb.vol.offset in seen:
+                return None
+            seen.add(kcb.ParentKcb.vol.offset)
+
+            if len(output) > 128:
+                return None
+
             if kcb.NameBlock.Name is None:
                 break
 
@@ -159,16 +166,24 @@ class CM_KEY_NODE(objects.StructType):
     """Extension to allow traversal of registry keys."""
 
     def get_volatile(self) -> bool:
-        if not isinstance(self._context.layers[self.vol.layer_name], RegistryHive):
-            raise ValueError(
-                "Cannot determine volatility of registry key without an offset in a RegistryHive layer"
-            )
+        """
+        Returns a bool indicating whether or not the key is volatile.
+
+        Raises TypeError if the key was not instantiated on a RegistryHive layer
+        """
+        if not isinstance(
+            self._context.layers[self.vol.layer_name], registry.RegistryHive
+        ):
+            raise TypeError("CM_KEY_NODE was not instantiated on a RegistryHive layer")
         return bool(self.vol.offset & 0x80000000)
 
     def get_subkeys(self) -> Iterator["CM_KEY_NODE"]:
-        """Returns a list of the key nodes."""
+        """Returns a list of the key nodes.
+
+        Raises TypeError if the key was not instantiated on a RegistryHive layer
+        """
         hive = self._context.layers[self.vol.layer_name]
-        if not isinstance(hive, RegistryHive):
+        if not isinstance(hive, registry.RegistryHive):
             raise TypeError("CM_KEY_NODE was not instantiated on a RegistryHive layer")
         for index in range(2):
             # Use get_cell because it should *always* be a KeyIndex
@@ -176,7 +191,7 @@ class CM_KEY_NODE(objects.StructType):
             yield from self._get_subkeys_recursive(hive, subkey_node)
 
     def _get_subkeys_recursive(
-        self, hive: RegistryHive, node: interfaces.objects.ObjectInterface
+        self, hive: "registry.RegistryHive", node: interfaces.objects.ObjectInterface
     ) -> Iterator["CM_KEY_NODE"]:
         """Recursively descend a node returning subkeys."""
         # The keylist appears to include 4 bytes of key name after each value
@@ -184,7 +199,10 @@ class CM_KEY_NODE(objects.StructType):
         # We could change the array type to a struct with both parts
         try:
             signature = node.cast("string", max_length=2, encoding="latin-1")
-        except (exceptions.InvalidAddressException, RegistryFormatException):
+        except (
+            exceptions.InvalidAddressException,
+            registry.RegistryException,
+        ):
             return None
 
         listjump = None
@@ -196,9 +214,7 @@ class CM_KEY_NODE(objects.StructType):
             yield cast("CM_KEY_NODE", node)
         else:
             vollog.debug(
-                "Unexpected node type encountered when traversing subkeys: {}, signature: {}".format(
-                    node.vol.type_name, signature
-                )
+                f"Unexpected node type encountered when traversing subkeys: {node.vol.type_name}, signature: {signature}"
             )
 
         if listjump:
@@ -214,7 +230,7 @@ class CM_KEY_NODE(objects.StructType):
                         subnode = hive.get_node(subnode_offset)
                     except (
                         exceptions.InvalidAddressException,
-                        RegistryFormatException,
+                        registry.RegistryException,
                     ):
                         vollog.log(
                             constants.LOGLEVEL_VVV,
@@ -224,25 +240,32 @@ class CM_KEY_NODE(objects.StructType):
                     yield from self._get_subkeys_recursive(hive, subnode)
 
     def get_values(self) -> Iterator["CM_KEY_VALUE"]:
-        """Returns a list of the Value nodes for a key."""
+        """Returns a list of the Value nodes for a key.
+
+        Raises TypeError if the key was not instantiated on a RegistryHive layer
+        """
         hive = self._context.layers[self.vol.layer_name]
-        if not isinstance(hive, RegistryHive):
+        if not isinstance(hive, registry.RegistryHive):
             raise TypeError("CM_KEY_NODE was not instantiated on a RegistryHive layer")
-        child_list = hive.get_cell(self.ValueList.List).u.KeyList
-        child_list.count = self.ValueList.Count
 
         try:
+            child_list = hive.get_cell(self.ValueList.List).u.KeyList
+            child_list.count = self.ValueList.Count
+
             for v in child_list:
                 if v != 0:
                     try:
                         node = hive.get_node(v)
-                    except (RegistryInvalidIndex, RegistryFormatException) as excp:
+                    except (registry.RegistryException,) as excp:
                         vollog.debug(f"Invalid address {excp}")
                         continue
                     if isinstance(node, CM_KEY_VALUE):
                         yield node
 
-        except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
+        except (
+            exceptions.InvalidAddressException,
+            registry.RegistryException,
+        ) as excp:
             vollog.debug(f"Invalid address in get_values iteration: {excp}")
             return None
 
@@ -253,8 +276,13 @@ class CM_KEY_NODE(objects.StructType):
         return self.Name.cast("string", max_length=namelength, encoding="latin-1")
 
     def get_key_path(self) -> str:
+        """
+        Returns the full path to this registry key.
+
+        Raises TypeError if the key was not instantiated on a RegistryHive layer
+        """
         reg = self._context.layers[self.vol.layer_name]
-        if not isinstance(reg, RegistryHive):
+        if not isinstance(reg, registry.RegistryHive):
             raise TypeError("Key was not instantiated on a RegistryHive layer")
         # Using the offset adds a significant delay (since it cannot be cached easily)
         # if self.vol.offset == reg.get_node(reg.root_cell_offset).vol.offset:
@@ -278,13 +306,22 @@ class CM_KEY_VALUE(objects.StructType):
         return RegValueTypes(self.Type)
 
     def decode_data(self) -> Union[int, bytes]:
-        """Properly decodes the data associated with the value node"""
+        """
+        Properly decodes the data associated with the value node.
+
+        If an InvalidAddressException occurs when reading data from the
+        underlying RegistryHive layer, the data will be padded with null bytes
+        of the same length.
+
+        Raises ValueError if the data cannot be read
+        Raises TypeError if the class was not instantiated on a RegistryHive layer
+        """
         # Determine if the data is stored inline
         datalen = self.DataLength
         data = b""
         # Check if the data is stored inline
         layer = self._context.layers[self.vol.layer_name]
-        if not isinstance(layer, RegistryHive):
+        if not isinstance(layer, registry.RegistryHive):
             raise TypeError("Key value was not instantiated on a RegistryHive layer")
 
         # If the high-bit is set
@@ -299,7 +336,7 @@ class CM_KEY_VALUE(objects.StructType):
                 data = layer.read(self.Data.vol.offset, datalen)
         elif layer.hive.Version == 5 and datalen > 0x4000:
             # We're bigdata
-            big_data = layer.get_node(self.Data)
+            big_data = layer.get_node(self.Data).cast("_CM_BIG_DATA")
             # Oddly, we get a list of addresses, at which are addresses, which then point to data blocks
             for i in range(big_data.Count):
                 # The value 4 should actually be unsigned-int.size, but since it's a file format that shouldn't change
@@ -312,14 +349,29 @@ class CM_KEY_VALUE(objects.StructType):
                     and block_offset < layer.maximum_address
                 ):
                     amount = min(BIG_DATA_MAXLEN, datalen)
-                    data += layer.read(
-                        offset=layer.get_cell(block_offset).vol.offset, length=amount
-                    )
+                    try:
+                        data += layer.read(
+                            offset=layer.get_cell(block_offset).vol.offset,
+                            length=amount,
+                        )
+                    except (
+                        exceptions.InvalidAddressException,
+                        registry.RegistryException,
+                    ):
+                        vollog.debug(
+                            f"Failed to read {amount:x} bytes of data, padding with {amount:x}"
+                        )
                     datalen -= amount
         else:
             # Suspect Data actually points to a Cell,
             # but the length at the start could be negative so just adding 4 to jump past it
-            data = layer.read(self.Data + 4, datalen)
+            try:
+                data = layer.read(self.Data + 4, datalen)
+            except (exceptions.InvalidAddressException, registry.RegistryException):
+                vollog.debug(
+                    f"Failed to read {datalen:x} bytes of data, returning {datalen:x} null bytes"
+                )
+                data = b"\x00" * datalen
 
         if self.get_type() == RegValueTypes.REG_DWORD:
             if len(data) != struct.calcsize("<L"):

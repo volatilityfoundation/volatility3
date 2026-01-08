@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 """Symbols provide structural information about a set of bytes."""
+
 import bisect
 import collections.abc
 from abc import ABC, abstractmethod
@@ -10,7 +11,6 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type
 from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import configuration, objects
-from volatility3.framework.interfaces.configuration import RequirementInterface
 
 
 class SymbolInterface:
@@ -122,7 +122,7 @@ class BaseSymbolTableInterface:
 
     @property
     def symbols(self) -> Iterable[str]:
-        """Returns an iterator of the Symbol names."""
+        """Returns an iterable of the available symbol names."""
         raise NotImplementedError(
             "Abstract property symbols not implemented by subclass."
         )
@@ -131,7 +131,7 @@ class BaseSymbolTableInterface:
 
     @property
     def types(self) -> Iterable[str]:
-        """Returns an iterator of the Symbol type names."""
+        """Returns an iterable of the available symbol type names."""
         raise NotImplementedError(
             "Abstract property types not implemented by subclass."
         )
@@ -149,7 +149,7 @@ class BaseSymbolTableInterface:
 
     @property
     def enumerations(self) -> Iterable[Any]:
-        """Returns an iterator of the Enumeration names."""
+        """Returns an iterable of the available enumerations."""
         raise NotImplementedError(
             "Abstract property enumerations not implemented by subclass."
         )
@@ -250,13 +250,13 @@ class BaseSymbolTableInterface:
 
     def clear_symbol_cache(self) -> None:
         """Clears the symbol cache of this symbol table."""
-        pass
 
 
 class SymbolSpaceInterface(collections.abc.Mapping):
     """An interface for the container that holds all the symbol-containing
     tables for use within a context."""
 
+    @abstractmethod
     def free_table_name(self, prefix: str = "layer") -> str:
         """Returns an unused table name to ensure no collision occurs when
         inserting a symbol table."""
@@ -347,7 +347,7 @@ class SymbolTableInterface(
         return config
 
     @classmethod
-    def get_requirements(cls) -> List[RequirementInterface]:
+    def get_requirements(cls) -> List[configuration.RequirementInterface]:
         return super().get_requirements() + [
             requirements.IntRequirement(
                 name="symbol_mask",
@@ -366,6 +366,7 @@ class NativeTableInterface(BaseSymbolTableInterface):
 
     @property
     def symbols(self) -> Iterable[str]:
+        """Returns an iterable of the available symbol names."""
         return []
 
     def get_enumeration(self, name: str) -> objects.Template:
@@ -374,11 +375,17 @@ class NativeTableInterface(BaseSymbolTableInterface):
         )
 
     @property
-    def enumerations(self) -> Iterable[str]:
+    def enumerations(self) -> Iterable[Any]:
+        """Returns an iterable of the available enumerations."""
+        return []
+
+    @property
+    def types(self) -> Iterable[str]:
+        """Returns an iterable of the available symbol type names."""
         return []
 
 
-class MetadataInterface(object):
+class MetadataInterface:
     """Interface for accessing metadata stored within a symbol table."""
 
     def __init__(self, json_data: Dict) -> None:

@@ -19,6 +19,8 @@ import sys
 
 import sphinx.ext.apidoc
 
+from importlib.util import find_spec
+
 
 def setup(app):
     volatility_directory = os.path.abspath(
@@ -124,7 +126,7 @@ def setup(app):
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath("../.."))
 
-from volatility3.framework import constants
+from volatility3.framework import constants  # noqa: E402
 
 # -- General configuration ------------------------------------------------
 
@@ -147,13 +149,9 @@ extensions = [
 
 autosectionlabel_prefix_document = True
 
-try:
-    import sphinx_autodoc_typehints
-
+if find_spec("sphinx_autodoc_typehints") is not None:
     extensions.append("sphinx_autodoc_typehints")
-except ImportError:
-    # If the autodoc typehints extension isn't available, carry on regardless
-    pass
+# If the autodoc typehints extension isn't available, carry on regardless
 
 # Add any paths that contain templates here, relative to this directory.
 # templates_path = ['tools/templates']
@@ -169,7 +167,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "Volatility 3"
-copyright = "2012-2024, Volatility Foundation"
+copyright = "2012-2025, Volatility Foundation"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

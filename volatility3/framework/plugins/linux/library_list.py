@@ -21,8 +21,7 @@ class LibraryList(interfaces.plugins.PluginInterface):
     """Enumerate libraries loaded into processes"""
 
     _required_framework_version = (2, 0, 0)
-
-    _version = (1, 0, 0)
+    _version = (1, 0, 2)
 
     @classmethod
     def get_requirements(cls):
@@ -32,8 +31,8 @@ class LibraryList(interfaces.plugins.PluginInterface):
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 2, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pids",

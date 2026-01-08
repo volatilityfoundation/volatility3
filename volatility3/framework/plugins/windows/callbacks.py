@@ -28,7 +28,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
     """Lists kernel callbacks and notification routines."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+    _version = (3, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -38,17 +38,17 @@ class Callbacks(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="ssdt", plugin=ssdt.SSDT, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="ssdt", component=ssdt.SSDT, version=(2, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="poolscanner", plugin=poolscanner.PoolScanner, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="poolscanner", component=poolscanner.PoolScanner, version=(3, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="driverirp", plugin=driverirp.DriverIrp, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="driverirp", component=driverirp.DriverIrp, version=(1, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="handles", plugin=handles.Handles, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="handles", component=handles.Handles, version=(4, 0, 0)
             ),
         ]
 
@@ -78,7 +78,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
     def _create_default_scan_constraints(
         context: interfaces.context.ContextInterface, symbol_table: str
     ) -> List[poolscanner.PoolConstraint]:
-
         shutdown_packet_size = context.symbol_space.get_type(
             symbol_table + constants.BANG + "_SHUTDOWN_PACKET"
         ).size
@@ -187,7 +186,9 @@ class Callbacks(interfaces.plugins.PluginInterface):
             The name of the constructed symbol table
         """
         native_types = context.symbol_space[nt_symbol_table].natives
-        is_64bit = symbols.symbol_table_is_64bit(context, nt_symbol_table)
+        is_64bit = symbols.symbol_table_is_64bit(
+            context=context, symbol_table_name=nt_symbol_table
+        )
         table_mapping = {"nt_symbols": nt_symbol_table}
 
         if is_64bit:
@@ -209,8 +210,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
     def scan(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        nt_symbol_table: str,
+        kernel_module_name: str,
         callback_symbol_table: str,
     ) -> Iterable[
         Tuple[
@@ -223,18 +223,21 @@ class Callbacks(interfaces.plugins.PluginInterface):
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            nt_symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: Name of the module for the kernel
             callback_symbol_table: The name of the table containing the callback object symbols (_SHUTDOWN_PACKET etc.)
 
         Returns:
             A list of callback objects found by scanning the `layer_name` layer for callback pool signatures
         """
+        kernel = context.modules[kernel_module_name]
+
         is_vista_or_later = versions.is_vista_or_later(
-            context=context, symbol_table=nt_symbol_table
+            context=context, symbol_table=kernel.symbol_table_name
         )
 
-        type_map = handles.Handles.get_type_map(context, layer_name, nt_symbol_table)
+        type_map = handles.Handles.get_type_map(
+            context=context, kernel_module_name=kernel_module_name
+        )
 
         constraints = cls.create_callback_scan_constraints(
             context, callback_symbol_table, is_vista_or_later
@@ -245,7 +248,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
             mem_object,
             _header,
         ) in poolscanner.PoolScanner.generate_pool_scan(
-            context, layer_name, nt_symbol_table, constraints
+            context, kernel_module_name, constraints
         ):
             try:
                 if isinstance(mem_object, callbacks._SHUTDOWN_PACKET):
@@ -345,27 +348,24 @@ class Callbacks(interfaces.plugins.PluginInterface):
     def list_notify_routines(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         callback_table_name: str,
     ) -> Iterable[Tuple[str, int, Optional[str]]]:
         """Lists all kernel notification routines.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the module of the kernel
             callback_table_name: The name of the table containing the callback symbols
 
         Yields:
             A name, location and optional detail string
         """
 
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
-        ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
+        ntkrnlmp = context.modules[kernel_module_name]
 
         is_vista_or_later = versions.is_vista_or_later(
-            context=context, symbol_table=symbol_table
+            context=context, symbol_table=ntkrnlmp.symbol_table_name
         )
         full_type_name = callback_table_name + constants.BANG + "_GENERIC_CALLBACK"
 
@@ -410,16 +410,14 @@ class Callbacks(interfaces.plugins.PluginInterface):
     def _list_registry_callbacks_legacy(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         callback_table_name: str,
     ) -> Iterable[Tuple[str, int, None]]:
         """
         Lists all registry callbacks from the old format via the CmpCallBackVector.
         """
 
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
-        ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
+        ntkrnlmp = context.modules[kernel_module_name]
         full_type_name = (
             callback_table_name + constants.BANG + "_EX_CALLBACK_ROUTINE_BLOCK"
         )
@@ -457,16 +455,13 @@ class Callbacks(interfaces.plugins.PluginInterface):
     def _list_registry_callbacks_new(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         callback_table_name: str,
     ) -> Iterable[Tuple[str, int, Optional[str]]]:
         """
         Lists all registry callbacks via the CallbackListHead.
         """
-
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
-        ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
+        ntkrnlmp = context.modules[kernel_module_name]
         full_type_name = callback_table_name + constants.BANG + "_CM_CALLBACK_ENTRY"
 
         symbol_offset = ntkrnlmp.get_symbol("CallbackListHead").address
@@ -490,36 +485,33 @@ class Callbacks(interfaces.plugins.PluginInterface):
     def list_registry_callbacks(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         callback_table_name: str,
     ) -> Iterable[Tuple[str, int, Optional[str]]]:
         """Lists all registry callbacks.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the module of the kernel
             callback_table_name: The name of the table containing the callback symbols
 
         Yields:
             A name, location and optional detail string
         """
 
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
-        ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
+        ntkrnlmp = context.modules[kernel_module_name]
 
         if ntkrnlmp.has_symbol("CmpCallBackVector") and ntkrnlmp.has_symbol(
             "CmpCallBackCount"
         ):
             yield from cls._list_registry_callbacks_legacy(
-                context, layer_name, symbol_table, callback_table_name
+                context, kernel_module_name, callback_table_name
             )
         elif ntkrnlmp.has_symbol("CallbackListHead") and ntkrnlmp.has_symbol(
             "CmpCallBackCount"
         ):
             yield from cls._list_registry_callbacks_new(
-                context, layer_name, symbol_table, callback_table_name
+                context, kernel_module_name, callback_table_name
             )
         else:
             symbols_to_check = [
@@ -534,14 +526,11 @@ class Callbacks(interfaces.plugins.PluginInterface):
                     symbol_status = "exists"
                 vollog.debug(f"symbol {symbol_name} {symbol_status}.")
 
-            return None
-
     @classmethod
     def list_bugcheck_reason_callbacks(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         callback_table_name: str,
     ) -> Iterable[
         Tuple[
@@ -554,16 +543,14 @@ class Callbacks(interfaces.plugins.PluginInterface):
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the module of the kernel
             callback_table_name: The name of the table containing the callback symbols
 
         Yields:
             A name, location and optional detail string
         """
 
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
-        ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
+        ntkrnlmp = context.modules[kernel_module_name]
 
         try:
             list_offset = ntkrnlmp.get_symbol(
@@ -577,11 +564,15 @@ class Callbacks(interfaces.plugins.PluginInterface):
             callback_table_name + constants.BANG + "_KBUGCHECK_REASON_CALLBACK_RECORD"
         )
         callback_record = context.object(
-            object_type=full_type_name, offset=kvo + list_offset, layer_name=layer_name
+            object_type=full_type_name,
+            offset=ntkrnlmp.offset + list_offset,
+            layer_name=ntkrnlmp.layer_name,
         )
 
         for callback in callback_record.Entry:
-            if not context.layers[layer_name].is_valid(callback.CallbackRoutine, 64):
+            if not context.layers[ntkrnlmp.layer_name].is_valid(
+                callback.CallbackRoutine, 64
+            ):
                 continue
 
             try:
@@ -598,14 +589,17 @@ class Callbacks(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 component = renderers.UnreadableValue()
 
-            yield "KeBugCheckReasonCallbackListHead", callback.CallbackRoutine, component
+            yield (
+                "KeBugCheckReasonCallbackListHead",
+                callback.CallbackRoutine,
+                component,
+            )
 
     @classmethod
     def list_bugcheck_callbacks(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         callback_table_name: str,
     ) -> Iterable[
         Tuple[
@@ -618,16 +612,13 @@ class Callbacks(interfaces.plugins.PluginInterface):
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the module of the kernel
             callback_table_name: The name of the table containing the callback symbols
 
         Yields:
             A name, location and optional detail string
         """
-
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
-        ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
+        ntkrnlmp = context.modules[kernel_module_name]
 
         try:
             list_offset = ntkrnlmp.get_symbol("KeBugCheckCallbackListHead").address
@@ -639,17 +630,20 @@ class Callbacks(interfaces.plugins.PluginInterface):
             callback_table_name + constants.BANG + "_KBUGCHECK_CALLBACK_RECORD"
         )
         callback_record = context.object(
-            full_type_name, offset=kvo + list_offset, layer_name=layer_name
+            full_type_name,
+            offset=ntkrnlmp.offset + list_offset,
+            layer_name=ntkrnlmp.layer_name,
         )
 
         for callback in callback_record.Entry:
-            if not context.layers[layer_name].is_valid(callback.CallbackRoutine, 64):
+            if not context.layers[ntkrnlmp.layer_name].is_valid(
+                callback.CallbackRoutine, 64
+            ):
                 continue
 
             try:
-                component = context.object(
-                    symbol_table + constants.BANG + "string",
-                    layer_name=layer_name,
+                component = ntkrnlmp.object(
+                    "string",
                     offset=callback.Component,
                     max_length=64,
                     errors="replace",
@@ -667,7 +661,8 @@ class Callbacks(interfaces.plugins.PluginInterface):
         )
 
         collection = ssdt.SSDT.build_module_collection(
-            self.context, kernel.layer_name, kernel.symbol_table_name
+            context=self.context,
+            kernel_module_name=self.config["kernel"],
         )
 
         callback_methods = (
@@ -681,8 +676,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
         for callback_method in callback_methods:
             for callback_type, callback_address, callback_detail in callback_method(
                 self.context,
-                kernel.layer_name,
-                kernel.symbol_table_name,
+                self.config["kernel"],
                 callback_symbol_table,
             ):
                 if callback_detail is None:

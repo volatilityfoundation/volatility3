@@ -9,10 +9,10 @@ import random
 import string
 import sys
 from functools import wraps
-from typing import Any, Callable, Dict, List, Tuple
-from volatility3.cli import text_filter
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union
 
-from volatility3.framework import interfaces, renderers
+from volatility3.cli import text_filter
+from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
@@ -49,10 +49,12 @@ def hex_bytes_as_text(value: bytes, width: int = 16) -> str:
                 output += "\n"
             printables = ""
 
-    # Handle leftovers when the lenght is not mutiple of width
+    # Handle leftovers when the length is not a multiple of width
     if printables:
-        output += "   " * (width - len(printables))
+        padding = width - len(printables)
+        output += "   " * padding
         output += printables
+        output += " " * padding
 
     return output
 
@@ -78,7 +80,12 @@ def multitypedata_as_text(value: format_hints.MultiTypeData) -> str:
     return hex_bytes_as_text(value)
 
 
-def optional(func: Callable) -> Callable:
+T = TypeVar("T")
+
+
+def optional(
+    func: Callable[[Union[interfaces.renderers.BaseAbsentValue, T]], str],
+) -> Callable[[T], str]:
     @wraps(func)
     def wrapped(x: Any) -> str:
         if isinstance(x, interfaces.renderers.BaseAbsentValue):
@@ -108,7 +115,7 @@ def quoted_optional(func: Callable) -> Callable:
     return wrapped
 
 
-def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
+def display_disassembly(disasm: renderers.Disassembly) -> str:
     """Renders a disassembly renderer type into string format.
 
     Args:
@@ -130,35 +137,151 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
             for i in disasm_types[disasm.architecture].disasm(
                 disasm.data, disasm.offset
             ):
-                output += f"\n0x{i.address:x}:\t{i.mnemonic}\t{i.op_str}"
+                output += f"\n{i.address:#x}:\t{i.mnemonic}\t{i.op_str}"
         return output
     return QuickTextRenderer._type_renderers[bytes](disasm.data)
+
+
+class CLITypeRenderer(interfaces.renderers.TypeRendererInterface):
+    def __init__(self, func):
+        super().__init__(func=optional(func))
+
+
+class LayerDataRenderer(CLITypeRenderer):
+    """Renders a LayerData object into data/bytes"""
+
+    def __init__(self):
+        self.context_byte_len = 0
+        self.width = 16
+        self.display_offset = False
+        self.display_hex = True
+        self.display_ascii = True
+
+        def render(
+            data: Union[renderers.LayerData, interfaces.renderers.BaseAbsentValue],
+        ) -> str:
+            if isinstance(data, interfaces.renderers.BaseAbsentValue):
+                # FIXME: Do something cleverer here
+                return ""
+
+            specific_data, error_bytes = self.render_bytes(data)
+
+            printables = ""
+            output = "\n"
+            for count, byte in enumerate(specific_data):
+                if count not in error_bytes:
+                    output += f"{byte:02x} "
+                    char = chr(byte)
+                    printables += char if 0x20 <= byte <= 0x7E else "."
+                else:
+                    output += "__ "
+                    printables += "."
+                if count % self.width == self.width - 1:
+                    output += printables
+                    if count < len(specific_data) - 1:
+                        output += "\n"
+                    printables = ""
+
+            # Handle leftovers when the length is not a multiple of width
+            if printables:
+                padding = self.width - len(printables)
+                output += "   " * padding
+                output += printables
+                output += " " * padding
+
+            return output
+
+        render_func = render
+        return super().__init__(render_func)
+
+    def render_bytes(self, data: renderers.LayerData) -> Tuple[bytes, Set[int]]:
+        """Renders a valid LayerData into bytes (with context bytes)"""
+        context_byte_len = self.context_byte_len if not data.no_surrounding else 0
+
+        layer = data.context.layers[data.layer_name]
+        # Map of the holes
+        error_bytes = set()
+        start_offset = data.offset - context_byte_len
+        end_offset = data.offset + data.length + context_byte_len
+        if isinstance(layer, interfaces.layers.TranslationLayerInterface):
+            error_bytes = set()
+            mapping = iter(layer.mapping(start_offset, end_offset, True))
+            current_map = next(mapping)
+            for i in range(start_offset, end_offset):
+                # Run through the bytes, check if they're present
+                offset, sublength, _, _, _ = current_map
+                if i < offset:
+                    error_bytes.add(i - start_offset)
+                if i > offset + sublength:
+                    try:
+                        current_map = next(mapping)
+                    except StopIteration:
+                        pass
+                    offset, sublength, _, _, _ = current_map
+                if i > offset + sublength:
+                    error_bytes.add(i - start_offset)
+
+        # Padded data
+        specific_data = data.context.layers[data.layer_name].read(
+            start_offset,
+            end_offset - start_offset,
+            True,
+        )
+
+        return specific_data, error_bytes
 
 
 class CLIRenderer(interfaces.renderers.Renderer):
     """Class to add specific requirements for CLI renderers."""
 
+    _type_renderers = {
+        format_hints.Bin: CLITypeRenderer(lambda x: f"0b{x:b}"),
+        format_hints.Hex: CLITypeRenderer(lambda x: f"0x{x:x}"),
+        format_hints.HexBytes: CLITypeRenderer(hex_bytes_as_text),
+        format_hints.MultiTypeData: CLITypeRenderer(multitypedata_as_text),
+        renderers.Disassembly: CLITypeRenderer(display_disassembly),
+        bytes: CLITypeRenderer(lambda x: " ".join(f"{b:02x}" for b in x)),
+        renderers.LayerData: LayerDataRenderer(),
+        datetime.datetime: CLITypeRenderer(
+            lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")
+        ),
+        "default": CLITypeRenderer(lambda x: f"{x}"),
+    }
+
     name = "unnamed"
     structured_output = False
-    filter: text_filter.CLIFilter = None
+    filter: Optional[text_filter.CLIFilter] = None
+    column_hide_list: Optional[list] = None
+
+    def ignored_columns(
+        self,
+        grid: interfaces.renderers.TreeGrid,
+    ) -> List[interfaces.renderers.Column]:
+        ignored_column_list = []
+        if self.column_hide_list:
+            for column in grid.columns:
+                accept = True
+                for column_prefix in self.column_hide_list:
+                    if column.name.lower().startswith(column_prefix.lower()):
+                        accept = False
+                if not accept:
+                    ignored_column_list.append(column)
+        elif self.column_hide_list is None:
+            return []
+
+        if len(ignored_column_list) == len(grid.columns):
+            raise exceptions.RenderException("No visible columns to render")
+        vollog.info(
+            f"Hiding columns: {[column.name for column in ignored_column_list]}"
+        )
+        return ignored_column_list
 
 
 class QuickTextRenderer(CLIRenderer):
-    _type_renderers = {
-        format_hints.Bin: optional(lambda x: f"0b{x:b}"),
-        format_hints.Hex: optional(lambda x: f"0x{x:x}"),
-        format_hints.HexBytes: optional(hex_bytes_as_text),
-        format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
-        interfaces.renderers.Disassembly: optional(display_disassembly),
-        bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
-        datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
-        "default": optional(lambda x: f"{x}"),
-    }
-
     name = "quick"
 
     def get_render_options(self):
-        pass
+        return []
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
         """Renders each column immediately to stdout.
@@ -173,9 +296,11 @@ class QuickTextRenderer(CLIRenderer):
         outfd = sys.stdout
 
         line = []
+        ignore_columns = self.ignored_columns(grid)
         for column in grid.columns:
             # Ignore the type because namedtuples don't realize they have accessible attributes
-            line.append(f"{column.name}")
+            if column not in ignore_columns:
+                line.append(f"{column.name}")
         outfd.write("\n{}\n".format("\t".join(line)))
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
@@ -184,7 +309,8 @@ class QuickTextRenderer(CLIRenderer):
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
-                line.append(renderer(node.values[column_index]))
+                if column not in ignore_columns:
+                    line.append(renderer(node.values[column_index]))
 
             if self.filter and self.filter.filter(line):
                 return accumulator
@@ -213,7 +339,7 @@ class NoneRenderer(CLIRenderer):
     name = "none"
 
     def get_render_options(self):
-        pass
+        return []
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
         if not grid.populated:
@@ -221,22 +347,11 @@ class NoneRenderer(CLIRenderer):
 
 
 class CSVRenderer(CLIRenderer):
-    _type_renderers = {
-        format_hints.Bin: optional(lambda x: f"0b{x:b}"),
-        format_hints.Hex: optional(lambda x: f"0x{x:x}"),
-        format_hints.HexBytes: optional(hex_bytes_as_text),
-        format_hints.MultiTypeData: optional(multitypedata_as_text),
-        interfaces.renderers.Disassembly: optional(display_disassembly),
-        bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
-        datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
-        "default": optional(lambda x: f"{x}"),
-    }
-
     name = "csv"
     structured_output = True
 
     def get_render_options(self):
-        pass
+        return []
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
         """Renders each row immediately to stdout.
@@ -245,11 +360,13 @@ class CSVRenderer(CLIRenderer):
             grid: The TreeGrid object to render
         """
         outfd = sys.stdout
+        ignore_columns = self.ignored_columns(grid)
 
         header_list = ["TreeDepth"]
         for column in grid.columns:
             # Ignore the type because namedtuples don't realize they have accessible attributes
-            header_list.append(f"{column.name}")
+            if column not in ignore_columns:
+                header_list.append(f"{column.name}")
 
         writer = csv.DictWriter(
             outfd, header_list, lineterminator="\n", escapechar="\\"
@@ -265,7 +382,10 @@ class CSVRenderer(CLIRenderer):
                     column.type, self._type_renderers["default"]
                 )
                 row[f"{column.name}"] = renderer(node.values[column_index])
-                line.append(row[f"{column.name}"])
+                if column not in ignore_columns:
+                    line.append(row[f"{column.name}"])
+                else:
+                    del row[f"{column.name}"]
 
             if self.filter and self.filter.filter(line):
                 return accumulator
@@ -282,12 +402,10 @@ class CSVRenderer(CLIRenderer):
 
 
 class PrettyTextRenderer(CLIRenderer):
-    _type_renderers = QuickTextRenderer._type_renderers
-
     name = "pretty"
 
     def get_render_options(self):
-        pass
+        return []
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
         """Renders each column immediately to stdout.
@@ -303,11 +421,12 @@ class PrettyTextRenderer(CLIRenderer):
 
         sys.stderr.write("Formatting...\n")
 
+        ignore_columns = self.ignored_columns(grid)
         display_alignment = ">"
         column_separator = " | "
 
         tree_indent_column = "".join(
-            random.choice(string.ascii_uppercase + string.digits) for _ in range(20)
+            random.choices(string.ascii_uppercase + string.digits, k=20)
         )
         max_column_widths = dict(
             [(column.name, len(column.name)) for column in grid.columns]
@@ -335,7 +454,8 @@ class PrettyTextRenderer(CLIRenderer):
                 max_column_widths[column.name] = max(
                     max_column_widths.get(column.name, len(column.name)), field_width
                 )
-                line[column] = data.split("\n")
+                if column not in ignore_columns:
+                    line[column] = data.split("\n")
                 rendered_line.append(data)
 
             if self.filter and self.filter.filter(rendered_line):
@@ -344,7 +464,9 @@ class PrettyTextRenderer(CLIRenderer):
             accumulator.append((node.path_depth, line))
             return accumulator
 
-        final_output: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]] = []
+        final_output: List[Tuple[int, Dict[interfaces.renderers.Column, list[str]]]] = (
+            []
+        )
         if not grid.populated:
             grid.populate(visitor, final_output)
         else:
@@ -354,43 +476,49 @@ class PrettyTextRenderer(CLIRenderer):
         format_string_list = [
             "{0:<" + str(max_column_widths.get(tree_indent_column, 0)) + "s}"
         ]
+        column_offset = 0
         for column_index, column in enumerate(grid.columns):
-            format_string_list.append(
-                "{"
-                + str(column_index + 1)
-                + ":"
-                + display_alignment
-                + str(max_column_widths[column.name])
-                + "s}"
-            )
+            if column not in ignore_columns:
+                format_string_list.append(
+                    "{"
+                    + str(column_index - column_offset + 1)
+                    + ":"
+                    + display_alignment
+                    + str(max_column_widths[column.name])
+                    + "s}"
+                )
+            else:
+                column_offset += 1
 
         format_string = column_separator.join(format_string_list) + "\n"
 
-        column_titles = [""] + [column.name for column in grid.columns]
+        column_titles = [""] + [
+            column.name for column in grid.columns if column not in ignore_columns
+        ]
+
         outfd.write(format_string.format(*column_titles))
         for depth, line in final_output:
             nums_line = max([len(line[column]) for column in line])
             for column in line:
-                line[column] = line[column] + ([""] * (nums_line - len(line[column])))
+                if column in ignore_columns:
+                    del line[column]
+                else:
+                    line[column] = line[column] + (
+                        [""] * (nums_line - len(line[column]))
+                    )
             for index in range(nums_line):
                 if index == 0:
                     outfd.write(
                         format_string.format(
                             "*" * depth,
-                            *[
-                                self.tab_stop(line[column][index])
-                                for column in grid.columns
-                            ],
+                            *[self.tab_stop(line[column][index]) for column in line],
                         )
                     )
                 else:
                     outfd.write(
                         format_string.format(
                             " " * depth,
-                            *[
-                                self.tab_stop(line[column][index])
-                                for column in grid.columns
-                            ],
+                            *[self.tab_stop(line[column][index]) for column in line],
                         )
                     )
 
@@ -405,10 +533,19 @@ class PrettyTextRenderer(CLIRenderer):
 
 class JsonRenderer(CLIRenderer):
     _type_renderers = {
-        format_hints.HexBytes: quoted_optional(hex_bytes_as_text),
-        interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
+        format_hints.HexBytes: lambda x: (
+            x.hex(" ")
+            if not isinstance(x, interfaces.renderers.BaseAbsentValue)
+            else "N/A"
+        ),
+        renderers.Disassembly: quoted_optional(display_disassembly),
         format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
-        bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
+        renderers.LayerData: lambda x: (
+            LayerDataRenderer().render_bytes(x)[0].hex(" ")
+            if not isinstance(x, interfaces.renderers.BaseAbsentValue)
+            else "N/A"
+        ),
+        bytes: optional(lambda x: " ".join(f"{b:02x}" for b in x)),
         datetime.datetime: lambda x: (
             x.isoformat()
             if not isinstance(x, interfaces.renderers.BaseAbsentValue)
@@ -421,11 +558,11 @@ class JsonRenderer(CLIRenderer):
     structured_output = True
 
     def get_render_options(self) -> List[interfaces.renderers.RenderOption]:
-        pass
+        return []
 
     def output_result(self, outfd, result):
         """Outputs the JSON data to a file in a particular format"""
-        outfd.write("{}\n".format(json.dumps(result, indent=2, sort_keys=True)))
+        outfd.write(f"{json.dumps(result, indent=2, sort_keys=True)}\n")
 
     def render(self, grid: interfaces.renderers.TreeGrid):
         outfd = sys.stdout
@@ -436,6 +573,8 @@ class JsonRenderer(CLIRenderer):
             List[interfaces.renderers.TreeNode],
         ] = ({}, [])
 
+        ignore_columns = self.ignored_columns(grid)
+
         def visitor(
             node: interfaces.renderers.TreeNode,
             accumulator: Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]],
@@ -445,6 +584,8 @@ class JsonRenderer(CLIRenderer):
             node_dict: Dict[str, Any] = {"__children": []}
             line = []
             for column_index, column in enumerate(grid.columns):
+                if column in ignore_columns:
+                    continue
                 renderer = self._type_renderers.get(
                     column.type, self._type_renderers["default"]
                 )
@@ -457,7 +598,8 @@ class JsonRenderer(CLIRenderer):
             if self.filter and self.filter.filter(line):
                 return accumulator
 
-            if node.parent:
+            # Only add if the parent hasn't been filtered out
+            if node.parent and node.parent.path in acc_map:
                 acc_map[node.parent.path]["__children"].append(node_dict)
             else:
                 final_tree.append(node_dict)

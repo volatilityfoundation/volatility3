@@ -26,6 +26,7 @@ The self-referential indices for older versions of windows are listed below:
     | x64          | 0x1ED |
     +--------------+-------+
 """
+
 import logging
 import struct
 from typing import Generator, Iterable, List, Optional, Tuple, Type

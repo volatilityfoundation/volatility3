@@ -23,7 +23,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for network objects present in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -34,10 +34,15 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="poolscanner", component=poolscanner.PoolScanner, version=(1, 0, 0)
+                name="poolscanner", component=poolscanner.PoolScanner, version=(3, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="info", component=info.Info, version=(1, 0, 0)
+                name="info", component=info.Info, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
             ),
             requirements.VersionRequirement(
                 name="verinfo", component=verinfo.VerInfo, version=(1, 0, 0)
@@ -50,9 +55,9 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             ),
         ]
 
-    @staticmethod
+    @classmethod
     def create_netscan_constraints(
-        context: interfaces.context.ContextInterface, symbol_table: str
+        cls, context: interfaces.context.ContextInterface, symbol_table: str
     ) -> List[poolscanner.PoolConstraint]:
         """Creates a list of Pool Tag Constraints for network objects.
 
@@ -117,15 +122,13 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def determine_tcpip_version(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        nt_symbol_table: str,
+        kernel_module_name: str,
     ) -> Tuple[str, Type]:
         """Tries to determine which symbol filename to use for the image's tcpip driver. The logic is partially taken from the info plugin.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            nt_symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: Name of the module for the kernel
 
         Returns:
             The filename of the symbol table to use.
@@ -137,10 +140,14 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         # therefore we determine the version based on the kernel version as testing
         # with several windows versions has showed this to work out correctly.
 
-        is_64bit = symbols.symbol_table_is_64bit(context, nt_symbol_table)
+        kernel = context.modules[kernel_module_name]
+
+        is_64bit = symbols.symbol_table_is_64bit(
+            context=context, symbol_table_name=kernel.symbol_table_name
+        )
 
         is_18363_or_later = versions.is_win10_18363_or_later(
-            context=context, symbol_table=nt_symbol_table
+            context=context, symbol_table=kernel.symbol_table_name
         )
 
         if is_64bit:
@@ -148,9 +155,9 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         else:
             arch = "x86"
 
-        vers = info.Info.get_version_structure(context, layer_name, nt_symbol_table)
+        vers = info.Info.get_version_structure(context, kernel_module_name)
 
-        kuser = info.Info.get_kuser_structure(context, layer_name, nt_symbol_table)
+        kuser = info.Info.get_kuser_structure(context, kernel_module_name)
 
         try:
             vers_minor_version = int(vers.MinorVersion)
@@ -161,20 +168,15 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             raise NotImplementedError(
                 "Kernel Debug Structure version format not supported!"
             )
-        except:
-            # unsure what to raise here. Also, it might be useful to add some kind of fallback,
+        except Exception:
+            # FIXME: unsure what to raise here. Also, it might be useful to add some kind of fallback,
             # either to a user-provided version or to another method to determine tcpip.sys's version
             raise exceptions.VolatilityException(
                 "Kernel Debug Structure missing VERSION/KUSER structure, unable to determine Windows version!"
             )
 
         vollog.debug(
-            "Determined OS Version: {}.{} {}.{}".format(
-                kuser.NtMajorVersion,
-                kuser.NtMinorVersion,
-                vers.MajorVersion,
-                vers.MinorVersion,
-            )
+            f"Determined OS Version: {kuser.NtMajorVersion}.{kuser.NtMinorVersion} {vers.MajorVersion}.{vers.MinorVersion}"
         )
 
         if nt_major_version == 10 and arch == "x64":
@@ -262,7 +264,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 "Requiring further version inspection due to OS version by checking tcpip.sys's FileVersion header"
             )
             # the following is IntelLayer specific and might need to be adapted to other architectures.
-            physical_layer_name = context.layers[layer_name].config.get(
+            physical_layer_name = context.layers[kernel.layer_name].config.get(
                 "memory_layer", None
             )
             if physical_layer_name:
@@ -272,9 +274,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 if ver:
                     tcpip_mod_version = ver[3]
                     vollog.debug(
-                        "Determined tcpip.sys's FileVersion: {}".format(
-                            tcpip_mod_version
-                        )
+                        f"Determined tcpip.sys's FileVersion: {tcpip_mod_version}"
                     )
                 else:
                     vollog.debug("Could not determine tcpip.sys's FileVersion.")
@@ -316,12 +316,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             else:
                 raise NotImplementedError(
-                    "This version of Windows is not supported: {}.{} {}.{}!".format(
-                        nt_major_version,
-                        nt_minor_version,
-                        vers.MajorVersion,
-                        vers_minor_version,
-                    )
+                    f"This version of Windows is not supported: {nt_major_version}.{nt_minor_version} {vers.MajorVersion}.{vers_minor_version}!"
                 )
 
         vollog.debug(f"Determined symbol filename: {filename}")
@@ -332,27 +327,26 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def create_netscan_symbol_table(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        nt_symbol_table: str,
+        kernel_module_name: str,
         config_path: str,
     ) -> str:
         """Creates a symbol table for TCP Listeners and TCP/UDP Endpoints.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            nt_symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: Name of the module for the kernel
             config_path: The config path where to find symbol files
 
         Returns:
             The name of the constructed symbol table
         """
-        table_mapping = {"nt_symbols": nt_symbol_table}
+        kernel = context.modules[kernel_module_name]
+
+        table_mapping = {"nt_symbols": kernel.symbol_table_name}
 
         symbol_filename, class_types = cls.determine_tcpip_version(
             context,
-            layer_name,
-            nt_symbol_table,
+            kernel_module_name,
         )
 
         return intermed.IntermediateSymbolTable.create(
@@ -368,16 +362,14 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def scan(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        nt_symbol_table: str,
+        kernel_module_name: str,
         netscan_symbol_table: str,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Scans for network objects using the poolscanner module and constraints.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            nt_symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the module for the kernel
             netscan_symbol_table: The name of the table containing the network object symbols (_TCP_LISTENER etc.)
 
         Returns:
@@ -387,7 +379,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         constraints = cls.create_netscan_constraints(context, netscan_symbol_table)
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
-            context, layer_name, nt_symbol_table, constraints
+            context, kernel_module_name, constraints
         ):
             _constraint, mem_object, _header = result
             yield mem_object
@@ -395,16 +387,13 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def _generator(self, show_corrupt_results: Optional[bool] = None):
         """Generates the network objects for use in rendering."""
 
-        kernel = self.context.modules[self.config["kernel"]]
-
         netscan_symbol_table = self.create_netscan_symbol_table(
-            self.context, kernel.layer_name, kernel.symbol_table_name, self.config_path
+            self.context, self.config["kernel"], self.config_path
         )
 
         for netw_obj in self.scan(
             self.context,
-            kernel.layer_name,
-            kernel.symbol_table_name,
+            self.config["kernel"],
             netscan_symbol_table,
         ):
             vollog.debug(
@@ -510,17 +499,8 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 for i in row_data
             ]
             description = (
-                "Network connection: Process {} {} Local Address {}:{} "
-                "Remote Address {}:{} State {} Protocol {} ".format(
-                    row_data[7],
-                    row_data[8],
-                    row_data[2],
-                    row_data[3],
-                    row_data[4],
-                    row_data[5],
-                    row_data[6],
-                    row_data[1],
-                )
+                f"Network connection: Process {row_data[7]} {row_data[8]} Local Address {row_data[2]}:{row_data[3]} "
+                f"Remote Address {row_data[4]}:{row_data[5]} State {row_data[6]} Protocol {row_data[1]} "
             )
             yield (description, timeliner.TimeLinerType.CREATED, row_data[9])
 

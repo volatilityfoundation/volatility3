@@ -1,0 +1,67 @@
+{
+    "WINDOWS10_GENERIC": [
+        {
+            "EndAddress": 18446735295750344704,
+            "Name": "hwpolicy.sys",
+            "StartAddress": 18446735295750275072,
+            "Time": "2025-03-06T17:47:55+00:00",
+            "__children": []
+        },
+        {
+            "EndAddress": 18446735295728652288,
+            "Name": "WdBoot.sys",
+            "StartAddress": 18446735295728582656,
+            "Time": "2025-03-06T17:47:56+00:00",
+            "__children": []
+        },
+        {
+            "EndAddress": 18446735295786053632,
+            "Name": "dam.sys",
+            "StartAddress": 18446735295785926656,
+            "Time": "2025-03-06T17:48:02+00:00",
+            "__children": []
+        },
+        {
+            "EndAddress": 18446735295788797952,
+            "Name": "serial.sys",
+            "StartAddress": 18446735295788679168,
+            "Time": "2025-03-06T17:48:21+00:00",
+            "__children": []
+        },
+        {
+            "EndAddress": 18446735295788875776,
+            "Name": "serenum.sys",
+            "StartAddress": 18446735295788810240,
+            "Time": "2025-03-06T17:48:21+00:00",
+            "__children": []
+        },
+        {
+            "EndAddress": 18446735295761932288,
+            "Name": "dump_dumpfve.sys",
+            "StartAddress": 18446735295761809408,
+            "Time": "2025-03-06T17:48:27+00:00",
+            "__children": []
+        },
+        {
+            "EndAddress": 18446735295761629184,
+            "Name": "dump_vmbkmcl.sys",
+            "StartAddress": 18446735295761481728,
+            "Time": "2025-03-06T17:48:27+00:00",
+            "__children": []
+        },
+        {
+            "EndAddress": 18446735295761481728,
+            "Name": "dump_storvsc.sys",
+            "StartAddress": 18446735295761416192,
+            "Time": "2025-03-06T17:48:27+00:00",
+            "__children": []
+        },
+        {
+            "EndAddress": 18446735295761350656,
+            "Name": "dump_storport.sys",
+            "StartAddress": 18446735295761285120,
+            "Time": "2025-03-06T17:48:27+00:00",
+            "__children": []
+        }
+    ]
+}

@@ -46,7 +46,7 @@ class FileHandlerInterface(io.RawIOBase):
     def preferred_filename(self, filename: str):
         """Sets the preferred filename"""
         if self.closed:
-            raise IOError("FileHandler name cannot be changed once closed")
+            raise OSError("FileHandler name cannot be changed once closed")
         if not isinstance(filename, str):
             raise TypeError("FileHandler preferred filenames must be strings")
         if os.path.sep in filename:
@@ -59,14 +59,14 @@ class FileHandlerInterface(io.RawIOBase):
 
     @staticmethod
     def sanitize_filename(filename: str) -> str:
-        """Sanititizes the filename to ensure only a specific whitelist of characters is allowed through"""
-        allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.- ()[]{}!$%^:#~?<>,|"
+        """Sanititizes the filename to ensure only a specific allow list of characters is allowed through"""
+        allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.- ()[]{}!$%^#~,"
         result = ""
         for char in filename:
             if char in allowed:
                 result += char
             else:
-                result += "?"
+                result += "_"  # change unwanted chars to an underscore
         return result
 
     def __enter__(self):

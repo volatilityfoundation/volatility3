@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import contextlib
+import functools
 import logging
 import datetime
 from typing import Generator, Iterable, Optional, Set, Tuple
@@ -18,8 +19,9 @@ class proc(generic.GenericIntelProcess):
     def get_task(self):
         return self.task.dereference().cast("task")
 
+    @functools.lru_cache
     def add_process_layer(
-        self, config_prefix: str = None, preferred_name: str = None
+        self, config_prefix: Optional[str] = None, preferred_name: Optional[str] = None
     ) -> Optional[str]:
         """Constructs a new layer based on the process's DTB.
 
@@ -254,7 +256,7 @@ class vm_map_entry(objects.StructType):
     def get_path(self, context, config_prefix):
         node = self.get_vnode(context, config_prefix)
 
-        if type(node) == str and node == "sub_map":
+        if type(node) is str and node == "sub_map":
             ret = node
         elif node:
             path = []
