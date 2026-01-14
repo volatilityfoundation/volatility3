@@ -864,15 +864,19 @@ class task_struct(generic.GenericIntelProcess):
 
         return ppid
 
-    def get_pid(self) -> int:
+    def get_user_pid(self) -> int:
         """Returns the pid of this process"""
         return self.tgid
 
-    def get_parent_pid(self) -> int:
+    def get_user_tid(self) -> int:
+        """Returns the tid of this process"""
+        return self.tgid
+
+    def get_user_parent_pid(self) -> int:
         """Returns the pid of parent of this process"""
         # Uses real_parent rather than parent to match Linux kernel getppid
         return (
-            self.real_parent.get_pid()
+            self.real_parent.get_user_pid()
             if self.real_parent and self.real_parent.is_readable()
             else 0
         )

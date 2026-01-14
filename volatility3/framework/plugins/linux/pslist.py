@@ -115,7 +115,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         Returns:
             A TaskFields object with the fields to show in the plugin output.
         """
-        name = utility.array_to_string(task.comm)
+        name = task.get_name()
         if decorate_comm:
             if task.is_kernel_thread:
                 name = f"[{name}]"
@@ -131,9 +131,9 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         return TaskFields(
             offset=task.vol.offset,
-            user_pid=task.tgid,
-            user_tid=task.pid,
-            user_ppid=task.get_parent_pid(),
+            user_pid=task.get_user_pid(),
+            user_tid=task.get_user_tid(),
+            user_ppid=task.get_user_parent_pid(),
             name=name,
             uid=task.cred.uid if valid_cred else None,
             gid=task.cred.gid if valid_cred else None,
