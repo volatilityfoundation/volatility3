@@ -95,13 +95,16 @@ class Sessions(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
         # Group and yield each row
         for rows in sessions.values():
             for row in rows:
-                yield 0, (
-                    row.get("session_id"),
-                    row.get("session_type"),
-                    row.get("process_id"),
-                    row.get("process_name"),
-                    row.get("user_name"),
-                    row.get("process_start"),
+                yield (
+                    0,
+                    (
+                        row.get("session_id"),
+                        row.get("session_type"),
+                        row.get("process_id"),
+                        row.get("process_name"),
+                        row.get("user_name"),
+                        row.get("process_start"),
+                    ),
                 )
 
     def generate_timeline(self):

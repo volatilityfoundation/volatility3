@@ -245,7 +245,6 @@ You can try using ffmpeg to decode the raw buffer. Example usage:
         return fb
 
     def _generator(self):
-
         if not has_pil:
             vollog.error(
                 "PIL (pillow) module is required to use this plugin. Please install it manually or through pyproject.toml."

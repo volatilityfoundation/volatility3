@@ -225,18 +225,21 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             task_euid = self._format_cred(task_fields.euid)
             task_egid = self._format_cred(task_fields.egid)
 
-            yield 0, (
-                format_hints.Hex(task_fields.offset),
-                task_fields.user_pid,
-                task_fields.user_tid,
-                task_fields.user_ppid,
-                task_fields.name,
-                task_uid,
-                task_gid,
-                task_euid,
-                task_egid,
-                task_fields.creation_time or renderers.NotAvailableValue(),
-                file_output,
+            yield (
+                0,
+                (
+                    format_hints.Hex(task_fields.offset),
+                    task_fields.user_pid,
+                    task_fields.user_tid,
+                    task_fields.user_ppid,
+                    task_fields.name,
+                    task_uid,
+                    task_gid,
+                    task_euid,
+                    task_egid,
+                    task_fields.creation_time or renderers.NotAvailableValue(),
+                    file_output,
+                ),
             )
 
     @classmethod

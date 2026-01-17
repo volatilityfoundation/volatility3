@@ -31,7 +31,7 @@ except ImportError:
 
     except ImportError:
         vollog.info(
-            "Neither yara-x nor yara-python (>3.8.0) module not found, plugin (and dependent plugins) not available"
+            "Neither yara-x nor yara-python (>3.8.0) module was found, plugin (and dependent plugins) not available"
         )
         raise
 

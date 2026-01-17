@@ -167,16 +167,19 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
             info = self.gather_thread_info(ethread, vads_cache)
 
             if info:
-                yield 0, (
-                    format_hints.Hex(info.offset),
-                    info.pid,
-                    info.tid,
-                    format_hints.Hex(info.start_addr),
-                    info.start_path or renderers.NotAvailableValue(),
-                    format_hints.Hex(info.win32_start_addr),
-                    info.win32_start_path or renderers.NotAvailableValue(),
-                    info.create_time,
-                    info.exit_time,
+                yield (
+                    0,
+                    (
+                        format_hints.Hex(info.offset),
+                        info.pid,
+                        info.tid,
+                        format_hints.Hex(info.start_addr),
+                        info.start_path or renderers.NotAvailableValue(),
+                        format_hints.Hex(info.win32_start_addr),
+                        info.win32_start_path or renderers.NotAvailableValue(),
+                        info.create_time,
+                        info.exit_time,
+                    ),
                 )
 
     def generate_timeline(self):
@@ -190,6 +193,9 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
                 row_dict["PID"],
                 row_dict["TID"],
                 row_dict["StartAddress"],
+                row_dict["StartPath"],
+                row_dict["Win32StartAddress"],
+                row_dict["Win32StartPath"],
                 row_dict["CreateTime"],
                 row_dict["ExitTime"],
             ) = row_data

@@ -220,7 +220,6 @@ class GUIExtensions(interfaces.configuration.VersionableInterface):
                     break
 
     class tagWND(objects.StructType, pool.ExecutiveObject):
-
         def is_valid(self) -> bool:
             """
             Enforce a valid sid

@@ -119,13 +119,16 @@ class Modules(interfaces.plugins.PluginInterface):
             if self.config["dump"]:
                 file_output = self.dump_module(session_layers, pe_table_name, mod)
 
-            yield 0, (
-                format_hints.Hex(mod.vol.offset),
-                format_hints.Hex(mod.DllBase),
-                format_hints.Hex(mod.SizeOfImage),
-                BaseDllName,
-                FullDllName,
-                file_output,
+            yield (
+                0,
+                (
+                    format_hints.Hex(mod.vol.offset),
+                    format_hints.Hex(mod.DllBase),
+                    format_hints.Hex(mod.SizeOfImage),
+                    BaseDllName,
+                    FullDllName,
+                    file_output,
+                ),
             )
 
     @classmethod

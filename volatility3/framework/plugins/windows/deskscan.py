@@ -77,6 +77,11 @@ class DeskScan(desktops.Desktops):
                 continue
 
             for _thread, process_name, process_pid in desktop.get_threads():
-                yield format_hints.Hex(
-                    desktop.vol.offset
-                ), winsta_name, session_id, desktop_name, process_name, process_pid
+                yield (
+                    format_hints.Hex(desktop.vol.offset),
+                    winsta_name,
+                    session_id,
+                    desktop_name,
+                    process_name,
+                    process_pid,
+                )

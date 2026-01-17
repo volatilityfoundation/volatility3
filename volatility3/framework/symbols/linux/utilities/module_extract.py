@@ -11,11 +11,7 @@ from typing import (
 )
 
 from volatility3 import framework
-from volatility3.framework import (
-    interfaces,
-    exceptions,
-    symbols,
-)
+from volatility3.framework import interfaces, exceptions, symbols, deprecation
 from volatility3.framework.constants import linux as linux_constants
 from volatility3.framework.symbols.linux import extensions
 
@@ -35,53 +31,19 @@ vollog = logging.getLogger(__name__)
 # ModuleExtract.extract_module is the entry point and only visible method for plugins
 
 
+# See PR #1773
+@deprecation.renamed_class(
+    deprecated_class_name="ModuleExtract",
+    removal_date="2026-06-01",
+    message="volatility3.framework.symbols.linux.utilities.module_extract.ModuleExtract is to be deprecated. Use volatility3.framework.symbols.linux.utilities.modules.ModuleExtract instead.",
+)
 class ModuleExtract(interfaces.configuration.VersionableInterface):
     """Extracts Linux kernel module structures into an analyzable ELF file"""
 
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
     _required_framework_version = (2, 25, 0)
 
     framework.require_interface_version(*_required_framework_version)
-
-    @classmethod
-    def _get_module_section_count(
-        cls,
-        context: interfaces.context.ContextInterface,
-        vmlinux_name: str,
-        module: extensions.module,
-        grp: interfaces.objects.ObjectInterface,
-    ) -> int:
-        """
-        Used to manually determine the section count for kernels that do not track
-        this count directly within the attribute structures
-        """
-        kernel = context.modules[vmlinux_name]
-
-        count = 0
-
-        try:
-            array = kernel.object(
-                object_type="array",
-                offset=grp.attrs,
-                sub_type=kernel.get_type("pointer"),
-                count=50,
-                absolute=True,
-            )
-
-            # Walk up to 50 sections counting until we reach the end or a page fault
-            for sect in array:
-                if sect.vol.offset == 0:
-                    break
-
-                count += 1
-
-        except exceptions.InvalidAddressException:
-            # Use whatever count we reached before the error
-            vollog.debug(
-                f"Exception hit counting sections for module at {module.vol.offset:#x}"
-            )
-
-        return count
 
     @classmethod
     def _find_section(
@@ -262,54 +224,6 @@ class ModuleExtract(interfaces.configuration.VersionableInterface):
         return sym_table_data
 
     @classmethod
-    def _enumerate_original_sections(
-        cls,
-        context: interfaces.context.ContextInterface,
-        vmlinux_name: str,
-        module: extensions.module,
-    ) -> Optional[Dict[int, str]]:
-        """
-        Enumerates the module's sections as maintained by the kernel after load time
-        'Early' sections like .init.text and .init.data are discarded after module
-        initialization, so they are not expected to be in memory during extraction
-        """
-        if hasattr(module.sect_attrs, "nsections"):
-            num_sections = module.sect_attrs.nsections
-        else:
-            num_sections = cls._get_module_section_count(
-                context, vmlinux_name, module.sect_attrs.grp
-            )
-
-        if num_sections > 1024 or num_sections == 0:
-            vollog.debug(
-                f"Invalid number of sections ({num_sections}) for module at offset {module.vol.offset:#x}"
-            )
-            return None
-
-        vmlinux = context.modules[vmlinux_name]
-
-        # This is declared as a zero sized array, so we create ourselves
-        attribute_type = module.sect_attrs.attrs.vol.subtype
-
-        sect_array = vmlinux.object(
-            object_type="array",
-            subtype=attribute_type,
-            offset=module.sect_attrs.attrs.vol.offset,
-            count=num_sections,
-            absolute=True,
-        )
-
-        sections: Dict[int, str] = {}
-
-        # for each section, gather its name and address
-        for index, section in enumerate(sect_array):
-            name = section.get_name()
-
-            sections[section.address] = name
-
-        return sections
-
-    @classmethod
     def _parse_sections(
         cls,
         context: interfaces.context.ContextInterface,
@@ -325,10 +239,12 @@ class ModuleExtract(interfaces.configuration.VersionableInterface):
         The data of .strtab is read directly off the module structure and not its section
         as the section from the original module has no meaning after loading as the kernel does not reference it.
         """
-        original_sections = cls._enumerate_original_sections(
-            context, vmlinux_name, module
-        )
-        if original_sections is None:
+        original_sections = {}
+        for index, section in enumerate(module.get_sections()):
+            name = section.get_name()
+            original_sections[section.address] = name
+
+        if not original_sections:
             return None
 
         kernel = context.modules[vmlinux_name]
@@ -702,9 +618,10 @@ class ModuleExtract(interfaces.configuration.VersionableInterface):
             return None
 
         # Gather sections
-        updated_sections, strtab_index, symtab_index = cls._parse_sections(
-            context, vmlinux_name, module
-        )
+        parse_sections_result = cls._parse_sections(context, vmlinux_name, module)
+        if parse_sections_result is None:
+            return None
+        updated_sections, strtab_index, symtab_index = parse_sections_result
 
         kernel = context.modules[vmlinux_name]
 

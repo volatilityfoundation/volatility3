@@ -246,9 +246,12 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                             if name.endswith(zip_match + extension) or (
                                 zip_match == "*" and name.endswith(extension)
                             ):
-                                yield "jar:file:" + str(
-                                    pathlib.Path(zip_path)
-                                ) + "!" + name
+                                yield (
+                                    "jar:file:"
+                                    + str(pathlib.Path(zip_path))
+                                    + "!"
+                                    + name
+                                )
 
     @classmethod
     def create(

@@ -112,15 +112,18 @@ class Windows(interfaces.plugins.PluginInterface):
                 )
                 continue
 
-            yield 0, (
-                format_hints.Hex(window.vol.offset),
-                station_name,
-                sess_id,
-                desktop_name,
-                window_name or renderers.NotAvailableValue(),
-                window_proc,
-                process_name,
-                process_pid,
+            yield (
+                0,
+                (
+                    format_hints.Hex(window.vol.offset),
+                    station_name,
+                    sess_id,
+                    desktop_name,
+                    window_name or renderers.NotAvailableValue(),
+                    window_proc,
+                    process_name,
+                    process_pid,
+                ),
             )
 
     def run(self):

@@ -709,17 +709,15 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
             # symbol_info will be a symbol name or address requested
             for symbol_info in wanted_symbols:
-                if (
-                    wanted_type == wanted_names_identifier
-                    and type(symbol_info) not in valid_name_types
+                if wanted_type == wanted_names_identifier and not isinstance(
+                    symbol_info, tuple(valid_name_types)
                 ):
                     raise ValueError(
                         f"The requested symbol name has a type of {type(symbol_info)} which is not in the allowed set of {valid_name_types}"
                     )
 
-                elif (
-                    wanted_type == wanted_addresses_identifier
-                    and type(symbol_info) not in valid_address_types
+                elif wanted_type == wanted_addresses_identifier and not isinstance(
+                    symbol_info, tuple(valid_address_types)
                 ):
                     raise ValueError(
                         f"The requested address has a type of {type(symbol_info)} which is not in the allowed set of {valid_address_types}"

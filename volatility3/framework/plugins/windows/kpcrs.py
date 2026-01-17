@@ -96,7 +96,6 @@ class KPCRs(interfaces.plugins.PluginInterface):
             yield kpcr, kpcr.member(kpcr_member)
 
     def _generator(self) -> Iterator[Tuple]:
-
         for kpcr, current_prcb in self.list_kpcrs(self.context, self.config["kernel"]):
             yield (
                 0,

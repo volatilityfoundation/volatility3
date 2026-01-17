@@ -110,7 +110,7 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists open files for each processes."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 2)
+    _version = (2, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -137,6 +137,12 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 element_type=int,
                 optional=True,
             ),
+            requirements.BooleanRequirement(
+                name="files_only",
+                description="Include only file descriptors of type file",
+                optional=True,
+                default=False,
+            ),
         ]
 
     @classmethod
@@ -145,6 +151,7 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
         context: interfaces.context.ContextInterface,
         vmlinux_module_name: str,
         filter_func: Callable[[int], bool] = lambda _: False,
+        include_files_only: bool = False,
     ) -> Iterable[FDInternal]:
         """Enumerates open file descriptors in tasks
 
@@ -167,16 +174,20 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 linuxutils_symbol_table = task.vol.type_name.split(constants.BANG)[0]
 
             fd_generator = linux.LinuxUtilities.files_descriptors_for_process(
-                context, linuxutils_symbol_table, task
+                context, linuxutils_symbol_table, task, files_only=include_files_only
             )
 
             for fd_fields in fd_generator:
                 yield FDInternal(task=task, fd_fields=fd_fields)
 
-    def _generator(self, pids, vmlinux_module_name):
+    def _generator(self, pids, vmlinux_module_name, include_files_only):
         filter_func = pslist.PsList.create_pid_filter(pids)
+
         for fd_internal in self.list_fds(
-            self.context, vmlinux_module_name, filter_func=filter_func
+            self.context,
+            vmlinux_module_name,
+            filter_func=filter_func,
+            include_files_only=include_files_only,
         ):
             fd_user = fd_internal.to_user()
             yield (0, dataclasses.astuple(fd_user))
@@ -184,6 +195,7 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
     def run(self):
         pids = self.config.get("pid", None)
         vmlinux_module_name = self.config["kernel"]
+        include_files_only = self.config.get("files_only")
 
         tree_grid_args = [
             ("PID", int),
@@ -201,7 +213,10 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
             ("Size", int),
         ]
         return renderers.TreeGrid(
-            tree_grid_args, self._generator(pids, vmlinux_module_name)
+            tree_grid_args,
+            self._generator(
+                pids, vmlinux_module_name, include_files_only=include_files_only
+            ),
         )
 
     def generate_timeline(self):
@@ -220,5 +235,9 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
             )
 
             yield description, timeliner.TimeLinerType.CHANGED, fd_user.change_time
-            yield description, timeliner.TimeLinerType.MODIFIED, fd_user.modification_time
+            yield (
+                description,
+                timeliner.TimeLinerType.MODIFIED,
+                fd_user.modification_time,
+            )
             yield description, timeliner.TimeLinerType.ACCESSED, fd_user.access_time

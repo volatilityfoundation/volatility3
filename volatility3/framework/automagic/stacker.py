@@ -153,8 +153,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 constructor(context, config_path, requirement)
 
                 # Stash the changed config items
-                self._cached = context.config.get(path, None), context.config.branch(
-                    path
+                self._cached = (
+                    context.config.get(path, None),
+                    context.config.branch(path),
                 )
         vollog.debug(
             f"physical_layer maximum_address: {physical_layer.maximum_address}"

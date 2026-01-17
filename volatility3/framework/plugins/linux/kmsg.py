@@ -551,12 +551,15 @@ class Kmsg(interfaces.plugins.PluginInterface):
         for facility, level, timestamp, caller, line in ABCKmsg.run_all(
             context=self.context, config=self.config
         ):
-            yield 0, (
-                facility,
-                level,
-                timestamp,
-                caller or renderers.NotAvailableValue(),
-                line,
+            yield (
+                0,
+                (
+                    facility,
+                    level,
+                    timestamp,
+                    caller or renderers.NotAvailableValue(),
+                    line,
+                ),
             )
 
     def run(self):

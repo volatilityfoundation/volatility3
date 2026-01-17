@@ -6,6 +6,7 @@
 Renderers display the unified output format in some manner (be it text
 or file or graphical output
 """
+
 import collections
 import collections.abc
 import dataclasses

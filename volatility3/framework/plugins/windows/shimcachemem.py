@@ -51,9 +51,17 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
     ) -> Iterator[Tuple[str, timeliner.TimeLinerType, datetime]]:
         for _, (_, last_modified, last_update, _, _, file_path) in self._generator():
             if isinstance(last_update, datetime):
-                yield f"Shimcache: File {file_path} executed", timeliner.TimeLinerType.ACCESSED, last_update
+                yield (
+                    f"Shimcache: File {file_path} executed",
+                    timeliner.TimeLinerType.ACCESSED,
+                    last_update,
+                )
             if isinstance(last_modified, datetime):
-                yield f"Shimcache: File {file_path} modified", timeliner.TimeLinerType.MODIFIED, last_modified
+                yield (
+                    f"Shimcache: File {file_path} modified",
+                    timeliner.TimeLinerType.MODIFIED,
+                    last_modified,
+                )
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -161,7 +169,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
                     continue
 
                 try:
-                    if proc_layer.read(vad.get_start(), 4) != b"\xEF\xBE\xAD\xDE":
+                    if proc_layer.read(vad.get_start(), 4) != b"\xef\xbe\xad\xde":
                         if pid == 624:
                             vollog.debug("VAD magic bytes don't match DEADBEEF")
                         continue

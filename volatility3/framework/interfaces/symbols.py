@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 """Symbols provide structural information about a set of bytes."""
+
 import bisect
 import collections.abc
 from abc import ABC, abstractmethod

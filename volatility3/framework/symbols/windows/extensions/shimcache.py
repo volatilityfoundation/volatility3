@@ -183,7 +183,6 @@ class SHIM_CACHE_ENTRY(objects.StructType):
                     == self.ListEntry.Flink.Blink.dereference().vol.offset
                 )
             ):
-
                 return True
             else:
                 return False

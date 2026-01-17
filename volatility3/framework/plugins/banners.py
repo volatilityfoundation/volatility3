@@ -60,8 +60,9 @@ class Banners(interfaces.plugins.PluginInterface):
                     not in b" #()+,;/-.0123456789:@ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
                 ]
                 if not failed:
-                    yield format_hints.Hex(offset), str(
-                        data, encoding="latin-1", errors="?"
+                    yield (
+                        format_hints.Hex(offset),
+                        str(data, encoding="latin-1", errors="?"),
                     )
 
     def run(self):

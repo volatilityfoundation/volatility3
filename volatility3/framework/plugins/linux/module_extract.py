@@ -4,8 +4,8 @@
 import logging
 from typing import List
 
+import volatility3.framework.symbols.linux.utilities.modules as linux_utilities_modules
 from volatility3 import framework
-import volatility3.framework.symbols.linux.utilities.module_extract as linux_utilities_module_extract
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
@@ -17,7 +17,7 @@ vollog = logging.getLogger(__name__)
 class ModuleExtract(interfaces.plugins.PluginInterface):
     """Recreates an ELF file from a specific address in the kernel"""
 
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
     _required_framework_version = (2, 25, 0)
 
     framework.require_interface_version(*_required_framework_version)
@@ -37,9 +37,9 @@ class ModuleExtract(interfaces.plugins.PluginInterface):
                 optional=False,
             ),
             requirements.VersionRequirement(
-                name="linux_utilities_module_extract",
-                version=(1, 0, 0),
-                component=linux_utilities_module_extract.ModuleExtract,
+                name="linux_utilities_modules_module_extract",
+                version=(1, 0, 2),
+                component=linux_utilities_modules.ModuleExtract,
             ),
         ]
 
@@ -58,7 +58,7 @@ class ModuleExtract(interfaces.plugins.PluginInterface):
 
         module = kernel.object(object_type="module", offset=base_address, absolute=True)
 
-        elf_data = linux_utilities_module_extract.ModuleExtract.extract_module(
+        elf_data = linux_utilities_modules.ModuleExtract.extract_module(
             self.context, self.config["kernel"], module
         )
         if not elf_data:
@@ -75,10 +75,13 @@ class ModuleExtract(interfaces.plugins.PluginInterface):
         with self.open(file_name) as file_handle:
             file_handle.write(elf_data)
 
-        yield 0, (
-            format_hints.Hex(base_address),
-            len(elf_data),
-            file_handle.preferred_filename,
+        yield (
+            0,
+            (
+                format_hints.Hex(base_address),
+                len(elf_data),
+                file_handle.preferred_filename,
+            ),
         )
 
     def run(self):

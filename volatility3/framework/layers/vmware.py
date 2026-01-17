@@ -65,10 +65,10 @@ class VmwareLayer(segmented.SegmentedLayer):
         data = meta_layer.read(0, header_size)
         magic, unknown, groupCount = struct.unpack(self.header_structure, data)
         if magic not in [
-            b"\xD0\xBE\xD2\xBE",
-            b"\xD1\xBA\xD1\xBA",
-            b"\xD2\xBE\xD2\xBE",
-            b"\xD3\xBE\xD3\xBE",
+            b"\xd0\xbe\xd2\xbe",
+            b"\xd1\xba\xd1\xba",
+            b"\xd2\xbe\xd2\xbe",
+            b"\xd3\xbe\xd3\xbe",
         ]:
             raise VmwareFormatException(
                 self.name, f"Wrong magic bytes for Vmware layer: {repr(magic)}"

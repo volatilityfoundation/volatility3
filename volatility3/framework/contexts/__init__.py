@@ -8,6 +8,7 @@ This has been made an object to allow quick swapping and changing of
 contexts, to allow a plugin to act on multiple different contexts
 without them interfering with each other.
 """
+
 import functools
 import hashlib
 import logging

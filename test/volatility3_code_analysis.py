@@ -82,7 +82,6 @@ class CodeViolation(metaclass=abc.ABCMeta):
 
 
 class UnrequiredVersionableUsage(CodeViolation):
-
     def __init__(
         self,
         module: types.ModuleType,
@@ -107,7 +106,6 @@ class UnrequiredVersionableUsage(CodeViolation):
 
 
 class DirectVolatilityImportUsage(CodeViolation):
-
     def __init__(
         self,
         module: types.ModuleType,
@@ -174,8 +172,11 @@ class ModuleVisitor(NodeVisitor):
         """
         if (
             node.module
-            and node.module.startswith("volatility3.") # Give a pass to volatility3 module
-            and node.module != "volatility3.framework.constants._version" # make an exception for this
+            and node.module.startswith(
+                "volatility3."
+            )  # Give a pass to volatility3 module
+            and node.module
+            != "volatility3.framework.constants._version"  # make an exception for this
         ):
             for name in node.names:
                 try:
@@ -203,7 +204,6 @@ class ModuleVisitor(NodeVisitor):
 
     def enter_ImportFrom(self, node: ast.ImportFrom):
         self._check_vol3_import_from(node)
-
 
     def enter_ClassDef(self, node: ast.ClassDef) -> Any:
         logger.debug("Entering class %s", node.name)

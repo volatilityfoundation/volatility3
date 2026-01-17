@@ -29,7 +29,7 @@ class TestLinuxPslist:
 class TestLinuxCheckIdt:
     def test_linux_generic_check_idt(self, image, volatility, python):
         rc, out, _err = test_volatility.runvol_plugin(
-            "linux.check_idt.Check_idt", image, volatility, python
+            "linux.malware.check_idt.Check_idt", image, volatility, python
         )
 
         assert rc == 0
@@ -41,7 +41,7 @@ class TestLinuxCheckIdt:
 class TestLinuxCheckSyscall:
     def test_linux_generic_check_syscall(self, image, volatility, python):
         rc, out, _err = test_volatility.runvol_plugin(
-            "linux.check_syscall.Check_syscall", image, volatility, python
+            "linux.malware.check_syscall.Check_syscall", image, volatility, python
         )
 
         assert rc == 0
@@ -89,7 +89,7 @@ class TestLinuxProcMaps:
 class TestLinuxTtyCheck:
     def test_linux_generic_tty_check(self, image, volatility, python):
         rc, out, _err = test_volatility.runvol_plugin(
-            "linux.tty_check.tty_check", image, volatility, python
+            "linux.malware.tty_check.Tty_Check", image, volatility, python
         )
 
         assert rc == 0
@@ -200,7 +200,7 @@ class TestLinuxCapabilities:
 class TestLinuxCheckCreds:
     def test_linux_generic_check_creds(self, image, volatility, python):
         rc, out, _err = test_volatility.runvol_plugin(
-            "linux.check_creds.Check_creds", image, volatility, python
+            "linux.malware.check_creds.Check_creds", image, volatility, python
         )
 
         # linux-sample-1.bin has no processes sharing credentials.
@@ -251,7 +251,7 @@ class TestLinuxKthreads:
 class TestLinuxMalfind:
     def test_linux_generic_malfind(self, image, volatility, python):
         rc, out, _err = test_volatility.runvol_plugin(
-            "linux.malfind.Malfind", image, volatility, python
+            "linux.malware.malfind.Malfind", image, volatility, python
         )
 
         # linux-sample-1.bin has no process memory ranges with potential injected code.
@@ -426,7 +426,7 @@ class TestLinuxPageCacheInodepages:
 class TestLinuxCheckAfinfo:
     def test_linux_generic_check_afinfo(self, image, volatility, python):
         rc, out, _err = test_volatility.runvol_plugin(
-            "linux.check_afinfo.Check_afinfo", image, volatility, python
+            "linux.malware.check_afinfo.Check_afinfo", image, volatility, python
         )
 
         # linux-sample-1.bin has no suspicious results.
@@ -438,7 +438,7 @@ class TestLinuxCheckAfinfo:
 class TestLinuxCheckModules:
     def test_linux_generic_check_modules(self, image, volatility, python):
         rc, out, _err = test_volatility.runvol_plugin(
-            "linux.check_modules.Check_modules", image, volatility, python
+            "linux.malware.check_modules.Check_modules", image, volatility, python
         )
 
         # linux-sample-1.bin has no suspicious results.
@@ -479,7 +479,10 @@ class TestLinuxIomem:
 class TestLinuxKeyboardNotifiers:
     def test_linux_generic_keyboard_notifiers(self, image, volatility, python):
         rc, out, _err = test_volatility.runvol_plugin(
-            "linux.keyboard_notifiers.Keyboard_notifiers", image, volatility, python
+            "linux.malware.keyboard_notifiers.Keyboard_notifiers",
+            image,
+            volatility,
+            python,
         )
 
         # linux-sample-1.bin has no suspicious results for this plugin.
@@ -501,7 +504,7 @@ class TestLinuxKmesg:
 class TestLinuxNetfilter:
     def test_linux_generic_netfilter(self, image, volatility, python):
         rc, out, _err = test_volatility.runvol_plugin(
-            "linux.netfilter.Netfilter", image, volatility, python
+            "linux.malware.netfilter.Netfilter", image, volatility, python
         )
 
         # linux-sample-1.bin has no suspicious results for this plugin.
@@ -525,7 +528,7 @@ class TestLinuxHiddenModules:
         # TODO: this check should be specific, against a distinct infected sample
         image = LinuxSamples.LINUX_GENERIC.value.path
         rc, out, _err = test_volatility.runvol_plugin(
-            "linux.hidden_modules.Hidden_modules", image, volatility, python
+            "linux.malware.hidden_modules.Hidden_modules", image, volatility, python
         )
 
         # linux-sample-1.bin has no hidden modules.
@@ -615,3 +618,37 @@ class TestLinuxPscallstack:
             rb"1\s+init\s+39\s+0x88001f999a40.*?0xffff81109039\s+do_select\s+T\s+kernel",
             out,
         )
+
+
+class TestLinuxSockscan:
+    def test_linux_sockscan(self, volatility, python):
+        # designed for linux-sample-1.dmp SHA1:1C3A4627EDCA94A7ADE3414592BEF0E62D7D3BB6
+        image = LinuxSamples.LINUX_GENERIC.value.path
+        rc, out, err = test_volatility.runvol_plugin(
+            "linux.sockscan.Sockscan", image, volatility, python
+        )
+
+        # ensure that multiple unix paths for sockets have been found
+        assert (
+            len(
+                re.findall(
+                    rb"(/[ -~]+?){1,8}",
+                    out,
+                )
+            )
+            >= 10
+        )
+
+        # ensure that multiple IPv4 addresses have been found
+        assert (
+            len(
+                re.findall(
+                    rb"((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}",
+                    out,
+                )
+            )
+            >= 10
+        )
+
+        assert out.count(b"\n") >= 50
+        assert rc == 0

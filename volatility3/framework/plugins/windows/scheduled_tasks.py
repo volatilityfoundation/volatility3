@@ -2,7 +2,8 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from volatility3.framework import interfaces, deprecation
+
+from volatility3.framework import deprecation, interfaces
 from volatility3.plugins.windows.registry import scheduled_tasks
 
 vollog = logging.getLogger(__name__)
@@ -12,7 +13,7 @@ class ScheduledTasks(
     interfaces.plugins.PluginInterface,
     deprecation.PluginRenameClass,
     replacement_class=scheduled_tasks.ScheduledTasks,
-    removal_date="2025-09-25",
+    removal_date="2026-09-25",
 ):
     """Decodes scheduled task information from the Windows registry, including
     information about triggers, actions, run times, and creation times (deprecated)."""

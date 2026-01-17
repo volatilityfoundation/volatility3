@@ -10,8 +10,8 @@ import string
 import sys
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union
-from volatility3.cli import text_filter
 
+from volatility3.cli import text_filter
 from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.renderers import format_hints
 
@@ -278,7 +278,6 @@ class CLIRenderer(interfaces.renderers.Renderer):
 
 
 class QuickTextRenderer(CLIRenderer):
-
     name = "quick"
 
     def get_render_options(self):
@@ -348,7 +347,6 @@ class NoneRenderer(CLIRenderer):
 
 
 class CSVRenderer(CLIRenderer):
-
     name = "csv"
     structured_output = True
 
@@ -600,7 +598,8 @@ class JsonRenderer(CLIRenderer):
             if self.filter and self.filter.filter(line):
                 return accumulator
 
-            if node.parent:
+            # Only add if the parent hasn't been filtered out
+            if node.parent and node.parent.path in acc_map:
                 acc_map[node.parent.path]["__children"].append(node_dict)
             else:
                 final_tree.append(node_dict)

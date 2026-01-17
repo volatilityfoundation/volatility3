@@ -3,12 +3,14 @@
 #
 """Objects are the core of volatility, and provide pythonic access to
 interpreted values of data from a layer."""
+
 import abc
 import collections
 import collections.abc
 import contextlib
+import dataclasses
 import logging
-from typing import Any, Dict, List, Mapping, NamedTuple, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
 from volatility3.framework import constants, interfaces
 
@@ -52,7 +54,8 @@ class ReadOnlyMapping(collections.abc.Mapping):
         return dict(self) == dict(other)
 
 
-class ObjectInformation(NamedTuple):
+@dataclasses.dataclass
+class ObjectInformation:
     """Contains common information useful/pertinent only to an individual
     object (like an instance)
 
@@ -71,12 +74,12 @@ class ObjectInformation(NamedTuple):
     size: Optional[int] = None
 
     def __getitem__(self, key):
-        if key in self._fields:
+        if key in self:
             return getattr(self, key)
-        raise KeyError(f"NamedTuple does not have a key {key}")
+        raise KeyError(f"No {key} present in ObjectInformation")
 
     def __contains__(self, key):
-        return key in self._fields
+        return key in [field.name for field in dataclasses.fields(self)]
 
 
 class ObjectInterface(metaclass=abc.ABCMeta):

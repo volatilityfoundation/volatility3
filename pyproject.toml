@@ -42,6 +42,8 @@ dev = [
     "types-jsonschema>=4.23.0,<5",
 ]
 
+arrow = ["pyarrow>=17.0.0"]
+
 test = [
     "volatility3[dev]",
     "pytest>=8.3.3,<9",
@@ -52,7 +54,7 @@ test = [
 docs = [
     "volatility3[dev]",
     "sphinx>=4.0.0,<9",
-    "sphinx-autodoc-typehints>=2.0.0,<3",
+    "sphinx-autodoc-typehints>=3.0.0,<4; python_version >= '3.11'",
     "sphinx-rtd-theme>=3.0.1,<4",
 ]
 

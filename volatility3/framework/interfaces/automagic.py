@@ -7,6 +7,7 @@ runs.
 Automagic objects attempt to automatically fill configuration values
 that a user has not filled.
 """
+
 import logging
 from abc import ABCMeta
 from typing import Any, List, Optional, Tuple, Type, Union

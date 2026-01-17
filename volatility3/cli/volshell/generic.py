@@ -469,7 +469,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             and dereference_count < MAX_DEREFERENCE_COUNT
         ):
             # before defreerencing the pointer, show it's information
-            print(f'{"    " * dereference_count}{self._display_simple_type(volobject)}')
+            print(f"{'    ' * dereference_count}{self._display_simple_type(volobject)}")
 
             # check that we can follow the pointer before dereferencing and do not
             # attempt to follow null pointers.
@@ -486,7 +486,7 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         if hasattr(volobject.vol, "members"):
             # display the header for this object, if the original object was just a type string, display the type information
-            struct_header = f'{"    " * dereference_count}{volobject.vol.type_name} ({volobject.vol.size} bytes)'
+            struct_header = f"{'    ' * dereference_count}{volobject.vol.type_name} ({volobject.vol.size} bytes)"
             if isinstance(object, str) and offset is None:
                 suffix = ":"
             else:
@@ -523,7 +523,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                 len_typename = len(member_type_name)
                 if len(member_type_name) > MAX_TYPENAME_DISPLAY_LENGTH:
                     len_typename = MAX_TYPENAME_DISPLAY_LENGTH
-                    member_type_name = f"{member_type_name[:len_typename - 3]}..."
+                    member_type_name = f"{member_type_name[: len_typename - 3]}..."
 
                 if isinstance(volobject, interfaces.objects.ObjectInterface):
                     # We're an instance, so also display the data

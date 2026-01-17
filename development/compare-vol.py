@@ -208,7 +208,6 @@ class Volatility3PyPyTest(VolatilityTest):
 
 
 class VolatilityTester:
-
     def __init__(
         self,
         images: List[VolatilityImage],

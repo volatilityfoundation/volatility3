@@ -4,6 +4,7 @@
 
 import logging
 from typing import Iterable, List, Tuple
+import datetime
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
@@ -18,7 +19,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
     """Scans all the Virtual Address Descriptor memory maps using yara."""
 
     _required_framework_version = (2, 22, 0)
-    _version = (1, 1, 3)
+    _version = (1, 1, 4)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -99,12 +100,24 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                         layer_name=layer.name,
                         length=len(value),
                     )
-                    yield 0, (
-                        format_hints.Hex(offset),
-                        task.UniqueProcessId,
-                        rule_name,
-                        name,
-                        layer_data,
+                    yield (
+                        0,
+                        (
+                            format_hints.Hex(offset),
+                            task.UniqueProcessId,
+                            task.get_create_time(),
+                            task.InheritedFromUniqueProcessId,
+                            task.ImageFileName.cast(
+                                "string",
+                                max_length=task.ImageFileName.vol.count,
+                                errors="replace",
+                            ),
+                            task.get_session_id(),
+                            task.ActiveThreads,
+                            rule_name,
+                            name,
+                            layer_data,
+                        ),
                     )
 
     @classmethod
@@ -130,6 +143,11 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
             [
                 ("Offset", format_hints.Hex),
                 ("PID", int),
+                ("CreateTime", datetime.datetime),
+                ("PPID", int),
+                ("ImageFileName", str),
+                ("SessionId", int),
+                ("Threads", int),
                 ("Rule", str),
                 ("Component", str),
                 ("Value", renderers.LayerData),

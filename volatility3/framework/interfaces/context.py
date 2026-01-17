@@ -11,6 +11,7 @@ convenience functions, most notably the object constructor function,
 `object`, which will construct a symbol on a layer at a particular
 offset.
 """
+
 import collections
 import copy
 from abc import ABCMeta, abstractmethod

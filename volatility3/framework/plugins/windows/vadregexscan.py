@@ -62,7 +62,6 @@ class VadRegExScan(plugins.PluginInterface):
         vollog.debug(f"RegEx Pattern: {regex_pattern}")
 
         for proc in procs:
-
             # attempt to create a process layer for each proc
             proc_layer_name = proc.add_process_layer()
             if not proc_layer_name:
@@ -106,12 +105,15 @@ class VadRegExScan(plugins.PluginInterface):
                     max_length=proc.ImageFileName.vol.count,
                     errors="replace",
                 )
-                yield 0, (
-                    proc_id,
-                    process_name,
-                    format_hints.Hex(offset),
-                    text_result,
-                    bytes_result,
+                yield (
+                    0,
+                    (
+                        proc_id,
+                        process_name,
+                        format_hints.Hex(offset),
+                        text_result,
+                        bytes_result,
+                    ),
                 )
 
     def run(self):

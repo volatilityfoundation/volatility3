@@ -8,6 +8,7 @@ These requirement types allow plugins to request simple information
 types (such as strings, integers, etc) as well as indicating what they
 expect to be in the context (such as particular layers or symboltables).
 """
+
 import abc
 import logging
 import os

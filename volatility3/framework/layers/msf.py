@@ -234,9 +234,13 @@ class PdbMSFStream(linear.LinearlyMappedLayer):
                         layer_name=self.name, invalid_address=offset + returned
                     )
             else:
-                yield offset + returned, chunk_size, (
-                    self._pages[page] * page_size
-                ) + page_position, chunk_size, self._base_layer
+                yield (
+                    offset + returned,
+                    chunk_size,
+                    (self._pages[page] * page_size) + page_position,
+                    chunk_size,
+                    self._base_layer,
+                )
             returned += chunk_size
             length -= chunk_size
 

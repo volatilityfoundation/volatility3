@@ -6,6 +6,7 @@
 One layer may combine other layers, map data based on the data itself,
 or map a procedure (such as decryption) across another layer of data.
 """
+
 import collections.abc
 import functools
 import logging

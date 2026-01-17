@@ -210,9 +210,10 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         replacements = set()
         # Whole Symbols that still need traversing
         while traverse_list:
-            template_traverse_list, traverse_list = [
-                self._resolved[traverse_list[0]]
-            ], traverse_list[1:]
+            template_traverse_list, traverse_list = (
+                [self._resolved[traverse_list[0]]],
+                traverse_list[1:],
+            )
             # Traverse a single symbol looking for any ReferenceTemplate objects
             while template_traverse_list:
                 traverser, template_traverse_list = (

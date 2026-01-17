@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 """Volatility 3 framework."""
+
 # Check the python version to ensure it's suitable
 import glob
 import sys

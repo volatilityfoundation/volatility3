@@ -2,7 +2,8 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from volatility3.framework import interfaces, deprecation
+
+from volatility3.framework import deprecation, interfaces
 from volatility3.plugins.windows.registry import cachedump
 
 vollog = logging.getLogger(__name__)
@@ -12,7 +13,7 @@ class Cachedump(
     interfaces.plugins.PluginInterface,
     deprecation.PluginRenameClass,
     replacement_class=cachedump.Cachedump,
-    removal_date="2025-09-25",
+    removal_date="2026-09-25",
 ):
     """Dumps lsa secrets from memory (deprecated)"""
 

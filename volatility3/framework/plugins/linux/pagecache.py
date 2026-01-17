@@ -386,7 +386,11 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
             inode_out = inode_in.to_user(vmlinux_layer)
             description = f"Cached Inode for {inode_out.path}"
             yield description, timeliner.TimeLinerType.ACCESSED, inode_out.access_time
-            yield description, timeliner.TimeLinerType.MODIFIED, inode_out.modification_time
+            yield (
+                description,
+                timeliner.TimeLinerType.MODIFIED,
+                inode_out.modification_time,
+            )
             yield description, timeliner.TimeLinerType.CHANGED, inode_out.change_time
 
     @classmethod
@@ -813,7 +817,6 @@ class RecoverFs(plugins.PluginInterface):
 
         visited_paths = seen_prefixes = set()
         for inode_in in inodes_iter:
-
             # Code is slightly duplicated here with the if-block below.
             # However this prevents unneeded tar manipulation if fifo
             # or sock inodes come through for example.

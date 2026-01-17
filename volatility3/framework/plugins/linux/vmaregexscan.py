@@ -64,7 +64,6 @@ class VmaRegExScan(plugins.PluginInterface):
         vollog.debug(f"RegEx Pattern: {regex_pattern}")
 
         for task in tasks:
-
             if not task.mm:
                 continue
             name = utility.array_to_string(task.comm)
@@ -106,12 +105,15 @@ class VmaRegExScan(plugins.PluginInterface):
                     bytes_result = result_data
 
                 user_pid = task.tgid
-                yield 0, (
-                    user_pid,
-                    name,
-                    format_hints.Hex(offset),
-                    text_result,
-                    bytes_result,
+                yield (
+                    0,
+                    (
+                        user_pid,
+                        name,
+                        format_hints.Hex(offset),
+                        text_result,
+                        bytes_result,
+                    ),
                 )
 
     def run(self):

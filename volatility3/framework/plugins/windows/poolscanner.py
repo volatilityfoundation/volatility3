@@ -436,7 +436,6 @@ class PoolScanner(plugins.PluginInterface):
             constraints,
             alignment=alignment,
         ):
-
             mem_objects = header.get_object(
                 constraint=constraint,
                 use_top_down=is_windows_8_or_later,

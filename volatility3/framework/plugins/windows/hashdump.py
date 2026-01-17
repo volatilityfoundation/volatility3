@@ -2,7 +2,8 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from volatility3.framework import interfaces, deprecation
+
+from volatility3.framework import deprecation, interfaces
 from volatility3.plugins.windows.registry import hashdump
 
 vollog = logging.getLogger(__name__)
@@ -12,7 +13,7 @@ class Hashdump(
     interfaces.plugins.PluginInterface,
     deprecation.PluginRenameClass,
     replacement_class=hashdump.Hashdump,
-    removal_date="2025-09-25",
+    removal_date="2026-09-25",
 ):
     """Dumps user hashes from memory (deprecated)"""
 
