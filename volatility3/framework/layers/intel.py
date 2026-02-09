@@ -489,6 +489,26 @@ class Intel32e(Intel):
     ]
 
 
+class Intel32e5Level(Intel):
+    """Class for handling 64-bit (32-bit extensions) for Intel
+    architectures with 5 level page tables."""
+
+    _direct_metadata = collections.ChainMap(
+        {"architecture": "Intel64"}, Intel._direct_metadata
+    )
+    _entry_format = "<Q"
+    _bits_per_register = 64
+    _maxphyaddr = 52
+    _maxvirtaddr = 57
+    _structure = [
+        ("page map layer 5", 9, False),
+        ("page map layer 4", 9, False),
+        ("page directory pointer", 9, True),
+        ("page directory", 9, True),
+        ("page table", 9, False),
+    ]
+
+
 class WindowsMixin(Intel):
     @staticmethod
     def _page_is_valid(entry: int) -> bool:
