@@ -870,7 +870,7 @@ class task_struct(generic.GenericIntelProcess):
 
     def get_user_tid(self) -> int:
         """Returns the tid of this process"""
-        return self.tgid
+        return self.pid
 
     def get_user_parent_pid(self) -> int:
         """Returns the pid of parent of this process"""
