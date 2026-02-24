@@ -864,6 +864,13 @@ class task_struct(generic.GenericIntelProcess):
 
         return ppid
 
+    def get_pid(self) -> int:
+        """Returns the pid of this process by using the get_user_pid function"""
+        vollog.debug(
+            "It is not recomended to use get_pid for linux, use either get_user_pid or get_user_tid so that the results are clearer"
+        )
+        return self.get_user_pid
+
     def get_user_pid(self) -> int:
         """Returns the pid of this process"""
         return self.tgid
