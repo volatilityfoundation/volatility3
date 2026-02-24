@@ -857,7 +857,7 @@ class task_struct(generic.GenericIntelProcess):
         # root time namespace, not within the task's own time namespace
         return boottime + task_start_time_timedelta
 
-    def get_parent_pid(self) -> int:
+    def get_user_parent_pid(self) -> int:
         """Returns the parent process ID (PPID)
 
         This method replicates the Linux kernel's `getppid` syscall behavior.
@@ -867,9 +867,16 @@ class task_struct(generic.GenericIntelProcess):
         if self.real_parent and self.real_parent.is_readable():
             ppid = self.real_parent.tgid
         else:
-            ppid = 0
+            ppid = renderers.UnreadableValue()
 
         return ppid
+
+    def get_parent_pid(self) -> int:
+        """Returns the parent pid of this process by using the get_user_parent_pid function"""
+        vollog.debug(
+            "It is not recomended to use get_parent_pid for linux, use get_user_parent_pid so that the results are clearer"
+        )
+        return self.get_user_parent_pid
 
     def get_pid(self) -> int:
         """Returns the pid of this process by using the get_user_pid function"""
@@ -885,15 +892,6 @@ class task_struct(generic.GenericIntelProcess):
     def get_user_tid(self) -> int:
         """Returns the tid of this process"""
         return self.pid
-
-    def get_user_parent_pid(self) -> int:
-        """Returns the pid of parent of this process"""
-        # Uses real_parent rather than parent to match Linux kernel getppid
-        return (
-            self.real_parent.get_user_pid()
-            if self.real_parent and self.real_parent.is_readable()
-            else renderers.UnreadableValue("real_parent")
-        )
 
     def get_name(self) -> str:
         """Returns the name of this process"""
