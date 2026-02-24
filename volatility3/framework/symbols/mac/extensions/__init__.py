@@ -111,10 +111,10 @@ class proc(generic.GenericIntelProcess):
 
             yield (start, end - start)
 
-    def get_user_pid(self) -> int:
+    def get_pid(self) -> int:
         return self.p_pid
 
-    def get_user_parent_pid(self) -> int:
+    def get_parent_pid(self) -> int:
         return self.p_ppid
 
     def get_name(self) -> str:

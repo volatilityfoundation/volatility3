@@ -13,13 +13,13 @@ from volatility3.framework import objects, interfaces
 class GenericProcess(objects.StructType):
     """A Generic Process class which is not designed to be used directly but provide a base to be used elsewhere."""
 
-    def get_user_pid(self) -> int:
+    def get_pid(self) -> int:
         """get_pid should return the pid of the process"""
         raise NotImplementedError(
             "The GenericProcess base class has no get_user_pid method defined"
         )
 
-    def get_user_parent_pid(self) -> int:
+    def get_parent_pid(self) -> int:
         """get_user_parent_pid should return the pid of the parent process"""
         raise NotImplementedError(
             "The GenericProcess base class has no get_user_parent_pid method defined"
