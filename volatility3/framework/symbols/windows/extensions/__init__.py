@@ -1068,11 +1068,11 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
                 yield env, var
         return  # Generation finished
 
-    def get_user_pid(self) -> int:
+    def get_pid(self) -> int:
         """Returns the pid of this process"""
         return self.UniqueProcessId
 
-    def get_user_parent_pid(self) -> int:
+    def get_parent_pid(self) -> int:
         """Returns the pid of parent of this process"""
         return self.InheritedFromUniqueProcessId
 
