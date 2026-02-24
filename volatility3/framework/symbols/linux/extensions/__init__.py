@@ -22,7 +22,14 @@ from typing import (
     Callable,
 )
 
-from volatility3.framework import constants, exceptions, objects, interfaces, symbols
+from volatility3.framework import (
+    constants,
+    exceptions,
+    objects,
+    interfaces,
+    symbols,
+    renderers,
+)
 from volatility3.framework.renderers import conversion
 from volatility3.framework.constants import linux as linux_constants
 from volatility3.framework.layers import linear, intel
@@ -885,7 +892,7 @@ class task_struct(generic.GenericIntelProcess):
         return (
             self.real_parent.get_user_pid()
             if self.real_parent and self.real_parent.is_readable()
-            else 0
+            else renderers.UnreadableValue("real_parent")
         )
 
     def get_name(self) -> str:
