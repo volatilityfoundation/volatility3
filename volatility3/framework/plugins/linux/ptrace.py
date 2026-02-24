@@ -53,7 +53,7 @@ class Ptrace(plugins.PluginInterface):
         tasks = pslist.PsList.list_tasks(
             context,
             vmlinux_module_name,
-            filter_func=pslist.PsList.create_pid_filter(),
+            filter_func=pslist.PsList.create_user_tid_filter(),
             include_threads=True,
         )
 

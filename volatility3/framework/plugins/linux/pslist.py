@@ -79,7 +79,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     @classmethod
-    def create_pid_filter(
+    def create_user_tid_filter(
         cls, pid_list: Optional[List[int]] = None
     ) -> Callable[[Any], bool]:
         """Constructs a filter function for process IDs.
@@ -95,7 +95,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         if filter_list:
 
             def filter_func(x):
-                return x.get_pid() not in filter_list
+                return x.get_user_tid() not in filter_list
 
             return filter_func
         else:
@@ -292,7 +292,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         include_threads = self.config.get("threads")
         decorate_comm = self.config.get("decorate_comm")
         dump = self.config.get("dump")
-        filter_func = self.create_pid_filter(pids)
+        filter_func = self.create_user_tid_filter(pids)
 
         columns = [
             ("OFFSET (V)", format_hints.Hex),
@@ -313,7 +313,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     def generate_timeline(self):
         pids = self.config.get("pid")
-        filter_func = self.create_pid_filter(pids)
+        filter_func = self.create_user_tid_filter(pids)
         for task in self.list_tasks(
             self.context, self.config["kernel"], filter_func, include_threads=True
         ):
