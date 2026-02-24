@@ -16,13 +16,13 @@ class GenericProcess(objects.StructType):
     def get_pid(self) -> int:
         """get_pid should return the pid of the process"""
         raise NotImplementedError(
-            "The GenericProcess base class has no get_user_pid method defined"
+            "The GenericProcess base class has no get_pid method defined"
         )
 
     def get_parent_pid(self) -> int:
-        """get_user_parent_pid should return the pid of the parent process"""
+        """get_parent_pid should return the pid of the parent process"""
         raise NotImplementedError(
-            "The GenericProcess base class has no get_user_parent_pid method defined"
+            "The GenericProcess base class has no get_parent_pid method defined"
         )
 
     def get_name(self) -> str:
