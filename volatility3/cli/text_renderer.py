@@ -321,7 +321,11 @@ class QuickTextRenderer(CLIRenderer):
                 "*" * max(0, node.path_depth - 1)
                 + ("" if (node.path_depth <= 1) else " ")
             )
-            accumulator.write("{}".format("\t".join(line)))
+
+            accumulator_text = ""
+            for part in line:
+                accumulator_text += f"{part.encode('ascii', errors='backslashreplace').decode('ascii')}\t"
+            accumulator.write(accumulator_text.rstrip("\t"))
             accumulator.flush()
             return accumulator
 
