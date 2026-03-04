@@ -118,16 +118,14 @@ class Volshell(interfaces.plugins.PluginInterface):
         mode = self.__module__.split(".")[-1]
         mode = mode[0].upper() + mode[1:]
 
-        banner = textwrap.dedent(
-            f"""
+        banner = textwrap.dedent(f"""
             Call help() to see available functions
 
             Volshell mode        : {mode}
             Current Layer        : {self.current_layer}
             Current Symbol Table : {self.current_symbol_table}
             Current Kernel Name  : {self.current_kernel_name}
-            """
-        )
+            """)
 
         sys.ps1 = f"({self.current_layer}) >>> "
         # Dict self._construct_locals_dict() will have priority on keys

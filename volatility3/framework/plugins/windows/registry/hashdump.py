@@ -444,7 +444,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
     def decrypt_single_salted_hash(
         cls, rid, hbootkey: bytes, enc_hash: bytes, _lmntstr, salt: bytes
     ) -> Optional[bytes]:
-        (des_k1, des_k2) = cls.sid_to_key(rid)
+        des_k1, des_k2 = cls.sid_to_key(rid)
         des1 = DES.new(des_k1, DES.MODE_ECB)
         des2 = DES.new(des_k2, DES.MODE_ECB)
         cipher = AES.new(hbootkey[:16], AES.MODE_CBC, salt)
@@ -556,7 +556,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
     def decrypt_single_hash(
         cls, rid: int, hbootkey: bytes, enc_hash: bytes, lmntstr: bytes
     ):
-        (des_k1, des_k2) = cls.sid_to_key(rid)
+        des_k1, des_k2 = cls.sid_to_key(rid)
         des1 = DES.new(des_k1, DES.MODE_ECB)
         des2 = DES.new(des_k2, DES.MODE_ECB)
         md5 = hashlib.md5()

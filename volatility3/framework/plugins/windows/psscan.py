@@ -84,9 +84,9 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         if not isinstance(memory, layers.intel.Intel):
             raise TypeError("Primary layer is not an intel layer")
 
-        (_, _, ph_offset, _, _) = list(
-            memory.mapping(offset=proc.vol.offset, length=0)
-        )[0]
+        _, _, ph_offset, _, _ = list(memory.mapping(offset=proc.vol.offset, length=0))[
+            0
+        ]
 
         return ph_offset
 
@@ -228,7 +228,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             virtual_process = ethread.owning_process()
             # Sanity check the bounce.
             # This compares the original offset with the new one (translated from virtual layer)
-            (_, _, ph_offset, _, _) = list(
+            _, _, ph_offset, _, _ = list(
                 context.layers[ntkrnlmp.layer_name].mapping(
                     offset=virtual_process.vol.offset, length=0
                 )
@@ -303,7 +303,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if not self.config["physical"]:
                 offset = proc.vol.offset
             else:
-                (_, _, offset, _, _) = list(
+                _, _, offset, _, _ = list(
                     memory.mapping(offset=proc.vol.offset, length=0)
                 )[0]
 

@@ -70,7 +70,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
 
     @classmethod
     def parse_cache_entry(cls, cache_data: bytes) -> Tuple[int, int, int, bytes, bytes]:
-        (uname_len, domain_len) = unpack("<HH", cache_data[:4])
+        uname_len, domain_len = unpack("<HH", cache_data[:4])
         if len(cache_data[60:62]) == 0:
             return (uname_len, domain_len, 0, b"", b"")
         (domain_name_len,) = unpack("<H", cache_data[60:62])
@@ -159,7 +159,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
                 continue
             dec_data = self.decrypt_hash(enc_data, nlkm, ch, not vista_or_later)
 
-            (username, domain, domain_name, hashh) = self.parse_decrypted_cache(
+            username, domain, domain_name, hashh = self.parse_decrypted_cache(
                 dec_data, uname_len, domain_len, domain_name_len
             )
             yield (0, (username, domain, domain_name, hashh))

@@ -12,7 +12,6 @@ from volatility3.framework.interfaces import plugins
 from volatility3.framework.symbols import linux
 from volatility3.plugins.linux import pslist
 
-
 vollog = logging.getLogger(__name__)
 
 MountInfoData = namedtuple(

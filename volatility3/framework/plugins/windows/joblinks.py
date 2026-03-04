@@ -53,7 +53,7 @@ class JobLinks(interfaces.plugins.PluginInterface):
                 if not self.config["physical"]:
                     offset = proc.vol.offset
                 else:
-                    (_, _, offset, _, _) = list(
+                    _, _, offset, _, _ = list(
                         memory.mapping(offset=proc.vol.offset, length=0)
                     )[0]
 
@@ -83,7 +83,7 @@ class JobLinks(interfaces.plugins.PluginInterface):
                     if not self.config["physical"]:
                         offset = entry.vol.offset
                     else:
-                        (_, _, offset, _, _) = list(
+                        _, _, offset, _, _ = list(
                             memory.mapping(offset=entry.vol.offset, length=0)
                         )[0]
 

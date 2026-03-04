@@ -178,7 +178,7 @@ class VerInfo(interfaces.plugins.PluginInterface):
                 self.context, session_layers, mod.DllBase
             )
             try:
-                (major, minor, product, build) = self.get_version_information(
+                major, minor, product, build = self.get_version_information(
                     self._context, pe_table_name, session_layer_name, mod.DllBase
                 )
             except (
@@ -187,7 +187,7 @@ class VerInfo(interfaces.plugins.PluginInterface):
                 TypeError,
                 AttributeError,
             ):
-                (major, minor, product, build) = [renderers.UnreadableValue()] * 4
+                major, minor, product, build = [renderers.UnreadableValue()] * 4
                 if (
                     not isinstance(BaseDllName, renderers.UnreadableValue)
                     and physical_layer_name is not None
@@ -197,7 +197,7 @@ class VerInfo(interfaces.plugins.PluginInterface):
                         self._context, physical_layer_name, BaseDllName
                     )
                     if result is not None:
-                        (major, minor, product, build) = result
+                        major, minor, product, build = result
 
             # the pid and process are not applicable for kernel modules
             yield (
@@ -238,11 +238,11 @@ class VerInfo(interfaces.plugins.PluginInterface):
                     DllBase = renderers.UnreadableValue()
 
                 try:
-                    (major, minor, product, build) = self.get_version_information(
+                    major, minor, product, build = self.get_version_information(
                         self._context, pe_table_name, proc_layer_name, entry.DllBase
                     )
                 except (exceptions.InvalidAddressException, ValueError, AttributeError):
-                    (major, minor, product, build) = [renderers.UnreadableValue()] * 4
+                    major, minor, product, build = [renderers.UnreadableValue()] * 4
 
                 yield (
                     0,
