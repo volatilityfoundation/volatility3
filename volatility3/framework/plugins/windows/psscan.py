@@ -4,17 +4,15 @@
 
 import datetime
 import logging
-from typing import Iterable, Callable, Optional, Tuple
+from typing import Callable, Iterable, Optional, Tuple
 
-from volatility3.framework import renderers, interfaces, layers, exceptions
+from volatility3.framework import exceptions, interfaces, layers, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
 from volatility3.plugins import timeliner
-from volatility3.plugins.windows import info
-from volatility3.plugins.windows import poolscanner
-from volatility3.plugins.windows import pslist
+from volatility3.plugins.windows import info, poolscanner, pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -150,9 +148,9 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         cls,
         context: interfaces.context.ContextInterface,
         kernel_module_name: str,
-        filter_func: Callable[
-            [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: False,
+        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: (
+            False
+        ),
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Scans for processes using the poolscanner module and constraints.
 
@@ -165,13 +163,19 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         """
 
         kernel = context.modules[kernel_module_name]
+        scan_layer_name = context.layers[kernel.layer_name].config.get(
+            "memory_layer", kernel.layer_name
+        )
 
         constraints = poolscanner.PoolScanner.builtin_constraints(
             kernel.symbol_table_name, [b"Pro\xe3", b"Proc"]
         )
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
-            context, kernel_module_name, constraints
+            context,
+            kernel_module_name,
+            constraints,
+            scan_layer_name=scan_layer_name,
         ):
             _constraint, mem_object, _header = result
             if not filter_func(mem_object):

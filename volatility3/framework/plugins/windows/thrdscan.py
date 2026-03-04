@@ -3,7 +3,7 @@
 ##
 import datetime
 import logging
-from typing import Callable, Dict, NamedTuple, Optional, Union, Tuple, Iterator
+from typing import Callable, Dict, Iterator, NamedTuple, Optional, Tuple, Union
 
 from volatility3.framework import exceptions, interfaces, objects, renderers
 from volatility3.framework.configuration import requirements
@@ -76,13 +76,19 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
         """
 
         kernel = context.modules[module_name]
+        scan_layer_name = context.layers[kernel.layer_name].config.get(
+            "memory_layer", kernel.layer_name
+        )
 
         constraints = poolscanner.PoolScanner.builtin_constraints(
             kernel.symbol_table_name, [b"Thr\xe5", b"Thre"]
         )
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
-            context, module_name, constraints
+            context,
+            module_name,
+            constraints,
+            scan_layer_name=scan_layer_name,
         ):
             _constraint, mem_object, _header = result
             yield mem_object
@@ -99,12 +105,8 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
             thread_tid = ethread.Cid.UniqueThread
             thread_start_addr = ethread.StartAddress
             thread_win32start_addr = ethread.Win32StartAddress
-            thread_create_time = (
-                ethread.get_create_time()
-            )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
-            thread_exit_time = (
-                ethread.get_exit_time()
-            )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
+            thread_create_time = ethread.get_create_time()  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
+            thread_exit_time = ethread.get_exit_time()  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
 
             owner_proc = None
             if vads_cache is not None:

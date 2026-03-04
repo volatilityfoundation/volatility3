@@ -3,15 +3,15 @@
 #
 import logging
 import os
-from typing import List, Tuple, Iterator, Generator, Dict
+from typing import Dict, Generator, Iterator, List, Tuple
 
-from volatility3.framework import interfaces, renderers, symbols, exceptions
+from volatility3.framework import exceptions, interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import versions
-from volatility3.plugins.windows import poolscanner, modules
 from volatility3.framework.symbols.windows.extensions import gui
+from volatility3.plugins.windows import modules, poolscanner
 
 vollog = logging.getLogger(__name__)
 
@@ -150,6 +150,9 @@ class WindowStations(interfaces.plugins.PluginInterface):
         """
 
         kernel = context.modules[kernel_module_name]
+        scan_layer_name = context.layers[kernel.layer_name].config.get(
+            "memory_layer", kernel.layer_name
+        )
 
         gui_table_name = cls.create_gui_table(
             context, kernel.symbol_table_name, config_path
@@ -166,6 +169,7 @@ class WindowStations(interfaces.plugins.PluginInterface):
             kernel_module_name=kernel_module_name,
             object_symbol_table_name=gui_table_name,
             constraints=constraints,
+            scan_layer_name=scan_layer_name,
         ):
             _constraint, mem_object, _header = result
 
