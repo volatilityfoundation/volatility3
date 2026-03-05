@@ -5,7 +5,7 @@
 import logging
 import os
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 from volatility3.framework import interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
@@ -291,13 +291,13 @@ class Bitlocker(interfaces.plugins.PluginInterface):
                 )
 
     def _dump_files(self, result: FvekResult) -> Tuple[
-        interfaces.renderers.BaseAbsentValue | str,
-        interfaces.renderers.BaseAbsentValue | str,
+        Union[interfaces.renderers.BaseAbsentValue, str],
+        Union[interfaces.renderers.BaseAbsentValue, str],
     ]:
-        dump_file: interfaces.renderers.BaseAbsentValue | str = (
+        dump_file: Union[interfaces.renderers.BaseAbsentValue, str] = (
             renderers.NotApplicableValue()
         )
-        dislocker_file: interfaces.renderers.BaseAbsentValue | str = (
+        dislocker_file: Union[interfaces.renderers.BaseAbsentValue, str] = (
             renderers.NotApplicableValue()
         )
 
