@@ -153,6 +153,8 @@ orders the results by time."""
                         )
                     times[timestamp_type] = timestamp
                     self.timeline[(plugin_name, item)] = times
+
+                for plugin_name, item in self.timeline:
                     data.append(
                         (
                             0,

@@ -10,7 +10,7 @@ import struct
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from volatility3 import classproperty
-from volatility3.framework import exceptions, interfaces, constants
+from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import linear
 
@@ -38,7 +38,7 @@ class Intel(linear.LinearlyMappedLayer):
     # NOTE: _maxphyaddr is MAXPHYADDR as defined in the Intel specs *NOT* the maximum physical address
     _maxphyaddr = 32
     _maxvirtaddr = _maxphyaddr
-    _structure = [("page directory", 10, False), ("page table", 10, True)]
+    _structure = [("page directory", 10, True), ("page table", 10, False)]
     _direct_metadata = collections.ChainMap(
         {"architecture": "Intel32"},
         {"mapped": True},
@@ -221,18 +221,6 @@ class Intel(linear.LinearlyMappedLayer):
                     entry,
                     "Page Fault at entry " + hex(entry) + " in table " + name,
                 )
-            # Check if we're a large page
-            if large_page and (entry & self._PAGE_PSE):
-                # Mask off the PAT bit
-                if entry & self._PAGE_PAT_LARGE:
-                    entry -= self._PAGE_PAT_LARGE
-                # We're a large page, the rest is finished below
-                # If we want to implement PSE-36, it would need to be done here
-                break
-            # Figure out how much of the offset we should be using
-            start = position
-            position -= size
-            index = self._mask(page_address, start, position + 1) >> (position + 1)
 
             # Grab the base address of the table we'll be getting the next entry from
             base_address = self._mask(
@@ -249,6 +237,11 @@ class Intel(linear.LinearlyMappedLayer):
                     "Page Fault at entry " + hex(entry) + " in table " + name,
                 )
 
+            # Figure out how much of the offset we should be using
+            start = position
+            position -= size
+            index = self._mask(page_address, start, position + 1) >> (position + 1)
+
             # Read the data for the next entry
             entry_data_start = index << self._index_shift
             entry_data = table[entry_data_start : entry_data_start + self._entry_size]
@@ -262,16 +255,52 @@ class Intel(linear.LinearlyMappedLayer):
             # Read out the new entry from memory
             (entry,) = struct.unpack(self._entry_format, entry_data)
 
+            # Check if we're a large page
+            if large_page and (entry & self._PAGE_PSE):
+                # Mask off the PAT bit
+                if entry & self._PAGE_PAT_LARGE:
+                    entry -= self._PAGE_PAT_LARGE
+                # We're a large page, the rest is finished below
+                # If we want to implement PSE-36, it would need to be done here
+                break
+
         return entry, position
 
     @functools.lru_cache(maxsize=1025)
     def _get_valid_table(self, base_address: int) -> Optional[bytes]:
         """Extracts the table, validates it and returns it if it's valid."""
-        table = self._context.layers.read(
-            self._base_layer, base_address, self.page_size
-        )
+        try:
+            table = self._context.layers.read(
+                self._base_layer, base_address, self.page_size
+            )
+        except exceptions.InvalidAddressException:
+            return None
 
+        ####
         # If the table is entirely duplicates, then mark the whole table as bad
+        # This is because Windows 10 onwards has a tendency to map unused pages as present
+        # This had the following consequences:
+        #  - Used very litle physical memory
+        #  - Exploded virtual memory
+        #  - Causes *scan plugins to take multiple hours to complete even on small images
+
+        # Previous versions of volatility would ignore a page during a scan when it matched
+        # the one directly preceding it in physical memory.
+        # This could trip if only two pages were identical and still required enumerating all
+        # the invalid pages (which itself was quite time consuming)
+
+        # For this reason, volatility 3 shifted to looking at entire page tables (1,024 pages)
+        # and if all the pages mapped to the same place the table wouuld be skipped
+        # This could also be applied to the Directory level as well as the Table level, allowing
+        # Volatility to skip huge sections of virtual memory very efficiently, without missing
+        # any pages that were distinct within a particular page table (or directory).
+
+        # In order to work at this level, the logic was moved out of the scanning component and
+        # directly into the layer logic itself.  This does have the side effect of preventing
+        # entirely duplicated page tables from reporting as present, however, the trade off between
+        # Windows 10+ reduced scanning times (common amongst scan plugins) versus incorrectly reporting
+        # entire page tables of identically mapped repeating *valid* data (rare) was accepted in favour
+        # of the more common occurance.
         if table == table[: self._entry_size] * self._entry_number:
             return None
         return table
@@ -371,12 +400,18 @@ class Intel(linear.LinearlyMappedLayer):
             yield offset, length, mapped_offset, length, layer_name
             return None
         while length > 0:
+            skip_mask = None
             try:
                 chunk_offset, page_size, layer_name = self._translate(offset)
-                chunk_size = min(page_size - (chunk_offset % page_size), length)
+                # Page align the chunk size value
+                chunk_size = min(page_size - (offset % page_size), length)
                 if not self._context.layers[layer_name].is_valid(
                     chunk_offset, chunk_size
                 ):
+                    # Virtual -> physical is contiguous in the chunk_size range.
+                    # If we fail, we can jump directly to the end as we know all bytes in between
+                    # aren't mapped (virtually and) physically anyway.
+                    skip_mask = chunk_size - 1
                     raise exceptions.InvalidAddressException(
                         layer_name=layer_name, invalid_address=chunk_offset
                     )
@@ -386,12 +421,13 @@ class Intel(linear.LinearlyMappedLayer):
             ) as excp:
                 if not ignore_errors:
                     raise
-                # We can jump more if we know where the page fault failed
-                if isinstance(excp, exceptions.PagedInvalidAddressException):
-                    mask = (1 << excp.invalid_bits) - 1
-                else:
-                    mask = (1 << self._page_size_in_bits) - 1
-                length_diff = mask + 1 - (offset & mask)
+                if skip_mask is None:
+                    # We can jump more if we know where the page fault occured
+                    if isinstance(excp, exceptions.PagedInvalidAddressException):
+                        skip_mask = (1 << excp.invalid_bits) - 1
+                    else:
+                        skip_mask = (1 << self._page_size_in_bits) - 1
+                length_diff = skip_mask + 1 - (offset & skip_mask)
                 length -= length_diff
                 offset += length_diff
             else:
@@ -429,7 +465,7 @@ class IntelPAE(Intel):
     _structure = [
         ("page directory pointer", 2, False),
         ("page directory", 9, True),
-        ("page table", 9, True),
+        ("page table", 9, False),
     ]
     _direct_metadata = collections.ChainMap({"pae": True}, Intel._direct_metadata)
 
@@ -449,7 +485,7 @@ class Intel32e(Intel):
         ("page map layer 4", 9, False),
         ("page directory pointer", 9, True),
         ("page directory", 9, True),
-        ("page table", 9, True),
+        ("page table", 9, False),
     ]
 
 

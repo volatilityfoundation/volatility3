@@ -179,25 +179,45 @@ class module(generic.GenericIntelProcess):
             return None
 
     def _get_sect_count(self, grp: interfaces.objects.ObjectInterface) -> int:
-        """Try to determine the number of valid sections"""
-        symbol_table_name = self.get_symbol_table_name()
-        arr = self._context.object(
-            symbol_table_name + constants.BANG + "array",
-            layer_name=self.vol.layer_name,
-            offset=grp.attrs,
-            subtype=self._context.symbol_space.get_type(
-                symbol_table_name + constants.BANG + "pointer"
-            ),
-            count=25,
-        )
+        """Try to determine the number of valid sections. Support for kernels > 6.14-rc1.
 
-        idx = 0
-        while arr[idx] and arr[idx].is_readable():
-            idx = idx + 1
-        return idx
+        Resources:
+            - https://github.com/torvalds/linux/commit/d8959b947a8dfab1047c6fd5e982808f65717bfe
+            - https://github.com/torvalds/linux/commit/e0349c46cb4fbbb507fa34476bd70f9c82bad359
+        """
+
+        if grp.has_member("bin_attrs"):
+            arr_offset_ptr = grp.bin_attrs
+            arr_subtype = "bin_attribute"
+        else:
+            arr_offset_ptr = grp.attrs
+            arr_subtype = "attribute"
+
+        if not arr_offset_ptr.is_readable():
+            vollog.log(
+                constants.LOGLEVEL_V,
+                f"Cannot dereference the pointer to the NULL-terminated list of binary attributes for module at offset {self.vol.offset:#x}",
+            )
+            return 0
+
+        # We chose 100 as an arbitrary guard value to prevent
+        # looping forever in extreme cases, and because 100 is not expected
+        # to be a valid number of sections. If that still happens,
+        # Vol3 module processing will indicate that it is missing information
+        # with the following message:
+        # "Unable to reconstruct the ELF for module struct at"
+        # See PR #1773 for more information.
+        bin_attrs_list = utility.dynamically_sized_array_of_pointers(
+            context=self._context,
+            array=arr_offset_ptr.dereference(),
+            subtype=self.get_symbol_table_name() + constants.BANG + arr_subtype,
+            iterator_guard_value=100,
+        )
+        return len(bin_attrs_list)
 
     @functools.cached_property
     def number_of_sections(self) -> int:
+        # Dropped in 6.14-rc1: d8959b947a8dfab1047c6fd5e982808f65717bfe
         if self.sect_attrs.has_member("nsections"):
             return self.sect_attrs.nsections
 
@@ -205,15 +225,18 @@ class module(generic.GenericIntelProcess):
 
     def get_sections(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Get a list of section attributes for the given module."""
+        if self.number_of_sections == 0:
+            vollog.debug(
+                f"Invalid number of sections ({self.number_of_sections}) for module at offset {self.vol.offset:#x}"
+            )
+            return []
 
         symbol_table_name = self.get_symbol_table_name()
         arr = self._context.object(
             symbol_table_name + constants.BANG + "array",
             layer_name=self.vol.layer_name,
             offset=self.sect_attrs.attrs.vol.offset,
-            subtype=self._context.symbol_space.get_type(
-                symbol_table_name + constants.BANG + "module_sect_attr"
-            ),
+            subtype=self.sect_attrs.attrs.vol.subtype,
             count=self.number_of_sections,
         )
 
@@ -1092,14 +1115,11 @@ class mm_struct(objects.StructType):
             vm_area_struct objects
         """
         for vma in self._do_get_vma_iter():
-            try:
-                vma.vm_start
-                vma.vm_end
-                vma.get_protection()
-
-                yield vma
-            except exceptions.InvalidAddressException:
+            if not vma.is_valid():
                 vollog.debug(f"Skipping invalid vm_area_struct at {vma.vol.offset:#x}")
+                continue
+
+            yield vma
 
 
 class super_block(objects.StructType):
@@ -1234,6 +1254,39 @@ class vm_area_struct(objects.StructType):
             else:
                 retval = retval + "-"
         return retval
+
+    def is_valid(self) -> bool:
+        """Validate a VMA struct to prevent processing smeared entries."""
+        try:
+            start = self.vm_start
+            end = self.vm_end
+            self.get_protection()
+        except exceptions.InvalidAddressException:
+            return False
+
+        layer = self._context.layers[self.vol.layer_name]
+        length = end - start
+        if (
+            (start > end)
+            or (start == 0 and length == 0)
+            or (length % layer.page_size != 0)
+        ):
+            return False
+
+        if self.vm_file != 0:
+            try:
+                inode = self.vm_file.get_inode()
+            except exceptions.InvalidAddressException:
+                return False
+
+            # Verify that a file-backed VMA's page offset
+            # is not greater than the size of the file's inode.
+            # Check only inode sizes greater than 0 to account for
+            # special devices (e.g. "/dev/dri/card0") and prevent false negatives.
+            if inode.i_size > 0 and self.get_page_offset() > inode.i_size:
+                return False
+
+        return True
 
     # only parse the rwx bits
     def get_protection(self) -> str:
@@ -3158,7 +3211,9 @@ class module_sect_attr(objects.StructType):
         """
         if hasattr(self, "battr"):
             try:
-                return utility.pointer_to_string(self.battr.attr.name, count=32)
+                return utility.pointer_to_string(
+                    self.battr.attr.name, count=linux_constants.ATTRIBUTE_NAME_MAX_SIZE
+                )
             except exceptions.InvalidAddressException:
                 # if battr is present then its name attribute needs to be valid
                 vollog.debug(f"Invalid battr name for section at {self.vol.offset:#x}")
@@ -3166,14 +3221,18 @@ class module_sect_attr(objects.StructType):
 
         elif self.name.vol.type_name == "array":
             try:
-                return utility.array_to_string(self.name, count=32)
+                return utility.array_to_string(
+                    self.name, count=linux_constants.ATTRIBUTE_NAME_MAX_SIZE
+                )
             except exceptions.InvalidAddressException:
                 # specifically do not return here to give `mattr` a chance
                 vollog.debug(f"Invalid direct name for section at {self.vol.offset:#x}")
 
         elif self.name.vol.type_name == "pointer":
             try:
-                return utility.pointer_to_string(self.name, count=32)
+                return utility.pointer_to_string(
+                    self.name, count=linux_constants.ATTRIBUTE_NAME_MAX_SIZE
+                )
             except exceptions.InvalidAddressException:
                 # specifically do not return here to give `mattr` a chance
                 vollog.debug(
@@ -3183,10 +3242,33 @@ class module_sect_attr(objects.StructType):
         # if everything else failed...
         if hasattr(self, "mattr"):
             try:
-                return utility.pointer_to_string(self.mattr.attr.name, count=32)
+                return utility.pointer_to_string(
+                    self.mattr.attr.name, count=linux_constants.ATTRIBUTE_NAME_MAX_SIZE
+                )
             except exceptions.InvalidAddressException:
                 vollog.debug(
                     f"Unresolvable name for for section at {self.vol.offset:#x}"
                 )
 
         return None
+
+
+class bin_attribute(objects.StructType):
+    def get_name(self) -> Optional[str]:
+        """
+        Performs extraction of the bin_attribute name
+        """
+        try:
+            return utility.pointer_to_string(
+                self.attr.name, count=linux_constants.ATTRIBUTE_NAME_MAX_SIZE
+            )
+        except exceptions.InvalidAddressException:
+            vollog.debug(f"Invalid attr name for bin_attribute at {self.vol.offset:#x}")
+            return None
+
+    @property
+    def address(self) -> int:
+        """Equivalent to module_sect_attr.address:
+        - https://github.com/torvalds/linux/commit/4b2c11e4aaf7e3d7fd9ce8e5995a32ff5e27d74f
+        """
+        return self.private

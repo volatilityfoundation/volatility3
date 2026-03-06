@@ -618,3 +618,37 @@ class TestLinuxPscallstack:
             rb"1\s+init\s+39\s+0x88001f999a40.*?0xffff81109039\s+do_select\s+T\s+kernel",
             out,
         )
+
+
+class TestLinuxSockscan:
+    def test_linux_sockscan(self, volatility, python):
+        # designed for linux-sample-1.dmp SHA1:1C3A4627EDCA94A7ADE3414592BEF0E62D7D3BB6
+        image = LinuxSamples.LINUX_GENERIC.value.path
+        rc, out, err = test_volatility.runvol_plugin(
+            "linux.sockscan.Sockscan", image, volatility, python
+        )
+
+        # ensure that multiple unix paths for sockets have been found
+        assert (
+            len(
+                re.findall(
+                    rb"(/[ -~]+?){1,8}",
+                    out,
+                )
+            )
+            >= 10
+        )
+
+        # ensure that multiple IPv4 addresses have been found
+        assert (
+            len(
+                re.findall(
+                    rb"((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}",
+                    out,
+                )
+            )
+            >= 10
+        )
+
+        assert out.count(b"\n") >= 50
+        assert rc == 0

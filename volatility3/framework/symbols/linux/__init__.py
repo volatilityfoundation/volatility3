@@ -52,7 +52,6 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("idr", extensions.IDR)
         self.set_type_class("address_space", extensions.address_space)
         self.set_type_class("page", extensions.page)
-        self.set_type_class("module_sect_attr", extensions.module_sect_attr)
 
         # Might not exist in the current symbols
         self.optional_set_type_class("module", extensions.module)
@@ -61,6 +60,8 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.optional_set_type_class("kernel_cap_struct", extensions.kernel_cap_struct)
         self.optional_set_type_class("kernel_cap_t", extensions.kernel_cap_t)
         self.optional_set_type_class("scatterlist", extensions.scatterlist)
+        self.optional_set_type_class("module_sect_attr", extensions.module_sect_attr)
+        self.optional_set_type_class("bin_attribute", extensions.bin_attribute)
 
         # kernels >= 4.18
         self.optional_set_type_class("timespec64", extensions.timespec64)

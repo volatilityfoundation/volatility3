@@ -9,6 +9,10 @@ Linux-specific values that aren't found in debug symbols
 import enum
 from dataclasses import dataclass
 
+# Exec argument limits
+# Ref: include/uapi/linux/binfmts.h (linux.git commit f6031913338f1dad5bd8cb7286ff4e53644b6940)
+MAX_ARG_STRLEN = 32 * 4096
+
 KERNEL_NAME = "__kernel__"
 
 """The value hard coded from the Linux Kernel (hence not extracted from the layer itself)"""
@@ -431,6 +435,17 @@ VMCOREINFO_MAGIC = b"VMCOREINFO\x00"
 # Aligned to 4 bytes. See storenote() in kernels < 4.19 or append_kcore_note() in kernels >= 4.19
 VMCOREINFO_MAGIC_ALIGNED = VMCOREINFO_MAGIC + b"\x00"
 OSRELEASE_TAG = b"OSRELEASE="
+
+ATTRIBUTE_NAME_MAX_SIZE = 255
+"""
+In 5.9-rc1+, the Linux kernel limits the READ size of a section bin_attribute name to MODULE_SECT_READ_SIZE:
+
+- https://elixir.bootlin.com/linux/v6.15-rc4/source/kernel/module/sysfs.c#L106
+- https://github.com/torvalds/linux/commit/11990a5bd7e558e9203c1070fc52fb6f0488e75b
+
+However, the raw section name loaded from the .ko ELF can in theory be thousands of characters,
+and unless we do a NULL terminated search we can't set a perfect value.
+"""
 
 
 @dataclass

@@ -525,6 +525,10 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
     .. note:: The pdb_names must be a list of byte strings, unicode strs will not match against the data scanned
     """
 
+    _version = (1, 0, 0)
+
+    _required_framework_version = (2, 27, 0)
+
     overlap = 0x4000
     """The size of overlap needed for the signature to ensure data cannot hide between two scanned chunks"""
     thread_safe = True

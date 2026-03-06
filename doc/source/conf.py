@@ -1,4 +1,4 @@
-# This file is Copyright 2022 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2026 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 #
@@ -16,10 +16,9 @@
 
 import os
 import sys
+from importlib.util import find_spec
 
 import sphinx.ext.apidoc
-
-from importlib.util import find_spec
 
 
 def setup(app):
@@ -167,7 +166,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "Volatility 3"
-copyright = "2012-2025, Volatility Foundation"
+copyright = "2012-2026, Volatility Foundation"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

@@ -52,7 +52,7 @@ class ArrowRenderer(text_renderer.CLIRenderer):
             datetime.datetime: lambda: pa.timestamp("ms"),
             format_hints.Bin: pa.uint64,
             format_hints.Hex: pa.uint64,
-            format_hints.MultiTypeData: pa.utf8,
+            format_hints.MultiTypeData: pa.binary,
             format_hints.HexBytes: pa.binary,
             renderers.LayerData: pa.binary,
             bytes: pa.binary,

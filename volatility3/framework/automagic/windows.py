@@ -200,7 +200,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
         (
             "Detecting Self-referential pointer for recent windows",
             [DtbSelfRef64bit()],
-            [(0x150000, 0x150000), (0x650000, 0xA0000)],
+            [(0x150000, 0x150000), (0x550000, 0x1A0000), (0x900000, 0x100000)],
         ),
         (
             "Older windows fixed location self-referential pointers",
@@ -305,9 +305,20 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
 
             hits = sorted(list(hits), key=sort_by_tests)
 
+            vollog.debug(f"WindowsIntelStacker hits: {hits}")
+
             for test, page_map_offset in hits:
                 # Turn the page tables into integers and find the largest one
                 page_table = base_layer.read(page_map_offset, 0x1000)
+
+                # Modern windows can have a dummy page table with only about 2 entries, so sanity check
+                null_count = sum([1 if page_table[x] else 0 for x in page_table])
+                if null_count > 0xFA0:
+                    vollog.debug(
+                        f"DTB {page_map_offset:x} contains less than 12 valid pointers, ignoring"
+                    )
+                    continue
+
                 ptr_size = struct.calcsize(test.ptr_struct)
                 max_pointer = get_max_pointer(page_table, test, ptr_size)
 
