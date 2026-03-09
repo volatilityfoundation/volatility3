@@ -14,7 +14,7 @@ import sys
 import urllib.parse
 import urllib.request
 import zipfile
-from typing import Any, IO, List, Optional
+from typing import IO, Any, List, Optional
 from urllib import error
 
 from volatility3 import framework
@@ -26,6 +26,13 @@ try:
     HAS_MAGIC = True
 except ImportError:
     HAS_MAGIC = False
+
+try:
+    import zstd
+
+    ZSTD_SUPPORTED = True
+except ImportError:
+    ZSTD_SUPPORTED = False
 
 try:
     # Import so that the handler is found by the framework.class_subclasses callc
@@ -232,21 +239,26 @@ class ResourceAccessor:
                     # Only file's python has magic.detect_from_fobj
 
                 if detected:
+                    inside_compressed_file = False
                     if detected.mime_type == "application/x-xz":
                         curfile = cascadeCloseFile(
                             lzma.LZMAFile(curfile, mode), curfile
                         )
+                        inside_compressed_file = True
                     elif detected.mime_type == "application/x-bzip2":
                         curfile = cascadeCloseFile(bz2.BZ2File(curfile, mode), curfile)
+                        inside_compressed_file = True
                     elif detected.mime_type == "application/x-gzip":
                         curfile = cascadeCloseFile(
                             gzip.GzipFile(fileobj=curfile, mode=mode), curfile
                         )
-                    if detected.mime_type in [
-                        "application/x-xz",
-                        "application/x-bzip2",
-                        "application/x-gzip",
-                    ]:
+                        inside_compressed_file = True
+                    elif detected.mime_type == "application/zstd" and ZSTD_SUPPORTED:
+                        curfile = cascadeCloseFile(
+                            zstd.ZstdFile(fileobj=curfile, mode=mode), curfile
+                        )
+                        inside_compressed_file = True
+                    if inside_compressed_file:
                         # Read and rewind to ensure we're inside any compressed file layers
                         curfile.read(1)
                         curfile.seek(0)
@@ -271,6 +283,10 @@ class ResourceAccessor:
                 elif extension == "gz":
                     curfile = cascadeCloseFile(
                         gzip.GzipFile(fileobj=curfile, mode=mode), curfile
+                    )
+                elif extension == "zstd" and ZSTD_SUPPORTED:
+                    curfile = cascadeCloseFile(
+                        zstd.ZstdFile(fileobj=curfile, mode=mode), curfile
                     )
                 else:
                     stop = True
