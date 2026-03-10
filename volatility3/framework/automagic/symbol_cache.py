@@ -6,6 +6,7 @@ import datetime
 import json
 import logging
 import os
+import pathlib
 import sqlite3
 import urllib
 import urllib.parse
@@ -239,16 +240,19 @@ class SqliteCache(CacheManagerInterface):
         results = self._database.cursor().execute(statement, parameters).fetchall()
         result = None
         for row in results:
-            local_filepath = self._get_local_filepath(row["location"])
-            if not (
-                local_filepath is None
-                or local_filepath.startswith(tuple(constants.SYMBOL_BASEPATHS))
-            ):
-                vollog.debug(
-                    f"Location {row['location']} found but outside of the registered symbol paths"
-                )
-            else:
-                result = row["location"]
+            if row["location"]:
+                local_filepath = pathlib.Path(self._get_local_filepath(row["location"]))
+                if local_filepath and not any(
+                    [
+                        local_filepath.is_relative_to(basepath)
+                        for basepath in constants.SYMBOL_BASEPATHS
+                    ]
+                ):
+                    vollog.debug(
+                        f"Location {row['location']} found but outside of the registered symbol paths"
+                    )
+                else:
+                    result = row["location"]
         return result
 
     def get_local_locations(self) -> Generator[str, None, None]:
@@ -495,13 +499,17 @@ class SqliteCache(CacheManagerInterface):
                 vollog.debug(
                     f"Duplicate entry for identifier {row['identifier']}: {row['location']} and {output[row['identifier']]}"
                 )
-            local_filepath = self._get_local_filepath(row["location"])
-            if local_filepath and not local_filepath.startswith(
-                tuple(constants.SYMBOL_BASEPATHS)
-            ):
-                vollog.debug(
-                    f"Location {row['location']} was not in the registered symbol paths and therefore not in the identifier dictionary"
-                )
+            if row["location"]:
+                local_filepath = pathlib.Path(self._get_local_filepath(row["location"]))
+                if local_filepath and not any(
+                    [
+                        local_filepath.is_relative_to(basepath)
+                        for basepath in constants.SYMBOL_BASEPATHS
+                    ]
+                ):
+                    vollog.debug(
+                        f"Location {row['location']} was not in the registered symbol paths and therefore not in the identifier dictionary"
+                    )
             else:
                 output[row["identifier"]] = row["location"]
         return output
