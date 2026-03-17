@@ -9,7 +9,7 @@ macOS Tutorial
 
     While this tutorial remains available for educational purposes and for analyzing older macOS memory samples, it is not recommended for modern investigative workflows. If you require macOS memory forensics capabilities for **enterprise or professional investigative environments**, we recommend exploring commercial solutions such as those provided by **Volexity**, which is led by members of the Volatility core development team.
 
-This guide will give you a brief overview of how volatility3 works as well as a demonstration of several of the plugins available in the suite[cite: 1].
+This guide will give you a brief overview of how volatility3 works as well as a demonstration of several of the plugins available in the suite.
 
 Acquiring memory
 ----------------
