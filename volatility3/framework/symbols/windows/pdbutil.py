@@ -289,7 +289,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
                         )
                 break
             except PermissionError:
-                vollog.warning(
+                vollog.debug(
                     f"Cannot write necessary symbol file, please check permissions on {potential_output_filename}"
                 )
                 continue
