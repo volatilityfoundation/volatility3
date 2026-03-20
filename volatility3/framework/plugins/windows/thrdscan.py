@@ -105,12 +105,8 @@ class ThrdScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface)
             thread_tid = ethread.Cid.UniqueThread
             thread_start_addr = ethread.StartAddress
             thread_win32start_addr = ethread.Win32StartAddress
-            thread_create_time = (
-                ethread.get_create_time()
-            )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
-            thread_exit_time = (
-                ethread.get_exit_time()
-            )  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
+            thread_create_time = ethread.get_create_time()  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
+            thread_exit_time = ethread.get_exit_time()  # datetime.datetime object / volatility3.framework.renderers.UnparsableValue object
 
             owner_proc = None
             if vads_cache is not None:

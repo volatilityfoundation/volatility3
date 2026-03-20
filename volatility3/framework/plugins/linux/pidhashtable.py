@@ -194,15 +194,11 @@ class PIDHashTable(plugins.PluginInterface):
 
         has_pid_numbers = vmlinux.has_type("pid") and vmlinux.get_type(
             "pid"
-        ).has_member(
-            "numbers"
-        )  # kernels >= 2.6.24
+        ).has_member("numbers")  # kernels >= 2.6.24
 
         has_pid_chain = vmlinux.has_type("upid") and vmlinux.get_type(
             "upid"
-        ).has_member(
-            "pid_chain"
-        )  # 2.6.24 <= kernels < 4.15
+        ).has_member("pid_chain")  # 2.6.24 <= kernels < 4.15
 
         # kernels >= 4.15
         pid_idr = vmlinux.has_type("pid_namespace") and vmlinux.get_type(

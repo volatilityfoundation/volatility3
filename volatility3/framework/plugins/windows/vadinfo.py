@@ -115,9 +115,9 @@ class VadInfo(interfaces.plugins.PluginInterface):
     def list_vads(
         cls,
         proc: interfaces.objects.ObjectInterface,
-        filter_func: Callable[
-            [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: False,
+        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: (
+            False
+        ),
     ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Lists the Virtual Address Descriptors of a specific process.
 
@@ -198,7 +198,9 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
         return file_handle
 
-    def _generator(self, procs: List[interfaces.objects.ObjectInterface]) -> Generator[
+    def _generator(
+        self, procs: List[interfaces.objects.ObjectInterface]
+    ) -> Generator[
         Tuple[
             int,
             Tuple[

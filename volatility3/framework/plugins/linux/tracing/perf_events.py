@@ -34,7 +34,9 @@ class PerfEvents(plugins.PluginInterface):
         ]
 
     @classmethod
-    def list_perf_events(cls, context, vmlinux_module_name: str) -> Generator[
+    def list_perf_events(
+        cls, context, vmlinux_module_name: str
+    ) -> Generator[
         Tuple[
             interfaces.objects.ObjectInterface,
             interfaces.objects.ObjectInterface,

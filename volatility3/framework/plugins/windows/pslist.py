@@ -167,13 +167,15 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             Filter function for passing to the `list_processes` method
         """
 
-        return lambda x: not (
-            x.is_valid()
-            and x.ActiveThreads > 0
-            and x.UniqueProcessId != 4
-            and x.InheritedFromUniqueProcessId != 4
-            and x.ExitTime.QuadPart == 0
-            and x.get_handle_count() != renderers.UnreadableValue()
+        return lambda x: (
+            not (
+                x.is_valid()
+                and x.ActiveThreads > 0
+                and x.UniqueProcessId != 4
+                and x.InheritedFromUniqueProcessId != 4
+                and x.ExitTime.QuadPart == 0
+                and x.get_handle_count() != renderers.UnreadableValue()
+            )
         )
 
     @classmethod
@@ -214,9 +216,9 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         cls,
         context: interfaces.context.ContextInterface,
         kernel_module_name: str,
-        filter_func: Callable[
-            [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: False,
+        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: (
+            False
+        ),
     ) -> Iterator["extensions.EPROCESS"]:
         """Lists all the processes in the given layer that are in the pid
         config option.

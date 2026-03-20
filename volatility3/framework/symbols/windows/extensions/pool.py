@@ -126,8 +126,7 @@ class POOL_HEADER(objects.StructType):
                     infomask_value = infomask_data[addr + infomask_offset]
                     pointercount_value = int.from_bytes(
                         infomask_data[
-                            addr
-                            + pointercount_offset : addr
+                            addr + pointercount_offset : addr
                             + pointercount_offset
                             + pointercount_size
                         ],
@@ -165,8 +164,7 @@ class POOL_HEADER(objects.StructType):
                         (padding_length,) = struct.unpack(
                             "<I",
                             infomask_data[
-                                addr
-                                - optional_headers_length : addr
+                                addr - optional_headers_length : addr
                                 - optional_headers_length
                                 + 4
                             ],

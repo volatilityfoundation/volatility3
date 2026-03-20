@@ -65,9 +65,9 @@ class Maps(interfaces.plugins.PluginInterface):
     def list_vmas(
         cls,
         task: interfaces.objects.ObjectInterface,
-        filter_func: Callable[
-            [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: True,
+        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: (
+            True
+        ),
     ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Lists the Virtual Memory Areas of a specific process.
 
