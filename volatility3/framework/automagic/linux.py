@@ -165,9 +165,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                 "init_mm"
             ).address and init_task.tasks.next.cast(
                 "long unsigned int"
-            ) == init_task.tasks.prev.cast(
-                "long unsigned int"
-            ):
+            ) == init_task.tasks.prev.cast("long unsigned int"):
                 # The idle task steals `mm` from previously running task, i.e.,
                 # `init_mm` is only used as long as no CPU has ever been idle.
                 # This catches cases where we found a fragment of the

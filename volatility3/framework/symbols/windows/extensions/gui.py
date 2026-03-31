@@ -146,7 +146,7 @@ class GUIExtensions(interfaces.configuration.VersionableInterface):
             self, window, max_windows
         ) -> Generator[Tuple[interfaces.objects.ObjectInterface, str], None, None]:
             """
-            Recusively walks and yields the adjacent and child windows
+            Recursively walks and yields the adjacent and child windows
             """
             seen_windows = set()
             seen_children = set()
@@ -220,7 +220,6 @@ class GUIExtensions(interfaces.configuration.VersionableInterface):
                     break
 
     class tagWND(objects.StructType, pool.ExecutiveObject):
-
         def is_valid(self) -> bool:
             """
             Enforce a valid sid

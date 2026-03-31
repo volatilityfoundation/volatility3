@@ -48,7 +48,7 @@ class FtraceOpsFlags(Enum):
 @dataclass
 class ParsedFtraceOps:
     """Parsed ftrace_ops struct representation, containing a selection of forensics valuable
-    informations."""
+    information."""
 
     ftrace_ops_offset: int
     callback_symbol: str

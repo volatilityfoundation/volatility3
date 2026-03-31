@@ -54,7 +54,6 @@ class MFTEntry(objects.StructType):
         return max(names, key=lambda x: len(str(x)))
 
     def _attributes(self) -> Iterator["MFTAttribute"]:
-
         # We will update this on each pass in the next loop and use it as the new offset.
         attr_base_offset = self.FirstAttrOffset
         attribute_object_type_name = (

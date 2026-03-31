@@ -8,6 +8,7 @@ This has been made an object to allow quick swapping and changing of
 contexts, to allow a plugin to act on multiple different contexts
 without them interfering with each other.
 """
+
 import functools
 import hashlib
 import logging
@@ -287,7 +288,7 @@ class Module(interfaces.context.ModuleInterface):
             symbol_name: Name of the symbol (within the module) to construct
             native_layer_name: Name of the layer in which constructed objects are made (for pointers)
             absolute: whether the symbol's address is absolute or relative to the module
-            object_type: Override for the type from the symobl to use (or if the symbol type is missing)
+            object_type: Override for the type from the symbol to use (or if the symbol type is missing)
         """
         if constants.BANG not in symbol_name:
             symbol_name = self.symbol_table_name + constants.BANG + symbol_name

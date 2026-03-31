@@ -49,14 +49,16 @@ class PsList(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def get_list_tasks(cls, method: str) -> Callable[
+    def get_list_tasks(
+        cls, method: str
+    ) -> Callable[
         [interfaces.context.ContextInterface, str, Callable[[int], bool]],
         Iterable[interfaces.objects.ObjectInterface],
     ]:
         """Returns the list_tasks method based on the selector
 
         Args:
-            method: Must be one fo the available methods in get_task_choices
+            method: Must be one of the available methods in get_task_choices
 
         Returns:
             list_tasks method for listing tasks
@@ -135,7 +137,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            kernel_module_name: The name of the the kernel module on which to operate
+            kernel_module_name: The name of the kernel module on which to operate
             filter_func: A function which takes a process object and returns True if the process should be ignored/filtered
 
         Returns:
@@ -180,7 +182,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            kernel_module_name: The name of the the kernel module on which to operate
+            kernel_module_name: The name of the kernel module on which to operate
             filter_func: A function which takes a task object and returns True if the task should be ignored/filtered
 
         Returns:
@@ -224,7 +226,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            kernel_module_name: The name of the the kernel module on which to operate
+            kernel_module_name: The name of the kernel module on which to operate
             filter_func: A function which takes a task object and returns True if the task should be ignored/filtered
 
         Returns:
@@ -259,7 +261,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            kernel_module_name: The name of the the kernel module on which to operate
+            kernel_module_name: The name of the kernel module on which to operate
             filter_func: A function which takes a task object and returns True if the task should be ignored/filtered
 
         Returns:
@@ -297,7 +299,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            kernel_module_name: The name of the the kernel module on which to operate
+            kernel_module_name: The name of the kernel module on which to operate
             filter_func: A function which takes a task object and returns True if the task should be ignored/filtered
 
         Returns:

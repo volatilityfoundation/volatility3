@@ -72,9 +72,12 @@ class IsfInfo(plugins.PluginInterface):
                                 for extension in constants.ISF_EXTENSIONS:
                                     # By ending with an extension (and therefore, not /), we should not return any directories
                                     if name.endswith(extension):
-                                        yield "jar:file:" + str(
-                                            pathlib.Path(base_name)
-                                        ) + "!" + name
+                                        yield (
+                                            "jar:file:"
+                                            + str(pathlib.Path(base_name))
+                                            + "!"
+                                            + name
+                                        )
 
                     else:
                         for extension in constants.ISF_EXTENSIONS:

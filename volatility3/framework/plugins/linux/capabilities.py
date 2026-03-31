@@ -29,7 +29,7 @@ class TaskData:
 
 @dataclass
 class CapabilitiesData:
-    """Stores each set of capabilties for a task"""
+    """Stores each set of capabilities for a task"""
 
     cap_inheritable: interfaces.objects.ObjectInterface
     cap_permitted: interfaces.objects.ObjectInterface

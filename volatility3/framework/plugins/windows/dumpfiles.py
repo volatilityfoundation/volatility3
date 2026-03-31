@@ -5,18 +5,12 @@
 import logging
 import ntpath
 import re
-from typing import List, Tuple, Type, Optional, Generator
+from typing import Generator, List, Optional, Tuple, Type
 
-from volatility3.framework import (
-    interfaces,
-    exceptions,
-    constants,
-    renderers,
-)
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
-from volatility3.plugins.windows import handles
-from volatility3.plugins.windows import pslist
+from volatility3.plugins.windows import handles, pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -76,7 +70,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="handles", component=handles.Handles, version=(3, 0, 0)
+                name="handles", component=handles.Handles, version=(4, 0, 0)
             ),
         ]
 
@@ -231,14 +225,11 @@ class DumpFiles(interfaces.plugins.PluginInterface):
             # private variables, so we need an instance (for now, anyway). We _could_ call Handles._generator()
             # to do some of the other work that is duplicated here, but then we'd need to parse the TreeGrid
             # results instead of just dealing with them as direct objects here.
-            handles_plugin = handles.Handles(
-                context=self.context, config_path=self._config_path
-            )
-            type_map = handles_plugin.get_type_map(
+            type_map = handles.Handles.get_type_map(
                 context=self.context,
                 kernel_module_name=self.config["kernel"],
             )
-            cookie = handles_plugin.find_cookie(
+            cookie = handles.Handles.find_cookie(
                 context=self.context,
                 kernel_module_name=self.config["kernel"],
             )
@@ -255,7 +246,11 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                     )
                     continue
 
-                for entry in handles_plugin.handles(object_table):
+                for entry in handles.Handles.handles(
+                    context=self.context,
+                    kernel_module_name=self.config["kernel"],
+                    handle_table=object_table,
+                ):
                     try:
                         obj_type = entry.get_object_type(type_map, cookie)
                         if obj_type == "File":

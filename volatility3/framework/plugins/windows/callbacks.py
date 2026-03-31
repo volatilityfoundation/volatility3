@@ -48,7 +48,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
                 name="driverirp", component=driverirp.DriverIrp, version=(1, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="handles", component=handles.Handles, version=(3, 0, 0)
+                name="handles", component=handles.Handles, version=(4, 0, 0)
             ),
         ]
 
@@ -78,7 +78,6 @@ class Callbacks(interfaces.plugins.PluginInterface):
     def _create_default_scan_constraints(
         context: interfaces.context.ContextInterface, symbol_table: str
     ) -> List[poolscanner.PoolConstraint]:
-
         shutdown_packet_size = context.symbol_space.get_type(
             symbol_table + constants.BANG + "_SHUTDOWN_PACKET"
         ).size
@@ -590,7 +589,11 @@ class Callbacks(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 component = renderers.UnreadableValue()
 
-            yield "KeBugCheckReasonCallbackListHead", callback.CallbackRoutine, component
+            yield (
+                "KeBugCheckReasonCallbackListHead",
+                callback.CallbackRoutine,
+                component,
+            )
 
     @classmethod
     def list_bugcheck_callbacks(

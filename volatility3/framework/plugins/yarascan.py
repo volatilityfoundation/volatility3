@@ -31,7 +31,7 @@ except ImportError:
 
     except ImportError:
         vollog.info(
-            "Neither yara-x nor yara-python (>3.8.0) module not found, plugin (and dependent plugins) not available"
+            "Neither yara-x nor yara-python (>3.8.0) module was found, plugin (and dependent plugins) not available"
         )
         raise
 
@@ -182,7 +182,7 @@ class YaraScan(plugins.PluginInterface):
             rule = config["yara_string"]
             if rule[0] not in ["{", "/"]:
                 rule = f'"{rule}"'
-            if config.get("case", False):
+            if config.get("insensitive", False):
                 rule += " nocase"
             if config.get("wide", False):
                 rule += " wide ascii"

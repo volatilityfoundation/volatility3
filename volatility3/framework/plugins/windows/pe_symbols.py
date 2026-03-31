@@ -37,7 +37,7 @@ filter_modules_type = Dict[str, filter_module_info]
 found_symbols_module = List[Tuple[str, int]]
 found_symbols_type = Dict[str, found_symbols_module]
 
-# used to hold informatin about a range (VAD or kernel module)
+# used to hold information about a range (VAD or kernel module)
 # (start address, size, file path)
 range_type = Tuple[int, int, str]
 ranges_type = List[range_type]
@@ -243,7 +243,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
     _required_framework_version = (2, 7, 0)
 
     # 2.0.0 - changed signature of get_kernel_modules, get_all_vads_with_file_paths, addresses_for_process_symbols, get_process_modules
-    # 3.0.0 - find_symbols wil now throw a ValueError if the provided wanted symbol information does not follow the spec
+    # 3.0.0 - find_symbols will now throw a ValueError if the provided wanted symbol information does not follow the spec
     _version = (3, 0, 0)
 
     # used for special handling of the kernel PDB file. See later notes
@@ -649,7 +649,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
             and wanted_addresses_identifier not in wanted_symbols
         ):
             vollog.warning(
-                "Invalid `wanted_symbols` sent to `find_symbols`. addresses and names keys both misssing."
+                "Invalid `wanted_symbols` sent to `find_symbols`. addresses and names keys both missing."
             )
             return
 
@@ -671,7 +671,7 @@ class PESymbols(interfaces.plugins.PluginInterface):
                 for value_index, wanted_value in enumerate(all_wanted):
                     symbol_value = symbol_getter(wanted_value)
                     if symbol_value:
-                        # yield out deleteion key, deletion index, symbol name, symbol address
+                        # yield out deletion key, deletion index, symbol name, symbol address
                         if symbol_key == wanted_names_identifier:
                             yield symbol_key, wanted_value, symbol_value
                         else:
@@ -709,17 +709,15 @@ class PESymbols(interfaces.plugins.PluginInterface):
 
             # symbol_info will be a symbol name or address requested
             for symbol_info in wanted_symbols:
-                if (
-                    wanted_type == wanted_names_identifier
-                    and type(symbol_info) not in valid_name_types
+                if wanted_type == wanted_names_identifier and not isinstance(
+                    symbol_info, tuple(valid_name_types)
                 ):
                     raise ValueError(
                         f"The requested symbol name has a type of {type(symbol_info)} which is not in the allowed set of {valid_name_types}"
                     )
 
-                elif (
-                    wanted_type == wanted_addresses_identifier
-                    and type(symbol_info) not in valid_address_types
+                elif wanted_type == wanted_addresses_identifier and not isinstance(
+                    symbol_info, tuple(valid_address_types)
                 ):
                     raise ValueError(
                         f"The requested address has a type of {type(symbol_info)} which is not in the allowed set of {valid_address_types}"

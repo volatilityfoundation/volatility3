@@ -150,9 +150,9 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         cls,
         context: interfaces.context.ContextInterface,
         kernel_module_name: str,
-        filter_func: Callable[
-            [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: False,
+        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: (
+            False
+        ),
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Scans for processes using the poolscanner module and constraints.
 

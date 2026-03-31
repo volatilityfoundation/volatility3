@@ -51,9 +51,17 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
     ) -> Iterator[Tuple[str, timeliner.TimeLinerType, datetime]]:
         for _, (_, last_modified, last_update, _, _, file_path) in self._generator():
             if isinstance(last_update, datetime):
-                yield f"Shimcache: File {file_path} executed", timeliner.TimeLinerType.ACCESSED, last_update
+                yield (
+                    f"Shimcache: File {file_path} executed",
+                    timeliner.TimeLinerType.ACCESSED,
+                    last_update,
+                )
             if isinstance(last_modified, datetime):
-                yield f"Shimcache: File {file_path} modified", timeliner.TimeLinerType.MODIFIED, last_modified
+                yield (
+                    f"Shimcache: File {file_path} modified",
+                    timeliner.TimeLinerType.MODIFIED,
+                    last_modified,
+                )
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -161,7 +169,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
                     continue
 
                 try:
-                    if proc_layer.read(vad.get_start(), 4) != b"\xEF\xBE\xAD\xDE":
+                    if proc_layer.read(vad.get_start(), 4) != b"\xef\xbe\xad\xde":
                         if pid == 624:
                             vollog.debug("VAD magic bytes don't match DEADBEEF")
                         continue
@@ -236,7 +244,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         2) Iterate over every 4/8 bytes (depending on OS bitness) in the .data
            section and test for the following:
            a) offset represents a valid RTL_AVL_TABLE object
-           b) RTL_AVL_TABLE is preceeded by an ERESOURCE object
+           b) RTL_AVL_TABLE is preceded by an ERESOURCE object
            c) RTL_AVL_TABLE is followed by the beginning of the SHIM LRU list
 
         :param context: The context to retrieve required elements (layers, symbol tables) from
@@ -582,13 +590,19 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         :return: The offset and size of the module, if found; Otherwise, returns `None`
         """
 
-        try:
-            krnl_mod = next(
-                module
-                for module in modules.Modules.list_modules(context, kernel_module_name)
-                if module.BaseDllName.String in module_list
-            )
-        except StopIteration:
+        krnl_mod = None
+        for module in modules.Modules.list_modules(context, kernel_module_name):
+            try:
+                if module.BaseDllName.String in module_list:
+                    krnl_mod = module
+                    break
+            except exceptions.InvalidAddressException as exc:
+                vollog.warning(
+                    f"Failed to get kernel module due to {exc.__class__.__name__}: {exc.invalid_address:#x}"
+                )
+
+        if krnl_mod is None:
+            vollog.warning("Failed to find kernel module")
             return None
 
         kernel = context.modules[kernel_module_name]

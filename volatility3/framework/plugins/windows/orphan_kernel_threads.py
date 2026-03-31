@@ -85,7 +85,7 @@ class Threads(thrdscan.ThrdScan):
             # previous methods for determining if a thread was a kernel thread
             # such as bit fields and flags are not stable in Win10+
             # so we check if the thread is from the kernel itself or one its child
-            # kernel processes (MemCompression, Regsitry, ...)
+            # kernel processes (MemCompression, Registry, ...)
             if pid != 4 and ppid != 4:
                 continue
 

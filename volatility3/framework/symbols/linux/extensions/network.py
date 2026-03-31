@@ -65,7 +65,7 @@ class net_device(objects.StructType):
             hwaddr = parent_layer.read(self.dev_addr, self.addr_len, pad=True)
         except exceptions.InvalidAddressException:
             vollog.debug(
-                f"Unable to read network inteface mac address from {self.dev_addr:#x}"
+                f"Unable to read network interface mac address from {self.dev_addr:#x}"
             )
             return None
 
@@ -255,10 +255,10 @@ class net_device(objects.StructType):
             return None
 
     def get_queue_length(self) -> int:
-        """Return the netwrok device transmision qeueue length (qlen)
+        """Return the network device transmission queue length (qlen)
 
         Returns:
-            int: the netwrok device transmision qeueue length (qlen)
+            int: the network device transmission queue length (qlen)
         """
         return self.tx_queue_len
 

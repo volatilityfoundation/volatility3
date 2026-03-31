@@ -63,9 +63,14 @@ class Desktops(interfaces.plugins.PluginInterface):
             for desktop, desktop_name in winsta.desktops(kernel.symbol_table_name):
                 # for each desktop, walk its threads
                 for _thread, process_name, process_pid in desktop.get_threads():
-                    yield format_hints.Hex(
-                        desktop.vol.offset
-                    ), station_name, session_id, desktop_name, process_name, process_pid
+                    yield (
+                        format_hints.Hex(desktop.vol.offset),
+                        station_name,
+                        session_id,
+                        desktop_name,
+                        process_name,
+                        process_pid,
+                    )
 
     def _generator(self):
         kernel_name = self.config["kernel"]

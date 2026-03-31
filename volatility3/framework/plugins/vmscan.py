@@ -54,7 +54,7 @@ class PageStartScanner(interfaces.layers.ScannerInterface):
 
 
 class Vmscan(plugins.PluginInterface):
-    """Scans for Intel VT-d structues and generates VM volatility configs for them"""
+    """Scans for Intel VT-d structures and generates VM volatility configs for them"""
 
     _required_framework_version = (2, 2, 0)
     _version = (1, 0, 0)

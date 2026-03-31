@@ -52,7 +52,6 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class("idr", extensions.IDR)
         self.set_type_class("address_space", extensions.address_space)
         self.set_type_class("page", extensions.page)
-        self.set_type_class("module_sect_attr", extensions.module_sect_attr)
 
         # Might not exist in the current symbols
         self.optional_set_type_class("module", extensions.module)
@@ -61,6 +60,8 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.optional_set_type_class("kernel_cap_struct", extensions.kernel_cap_struct)
         self.optional_set_type_class("kernel_cap_t", extensions.kernel_cap_t)
         self.optional_set_type_class("scatterlist", extensions.scatterlist)
+        self.optional_set_type_class("module_sect_attr", extensions.module_sect_attr)
+        self.optional_set_type_class("bin_attribute", extensions.bin_attribute)
 
         # kernels >= 4.18
         self.optional_set_type_class("timespec64", extensions.timespec64)
@@ -99,8 +100,10 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""
 
-    _version = (2, 3, 0)
+    _version = (2, 4, 0)
     _required_framework_version = (2, 0, 0)
+    deleted = "(deleted)"
+    smear = "<potentially smeared>"
 
     framework.require_interface_version(*_required_framework_version)
 
@@ -168,7 +171,9 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             # vfsmnt can be the vfsmount object itself (>=3.3) or a vfsmount * (<3.3)
             return ""
 
+        inode = dentry.d_inode
         path_reversed = []
+        smeared = False
         while (
             dentry
             and dentry.is_readable()
@@ -190,10 +195,23 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
 
             parent = dentry.d_parent
             dname = dentry.d_name.name_as_str()
+
+            # empty dentry names are most likely
+            # the result of smearing
+            if not dname:
+                smeared = True
             path_reversed.append(dname.strip("/"))
             dentry = parent
 
         path = "/" + "/".join(reversed(path_reversed))
+        if smeared:
+            # if there is smear the missing dname will be empty. e.g. if the normal
+            # path would be /foo/bar/baz, but bar is missing due to smear the results
+            # returned here will show /foo//baz. Note the // for the missing dname.
+            return f"{LinuxUtilities.smear} {path}"
+
+        if inode and inode.is_readable() and inode.is_valid() and inode.i_nlink == 0:
+            path = f" {path} {LinuxUtilities.deleted}"
         return path
 
     @classmethod
@@ -291,7 +309,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         return f"{pre_name}:[{inode.i_ino:d}]"
 
     @classmethod
-    def path_for_file(cls, context, task, filp) -> str:
+    def path_for_file(cls, context, task, filp, files_only=False) -> str:
         """Returns a file (or sock pipe) pathname relative to the task's root directory.
 
         A 'file' structure doesn't have enough information to properly restore its
@@ -330,7 +348,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         except exceptions.InvalidAddressException:
             dname_is_valid = False
 
-        if dname_is_valid:
+        if dname_is_valid and not files_only:
             ret = LinuxUtilities._get_new_sock_pipe_path(context, task, filp)
         else:
             ret = LinuxUtilities._get_path_file(task, filp)
@@ -343,6 +361,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         context: interfaces.context.ContextInterface,
         symbol_table: str,
         task: interfaces.objects.ObjectInterface,
+        files_only: bool = False,
     ):
         try:
             files = task.files
@@ -366,7 +385,9 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
 
         for fd_num, filp in enumerate(fds):
             if filp and filp.is_readable():
-                full_path = LinuxUtilities.path_for_file(context, task, filp)
+                full_path = LinuxUtilities.path_for_file(
+                    context, task, filp, files_only
+                )
 
                 yield fd_num, filp, full_path
 
@@ -505,7 +526,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         vmlinux: interfaces.context.ModuleInterface,
     ) -> Optional[interfaces.objects.ObjectInterface]:
         """Cast a member of a structure out to the containing structure.
-        It mimicks the Linux kernel macro container_of() see include/linux.kernel.h
+        It mimics the Linux kernel macro container_of() see include/linux.kernel.h
 
         Args:
             addr: The pointer to the member.

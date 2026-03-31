@@ -475,12 +475,6 @@ class Sockstat(plugins.PluginInterface):
             requirements.VersionRequirement(
                 name="linux_net", component=network.NetSymbols, version=(1, 0, 0)
             ),
-            requirements.BooleanRequirement(
-                name="unix",
-                description=("Show UNIX domain Sockets only"),
-                default=False,
-                optional=True,
-            ),
             requirements.ListRequirement(
                 name="pids",
                 description="Filter results by process IDs. "

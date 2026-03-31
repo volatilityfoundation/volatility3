@@ -6,14 +6,9 @@ import io
 
 from dataclasses import dataclass
 from typing import Type, List, Dict, Tuple
-from volatility3.framework import constants, exceptions, interfaces
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework.renderers import (
-    format_hints,
-    TreeGrid,
-    NotAvailableValue,
-    UnreadableValue,
-)
+from volatility3.framework.renderers import format_hints
 from volatility3.framework.objects import utility
 from volatility3.framework.constants import architectures
 from volatility3.framework.symbols import linux
@@ -181,7 +176,7 @@ class Fbdev(interfaces.plugins.PluginInterface):
         """
         kernel = context.modules[kernel_name]
         kernel_layer = context.layers[kernel.layer_name]
-        id = "N-A" if isinstance(fb.id, NotAvailableValue) else fb.id
+        id = "N-A" if isinstance(fb.id, renderers.NotAvailableValue) else fb.id
         base_filename = f"{id}_{fb.xres_virtual}x{fb.yres_virtual}_{fb.bpp}bpp"
         if convert_to_png_image:
             image_object = cls.convert_fb_raw_buffer_to_image(context, kernel_name, fb)
@@ -193,9 +188,9 @@ class Fbdev(interfaces.plugins.PluginInterface):
             final_fb_buffer = kernel_layer.read(fb.fb_info.screen_base, fb.size)
             filename = f"{base_filename}.raw"
 
-        with open_method(filename) as f:
-            f.write(final_fb_buffer)
-            return f.preferred_filename
+        with open_method(filename) as fp:
+            fp.write(final_fb_buffer)
+            return fp.preferred_filename
 
     @classmethod
     def parse_fb_info(
@@ -216,7 +211,7 @@ class Fbdev(interfaces.plugins.PluginInterface):
                 - struct fb_var_screeninfo stores device independent changeable information about a frame buffer device, its current format and video mode,
                 as well as other miscellaneous parameters.
         """
-        id = utility.array_to_string(fb_info.fix.id) or NotAvailableValue()
+        id = utility.array_to_string(fb_info.fix.id) or renderers.NotAvailableValue()
         color_fields = None
 
         # 0 = color, 1 = grayscale,	>1 = FOURCC
@@ -250,7 +245,6 @@ You can try using ffmpeg to decode the raw buffer. Example usage:
         return fb
 
     def _generator(self):
-
         if not has_pil:
             vollog.error(
                 "PIL (pillow) module is required to use this plugin. Please install it manually or through pyproject.toml."
@@ -299,14 +293,14 @@ You can try using ffmpeg to decode the raw buffer. Example usage:
                     vollog.error(
                         f'Layer {excp.layer_name} failed to read address {hex(excp.invalid_address)} when dumping framebuffer "{fb.id}".'
                     )
-                    file_output = UnreadableValue()
+                    file_output = renderers.UnreadableValue()
 
             try:
                 fb_device_name = utility.pointer_to_string(
                     fb.fb_info.dev.kobj.name, 256
                 )
             except exceptions.InvalidAddressException:
-                fb_device_name = NotAvailableValue()
+                fb_device_name = renderers.NotAvailableValue()
 
             yield (
                 0,
@@ -334,7 +328,7 @@ You can try using ffmpeg to decode the raw buffer. Example usage:
             ("Filename", str),
         ]
 
-        return TreeGrid(
+        return renderers.TreeGrid(
             columns,
             self._generator(),
         )

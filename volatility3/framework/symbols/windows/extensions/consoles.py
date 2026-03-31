@@ -168,7 +168,7 @@ class SCREEN_INFORMATION(objects.StructType):
 
         @param truncate: True if the empty rows at the
         end (i.e. bottom) of the screen buffer should be
-        supressed.
+        suppressed.
         """
         rows = []
 

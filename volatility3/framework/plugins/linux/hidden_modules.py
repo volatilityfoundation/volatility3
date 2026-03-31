@@ -1,197 +1,20 @@
-# This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2025 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from typing import List, Set, Tuple, Iterable
-from volatility3.framework.symbols.linux.utilities import (
-    modules as linux_utilities_modules,
-)
-from volatility3.framework import interfaces, exceptions, deprecation
-from volatility3.framework.configuration import requirements
-from volatility3.framework.symbols.linux import extensions
-from volatility3.framework.interfaces import plugins
+from volatility3.framework import interfaces, deprecation
+from volatility3.plugins.linux.malware import hidden_modules
 
 vollog = logging.getLogger(__name__)
 
 
-class Hidden_modules(plugins.PluginInterface):
-    """Carves memory to find hidden kernel modules"""
+class Hidden_modules(
+    interfaces.plugins.PluginInterface,
+    deprecation.PluginRenameClass,
+    replacement_class=hidden_modules.Hidden_modules,
+    removal_date="2026-06-07",
+):
+    """Carves memory to find hidden kernel modules (deprecated)."""
 
     _required_framework_version = (2, 25, 0)
     _version = (3, 0, 2)
-
-    @classmethod
-    def find_hidden_modules(
-        cls, context, vmlinux_module_name: str
-    ) -> extensions.module:
-        if context.symbol_space.verify_table_versions(
-            "dwarf2json", lambda version, _: (not version) or version < (0, 8, 0)
-        ):
-            raise exceptions.SymbolSpaceError(
-                "Invalid symbol table, please ensure the ISF table produced by dwarf2json was created with version 0.8.0 or later"
-            )
-
-        known_module_addresses = cls.get_lsmod_module_addresses(
-            context, vmlinux_module_name
-        )
-        modules_memory_boundaries = (
-            linux_utilities_modules.Modules.get_modules_memory_boundaries(
-                context, vmlinux_module_name
-            )
-        )
-
-        yield from linux_utilities_modules.Modules.get_hidden_modules(
-            context,
-            vmlinux_module_name,
-            known_module_addresses,
-            modules_memory_boundaries,
-        )
-
-    @classmethod
-    def get_hidden_modules(
-        cls,
-        context: interfaces.context.ContextInterface,
-        vmlinux_module_name: str,
-        known_module_addresses: Set[int],
-        modules_memory_boundaries: Tuple,
-    ) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Enumerate hidden modules by taking advantage of memory address alignment patterns
-
-        This technique is much faster and uses less memory than the traditional scan method
-        in Volatility2, but it doesn't work with older kernels.
-
-        From kernels 4.2 struct module allocation are aligned to the L1 cache line size.
-        In i386/amd64/arm64 this is typically 64 bytes. However, this can be changed in
-        the Linux kernel configuration via CONFIG_X86_L1_CACHE_SHIFT. The alignment can
-        also be obtained from the DWARF info i.e. DW_AT_alignment<64>, but dwarf2json
-        doesn't support this feature yet.
-        In kernels < 4.2, alignment attributes are absent in the struct module, meaning
-        alignment cannot be guaranteed. Therefore, for older kernels, it's better to use
-        the traditional scan technique.
-
-        Args:
-            context: The context to retrieve required elements (layers, symbol tables) from
-            vmlinux_module_name: The name of the kernel module on which to operate
-            known_module_addresses: Set with known module addresses
-            modules_memory_boundaries: Minimum and maximum address boundaries for module allocation.
-        Yields:
-            module objects
-        """
-        return linux_utilities_modules.get_hidden_modules(
-            vmlinux_module_name, known_module_addresses, modules_memory_boundaries
-        )
-
-    run = linux_utilities_modules.ModuleDisplayPlugin.run
-    _generator = linux_utilities_modules.ModuleDisplayPlugin.generator
-    implementation = find_hidden_modules
-
-    @classmethod
-    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [
-            requirements.VersionRequirement(
-                name="linux_utilities_modules_module_display_plugin",
-                component=linux_utilities_modules.ModuleDisplayPlugin,
-                version=(1, 0, 0),
-            ),
-            requirements.VersionRequirement(
-                name="linux_utilities_modules",
-                component=linux_utilities_modules.Modules,
-                version=(3, 0, 1),
-            ),
-        ] + linux_utilities_modules.ModuleDisplayPlugin.get_requirements()
-
-    @staticmethod
-    @deprecation.deprecated_method(
-        replacement=linux_utilities_modules.Modules.get_modules_memory_boundaries,
-        removal_date="2025-09-25",
-        replacement_version=(3, 0, 0),
-    )
-    def get_modules_memory_boundaries(
-        context: interfaces.context.ContextInterface,
-        vmlinux_module_name: str,
-    ) -> Tuple[int, int]:
-        return linux_utilities_modules.Modules.get_modules_memory_boundaries(
-            context, vmlinux_module_name
-        )
-
-    @deprecation.deprecated_method(
-        replacement=linux_utilities_modules.Modules.get_module_address_alignment,
-        removal_date="2025-09-25",
-        replacement_version=(3, 0, 0),
-    )
-    @classmethod
-    def _get_module_address_alignment(
-        cls,
-        context: interfaces.context.ContextInterface,
-        vmlinux_module_name: str,
-    ) -> int:
-        """Obtain the module memory address alignment.
-
-        struct module is aligned to the L1 cache line, which is typically 64 bytes for most
-        common i386/AMD64/ARM64 configurations. In some cases, it can be 128 bytes, but this
-        will still work.
-
-        Args:
-            context: The context to retrieve required elements (layers, symbol tables) from
-            vmlinux_module_name: The name of the kernel module on which to operate
-
-        Returns:
-            The struct module alignment
-        """
-        return linux_utilities_modules.get_module_address_alignment(
-            context, vmlinux_module_name
-        )
-
-    @deprecation.deprecated_method(
-        replacement=linux_utilities_modules.Modules.get_hidden_modules,
-        removal_date="2025-09-25",
-        replacement_version=(3, 0, 0),
-    )
-    @staticmethod
-    @deprecation.deprecated_method(
-        replacement=linux_utilities_modules.Modules.validate_alignment_patterns,
-        removal_date="2025-09-25",
-        replacement_version=(3, 0, 0),
-    )
-    def _validate_alignment_patterns(
-        addresses: Iterable[int],
-        address_alignment: int,
-    ) -> bool:
-        """Check if the memory addresses meet our alignments patterns
-
-        Args:
-            addresses: Iterable with the address values
-            address_alignment: Number of bytes for alignment validation
-
-        Returns:
-            True if all the addresses meet the alignment
-        """
-        return linux_utilities_modules.validate_alignment_patterns(
-            addresses, address_alignment
-        )
-
-    @classmethod
-    def get_lsmod_module_addresses(
-        cls,
-        context: interfaces.context.ContextInterface,
-        vmlinux_module_name: str,
-    ) -> Set[int]:
-        """Obtain a set the known module addresses from linux.lsmod plugin
-
-        Args:
-            context: The context to retrieve required elements (layers, symbol tables) from
-            vmlinux_module_name: The name of the kernel module on which to operate
-
-        Returns:
-            A set containing known kernel module addresses
-        """
-        vmlinux = context.modules[vmlinux_module_name]
-        vmlinux_layer = context.layers[vmlinux.layer_name]
-
-        known_module_addresses = {
-            vmlinux_layer.canonicalize(module.vol.offset)
-            for module in linux_utilities_modules.Modules.list_modules(
-                context, vmlinux_module_name
-            )
-        }
-        return known_module_addresses

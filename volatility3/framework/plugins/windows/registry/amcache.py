@@ -246,13 +246,29 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     ) -> Iterator[Tuple[str, timeliner.TimeLinerType, datetime.datetime]]:
         for _, entry in self._generator():
             if isinstance(entry.last_modify_time, datetime.datetime):
-                yield f"Amcache: {entry.entry_type} {entry.path} registry key modified", timeliner.TimeLinerType.MODIFIED, entry.last_modify_time
+                yield (
+                    f"Amcache: {entry.entry_type} {entry.path} registry key modified",
+                    timeliner.TimeLinerType.MODIFIED,
+                    entry.last_modify_time,
+                )
             if isinstance(entry.last_modify_time_2, datetime.datetime):
-                yield f"Amcache: {entry.entry_type} {entry.path} STANDARD_INFORMATION create time", timeliner.TimeLinerType.CREATED, entry.last_modify_time_2
+                yield (
+                    f"Amcache: {entry.entry_type} {entry.path} STANDARD_INFORMATION create time",
+                    timeliner.TimeLinerType.CREATED,
+                    entry.last_modify_time_2,
+                )
             if isinstance(entry.install_time, datetime.datetime):
-                yield f"Amcache: {entry.entry_type} {entry.path} installed", timeliner.TimeLinerType.CREATED, entry.install_time
+                yield (
+                    f"Amcache: {entry.entry_type} {entry.path} installed",
+                    timeliner.TimeLinerType.CREATED,
+                    entry.install_time,
+                )
             if isinstance(entry.compile_time, datetime.datetime):
-                yield f"Amcache: {entry.entry_type} {entry.path} compiled (PE metadata)", timeliner.TimeLinerType.MODIFIED, entry.compile_time
+                yield (
+                    f"Amcache: {entry.entry_type} {entry.path} compiled (PE metadata)",
+                    timeliner.TimeLinerType.MODIFIED,
+                    entry.compile_time,
+                )
 
     @classmethod
     def get_amcache_hive(
@@ -319,20 +335,23 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             vollog.debug(f"Found sha1hash {sha1_hash}")
             product_name = _get_string_value(values, val_enum.Product.value)
 
-            yield program_id, _AmcacheEntry(
-                AmcacheEntryType.File.name,
-                path=path,
-                company=company,
-                last_modify_time=last_mod_time,
-                last_modify_time_2=last_mod_time_2,
-                install_time=install_time,
-                compile_time=compile_time,
-                sha1_hash=(
-                    sha1_hash.lstrip("0000")
-                    if isinstance(sha1_hash, str)
-                    else sha1_hash
+            yield (
+                program_id,
+                _AmcacheEntry(
+                    AmcacheEntryType.File.name,
+                    path=path,
+                    company=company,
+                    last_modify_time=last_mod_time,
+                    last_modify_time_2=last_mod_time_2,
+                    install_time=install_time,
+                    compile_time=compile_time,
+                    sha1_hash=(
+                        sha1_hash.lstrip("0000")
+                        if isinstance(sha1_hash, str)
+                        else sha1_hash
+                    ),
+                    product_name=product_name,
                 ),
-                product_name=product_name,
             )
 
     @classmethod
@@ -365,15 +384,18 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             )
             version = _get_string_value(values, val_enum.Version.value)
 
-            yield program_id, _AmcacheEntry(
-                AmcacheEntryType.Program.name,
-                company=company,
-                last_modify_time=conversion.wintime_to_datetime(
-                    program_key.LastWriteTime.QuadPart
+            yield (
+                program_id,
+                _AmcacheEntry(
+                    AmcacheEntryType.Program.name,
+                    company=company,
+                    last_modify_time=conversion.wintime_to_datetime(
+                        program_key.LastWriteTime.QuadPart
+                    ),
+                    install_time=install_time,
+                    product_name=product,
+                    product_version=version,
                 ),
-                install_time=install_time,
-                product_name=product,
-                product_version=version,
             )
 
     @classmethod
@@ -411,14 +433,17 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             product: str = name if isinstance(name, str) else "UNKNOWN"  # type: ignore
 
-            yield program_id.strip().strip("\u0000"), _AmcacheEntry(
-                AmcacheEntryType.Program.name,
-                path=path,
-                last_modify_time=last_mod,
-                install_time=install_date,
-                product_name=product,
-                company=publisher,
-                product_version=version,
+            yield (
+                program_id.strip().strip("\u0000"),
+                _AmcacheEntry(
+                    AmcacheEntryType.Program.name,
+                    path=path,
+                    last_modify_time=last_mod,
+                    install_time=install_date,
+                    product_name=product,
+                    company=publisher,
+                    product_version=version,
+                ),
             )
 
     @classmethod
@@ -456,19 +481,22 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             prod_ver = _get_string_value(values, val_enum.ProductVersion.value)
             program_id = _get_string_value(values, val_enum.ProgramID.value)
 
-            yield program_id, _AmcacheEntry(
-                AmcacheEntryType.File.name,
-                path=path,
-                company=publisher,
-                last_modify_time=last_mod,
-                compile_time=linkdate,
-                sha1_hash=(
-                    sha1_hash.lstrip("0000")
-                    if isinstance(sha1_hash, str)
-                    else sha1_hash
+            yield (
+                program_id,
+                _AmcacheEntry(
+                    AmcacheEntryType.File.name,
+                    path=path,
+                    company=publisher,
+                    last_modify_time=last_mod,
+                    compile_time=linkdate,
+                    sha1_hash=(
+                        sha1_hash.lstrip("0000")
+                        if isinstance(sha1_hash, str)
+                        else sha1_hash
+                    ),
+                    product_name=prod_name,
+                    product_version=prod_ver,
                 ),
-                product_name=prod_name,
-                product_version=prod_ver,
             )
 
     @classmethod
@@ -485,7 +513,6 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         wanted_values = [key.value for key in val_enum]
 
         for binary_key in driver_binary_key.get_subkeys():
-
             values = {
                 str(value.get_name()): value
                 for value in binary_key.get_values()
@@ -636,7 +663,6 @@ class Amcache(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             yield 0, empty_program
 
     def run(self):
-
         return renderers.TreeGrid(
             [
                 ("EntryType", str),

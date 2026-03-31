@@ -121,7 +121,7 @@ class _KallsymsIO:
         self._endian = endian
 
     def read(self, size: int) -> bytes:
-        """Return 'size' bytes from the current postion"""
+        """Return 'size' bytes from the current position"""
         layer = self._context.layers[self._layer_name]
         buf = layer.read(offset=self._position, length=size)
         self._position += size

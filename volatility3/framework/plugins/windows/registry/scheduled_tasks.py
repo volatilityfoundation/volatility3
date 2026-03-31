@@ -185,7 +185,6 @@ NULL = "\u0000"
 
 
 class _ScheduledTasksReader(io.BytesIO):
-
     def read_task_scheduler_time(self) -> Optional[datetime.datetime]:
         _ = bool(self.read_aligned_u1())  # is_localized
         filetime = self.decode_filetime()
@@ -393,7 +392,6 @@ class TaskAction:
 
         num_attachment_filenames = reader.read_u4()
         if num_attachment_filenames is not None:
-
             attachment_filenames = [
                 reader.read_bstring() for _ in range(num_attachment_filenames)
             ]
@@ -602,7 +600,7 @@ def decode_sid(data: bytes) -> Optional[str]:
     Decodes a windows SID from variable-length raw bytes
 
     Returns the string representation of the SID if decoding was successful, or None
-    if the data could not be parsed due to an insufficent number of bytes.
+    if the data could not be parsed due to an insufficient number of bytes.
     """
     try:
         revision, subid_count, id_authority = struct.unpack(
@@ -817,7 +815,7 @@ class TaskTrigger:
         _ = reader.read_u4()  # timeout seconds
 
         repetition_interval_secs = reader.read_u4()
-        _ = reader.read_u4()  # reptition duration seconds
+        _ = reader.read_u4()  # repetition duration seconds
         _ = reader.read_u4()  # repetition duration seconds 2
 
         _ = reader.read_bool()  # stop at duration end
@@ -1138,11 +1136,23 @@ class ScheduledTasks(interfaces.plugins.PluginInterface, timeliner.TimeLinerInte
     ) -> Iterator[Tuple[str, timeliner.TimeLinerType, datetime.datetime]]:
         for _, task in self._generator():
             if isinstance(task.last_run_time, datetime.datetime):
-                yield f"ScheduledTasks: task action {task.action_description} with trigger {task.trigger_description} ran", timeliner.TimeLinerType.ACCESSED, task.last_run_time
+                yield (
+                    f"ScheduledTasks: task action {task.action_description} with trigger {task.trigger_description} ran",
+                    timeliner.TimeLinerType.ACCESSED,
+                    task.last_run_time,
+                )
             if isinstance(task.last_successful_run_time, datetime.datetime):
-                yield f"ScheduledTasks: task action {task.action_description} with trigger {task.trigger_description} ran successfully", timeliner.TimeLinerType.ACCESSED, task.last_successful_run_time
+                yield (
+                    f"ScheduledTasks: task action {task.action_description} with trigger {task.trigger_description} ran successfully",
+                    timeliner.TimeLinerType.ACCESSED,
+                    task.last_successful_run_time,
+                )
             if isinstance(task.creation_time, datetime.datetime):
-                yield f"ScheduledTasks: Creation Time for task {task.guid} with trigger {task.trigger_description or '<UNKNOWN>'}", timeliner.TimeLinerType.CREATED, task.creation_time
+                yield (
+                    f"ScheduledTasks: Creation Time for task {task.guid} with trigger {task.trigger_description or '<UNKNOWN>'}",
+                    timeliner.TimeLinerType.CREATED,
+                    task.creation_time,
+                )
 
     @classmethod
     def get_software_hive(
@@ -1203,7 +1213,6 @@ class ScheduledTasks(interfaces.plugins.PluginInterface, timeliner.TimeLinerInte
     def parse_dynamic_info_value(
         cls, dyn_info_value: reg_extensions.CM_KEY_VALUE
     ) -> Optional[DynamicInfo]:
-
         try:
             data = dyn_info_value.decode_data()
         except exceptions.InvalidAddressException:
@@ -1318,7 +1327,6 @@ class ScheduledTasks(interfaces.plugins.PluginInterface, timeliner.TimeLinerInte
         all_actions = action_set.actions or [None] if action_set is not None else [None]
 
         for action, trigger in itertools.product(all_actions, all_triggers):
-
             if action is not None:
                 if action.action_type in (
                     ActionType.Exe,

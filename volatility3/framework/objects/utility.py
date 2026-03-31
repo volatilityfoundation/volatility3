@@ -3,10 +3,12 @@
 #
 
 import re
-
+import logging
 from typing import Optional, Union
 
 from volatility3.framework import interfaces, objects, constants, exceptions
+
+vollog = logging.getLogger(__name__)
 
 
 def rol(value: int, count: int, max_bits: int = 64) -> int:
@@ -152,7 +154,7 @@ def bytes_to_decoded_string(
     """
     Args:
         data: The `bytes` buffer containing the string of a string at offset 0
-        encoding: An encoding value for the encoding paramater of `bytes.decode`
+        encoding: An encoding value for the encoding parameter of `bytes.decode`
         errors: An errors value for the errors parameter of `bytes.decode`
         return_truncated: Dictates whether truncated strings should be returned or
         if a ValueError should be thrown if a truncated (broken) string was decoded
@@ -250,3 +252,63 @@ def array_of_pointers(
     ).clone()
     subtype_pointer.update_vol(subtype=subtype)
     return array.cast("array", count=count, subtype=subtype_pointer)
+
+
+def dynamically_sized_array_of_pointers(
+    context: interfaces.context.ContextInterface,
+    array: interfaces.objects.ObjectInterface,
+    subtype: Union[str, interfaces.objects.Template],
+    iterator_guard_value: int,
+    stop_value: int = 0,
+    stop_on_invalid_pointers: bool = True,
+) -> interfaces.objects.ObjectInterface:
+    """Iterates over a dynamically sized array of pointers (e.g. NULL-terminated).
+    Array iteration should always be performed with an arbitrary guard value as maximum size,
+    to prevent running forever in case something unexpected happens.
+
+        Args:
+            context: The context on which to operate.
+            array: The object to cast to an array.
+            iterator_guard_value: Stop iterating when the iterator index is greater than this value. This is an extra-safety against smearing.
+            subtype: The subtype of the array's pointers.
+            stop_value: Stop value used to determine when to terminate iteration once it is encountered. Defaults to 0 (NULL-terminated arrays).
+            stop_on_invalid_pointers: Determines whether to stop iterating or not when an invalid pointer is encountered. This can be useful for arrays
+    that are known to have smeared entries before the end.
+
+        Returns:
+            An array of pointer objects
+    """
+    new_count = 0
+    sym_table_name = array.get_symbol_table_name()
+    sym_table = context.symbol_space[sym_table_name]
+    ptr_size = sym_table.get_type("pointer").size
+    layer_name = array.vol.layer_name
+
+    offset = array.vol.offset
+    entry = None
+    while entry != stop_value and new_count < iterator_guard_value:
+        try:
+            entry = context.object(
+                sym_table_name + constants.BANG + "pointer",
+                offset=offset,
+                layer_name=layer_name,
+            )
+        except exceptions.InvalidAddressException:
+            break
+
+        if not entry.is_readable() and stop_on_invalid_pointers:
+            break
+
+        offset += ptr_size
+        new_count += 1
+    else:
+        vollog.log(
+            constants.LOGLEVEL_V,
+            f"""Iterator guard value {iterator_guard_value} reached while iterating over array at offset {array.vol.offset:#x}.\
+ This means that there is a bug (e.g. smearing) with this array, or that it may contain valid entries past the iterator guard value.""",
+        )
+
+    # Leverage the "Array" object instead of returning a Python list
+    return array_of_pointers(
+        array=array, count=new_count, subtype=subtype, context=context
+    )

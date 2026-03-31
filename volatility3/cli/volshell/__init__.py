@@ -344,8 +344,9 @@ class VolShell(cli.CommandLine):
                     raise ValueError(
                         "Invalid extension (extensions must be of the format \"conf.path.value='value'\")"
                     )
-                address, value = extension[: extension.find("=")], json.loads(
-                    extension[extension.find("=") + 1 :]
+                address, value = (
+                    extension[: extension.find("=")],
+                    json.loads(extension[extension.find("=") + 1 :]),
                 )
                 ctx.config[address] = value
 

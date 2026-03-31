@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 """Volatility 3 - An open-source memory forensics framework"""
+
 import inspect
 import sys
 from importlib import abc

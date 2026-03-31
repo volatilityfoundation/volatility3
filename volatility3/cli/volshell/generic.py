@@ -187,6 +187,9 @@ class Volshell(interfaces.plugins.PluginInterface):
     def construct_locals(self) -> List[Tuple[List[str], Any]]:
         """Returns a listing of the functions to be added to the environment."""
         return [
+            (["bc", "breakpoint_clear"], self.breakpoint_clear),
+            (["bl", "breakpoint_list"], self.breakpoint_list),
+            (["bp", "breakpoint"], self.breakpoint),
             (["dt", "display_type"], self.display_type),
             (["db", "display_bytes"], self.display_bytes),
             (["dw", "display_words"], self.display_words),
@@ -466,7 +469,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             and dereference_count < MAX_DEREFERENCE_COUNT
         ):
             # before defreerencing the pointer, show it's information
-            print(f'{"    " * dereference_count}{self._display_simple_type(volobject)}')
+            print(f"{'    ' * dereference_count}{self._display_simple_type(volobject)}")
 
             # check that we can follow the pointer before dereferencing and do not
             # attempt to follow null pointers.
@@ -482,8 +485,8 @@ class Volshell(interfaces.plugins.PluginInterface):
                 return
 
         if hasattr(volobject.vol, "members"):
-            # display the header for this object, if the orginal object was just a type string, display the type information
-            struct_header = f'{"    " * dereference_count}{volobject.vol.type_name} ({volobject.vol.size} bytes)'
+            # display the header for this object, if the original object was just a type string, display the type information
+            struct_header = f"{'    ' * dereference_count}{volobject.vol.type_name} ({volobject.vol.size} bytes)"
             if isinstance(object, str) and offset is None:
                 suffix = ":"
             else:
@@ -520,7 +523,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                 len_typename = len(member_type_name)
                 if len(member_type_name) > MAX_TYPENAME_DISPLAY_LENGTH:
                     len_typename = MAX_TYPENAME_DISPLAY_LENGTH
-                    member_type_name = f"{member_type_name[:len_typename - 3]}..."
+                    member_type_name = f"{member_type_name[: len_typename - 3]}..."
 
                 if isinstance(volobject, interfaces.objects.ObjectInterface):
                     # We're an instance, so also display the data
@@ -555,7 +558,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                     )
 
         else:  # simple type with no members, only one line to print
-            # if the orginal object was just a type string, display the type information
+            # if the original object was just a type string, display the type information
             if isinstance(object, str) and offset is None:
                 print(self._display_simple_type(volobject, include_value=False))
 
@@ -796,6 +799,89 @@ class Volshell(interfaces.plugins.PluginInterface):
             self.context.symbol_space.append(constructed)
 
         return constructed
+
+    def breakpoint(
+        self, address: int, layer_name: Optional[str] = None, lowest: bool = False
+    ) -> None:
+        """Sets a breakpoint on a particular address (within a specific layer)"""
+        if layer_name is None:
+            if self.current_layer is None:
+                raise ValueError("Current layer must be set")
+            layer_name = self.current_layer
+
+        layer: interfaces.layers.DataLayerInterface = self.context.layers[layer_name]
+
+        if lowest:
+            while isinstance(layer, interfaces.layers.TranslationLayerInterface):
+                mapping = layer.mapping(address, 1)
+                if not mapping:
+                    raise ValueError(
+                        "Offset cannot be mapped lower, cannot break at lowest layer"
+                    )
+                _, _, mapped_offset, _, mapped_layer_name = next(mapping)
+                layer = self.context.layers[mapped_layer_name]
+                address = mapped_offset
+
+        # Check if the read value is already overloaded
+        if not hasattr(layer.read, "breakpoints"):
+            # Layer read is not yet wrapped
+            def wrapped_read(offset: int, length: int, pad: bool = False) -> bytes:
+                original_read = getattr(wrapped_read, "original_read")
+                for breakpoint in getattr(wrapped_read, "breakpoints"):
+                    if (offset <= breakpoint) and (breakpoint < offset + length):
+                        print(
+                            "Hit breakpoint, entering python debugger. To continue running without the debugger use the command continue"
+                        )
+                        import pdb
+
+                        pdb.set_trace()
+                        _ = "First statement after the breakpoint, use u(p), d(own) and list to navigate through the execution frames"
+                return original_read(offset, length, pad)
+
+            setattr(wrapped_read, "breakpoints", set())
+            setattr(wrapped_read, "original_read", layer.read)
+            setattr(layer, "read", wrapped_read)
+
+        # Add the new breakpoint
+        print(f"Setting breakpoint {address:#x} on {layer.name}")
+        breakpoints = getattr(layer.read, "breakpoints")
+        breakpoints.add(address)
+        setattr(layer.read, "breakpoints", breakpoints)
+
+    def breakpoint_list(self, layer_names: Optional[List[str]] = None):
+        """List available breakpoints for a set of layers"""
+        if not layer_names:
+            layer_names = [layer_name for layer_name in self.context.layers]
+
+        print("Listing breakpoints:")
+        for layer_name in layer_names:
+            print(f" {layer_name}")
+            layer = self.context.layers.get(layer_name, None)
+            if layer and hasattr(layer.read, "breakpoints"):
+                for breakpoint in layer.read.breakpoints:
+                    print(f"  {breakpoint:#x}")
+
+    def breakpoint_clear(
+        self, offset: Optional[int] = None, layer_name: Optional[str] = None
+    ):
+        """Clears a offset breakpoint on a layer (or all breakpoints if offset or layer not specified)
+
+        Args:
+            offset: Address of the breakpoint to clear (or all if None)
+            layer_name: Layer to clear breakpoints from (or all if None)
+        """
+        print("Clearing breakpoints:")
+        for candidate_layer_name in self.context.layers:
+            candidate_layer = self.context.layers[candidate_layer_name]
+            if layer_name is None or layer_name == candidate_layer_name:
+                print(f" {candidate_layer_name}")
+                if hasattr(candidate_layer.read, "breakpoints"):
+                    breakpoints_to_remove = set()
+                    for breakpoint in candidate_layer.read.breakpoints:
+                        if offset is None or offset == breakpoint:
+                            print(f"  clearing {breakpoint:#x}")
+                            breakpoints_to_remove.add(breakpoint)
+                    candidate_layer.read.breakpoints -= breakpoints_to_remove
 
 
 class NullFileHandler(io.BytesIO, interfaces.plugins.FileHandlerInterface):

@@ -22,7 +22,6 @@ if __name__ == "__main__":
 
 
 class PDBRetreiver:
-
     def retreive_pdb(self, guid: str, file_name: str) -> Optional[str]:
         logger.info("Download PDB file...")
         file_name = ".".join(file_name.split(".")[:-1] + ["pdb"])

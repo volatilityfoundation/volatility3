@@ -7,6 +7,7 @@ from loaded PE files.
 This module contains a standalone scanner, and also a :class:`~volatility3.framework.interfaces.layers.ScannerInterface`
 based scanner for use within the framework by calling :func:`~volatility3.framework.interfaces.layers.DataLayerInterface.scan`.
 """
+
 import contextlib
 import logging
 import math
@@ -449,7 +450,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             while (kernel_base + 0x2000000) > kernel_hint:
                 for i in range(0, 0x200000, 0x1000):
                     valid_kernel = self.check_kernel_offset(
-                        context, vlayer, kernel_base, progress_callback
+                        context, vlayer, kernel_base + i, progress_callback
                     )
                     if valid_kernel:
                         return valid_kernel

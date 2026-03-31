@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, Iterator, List, Optional
 
 from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
@@ -18,13 +18,9 @@ class Handles(interfaces.plugins.PluginInterface):
     """Lists process open handles."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (3, 0, 0)
+    _version = (4, 0, 0)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._type_map = None
-        self._cookie = None
-        self._level_mask = 7
+    LEVEL_MASK = 7
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -54,18 +50,27 @@ class Handles(interfaces.plugins.PluginInterface):
             ),
         ]
 
-    def _get_item(self, handle_table_entry, handle_value):
-        """Given  a handle table entry (_HANDLE_TABLE_ENTRY) structure from a
+    @classmethod
+    def _get_item(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        handle_table_entry: interfaces.objects.ObjectInterface,
+        handle_value: int,
+    ) -> Optional[interfaces.objects.ObjectInterface]:
+        """
+        Given  a handle table entry (_HANDLE_TABLE_ENTRY) structure from a
         process' handle table, determine where the corresponding object's
-        _OBJECT_HEADER can be found."""
+        _OBJECT_HEADER can be found, and construct and return the _OBJECT_HEADER
+        """
 
-        kernel = self.context.modules[self.config["kernel"]]
+        kernel = context.modules[kernel_module_name]
 
         virtual = kernel.layer_name
 
         try:
             # before windows 7
-            if not self.context.layers[virtual].is_valid(handle_table_entry.Object):
+            if not context.layers[virtual].is_valid(handle_table_entry.Object):
                 return None
             fast_ref = handle_table_entry.Object.cast("_EX_FAST_REF")
 
@@ -78,7 +83,7 @@ class Handles(interfaces.plugins.PluginInterface):
         except AttributeError:
             # starting with windows 8
             is_64bit = symbols.symbol_table_is_64bit(
-                context=self.context, symbol_table_name=kernel.symbol_table_name
+                context=context, symbol_table_name=kernel.symbol_table_name
             )
 
             if is_64bit:
@@ -104,7 +109,7 @@ class Handles(interfaces.plugins.PluginInterface):
                 offset = info_table & ~7
 
             # print("LowValue: {0:#x} Magic: {1:#x} Offset: {2:#x}".format(handle_table_entry.InfoTable, magic, offset))
-            object_header = self.context.object(
+            object_header = context.object(
                 kernel.symbol_table_name + constants.BANG + "_OBJECT_HEADER",
                 virtual,
                 offset=offset,
@@ -205,11 +210,23 @@ class Handles(interfaces.plugins.PluginInterface):
             offset=symbol_offset,
         )
 
-    def _make_handle_array(self, offset, level, depth=0):
-        """Parse a process' handle table and yield valid handle table entries,
-        going as deep into the table "levels" as necessary."""
+    @classmethod
+    def _make_handle_array(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        offset: int,
+        level: int,
+        depth: int = 0,
+    ) -> Iterator[interfaces.objects.ObjectInterface]:
+        """
+        Parses a process' handle table by constructing an array of
+        `_HANDLE_TABLE_ENTRY` structures at the given offset, and yields valid
+        handle table entries, going as deep into the table "levels" as
+        necessary.
+        """
 
-        kernel = self.context.modules[self.config["kernel"]]
+        kernel = context.modules[kernel_module_name]
 
         if level > 0:
             subtype = kernel.get_type("pointer")
@@ -218,7 +235,7 @@ class Handles(interfaces.plugins.PluginInterface):
             subtype = kernel.get_type("_HANDLE_TABLE_ENTRY")
             count = 0x1000 / subtype.size
 
-        if not self.context.layers[kernel.layer_name].is_valid(offset):
+        if not context.layers[kernel.layer_name].is_valid(offset):
             return None
 
         table = kernel.object(
@@ -229,7 +246,7 @@ class Handles(interfaces.plugins.PluginInterface):
             absolute=True,
         )
 
-        layer_object = self.context.layers[kernel.layer_name]
+        layer_object = context.layers[kernel.layer_name]
         masked_offset = offset & layer_object.maximum_address
 
         for i in range(len(table)):
@@ -243,11 +260,13 @@ class Handles(interfaces.plugins.PluginInterface):
             # The code above this calls `is_valid` on the `offset`
             # It is sent but then does not validate `entry` before
             # sending it to `_get_item`
-            if not self.context.layers[kernel.layer_name].is_valid(entry.vol.offset):
+            if not context.layers[kernel.layer_name].is_valid(entry.vol.offset):
                 continue
 
             if level > 0:
-                yield from self._make_handle_array(entry, level - 1, depth)
+                yield from cls._make_handle_array(
+                    context, kernel_module_name, entry, level - 1, depth
+                )
                 depth += 1
             else:
                 handle_multiplier = 4
@@ -258,7 +277,7 @@ class Handles(interfaces.plugins.PluginInterface):
                     / (subtype.size / handle_multiplier)
                 ) + handle_level_base
 
-                item = self._get_item(entry, handle_value)
+                item = cls._get_item(context, kernel_module_name, entry, handle_value)
 
                 if item is None:
                     continue
@@ -272,10 +291,21 @@ class Handles(interfaces.plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     continue
 
-    def handles(self, handle_table):
+    @classmethod
+    def handles(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        handle_table: interfaces.objects.ObjectInterface,
+    ) -> Iterator[interfaces.objects.ObjectInterface]:
+        """
+        Takes a context, kernel module name, and handle table structure
+        (_HANDLE_TABLE), and yields _HANDLE_TABLE_ENTRY structures from the
+        handle table.
+        """
         try:
-            TableCode = handle_table.TableCode & ~self._level_mask
-            table_levels = handle_table.TableCode & self._level_mask
+            TableCode = handle_table.TableCode & ~cls.LEVEL_MASK
+            table_levels = handle_table.TableCode & cls.LEVEL_MASK
         except exceptions.InvalidAddressException:
             vollog.log(
                 constants.LOGLEVEL_VVV,
@@ -283,7 +313,9 @@ class Handles(interfaces.plugins.PluginInterface):
             )
             return None
 
-        yield from self._make_handle_array(TableCode, table_levels)
+        yield from cls._make_handle_array(
+            context, kernel_module_name, TableCode, table_levels
+        )
 
     def _generator(self, procs):
         type_map = self.get_type_map(
@@ -306,7 +338,9 @@ class Handles(interfaces.plugins.PluginInterface):
 
             process_name = utility.array_to_string(proc.ImageFileName)
 
-            for entry in self.handles(object_table):
+            for entry in self.handles(
+                self.context, self.config["kernel"], object_table
+            ):
                 try:
                     obj_type = entry.get_object_type(type_map, cookie)
                     if obj_type is None:

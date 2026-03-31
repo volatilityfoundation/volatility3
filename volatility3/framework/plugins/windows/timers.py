@@ -35,11 +35,11 @@ class Timers(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="ssdt", plugin=ssdt.SSDT, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="ssdt", component=ssdt.SSDT, version=(2, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="kpcrs", plugin=kpcrs.KPCRs, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="kpcrs", component=kpcrs.KPCRs, version=(2, 0, 0)
             ),
         ]
 

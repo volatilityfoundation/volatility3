@@ -10,8 +10,8 @@ import string
 import sys
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union
-from volatility3.cli import text_filter
 
+from volatility3.cli import text_filter
 from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.renderers import format_hints
 
@@ -49,7 +49,7 @@ def hex_bytes_as_text(value: bytes, width: int = 16) -> str:
                 output += "\n"
             printables = ""
 
-    # Handle leftovers when the length is not mutiple of width
+    # Handle leftovers when the length is not a multiple of width
     if printables:
         padding = width - len(printables)
         output += "   " * padding
@@ -182,7 +182,7 @@ class LayerDataRenderer(CLITypeRenderer):
                         output += "\n"
                     printables = ""
 
-            # Handle leftovers when the length is not mutiple of width
+            # Handle leftovers when the length is not a multiple of width
             if printables:
                 padding = self.width - len(printables)
                 output += "   " * padding
@@ -278,7 +278,6 @@ class CLIRenderer(interfaces.renderers.Renderer):
 
 
 class QuickTextRenderer(CLIRenderer):
-
     name = "quick"
 
     def get_render_options(self):
@@ -348,7 +347,6 @@ class NoneRenderer(CLIRenderer):
 
 
 class CSVRenderer(CLIRenderer):
-
     name = "csv"
     structured_output = True
 
@@ -466,9 +464,9 @@ class PrettyTextRenderer(CLIRenderer):
             accumulator.append((node.path_depth, line))
             return accumulator
 
-        final_output: List[Tuple[int, Dict[interfaces.renderers.Column, list[str]]]] = (
-            []
-        )
+        final_output: List[
+            Tuple[int, Dict[interfaces.renderers.Column, list[str]]]
+        ] = []
         if not grid.populated:
             grid.populate(visitor, final_output)
         else:
@@ -600,7 +598,8 @@ class JsonRenderer(CLIRenderer):
             if self.filter and self.filter.filter(line):
                 return accumulator
 
-            if node.parent:
+            # Only add if the parent hasn't been filtered out
+            if node.parent and node.parent.path in acc_map:
                 acc_map[node.parent.path]["__children"].append(node_dict)
             else:
                 final_tree.append(node_dict)

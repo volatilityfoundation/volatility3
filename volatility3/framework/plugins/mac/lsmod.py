@@ -3,6 +3,7 @@
 #
 """A module containing a collection of plugins that produce data typically
 found in Mac's lsmod command."""
+
 from typing import Set
 
 from volatility3.framework import renderers, interfaces, exceptions

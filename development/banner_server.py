@@ -14,7 +14,6 @@ vollog = logging.getLogger(__name__)
 
 
 class BannerCacheGenerator:
-
     def __init__(self, path: str, url_prefix: str):
         self._path = path
         self._url_prefix = url_prefix
@@ -79,7 +78,6 @@ class BannerCacheGenerator:
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", default=os.path.dirname(__file__))
     parser.add_argument(

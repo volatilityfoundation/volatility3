@@ -132,19 +132,22 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             # There should only be one STANDARD_INFORMATION attribute, but we
             # do this just in case.
             for std_information in mft_record.standard_information_entries():
-                yield 0, cls.MFTScanResult(
-                    format_hints.Hex(std_information.vol.offset),
-                    str(mft_record.get_signature()),
-                    mft_record.RecordNumber,
-                    mft_record.LinkCount,
-                    mft_flag,
-                    renderers.NotApplicableValue(),
-                    "STANDARD_INFORMATION",
-                    conversion.wintime_to_datetime(std_information.CreationTime),
-                    conversion.wintime_to_datetime(std_information.ModifiedTime),
-                    conversion.wintime_to_datetime(std_information.UpdatedTime),
-                    conversion.wintime_to_datetime(std_information.AccessedTime),
-                    renderers.NotApplicableValue(),
+                yield (
+                    0,
+                    cls.MFTScanResult(
+                        format_hints.Hex(std_information.vol.offset),
+                        str(mft_record.get_signature()),
+                        mft_record.RecordNumber,
+                        mft_record.LinkCount,
+                        mft_flag,
+                        renderers.NotApplicableValue(),
+                        "STANDARD_INFORMATION",
+                        conversion.wintime_to_datetime(std_information.CreationTime),
+                        conversion.wintime_to_datetime(std_information.ModifiedTime),
+                        conversion.wintime_to_datetime(std_information.UpdatedTime),
+                        conversion.wintime_to_datetime(std_information.AccessedTime),
+                        renderers.NotApplicableValue(),
+                    ),
                 )
         except exceptions.InvalidAddressException:
             pass
@@ -163,26 +166,28 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         # File Name Attribute
         try:
             for filename_info in mft_record.filename_entries():
-
                 # If we don't have a valid enum, coerce to hex so we can keep the record
                 try:
                     permissions = filename_info.Flags.lookup()
                 except ValueError:
                     permissions = hex(filename_info.Flags)
 
-                yield 1, cls.MFTScanResult(
-                    format_hints.Hex(filename_info.vol.offset),
-                    str(mft_record.get_signature()),
-                    mft_record.RecordNumber,
-                    mft_record.LinkCount,
-                    mft_flag,
-                    permissions,
-                    "FILE_NAME",
-                    conversion.wintime_to_datetime(filename_info.CreationTime),
-                    conversion.wintime_to_datetime(filename_info.ModifiedTime),
-                    conversion.wintime_to_datetime(filename_info.UpdatedTime),
-                    conversion.wintime_to_datetime(filename_info.AccessedTime),
-                    filename_info.get_full_name(),
+                yield (
+                    1,
+                    cls.MFTScanResult(
+                        format_hints.Hex(filename_info.vol.offset),
+                        str(mft_record.get_signature()),
+                        mft_record.RecordNumber,
+                        mft_record.LinkCount,
+                        mft_flag,
+                        permissions,
+                        "FILE_NAME",
+                        conversion.wintime_to_datetime(filename_info.CreationTime),
+                        conversion.wintime_to_datetime(filename_info.ModifiedTime),
+                        conversion.wintime_to_datetime(filename_info.UpdatedTime),
+                        conversion.wintime_to_datetime(filename_info.AccessedTime),
+                        filename_info.get_full_name(),
+                    ),
                 )
         except exceptions.InvalidAddressException:
             return
@@ -214,22 +219,25 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             # but in this case memory usage is so extreme due to the number of
             # records that it becomes necessary. The rich types are still
             # exposed through classmethods.
-            yield level, (
-                record.offset,
-                record.record_type,
-                int(record.record_number),
-                int(record.link_count),
-                record.mft_type,
-                record.permissions,
-                record.attribute_type,
-                record.created,
-                record.modified,
-                record.updated,
-                record.accessed,
+            yield (
+                level,
                 (
-                    str(record.filename)
-                    if isinstance(record.filename, objects.String)
-                    else record.filename
+                    record.offset,
+                    record.record_type,
+                    int(record.record_number),
+                    int(record.link_count),
+                    record.mft_type,
+                    record.permissions,
+                    record.attribute_type,
+                    record.created,
+                    record.modified,
+                    record.updated,
+                    record.accessed,
+                    (
+                        str(record.filename)
+                        if isinstance(record.filename, objects.String)
+                        else record.filename
+                    ),
                 ),
             )
 
@@ -344,22 +352,25 @@ class ADS(interfaces.plugins.PluginInterface):
                 # but in this case memory usage is so extreme due to the number of
                 # records that it becomes necessary. The rich types are still
                 # exposed through classmethods.
-                yield 0, (
-                    record.offset,
-                    str(record.signature),
-                    int(record.record_number),
-                    record.attribute_type,
+                yield (
+                    0,
                     (
-                        str(record.filename)
-                        if isinstance(record.filename, objects.String)
-                        else record.filename
+                        record.offset,
+                        str(record.signature),
+                        int(record.record_number),
+                        record.attribute_type,
+                        (
+                            str(record.filename)
+                            if isinstance(record.filename, objects.String)
+                            else record.filename
+                        ),
+                        (
+                            str(record.stream_name)
+                            if isinstance(record.stream_name, objects.String)
+                            else record.stream_name
+                        ),
+                        record.content,
                     ),
-                    (
-                        str(record.stream_name)
-                        if isinstance(record.stream_name, objects.String)
-                        else record.stream_name
-                    ),
-                    record.content,
                 )
 
     def run(self):
@@ -454,13 +465,16 @@ class ResidentData(interfaces.plugins.PluginInterface):
                 # but in this case memory usage is so extreme due to the number of
                 # records that it becomes necessary. The rich types are still
                 # exposed through classmethods.
-                yield 0, (
-                    resident_data_entry.offset,
-                    str(resident_data_entry.signature),
-                    int(resident_data_entry.record_number),
-                    resident_data_entry.attribute_type,
-                    str(resident_data_entry.filename),
-                    resident_data_entry.content,
+                yield (
+                    0,
+                    (
+                        resident_data_entry.offset,
+                        str(resident_data_entry.signature),
+                        int(resident_data_entry.record_number),
+                        resident_data_entry.attribute_type,
+                        str(resident_data_entry.filename),
+                        resident_data_entry.content,
+                    ),
                 )
 
     def run(self):

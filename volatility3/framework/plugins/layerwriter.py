@@ -62,7 +62,7 @@ class LayerWriter(plugins.PluginInterface):
         Args:
             context: the context from which to read the memory layer
             layer_name: the name of the layer to write out
-            preferred_name: a string with the preferred filename for hte file
+            preferred_name: a string with the preferred filename for the file
             chunk_size: an optional size for the chunks that should be written (defaults to 0x500000)
             open_method: class for creating FileHandler context managers
             progress_callback: an optional function that takes a percentage and a string that displays output

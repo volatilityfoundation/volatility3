@@ -5,7 +5,12 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
+import sys
+
 import volatility3.cli
 
 if __name__ == "__main__":
+    # Ensure stdout/stderr use UTF-8 to avoid output encoding errors on Windows systems
+    sys.stderr.reconfigure(encoding="utf-8")
+    sys.stdout.reconfigure(encoding="utf-8")
     volatility3.cli.main()

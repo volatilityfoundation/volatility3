@@ -21,7 +21,7 @@ vollog = logging.getLogger(__name__)
 @dataclass
 class ParsedTracepointFunc:
     """Parsed tracepoint_func struct, containing a selection of forensics valuable
-    informations."""
+    information."""
 
     tracepoint_name: str
     tracepoint_address: int

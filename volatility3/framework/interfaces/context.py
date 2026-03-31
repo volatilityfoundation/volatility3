@@ -11,6 +11,7 @@ convenience functions, most notably the object constructor function,
 `object`, which will construct a symbol on a layer at a particular
 offset.
 """
+
 import collections
 import copy
 from abc import ABCMeta, abstractmethod
@@ -267,7 +268,7 @@ class ModuleInterface(interfaces.configuration.ConfigurableInterface):
             symbol_name: The name of a symbol (that must be present in the module's symbol table).  The symbol's associated type will be used to construct an object at the symbol's offset.
             native_layer_name: The native layer for objects that reference a different layer (if not the default provided during module construction)
             absolute: A boolean specifying whether the offset is absolute within the layer, or relative to the start of the module
-            object_type: Override for the type from the symobl to use (or if the symbol type is missing)
+            object_type: Override for the type from the symbol to use (or if the symbol type is missing)
 
         Returns:
             The constructed object

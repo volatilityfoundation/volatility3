@@ -103,12 +103,15 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                         layer_name=proc_layer.name,
                         length=len(value),
                     )
-                    yield 0, (
-                        format_hints.Hex(offset),
-                        task.tgid,
-                        rule_name,
-                        name,
-                        layer_data,
+                    yield (
+                        0,
+                        (
+                            format_hints.Hex(offset),
+                            task.tgid,
+                            rule_name,
+                            name,
+                            layer_data,
+                        ),
                     )
 
     @classmethod

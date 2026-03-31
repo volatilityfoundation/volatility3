@@ -1710,3 +1710,16 @@ class SHARED_CACHE_MAP(objects.StructType):
                     )
 
         return vacb_list
+
+
+class LDR_DATA_TABLE_ENTRY(objects.StructType):
+    def get_load_count(self) -> Optional[int]:
+        try:
+            LoadCount = self.LoadCount.cast("short")
+        except Exception:
+            try:
+                LoadCount = self.ObsoleteLoadCount.cast("short")
+            except Exception:
+                LoadCount = None
+
+        return LoadCount

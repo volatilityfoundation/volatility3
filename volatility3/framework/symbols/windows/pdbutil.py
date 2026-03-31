@@ -289,7 +289,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
                         )
                 break
             except PermissionError:
-                vollog.warning(
+                vollog.debug(
                     f"Cannot write necessary symbol file, please check permissions on {potential_output_filename}"
                 )
                 continue
@@ -525,6 +525,10 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
     .. note:: The pdb_names must be a list of byte strings, unicode strs will not match against the data scanned
     """
 
+    _version = (1, 0, 0)
+
+    _required_framework_version = (2, 27, 0)
+
     overlap = 0x4000
     """The size of overlap needed for the signature to ensure data cannot hide between two scanned chunks"""
     thread_safe = True
@@ -548,9 +552,7 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
         )
         for match in re.finditer(pattern, data, flags=re.DOTALL):
             pdb_name = data[
-                match.start(0)
-                + 4
-                + self._RSDS_format.size : match.start(0)
+                match.start(0) + 4 + self._RSDS_format.size : match.start(0)
                 + len(match.group())
                 - 1
             ]

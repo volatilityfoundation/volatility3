@@ -305,8 +305,9 @@ class JarHandler(VolatilityHandler):
     def default_open(req: urllib.request.Request) -> Optional[Any]:
         """Handles the request if it's the jar scheme."""
         if req.type == "jar":
-            subscheme, remainder = req.full_url.split(":")[1], ":".join(
-                req.full_url.split(":")[2:]
+            subscheme, remainder = (
+                req.full_url.split(":")[1],
+                ":".join(req.full_url.split(":")[2:]),
             )
             if subscheme != "file":
                 vollog.log(
