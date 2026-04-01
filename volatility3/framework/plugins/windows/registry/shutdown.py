@@ -48,7 +48,11 @@ class LastShutdown(interfaces.plugins.PluginInterface):
         if not syshive:
             return
 
-        # try multiple controlsets (robust approach)
+        # Windows systems typically maintain a small number of ControlSets
+        # (commonly 1–3, but occasionally more in recovery scenarios).
+        # We iterate over a bounded range to ensure we can recover shutdown
+        # time even if the active ControlSet cannot be determined via
+        # Select\\Current or if registry data is partially corrupted.
         for i in range(1, 5):
 
             key_path = f"ControlSet{i:03}\\Control\\Windows"
