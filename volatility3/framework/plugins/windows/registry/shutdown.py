@@ -34,12 +34,6 @@ class LastShutdown(interfaces.plugins.PluginInterface):
             ),
         ]
 
-    @staticmethod
-    def filetime_to_dt(filetime: int) -> datetime.datetime:
-        return datetime.datetime(1601, 1, 1) + datetime.timedelta(
-            microseconds=filetime / 10
-        )
-
     @classmethod
     def get_key(
         cls, hive: registry_layer.RegistryHive, key_path: str
