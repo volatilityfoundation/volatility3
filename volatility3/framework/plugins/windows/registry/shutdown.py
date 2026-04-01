@@ -8,6 +8,7 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import registry as registry_layer
 from volatility3.framework.symbols.windows.extensions import registry
 from volatility3.plugins.windows.registry import hivelist
+from volatility3.framework.renderers import conversion
 
 vollog = logging.getLogger(__name__)
 
