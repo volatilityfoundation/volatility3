@@ -76,7 +76,7 @@ class LastShutdown(interfaces.plugins.PluginInterface):
                         continue
 
                     filetime = struct.unpack("<Q", data[:8])[0]
-                    shutdown_time = self.filetime_to_dt(filetime)
+                    shutdown_time = conversion.wintime_to_datetime(filetime)
 
                     yield (0, (key_path, str(shutdown_time)))
 
