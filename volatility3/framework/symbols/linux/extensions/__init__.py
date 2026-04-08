@@ -1360,7 +1360,7 @@ class vm_area_struct(objects.StructType):
                     break
         return malicious_pages
 
-    # used by malfind
+    # previously used by malfind
     def is_suspicious(self, proclayer=None):
         ret = False
 
