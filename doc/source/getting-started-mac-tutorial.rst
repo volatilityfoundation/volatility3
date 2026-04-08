@@ -7,7 +7,7 @@ macOS Tutorial
 
     The primary reason for this discontinuation is the increased complexity of memory acquisition on modern macOS. Apple’s stringent security policies—specifically **System Integrity Protection (SIP)** and **Kernel Lockdown**—have made it nearly impossible for open-source frameworks to reliably access kernel memory without significant, intrusive modifications to the target system.
 
-    While this tutorial remains available for educational purposes and for analyzing older macOS memory samples, it is not recommended for modern investigative workflows. If you require macOS memory forensics capabilities for **enterprise or professional investigative environments**, we recommend exploring commercial solutions such as those provided by **Volexity**, which is led by members of the Volatility core development team.
+    While this tutorial remains available for educational purposes and for analyzing older macOS memory samples, it is not recommended for modern investigative workflows.
 
 .. _Official Parity Release of Volatility 3: https://volatilityfoundation.org/announcing-the-official-parity-release-of-volatility-3/
 
