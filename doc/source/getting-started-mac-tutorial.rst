@@ -1,6 +1,16 @@
 macOS Tutorial
 ==============
 
+.. warning::
+
+    **As of the `Official Parity Release of Volatility 3`_ (v2.26.0) announced on May 16, 2025, macOS is no longer officially supported by the Volatility Foundation.** Ongoing development and maintenance will be focused exclusively on **Windows and Linux** memory analysis.
+
+    The primary reason for this discontinuation is the increased complexity of memory acquisition on modern macOS. Apple’s stringent security policies—specifically **System Integrity Protection (SIP)** and **Kernel Lockdown**—have made it nearly impossible for open-source frameworks to reliably access kernel memory without significant, intrusive modifications to the target system.
+
+    While this tutorial remains available for educational purposes and for analyzing older macOS memory samples, it is not recommended for modern investigative workflows.
+
+.. _Official Parity Release of Volatility 3: https://volatilityfoundation.org/announcing-the-official-parity-release-of-volatility-3/
+
 This guide will give you a brief overview of how volatility3 works as well as a demonstration of several of the plugins available in the suite.
 
 Acquiring memory
