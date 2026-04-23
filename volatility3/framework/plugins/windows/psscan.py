@@ -270,41 +270,22 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         ):
             file_output = "Disabled"
 
-            # windows 10 objects (maybe others in the future) are already in virtual memory
-            # if the proc native_layer_name and layer_name match then it is in 'virtual' memory.
-            if proc.vol.layer_name == proc.vol.native_layer_name:
-                # proc is already in a virtual mem, so a new object is not needed. it means
-                # that if physical addresses are requested in the output then proc.vol.offset
-                # cannot be used because it will be virtual, so the mapping is needed.
+            if isinstance(self.context.layers[proc.vol.layer_name], layers.intel.Intel):
                 vproc = proc
                 if self.config["physical"]:
-                    # the display should be physical addresses, so proc cannot be used. The
-                    # mappings are needed to find where it would be physically.
                     _, _, offset, _, _ = list(
                         memory.mapping(offset=proc.vol.offset, length=0)
                     )[0]
                 else:
-                    # the display should be virtual addresses, so proc can be used
                     offset = proc.vol.offset
-
-                #  renderers.UnreadableValue()
             else:
-                # proc is in virtual mem, so a new object needs to be creatd.
                 vproc = self.virtual_process_from_physical(
                     self.context, self.config["kernel"], proc
                 )
                 if self.config["physical"]:
-                    # the display should be physical addresses, so proc can be used
-                    # as it is
                     offset = proc.vol.offset
                 else:
-                    # the display should be virtual address, so vproc should be used
-                    # however virtual_process_from_physical is not always able to create
-                    # a vproc, in that case we need to display a UnreadableValue()
-                    if vproc is not None:
-                        offset = vproc.vol.offset
-                    else:
-                        offset = None
+                    offset = vproc.vol.offset if vproc is not None else None
 
             if self.config["dump"]:
                 file_output = "Error outputting file"
