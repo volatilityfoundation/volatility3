@@ -307,16 +307,17 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         offset = None
 
             if self.config["dump"]:
-                file_handle = pslist.PsList.process_dump(
-                    self.context,
-                    kernel.symbol_table_name,
-                    pe_table_name,
-                    vproc,
-                    self.open,
-                )
                 file_output = "Error outputting file"
-                if file_handle:
-                    file_output = file_handle.preferred_filename
+                if vproc is not None:
+                    file_handle = pslist.PsList.process_dump(
+                        self.context,
+                        kernel.symbol_table_name,
+                        pe_table_name,
+                        vproc,
+                        self.open,
+                    )
+                    if file_handle:
+                        file_output = file_handle.preferred_filename
 
             # format offset for display
             if offset is None:
