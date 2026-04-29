@@ -2,7 +2,7 @@ from typing import Iterator, Optional, Tuple
 from volatility3.framework.layers import scanners
 
 VALID_BANNER_CHARSET = (
-    b" #()+,;/-.0123456789:@ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
+    b" #()+,;/-.0123456789:@ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~\n"
 )
 BANNER_READ_SIZE = 0xFFF
 
@@ -25,6 +25,7 @@ class BannerScanner(scanners.RegExScanner):
         """Gets the banner at a layer offset and validates it."""
         layer = self.context.layers[self.layer_name]
         data = layer.read(offset, BANNER_READ_SIZE, pad=True)
+        # See symbol_cache's _normalize_identifier
         data_index = data.find(b"\x00")
         if data_index <= 0:
             return None
