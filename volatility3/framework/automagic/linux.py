@@ -6,7 +6,7 @@ import logging
 from typing import Optional, Tuple
 
 from volatility3.framework import constants, interfaces
-from volatility3.framework.automagic import symbol_cache, symbol_finder
+from volatility3.framework.automagic import banner_scanners, symbol_cache, symbol_finder
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, scanners
 from volatility3.framework.symbols import linux
@@ -45,9 +45,9 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
             )
             return None
 
-        mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
+        scanner = banner_scanners.LinuxBannerScanner()
         for _, banner in layer.scan(
-            context=context, scanner=mss, progress_callback=progress_callback
+            context=context, scanner=scanner, progress_callback=progress_callback
         ):
             dtb = None
             vollog.debug(f"Identified banner: {repr(banner)}")
