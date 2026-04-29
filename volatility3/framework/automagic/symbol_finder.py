@@ -4,12 +4,11 @@
 
 import logging
 import os
-from typing import Any, Callable, Iterable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from volatility3.framework import constants, interfaces, layers
 from volatility3.framework.automagic import symbol_cache, banner_scanners
 from volatility3.framework.configuration import requirements
-from volatility3.framework.layers import scanners
 
 vollog = logging.getLogger(__name__)
 
@@ -40,7 +39,22 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                 name="SQLiteCache",
                 component=symbol_cache.SqliteCache,
                 version=(1, 0, 0),
-            )
+            ),
+            requirements.VersionRequirement(
+                name="banner_scanners_bannerscanner",
+                component=banner_scanners.BannerScanner,
+                version=(1, 0, 0),
+            ),
+            requirements.VersionRequirement(
+                name="banner_scanners_linuxbannerscanner",
+                component=banner_scanners.LinuxBannerScanner,
+                version=(1, 0, 0),
+            ),
+            requirements.VersionRequirement(
+                name="banner_scanners_macbannerscanner",
+                component=banner_scanners.MacBannerScanner,
+                version=(1, 0, 0),
+            ),
         ]
 
     @property
@@ -128,7 +142,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
         if layer.config.get(self.banner_config_key, None):
             banner_list = [
                 (0, bytes(layer.config[self.banner_config_key], "raw_unicode_escape"))
-            ]  # type: Iterable[Any]
+            ]
         else:
             # Swap to the physical layer for scanning
             # Only traverse down a layer if it's an intel layer

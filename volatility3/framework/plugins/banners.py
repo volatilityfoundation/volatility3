@@ -36,6 +36,11 @@ class Banners(interfaces.plugins.PluginInterface):
                 component=pdbutil.PdbSignatureScanner,
                 version=(1, 0, 0),
             ),
+            requirements.VersionRequirement(
+                name="banner_scanners_bannerscanner",
+                component=banner_scanners.BannerScanner,
+                version=(1, 0, 0),
+            ),
         ]
 
     def _generator(self):
