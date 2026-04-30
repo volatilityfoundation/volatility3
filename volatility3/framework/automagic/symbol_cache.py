@@ -296,7 +296,7 @@ class SqliteCache(CacheManagerInterface):
             return row["hash"]
         return None
 
-    def _normalize_identifier(self, identifier: bytes):
+    def _normalize_linux_identifier(self, identifier: bytes):
         # Unify banner ending, accounts for "\x00\n" and "\n\x00" cases
         identifier = identifier.rstrip()
         identifier = identifier.rstrip(b"\x00")
@@ -403,7 +403,10 @@ class SqliteCache(CacheManagerInterface):
                             identifier = idextractor.get_identifier(json_obj)
                             if identifier is not None:
                                 operating_system = idextractor.operating_system
-                                identifier = self._normalize_identifier(identifier)
+                                if operating_system == "linux":
+                                    identifier = self._normalize_linux_identifier(
+                                        identifier
+                                    )
                                 break
 
                         # We don't try to validate schemas here, we do that on first use
@@ -454,7 +457,9 @@ class SqliteCache(CacheManagerInterface):
                     {}, operating_system=operating_system
                 )
                 for identifier, location in identifiers:
-                    identifier = self._normalize_identifier(identifier)
+                    if operating_system == "linux":
+                        identifier = self._normalize_linux_identifier(identifier)
+
                     cursor.execute(
                         "INSERT OR REPLACE INTO cache(identifier, location, operating_system, local, cached) VALUES (?, ?, ?, ?, datetime('now'))",
                         (identifier, location, operating_system, False),
