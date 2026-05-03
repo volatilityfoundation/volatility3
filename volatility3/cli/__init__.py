@@ -345,6 +345,18 @@ class CommandLine:
             choices=list(renderers),
         )
 
+        # Display the banner BEFORE the subparser is added (so parse_known_args
+        # below treats unknown positionals as leftover instead of rejecting them
+        # against the PLUGIN choice list) and BEFORE parser.parse_args() runs at
+        # the bottom of this method (so the banner still appears when the user
+        # passes --help / -h, which causes argparse to print help and exit).
+        banner_partial_args, _ = parser.parse_known_args(known_args)
+        banner_output = sys.stdout
+        if renderers[banner_partial_args.renderer].structured_output:
+            banner_output = sys.stderr
+        banner_output.write(f"Volatility 3 Framework {constants.PACKAGE_VERSION}\n")
+        banner_output.flush()
+
         seen_automagics = set()
         chosen_configurables_list = {}
         for amagic in automagics:
@@ -391,12 +403,6 @@ class CommandLine:
             # before all the plugins have been added
             argcomplete.autocomplete(parser)
         args = parser.parse_args()
-
-        # Display banner - redirect to stderr if using structured output
-        banner_output = sys.stdout
-        if renderers[args.renderer].structured_output:
-            banner_output = sys.stderr
-        banner_output.write(f"Volatility 3 Framework {constants.PACKAGE_VERSION}\n")
 
         if args.plugin is None:
             parser.error(
