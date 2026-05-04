@@ -7,8 +7,9 @@ import os
 from typing import Callable, List, Optional, Tuple
 
 from volatility3.framework import constants, interfaces, layers
-from volatility3.framework.automagic import symbol_cache, banner_scanners
+from volatility3.framework.automagic import symbol_cache
 from volatility3.framework.configuration import requirements
+from volatility3.framework.layers import scanners
 
 vollog = logging.getLogger(__name__)
 
@@ -41,18 +42,8 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                 version=(1, 0, 0),
             ),
             requirements.VersionRequirement(
-                name="banner_scanners_bannerscanner",
-                component=banner_scanners.BannerScanner,
-                version=(1, 0, 0),
-            ),
-            requirements.VersionRequirement(
-                name="banner_scanners_linuxbannerscanner",
-                component=banner_scanners.LinuxBannerScanner,
-                version=(1, 0, 0),
-            ),
-            requirements.VersionRequirement(
-                name="banner_scanners_macbannerscanner",
-                component=banner_scanners.MacBannerScanner,
+                name="multi_string_scanner",
+                component=scanners.MultiStringScanner,
                 version=(1, 0, 0),
             ),
         ]
@@ -147,19 +138,14 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
             # Swap to the physical layer for scanning
             # Only traverse down a layer if it's an intel layer
             # TODO: Fix this so it works for layers other than just Intel
-            if self.operating_system == "linux":
-                scanner = banner_scanners.LinuxBannerScanner
-            elif self.operating_system == "mac":
-                scanner = banner_scanners.MacBannerScanner
-            else:
-                scanner = banner_scanners.BannerScanner
-
+            mss = scanners.MultiStringScanner(
+                [x for x in self.banners if x is not None]
+            )
             scan_layer = layer
             if isinstance(scan_layer, layers.intel.Intel):
-                scan_layer = context.layers[layer.config["memory_layer"]]
-
+                scan_layer = context.layers[scan_layer.config["memory_layer"]]
             banner_list = scan_layer.scan(
-                context=context, scanner=scanner(), progress_callback=progress_callback
+                context=context, scanner=mss, progress_callback=progress_callback
             )
 
         for _, banner in banner_list:
