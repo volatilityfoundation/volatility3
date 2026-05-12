@@ -216,6 +216,7 @@ class VMRSExportManifest:
     def from_bytes(cls, data: bytes) -> "VMRSExportManifest":
         return cls.from_dict(json.loads(data.decode("utf-8")))
 
+
 class VMRSLayer(segmented.NonLinearlySegmentedLayer):
     provides = {"type": "physical"}
     EXPORT_MANIFEST_VERSION = 1
@@ -287,7 +288,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
             workflow="direct-vmrs",
             observed_stage="stacking",
             reasons=("VMRS layer has not been initialized",),
-            recommended_next_steps=("Open a supported VMRS capture and rerun stacking",),
+            recommended_next_steps=(
+                "Open a supported VMRS capture and rerun stacking",
+            ),
         )
         super().__init__(
             context=context,
@@ -435,9 +438,17 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                 data = base_layer.read(header_offset, cls.HEADER_STRUCT.size)
             except exceptions.InvalidAddressException:
                 continue
-            signature, _checksum, sequence, version, _unknown0e, block_size, _unknown1a, _unknown22, _unknown2a = cls.HEADER_STRUCT.unpack(
-                data
-            )
+            (
+                signature,
+                _checksum,
+                sequence,
+                version,
+                _unknown0e,
+                block_size,
+                _unknown1a,
+                _unknown22,
+                _unknown2a,
+            ) = cls.HEADER_STRUCT.unpack(data)
             if signature != cls.HEADER_SIGNATURE:
                 continue
             if block_size < 0x1000 or block_size > 0x10000:
@@ -451,7 +462,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                 )
             )
         if not headers:
-            raise VMRSFormatException(base_layer.name, "No valid VMRS storage header found")
+            raise VMRSFormatException(
+                base_layer.name, "No valid VMRS storage header found"
+            )
         selected = max(headers, key=lambda header: header.sequence)
         vollog.debug(
             "VMRS header selection chose %s with sequence 0x%x from %d candidate(s)",
@@ -468,10 +481,16 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
         if not self._object_entries:
             raise VMRSFormatException(self.name, "VMRS object table chain was empty")
 
-        self._all_key_entries = list(self._parse_key_entries(base_layer, self._object_entries))
-        self._key_entries = list(self._resolve_savedstate_entries(self._all_key_entries))
+        self._all_key_entries = list(
+            self._parse_key_entries(base_layer, self._object_entries)
+        )
+        self._key_entries = list(
+            self._resolve_savedstate_entries(self._all_key_entries)
+        )
         if not self._key_entries:
-            raise VMRSFormatException(self.name, "VMRS savedstate subtree could not be resolved")
+            raise VMRSFormatException(
+                self.name, "VMRS savedstate subtree could not be resolved"
+            )
 
         self._partition_state_profile = self._parse_partition_state_profile(base_layer)
         self._apply_partition_state_metadata(self._partition_state_profile)
@@ -493,15 +512,15 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                     "Verify the VMRS capture contains guest-memory mappings",
                 ),
             )
-            raise VMRSFormatException(
-                self.name, self._compatibility_reasons[-1]
-            )
+            raise VMRSFormatException(self.name, self._compatibility_reasons[-1])
 
         self._compatibility_status = "supported"
         self._refresh_compatibility_report()
         vollog.debug(
             "VMRS header %s selected with %d object entries, %d key entries, %d RAM blocks and %d translated segments",
-            hex(self._active_header.header_offset) if self._active_header else "unknown",
+            hex(self._active_header.header_offset)
+            if self._active_header
+            else "unknown",
             len(self._object_entries),
             len(self._key_entries),
             len(self._ram_blocks),
@@ -570,7 +589,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
             reasons=reasons,
             recommended_next_steps=recommended_next_steps,
         )
-        self._metadata["vmrs_compatibility_report"] = self._compatibility_report.to_dict()
+        self._metadata["vmrs_compatibility_report"] = (
+            self._compatibility_report.to_dict()
+        )
         base_layer = getattr(self, "_base_layer", None)
         context = getattr(self, "context", None)
         if context is not None and base_layer in context.layers:
@@ -676,8 +697,8 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
             entry_size = 0x12
             for _ in range(entry_count):
                 raw_entry = base_layer.read(cursor, entry_size)
-                entry_type, _checksum, file_offset, object_size, flags = self.OBJECT_ENTRY_STRUCT.unpack(
-                    raw_entry
+                entry_type, _checksum, file_offset, object_size, flags = (
+                    self.OBJECT_ENTRY_STRUCT.unpack(raw_entry)
                 )
                 entry = VMRSObjectTableEntry(
                     entry_index=entry_index,
@@ -742,9 +763,7 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                         f"Invalid key name length 0x{name_length:x} at 0x{cursor:x}",
                     )
                 name_bytes = entry_data[0x15 : 0x15 + name_length]
-                name = name_bytes.split(b"\x00", 1)[0].decode(
-                    "ascii", errors="replace"
-                )
+                name = name_bytes.split(b"\x00", 1)[0].decode("ascii", errors="replace")
                 payload = entry_data[name_end:]
                 entry_offset = cursor - object_entry.file_offset
                 entry_id = (entry_offset << 16) | table_index
@@ -772,7 +791,11 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
         for entry in key_entries:
             children_by_parent.setdefault(entry.parent_id, []).append(entry)
 
-        roots = [entry for entry in key_entries if entry.parent_id == 0 and entry.name == "savedstate"]
+        roots = [
+            entry
+            for entry in key_entries
+            if entry.parent_id == 0 and entry.name == "savedstate"
+        ]
         if not roots:
             vollog.debug("VMRS key hierarchy does not contain a savedstate root")
             return []
@@ -792,16 +815,27 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                 payload=entry.payload,
                 path=path,
             )
-            for child in sorted(children_by_parent.get(entry.entry_id, []), key=lambda item: item.field10):
+            for child in sorted(
+                children_by_parent.get(entry.entry_id, []),
+                key=lambda item: item.field10,
+            ):
                 queue.append((child, f"{path}/{child.name}"))
 
-        resolved = [selected[entry.entry_id] for entry in key_entries if entry.entry_id in selected]
+        resolved = [
+            selected[entry.entry_id]
+            for entry in key_entries
+            if entry.entry_id in selected
+        ]
         vollog.debug(
             "Resolved VMRS savedstate subtree with %d entrie(s) across %d root(s)",
             len(resolved),
             len(roots),
         )
-        return [entry for entry in resolved if self._memory_related_name(entry.name, entry.path)]
+        return [
+            entry
+            for entry in resolved
+            if self._memory_related_name(entry.name, entry.path)
+        ]
 
     @classmethod
     def _memory_related_name(cls, name: str, path: str = "") -> bool:
@@ -834,7 +868,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                 continue
             block_index = int(match.group(1))
             if block_index in seen_indices:
-                raise VMRSFormatException(self.name, f"Duplicate RamBlock index {block_index}")
+                raise VMRSFormatException(
+                    self.name, f"Duplicate RamBlock index {block_index}"
+                )
             stored_length = struct.unpack_from("<I", key_entry.payload, 0)[0]
             object_offset: Optional[int] = None
             inline_bytes: Optional[bytes] = None
@@ -972,7 +1008,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                 vp_count=None,
                 paging_mode=None,
                 page_map_offset=None,
-                limitations=("partition_state entry was not found in the savedstate tree",),
+                limitations=(
+                    "partition_state entry was not found in the savedstate tree",
+                ),
             )
 
         try:
@@ -996,7 +1034,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                 vp_count=None,
                 paging_mode=None,
                 page_map_offset=None,
-                limitations=("partition_state blob was too small to contain a record header",),
+                limitations=(
+                    "partition_state blob was too small to contain a record header",
+                ),
             )
 
         _unknown00, record_base, used_length = struct.unpack_from("<QQQ", blob, 0)
@@ -1025,7 +1065,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
         limitations: List[str] = []
 
         while cursor + 0x10 <= used_length:
-            record_type, record_size, _unknown08 = struct.unpack_from("<IIQ", blob, cursor)
+            record_type, record_size, _unknown08 = struct.unpack_from(
+                "<IIQ", blob, cursor
+            )
             total_size = record_size + 0x10
             if total_size < 0x10 or cursor + total_size > used_length:
                 limitations.append(
@@ -1047,7 +1089,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                 active_bank_by_vp.setdefault(current_vp, 0)
                 if current_vp not in seen_vps:
                     seen_vps.append(current_vp)
-            elif record_type == self.PARTITION_STATE_BANK_SELECT and record_size >= 0x01:
+            elif (
+                record_type == self.PARTITION_STATE_BANK_SELECT and record_size >= 0x01
+            ):
                 current_bank = blob[cursor + 0x10]
             elif (
                 record_type == self.PARTITION_STATE_ACTIVE_BANK
@@ -1077,7 +1121,11 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
         selected_vp: Optional[int] = None
         selected_bank: Optional[int] = None
         if cr3_by_vp_bank:
-            preferred_vp = 0 if (0, 0) in cr3_by_vp_bank else min(vp for vp, _bank in cr3_by_vp_bank)
+            preferred_vp = (
+                0
+                if (0, 0) in cr3_by_vp_bank
+                else min(vp for vp, _bank in cr3_by_vp_bank)
+            )
             preferred_bank = active_bank_by_vp.get(preferred_vp, 0)
             page_map_offset = cr3_by_vp_bank.get((preferred_vp, preferred_bank))
             if page_map_offset is None:
@@ -1098,7 +1146,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
         if vp_count is None:
             limitations.append("partition_state VP count could not be recovered")
         if paging_mode is None:
-            limitations.append("partition_state architecture selector could not be recovered")
+            limitations.append(
+                "partition_state architecture selector could not be recovered"
+            )
         if page_map_offset is None:
             limitations.append(
                 "partition_state typed records were parsed, but no CR3 value could be selected"
@@ -1116,9 +1166,7 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
             limitations=tuple(limitations),
         )
 
-    def _apply_partition_state_metadata(
-        self, profile: PartitionStateProfile
-    ) -> None:
+    def _apply_partition_state_metadata(self, profile: PartitionStateProfile) -> None:
         self._metadata["vmrs_partition_state_profile"] = profile.to_dict()
         self._metadata["vmrs_native_paging_verified"] = (
             profile.page_map_offset is not None
@@ -1150,7 +1198,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
 
         if profile.limitations:
             return f"{prefix} was parsed, but {profile.limitations[0]}"
-        return f"{prefix} was parsed, but no verified native paging evidence was recovered"
+        return (
+            f"{prefix} was parsed, but no verified native paging evidence was recovered"
+        )
 
     def _build_segments(self) -> List[Tuple[int, int, int, int]]:
         segments: List[Tuple[int, int, int, int]] = []
@@ -1204,7 +1254,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                 continue
             if token == self.TOKEN_FILL_MULTI:
                 if cursor + 12 > len(data):
-                    raise VMRSFormatException(self.name, "Truncated RamBlock fill-run token")
+                    raise VMRSFormatException(
+                        self.name, "Truncated RamBlock fill-run token"
+                    )
                 cursor += 8
                 page_count = struct.unpack_from("<I", data, cursor)[0]
                 cursor += 4
@@ -1212,7 +1264,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                 continue
             if token == self.TOKEN_EXPLICIT:
                 if cursor + 8 > len(data):
-                    raise VMRSFormatException(self.name, "Truncated RamBlock explicit token")
+                    raise VMRSFormatException(
+                        self.name, "Truncated RamBlock explicit token"
+                    )
                 out_len, payload_length = struct.unpack_from("<II", data, cursor)
                 cursor += 8 + payload_length
                 raw_length += out_len
@@ -1232,7 +1286,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
         if inline_bytes is not None:
             return inline_bytes
         if object_offset is None:
-            raise VMRSFormatException(self.name, "RamBlock storage reference was missing")
+            raise VMRSFormatException(
+                self.name, "RamBlock storage reference was missing"
+            )
         return base_layer.read(object_offset, stored_length)
 
     def _decode_ram_block_entry(self, block: VMRSRamBlock) -> bytes:
@@ -1392,7 +1448,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
         self, data: bytes, mapped_offset: int, offset: int, output_length: int
     ) -> bytes:
         segment_start, _, _, _ = self._find_segment(offset)
-        block_index, decoded_offset, _block_length = self._segment_metadata[segment_start]
+        block_index, decoded_offset, _block_length = self._segment_metadata[
+            segment_start
+        ]
         decoded = self._decode_ram_block_entry(self._ram_block_lookup[block_index])
         local_offset = decoded_offset + (offset - segment_start)
         return decoded[local_offset : local_offset + output_length]
@@ -1523,11 +1581,13 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
             if not is_match:
                 if input_position >= data_length:
                     raise VMRSFormatException(
-                        cls.__name__, "Compression format 3 literal overruns the payload"
+                        cls.__name__,
+                        "Compression format 3 literal overruns the payload",
                     )
                 if output_position >= expected_length:
                     raise VMRSFormatException(
-                        cls.__name__, "Compression format 3 produced more output than expected"
+                        cls.__name__,
+                        "Compression format 3 produced more output than expected",
                     )
                 output[output_position] = data[input_position]
                 input_position += 1
@@ -1539,7 +1599,8 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
 
             if input_position + 2 > data_length:
                 raise VMRSFormatException(
-                    cls.__name__, "Compression format 3 match token overruns the payload"
+                    cls.__name__,
+                    "Compression format 3 match token overruns the payload",
                 )
             match_bytes = data[input_position] | (data[input_position + 1] << 8)
             input_position += 2
@@ -1551,7 +1612,8 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                 if last_length_half_byte < 0:
                     if input_position >= data_length:
                         raise VMRSFormatException(
-                            cls.__name__, "Compression format 3 low-length nibble overruns the payload"
+                            cls.__name__,
+                            "Compression format 3 low-length nibble overruns the payload",
                         )
                     length_byte = data[input_position]
                     match_length = length_byte & 0x0F
@@ -1564,7 +1626,8 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                 if match_length == 15:
                     if input_position >= data_length:
                         raise VMRSFormatException(
-                            cls.__name__, "Compression format 3 extended length overruns the payload"
+                            cls.__name__,
+                            "Compression format 3 extended length overruns the payload",
                         )
                     match_length = data[input_position]
                     input_position += 1
@@ -1574,7 +1637,9 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                                 cls.__name__,
                                 "Compression format 3 extended u16 length overruns the payload",
                             )
-                        match_length = data[input_position] | (data[input_position + 1] << 8)
+                        match_length = data[input_position] | (
+                            data[input_position + 1] << 8
+                        )
                         input_position += 2
                         if match_length == 0:
                             if input_position + 4 > data_length:
@@ -1591,7 +1656,8 @@ class VMRSLayer(segmented.NonLinearlySegmentedLayer):
                             input_position += 4
                         if match_length < 22:
                             raise VMRSFormatException(
-                                cls.__name__, "Compression format 3 long match length is invalid"
+                                cls.__name__,
+                                "Compression format 3 long match length is invalid",
                             )
                         match_length -= 22
                     match_length += 15
@@ -1795,14 +1861,17 @@ class VMRSStacker(interfaces.automagic.StackerLayerInterface):
 
         new_name = context.layers.free_layer_name("VMRSLayer")
         config_path = interfaces.configuration.path_join("VMRSHelper", new_name)
-        context.config[interfaces.configuration.path_join(config_path, "base_layer")] = (
-            layer_name
-        )
+        context.config[
+            interfaces.configuration.path_join(config_path, "base_layer")
+        ] = layer_name
         try:
             layer = VMRSLayer(context, config_path, new_name)
         except VMRSFormatException as exc:
             base_metadata = getattr(base_layer, "_metadata", None)
-            if base_metadata is not None and "vmrs_compatibility_report" not in base_metadata:
+            if (
+                base_metadata is not None
+                and "vmrs_compatibility_report" not in base_metadata
+            ):
                 base_metadata["vmrs_compatibility_report"] = CompatibilityReport(
                     status="unsupported",
                     workflow="direct-vmrs",
