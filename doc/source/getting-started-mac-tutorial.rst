@@ -1,6 +1,12 @@
 macOS Tutorial
 ==============
 
+.. warning::
+
+    As of the Volatility 3 parity release, macOS analysis support is no longer actively maintained.
+    The existing macOS plugins remain available but may not receive future updates or bug fixes.
+    For more details, see the `official announcement <https://volatilityfoundation.org/announcing-the-official-parity-release-of-volatility-3/>`_.
+
 This guide will give you a brief overview of how volatility3 works as well as a demonstration of several of the plugins available in the suite.
 
 Acquiring memory
