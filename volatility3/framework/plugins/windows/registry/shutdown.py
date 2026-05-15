@@ -1,6 +1,5 @@
 import logging
 import struct
-import datetime
 from typing import Iterable, Optional
 
 from volatility3.framework import interfaces, renderers, exceptions
@@ -11,8 +10,6 @@ from volatility3.plugins.windows.registry import hivelist
 from volatility3.framework.renderers import conversion
 
 vollog = logging.getLogger(__name__)
-
-
 class LastShutdown(interfaces.plugins.PluginInterface):
     """Extract last Windows shutdown time from registry"""
 
