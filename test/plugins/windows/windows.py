@@ -1485,14 +1485,13 @@ class TestWindowsShutdown:
             globalargs=("-r", "json"),
         )
 
-        
         assert rc == 0
         json_out = json.loads(out)
         assert isinstance(json_out, list)
         assert len(json_out) > 0
         expected_keys = {"Registry Key", "Last Shutdown Time"}
 
-        #Here I controll for every row in the output if there are 
+        #Here I controll for every row in the output if there are
         #the registry key and the value other than controlling
         #if the output actually exists and is the right output to shutdown plugin
         for row in json_out:
