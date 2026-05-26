@@ -61,14 +61,14 @@ class RegExScanner(layers.ScannerInterface):
 class MultiStringScanner(layers.ScannerInterface):
     thread_safe = True
 
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
     _required_framework_version = (2, 0, 0)
 
-    def __init__(self, patterns: List[bytes]) -> None:
+    def __init__(self, patterns: List[bytes], max_depth: int = None) -> None:
         super().__init__()
         self._pattern_trie: Optional[Dict[int, Optional[Dict]]] = {}
         for pattern in patterns:
-            self._process_pattern(pattern)
+            self._process_pattern(pattern[: max_depth or len(pattern)])
         self._regex = self._process_trie(self._pattern_trie)
 
     def _process_pattern(self, value: bytes) -> None:

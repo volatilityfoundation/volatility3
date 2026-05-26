@@ -45,11 +45,21 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
             )
             return None
 
-        mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
-        for _, banner in layer.scan(
+        banners = [banner for banner in linux_banners if banner is not None]
+        max_banner_length = max(map(len, banners), default=0)
+        # Arbitrary constant, reduces memory usage when the cache
+        # has thousands of ISF banners.
+        mss = scanners.MultiStringScanner(banners, max_depth=40)
+        for offset, _ in layer.scan(
             context=context, scanner=mss, progress_callback=progress_callback
         ):
-            dtb = None
+            banner_raw = layer.read(offset, max_banner_length, pad=True)
+            null_index = banner_raw.find(b"\x00")
+            if null_index <= 0:
+                continue
+
+            # See symbol_cache's _normalize_identifier
+            banner = banner_raw[:null_index].rstrip()
             vollog.debug(f"Identified banner: {repr(banner)}")
 
             isf_path = linux_banners.get(banner, None)

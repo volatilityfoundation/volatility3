@@ -127,22 +127,24 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
         if not self.banners:
             return None
 
-        mss = scanners.MultiStringScanner([x for x in self.banners if x is not None])
-
         layer = context.layers[layer_name]
 
         # Check if the Stacker has already found what we're looking for
         if layer.config.get(self.banner_config_key, None):
             banner_list = [
                 (0, bytes(layer.config[self.banner_config_key], "raw_unicode_escape"))
-            ]  # type: Iterable[Any]
+            ]
         else:
             # Swap to the physical layer for scanning
             # Only traverse down a layer if it's an intel layer
             # TODO: Fix this so it works for layers other than just Intel
-            if isinstance(layer, layers.intel.Intel):
-                layer = context.layers[layer.config["memory_layer"]]
-            banner_list = layer.scan(
+            mss = scanners.MultiStringScanner(
+                [x for x in self.banners if x is not None]
+            )
+            scan_layer = layer
+            if isinstance(scan_layer, layers.intel.Intel):
+                scan_layer = context.layers[scan_layer.config["memory_layer"]]
+            banner_list = scan_layer.scan(
                 context=context, scanner=mss, progress_callback=progress_callback
             )
 
