@@ -5,7 +5,7 @@
 import logging
 from typing import Iterator, List, Tuple
 
-from volatility3.framework import exceptions, interfaces, renderers
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
@@ -42,14 +42,36 @@ class VadTree(interfaces.plugins.PluginInterface):
             ),
         ]
 
-    @classmethod
-    def get_heaps(cls, proc) -> List[int]:
-        """
-        """
+    def get_heaps(self, proc) -> List[int]:
+        """Return every process heap base address recorded in the process's
+        PEB. The previous implementation called ``.dereference()`` on the
+        ``ProcessHeaps`` pointer, which yields only the *first* heap pointer
+        rather than walking the array of ``NumberOfHeaps`` entries that the
+        PEB advertises. As a result, VAD type classification could never
+        identify heaps other than the default one. This rewrite walks the
+        full array."""
         try:
-            return [proc.get_peb().ProcessHeaps.dereference()]
+            peb = proc.get_peb()
+            heap_count = int(peb.NumberOfHeaps)
+            heap_array_addr = int(peb.ProcessHeaps)
+            if heap_count == 0 or heap_array_addr == 0:
+                return []
+
+            sym_table = proc.get_symbol_table_name()
+            layer_name = peb.vol.layer_name
+            ptr_type = self.context.symbol_space.get_type(
+                f"{sym_table}{constants.BANG}pointer"
+            )
+
+            heap_pointers = self.context.object(
+                object_type=f"{sym_table}{constants.BANG}array",
+                layer_name=layer_name,
+                offset=heap_array_addr,
+                subtype=ptr_type,
+                count=heap_count,
+            )
+            return [int(h) for h in heap_pointers if int(h) != 0]
         except exceptions.InvalidAddressException:
-            #vollog.log()
             return []
 
     @classmethod
