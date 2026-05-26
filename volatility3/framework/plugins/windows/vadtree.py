@@ -113,13 +113,9 @@ class VadTree(interfaces.plugins.PluginInterface):
 
         return stacks
     
-    def get_type(self, proc, vad) -> str:
-        heaps = self.get_heaps(proc)
-        modules = self.get_modules(proc)
-        stacks = self.get_stacks(proc)
-        
+    def get_type(self, proc, vad, heaps, modules, stacks) -> str:
         type = renderers.NotApplicableValue()
-        
+
         if(vad):
             if vad.get_start() in heaps:
                 type = "Heap"
@@ -133,18 +129,26 @@ class VadTree(interfaces.plugins.PluginInterface):
                         type = "File"
                 except AttributeError:
                     pass
-        
+
         return type
 
-    def _generator(self, procs) -> Iterator[Tuple]: 
-        for proc in procs:            
+    def _generator(self, procs) -> Iterator[Tuple]:
+        for proc in procs:
+            # Resolve the per-process address sets that classify a VAD a
+            # single time, instead of recomputing them for every VAD in
+            # the tree (which was O(N**2) in the original PR and caused
+            # observable slow-downs on processes with many VADs).
+            heaps = frozenset(self.get_heaps(proc))
+            modules = frozenset(self.get_modules(proc))
+            stacks = frozenset(self.get_stacks(proc))
+
             levels = {}
 
             for vad in vadinfo.VadInfo.list_vads(proc):
                 level = levels.get(vad.get_parent() & self.context.layers[vad.vol.layer_name].address_mask, -1) + 1
                 levels[vad.vol.offset] = level
 
-                type = self.get_type(proc, vad)
+                type = self.get_type(proc, vad, heaps, modules, stacks)
 
                 yield(level, (proc.UniqueProcessId,
                             utility.array_to_string(proc.ImageFileName),
