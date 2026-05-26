@@ -76,14 +76,18 @@ class VadTree(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_modules(cls, proc) -> List[int]:
-        """
-        """
+        """Return the DllBase of every module on the process's load-order
+        list. Modules whose DllBase cannot be read are skipped with a
+        debug log rather than aborting the whole enumeration."""
         modules = []
         for mod in proc.load_order_modules():
             try:
                 modules.append(mod.DllBase)
             except exceptions.InvalidAddressException:
-                #vollog.log()
+                vollog.debug(
+                    "Skipping unreadable module entry for PID %s",
+                    proc.UniqueProcessId,
+                )
                 continue
         return modules
 
@@ -114,23 +118,27 @@ class VadTree(interfaces.plugins.PluginInterface):
         return stacks
     
     def get_type(self, proc, vad, heaps, modules, stacks) -> str:
-        type = renderers.NotApplicableValue()
+        """Classify a single VAD as Heap, Module, Stack, File or N/A by
+        comparing its start address against the previously-resolved
+        per-process address sets."""
+        vad_type = renderers.NotApplicableValue()
 
-        if(vad):
-            if vad.get_start() in heaps:
-                type = "Heap"
-            elif vad.get_start() in modules:
-                type = "Module"
-            elif vad.get_start() in stacks:
-                type = "Stack"
+        if vad:
+            start = vad.get_start()
+            if start in heaps:
+                vad_type = "Heap"
+            elif start in modules:
+                vad_type = "Module"
+            elif start in stacks:
+                vad_type = "Stack"
             else:
                 try:
                     if vad.FileObject.FileName:
-                        type = "File"
+                        vad_type = "File"
                 except AttributeError:
                     pass
 
-        return type
+        return vad_type
 
     def _generator(self, procs) -> Iterator[Tuple]:
         for proc in procs:
@@ -148,12 +156,12 @@ class VadTree(interfaces.plugins.PluginInterface):
                 level = levels.get(vad.get_parent() & self.context.layers[vad.vol.layer_name].address_mask, -1) + 1
                 levels[vad.vol.offset] = level
 
-                type = self.get_type(proc, vad, heaps, modules, stacks)
+                vad_type = self.get_type(proc, vad, heaps, modules, stacks)
 
                 yield(level, (proc.UniqueProcessId,
                             utility.array_to_string(proc.ImageFileName),
                             format_hints.Hex(vad.vol.offset),
-                            type,
+                            vad_type,
                             format_hints.Hex(vad.get_start()),
                             format_hints.Hex(vad.get_end()),
                             vad.get_tag()))
