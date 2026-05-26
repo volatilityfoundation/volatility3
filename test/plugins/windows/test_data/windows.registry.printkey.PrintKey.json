@@ -1,0 +1,61 @@
+{
+    "WINDOWS10_GENERIC": [
+        {
+            "Data": "",
+            "Hive Offset": 213322954346496,
+            "Key": "[NONAME]",
+            "Last Write Time": "2025-03-06T17:59:19+00:00",
+            "Name": "A",
+            "Type": "Key",
+            "Volatile": false
+        },
+        {
+            "Data": "",
+            "Hive Offset": 213322954362880,
+            "Key": "\\REGISTRY\\MACHINE\\SYSTEM",
+            "Last Write Time": "2019-12-07T09:15:07+00:00",
+            "Name": "ControlSet001",
+            "Type": "Key",
+            "Volatile": false
+        },
+        {
+            "Data": "",
+            "Hive Offset": 213322964488192,
+            "Key": "\\SystemRoot\\System32\\Config\\SOFTWARE",
+            "Last Write Time": "2025-03-06T17:38:01+00:00",
+            "Name": "Classes",
+            "Type": "Key",
+            "Volatile": false
+        },
+        {
+            "Data": "",
+            "Hive Offset": 213323011252224,
+            "Key": "\\SystemRoot\\System32\\Config\\SAM",
+            "Last Write Time": "2025-01-31T13:01:49+00:00",
+            "Name": "SAM",
+            "Type": "Key",
+            "Volatile": false,
+            "__children": []
+        },
+        {
+            "Data": "",
+            "Hive Offset": 213323048636416,
+            "Key": "\\??\\C:\\Users\\generic-user\\ntuser.dat",
+            "Last Write Time": "2025-03-06T17:50:04+00:00",
+            "Name": "SOFTWARE",
+            "Type": "Key",
+            "Volatile": false,
+            "__children": []
+        },
+        {
+            "Data": "",
+            "Hive Offset": 213323047776256,
+            "Key": "\\??\\C:\\Users\\generic-user\\AppData\\Local\\Microsoft\\Windows\\UsrClass.dat",
+            "Last Write Time": "2025-03-05T18:36:09+00:00",
+            "Name": ".eip",
+            "Type": "Key",
+            "Volatile": false,
+            "__children": []
+        }
+    ]
+}

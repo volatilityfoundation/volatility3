@@ -1,0 +1,82 @@
+{
+  "WINDOWS10_GENERIC": [
+    {
+      "End offset": 17592186044416,
+      "Region": "MiVaBootLoaded",
+      "Start offset": 238594023227392,
+      "__children": []
+    },
+    {
+      "End offset": 549755813888,
+      "Region": "MiVaDriverImages",
+      "Start offset": 272678883688448,
+      "__children": []
+    },
+    {
+      "End offset": 549755813888,
+      "Region": "MiVaHal",
+      "Start offset": 258385232527360,
+      "__children": []
+    },
+    {
+      "End offset": 3848290697216,
+      "Region": "MiVaNonPagedPool",
+      "Start offset": 266081813921792,
+      "__children": []
+    },
+    {
+      "End offset": 2748779069440,
+      "Region": "MiVaPagedPool",
+      "Start offset": 278135644927560,
+      "__children": []
+    },
+    {
+      "End offset": 17592186044416,
+      "Region": "MiVaPfnDatabase",
+      "Start offset": 166026255794176,
+      "__children": []
+    },
+    {
+      "End offset": 17592186044416,
+      "Region": "MiVaProcessSpace",
+      "Start offset": 191315023233024,
+      "__children": []
+    },
+    {
+      "End offset": 549755813888,
+      "Region": "MiVaSessionGlobalSpace",
+      "Start offset": 186367220908032,
+      "__children": []
+    },
+    {
+      "End offset": 17592186044416,
+      "Region": "MiVaSessionSpace",
+      "Start offset": 213305255788544,
+      "__children": []
+    },
+    {
+      "End offset": 1099511627776,
+      "Region": "MiVaSpecialPoolPaged",
+      "Start offset": 261683767410688,
+      "__children": []
+    },
+    {
+      "End offset": 1099511627776,
+      "Region": "MiVaSystemCache",
+      "Start offset": 208907209277440,
+      "__children": []
+    },
+    {
+      "End offset": 549755813888,
+      "Region": "MiVaSystemPtes",
+      "Start offset": 274328151130112,
+      "__children": []
+    },
+    {
+      "End offset": 17592186044416,
+      "Region": "MiVaUnused",
+      "Start offset": 145135534866432,
+      "__children": []
+    }
+  ]
+}

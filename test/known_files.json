@@ -1,0 +1,19 @@
+{
+  "windows_dumpfiles": {
+    "win-xp-laptop-2005-06-25.img": {
+      "0x82220e78": [
+        "9bdd5532286f1660f3778e68bc36efe6",
+        "e3bc1e9e7370e3b5a661ebe591ecf4ec"
+      ],
+      "0x82350bf8": [
+        "e5c5e8d97b6280745b41f6572c85d1f0",
+        "8589f1463422884dbf1411aaad278465"
+      ],
+      "0x81eaf418": [
+        "f7a1ae2060a58f8470b97affdb46dccf",
+        "54fd611021fa784912530b8007545986"
+      ],
+      "0x820588e8": "458efbc8fdb859488a6ab2b200cce809"
+    }
+  }
+}

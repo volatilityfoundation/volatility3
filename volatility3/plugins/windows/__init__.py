@@ -11,6 +11,7 @@ existing or new.
 
 When overriding the plugins directory, you must include a file like this in any subdirectories that may be necessary.
 """
+
 import os
 import sys
 

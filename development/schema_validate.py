@@ -1,34 +1,33 @@
 import argparse
 import json
+import logging
 import os
 import sys
 
 # TODO: Rather nasty hack, when volatility's actually installed this would be unnecessary
 sys.path += ".."
 
-import logging
-
 console = logging.StreamHandler()
 console.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(levelname)-8s %(name)-12s: %(message)s')
+formatter = logging.Formatter("%(levelname)-8s %(name)-12s: %(message)s")
 console.setFormatter(formatter)
 
 logger = logging.getLogger("")
 logger.addHandler(console)
 logger.setLevel(logging.DEBUG)
 
-from volatility3 import schemas
+from volatility3 import schemas  # noqa: E402
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser("Validates ")
-    parser.add_argument("-s", "--schema", dest = "schema", default = None)
-    parser.add_argument("filenames", metavar = "FILE", nargs = '+')
+    parser.add_argument("-s", "--schema", dest="schema", default=None)
+    parser.add_argument("filenames", metavar="FILE", nargs="+")
 
     args = parser.parse_args()
 
     schema = None
     if args.schema:
-        with open(os.path.abspath(args.schema), 'r') as s:
+        with open(os.path.abspath(args.schema)) as s:
             schema = json.load(s)
 
     failures = []
@@ -36,7 +35,7 @@ if __name__ == '__main__':
         try:
             if os.path.exists(filename):
                 print(f"[?] Validating file: {filename}")
-                with open(filename, 'r') as t:
+                with open(filename) as t:
                     test = json.load(t)
 
                 if args.schema:

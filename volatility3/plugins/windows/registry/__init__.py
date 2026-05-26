@@ -11,9 +11,10 @@ existing or new.
 
 When overriding the plugins directory, you must include a file like this in any subdirectories that may be necessary.
 """
+
 import os
 import sys
 
 # This is necessary to ensure the core plugins are available, whilst still be overridable
-parent_module, module_name = ".".join(__name__.split(".")[:-1]), __name__.split(".")[-1]
+parent_module, module_name = __name__.rsplit(".", maxsplit=1)
 __path__ = [os.path.join(x, module_name) for x in sys.modules[parent_module].__path__]

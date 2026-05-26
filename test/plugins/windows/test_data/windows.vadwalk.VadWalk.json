@@ -1,0 +1,76 @@
+{
+  "WINDOWS10_GENERIC": [
+    {
+      "End": 2147381247,
+      "Left": 145201666899008,
+      "Offset": 145201666899248,
+      "PID": 4,
+      "Parent": 0,
+      "Process": "System",
+      "Right": 145201677927040,
+      "Start": 2147377152,
+      "Tag": "VadS",
+      "__children": []
+    },
+    {
+      "End": 2147356671,
+      "Left": 145201677922880,
+      "Offset": 145201666899008,
+      "PID": 4,
+      "Parent": 145201666899248,
+      "Process": "System",
+      "Right": 0,
+      "Start": 2147352576,
+      "Tag": "VadS",
+      "__children": []
+    },
+    {
+      "End": 2004303871,
+      "Left": 0,
+      "Offset": 145201677922880,
+      "PID": 4,
+      "Parent": 145201666899008,
+      "Process": "System",
+      "Right": 0,
+      "Start": 2002583552,
+      "Tag": "Vad ",
+      "__children": []
+    },
+    {
+      "End": 140703785033727,
+      "Left": 145201741534640,
+      "Offset": 145201677927040,
+      "PID": 4,
+      "Parent": 145201666899248,
+      "Process": "System",
+      "Right": 145201677926560,
+      "Start": 140703784828928,
+      "Tag": "Vad ",
+      "__children": []
+    },
+    {
+      "End": 2873390796799,
+      "Left": 0,
+      "Offset": 145201741534640,
+      "PID": 4,
+      "Parent": 145201677927040,
+      "Process": "System",
+      "Right": 0,
+      "Start": 2873390792704,
+      "Tag": "Vad ",
+      "__children": []
+    },
+    {
+      "End": 140703787155455,
+      "Left": 0,
+      "Offset": 145201677926560,
+      "PID": 4,
+      "Parent": 145201677927040,
+      "Process": "System",
+      "Right": 0,
+      "Start": 140703785091072,
+      "Tag": "Vad ",
+      "__children": []
+    }
+  ]
+}

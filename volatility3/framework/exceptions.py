@@ -8,7 +8,8 @@ space or symbol tables, and by layers when an address is invalid.  The
 :class:`PagedInvalidAddressException` contains information about the
 size of the invalid page.
 """
-from typing import Dict, Optional
+
+from typing import Callable, Dict, Optional, Tuple
 
 from volatility3.framework import interfaces
 
@@ -30,7 +31,9 @@ class PluginRequirementException(VolatilityException):
 class SymbolError(VolatilityException):
     """Thrown when a symbol lookup has failed."""
 
-    def __init__(self, symbol_name: Optional[str], table_name: Optional[str], *args) -> None:
+    def __init__(
+        self, symbol_name: Optional[str], table_name: Optional[str], *args
+    ) -> None:
         super().__init__(*args)
         self.symbol_name = symbol_name
         self.table_name = table_name
@@ -63,7 +66,14 @@ class PagedInvalidAddressException(InvalidAddressException):
     that are invalid
     """
 
-    def __init__(self, layer_name: str, invalid_address: int, invalid_bits: int, entry: int, *args) -> None:
+    def __init__(
+        self,
+        layer_name: str,
+        invalid_address: int,
+        invalid_bits: int,
+        entry: int,
+        *args,
+    ) -> None:
         super().__init__(layer_name, invalid_address, *args)
         self.invalid_bits = invalid_bits
         self.entry = entry
@@ -77,8 +87,15 @@ class SwappedInvalidAddressException(PagedInvalidAddressException):
     the lookup that were invalid.
     """
 
-    def __init__(self, layer_name: str, invalid_address: int, invalid_bits: int, entry: int, swap_offset: int,
-                 *args) -> None:
+    def __init__(
+        self,
+        layer_name: str,
+        invalid_address: int,
+        invalid_bits: int,
+        entry: int,
+        swap_offset: int,
+        *args,
+    ) -> None:
         super().__init__(layer_name, invalid_address, invalid_bits, entry, *args)
         self.swap_offset = swap_offset
 
@@ -88,14 +105,14 @@ class SymbolSpaceError(VolatilityException):
 
 
 class UnsatisfiedException(VolatilityException):
-
-    def __init__(self, unsatisfied: Dict[str, interfaces.configuration.RequirementInterface]) -> None:
+    def __init__(
+        self, unsatisfied: Dict[str, interfaces.configuration.RequirementInterface]
+    ) -> None:
         super().__init__()
         self.unsatisfied = unsatisfied
 
 
 class MissingModuleException(VolatilityException):
-
     def __init__(self, module: str, *args) -> None:
         super().__init__(*args)
         self.module = module
@@ -109,4 +126,40 @@ class OfflineException(VolatilityException):
         self._url = url
 
     def __str__(self):
-        return f'Volatility 3 is offline: unable to access {self._url}'
+        return f"Volatility 3 is offline: unable to access {self._url}"
+
+
+class RenderException(VolatilityException):
+    """Thrown if there is an error during rendering"""
+
+
+class LinuxPageCacheException(VolatilityException):
+    """Thrown if there is an error during Linux Page Cache processing"""
+
+
+class VersionMismatchException(VolatilityException):
+    """Thrown if a version mismatch has been encountered between two components."""
+
+    def __init__(
+        self,
+        source_component: Callable,
+        target_component: interfaces.configuration.VersionableInterface,
+        target_version: Tuple[int, int, int],
+        failure_reason: str = None,
+        *args,
+    ):
+        """
+        Args:
+            source_component: The component that required the target component
+            target_component: The component that is required. Must inherit from interfaces.configuration.VersionableInterface
+            target_version: The version of the target component that was required, and ultimately was not satisfied
+            failure_reason: A detailed failure reason to enhance debugging and bug tracking
+        """
+        super().__init__(*args)
+        self.source_component = source_component
+        self.target_component = target_component
+        self.target_version = target_version
+        self.failure_reason = failure_reason
+
+    def __str__(self):
+        return f"{self.source_component.__module__ + '.' + self.source_component.__qualname__}: Version {self.target_version} dependency on {self.target_component.__module__ + '.' + self.target_component.__name__} {self.target_component.version} unmet."

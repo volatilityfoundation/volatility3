@@ -10,8 +10,7 @@ from volatility3.plugins.mac import pslist
 
 
 class PsTree(plugins.PluginInterface):
-    """Plugin for listing processes in a tree based on their parent process
-    ID."""
+    """Plugin for listing processes in a tree based on their parent process ID."""
 
     _required_framework_version = (2, 0, 0)
 
@@ -24,9 +23,14 @@ class PsTree(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
-                                           architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0))
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Kernel module for the OS",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
+            ),
         ]
 
     def _find_level(self, pid):
@@ -35,7 +39,12 @@ class PsTree(plugins.PluginInterface):
         seen.add(pid)
         level = 0
         proc = self._processes.get(pid, None)
-        while proc is not None and proc.vol.offset != 0 and proc.p_ppid != 0 and proc.p_ppid not in seen:
+        while (
+            proc is not None
+            and proc.vol.offset != 0
+            and proc.p_ppid != 0
+            and proc.p_ppid not in seen
+        ):
             ppid = int(proc.p_ppid)
             child_list = self._children.get(ppid, set([]))
             child_list.add(proc.p_pid)
@@ -46,9 +55,11 @@ class PsTree(plugins.PluginInterface):
 
     def _generator(self):
         """Generates the tree list of processes"""
-        list_tasks = pslist.PsList.get_list_tasks(self.config.get('pslist_method', pslist.PsList.pslist_methods[0]))
+        list_tasks = pslist.PsList.get_list_tasks(
+            self.config.get("pslist_method", pslist.PsList.pslist_methods[0])
+        )
 
-        for proc in list_tasks(self.context, self.config['kernel']):
+        for proc in list_tasks(self.context, self.config["kernel"]):
             self._processes[proc.p_pid] = proc
 
         # Build the child/level maps
@@ -68,4 +79,6 @@ class PsTree(plugins.PluginInterface):
                 yield from yield_processes(pid)
 
     def run(self):
-        return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str)], self._generator())
+        return renderers.TreeGrid(
+            [("PID", int), ("PPID", int), ("COMM", str)], self._generator()
+        )

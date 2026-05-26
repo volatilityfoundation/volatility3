@@ -1,0 +1,392 @@
+{
+    "symbols": {},
+    "enums": {},
+    "base_types": {
+        "unsigned long": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned long long": {
+            "kind": "int",
+            "size": 8,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned char": {
+            "kind": "char",
+            "size": 1,
+            "signed": false,
+            "endian": "little"
+        },
+        "pointer": {
+            "kind": "int",
+            "size": 8,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned int": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned short": {
+            "kind": "int",
+            "size": 2,
+            "signed": false,
+            "endian": "little"
+        },
+        "long": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        }
+    },
+    "user_types": {
+        "_RTL_BALANCED_LINKS": {
+            "fields": {
+                "Parent": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_RTL_BALANCED_LINKS"
+                        }
+                    },
+                    "offset": 0
+                },
+                "LeftChild": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_RTL_BALANCED_LINKS"
+                        }
+                    },
+                    "offset": 8
+                },
+                "RightChild": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_RTL_BALANCED_LINKS"
+                        }
+                    },
+                    "offset": 16
+                },
+                "Balance": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned char"
+                    },
+                    "offset": 24
+                },
+                "Reserved": {
+                    "type": {
+                        "kind": "array",
+                        "count": 3,
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned char"
+                        }
+                    },
+                    "offset": 25
+                }
+            },
+            "kind": "struct",
+            "size": 32
+        },
+        "_RTL_AVL_TABLE": {
+            "fields": {
+                "BalancedRoot": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "_RTL_BALANCED_LINKS"
+                    },
+                    "offset": 0
+                },
+                "OrderedPointer": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 32
+                },
+                "WhichOrderedElement": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long"
+                    },
+                    "offset": 40
+                },
+                "NumberGenericTableElements": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long"
+                    },
+                    "offset": 44
+                },
+                "DepthOfTree": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long"
+                    },
+                    "offset": 48
+                },
+                "RestartKey": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_RTL_BALANCED_LINKS"
+                        }
+                    },
+                    "offset": 56
+                },
+                "DeleteCount": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long"
+                    },
+                    "offset": 64
+                },
+                "CompareRoutine": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 72
+                },
+                "AllocateRoutine": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 80
+                },
+                "FreeRoutine": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 88
+                },
+                "TableContext": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 96
+                }
+            },
+            "kind": "struct",
+            "size": 104
+        },
+        "SHIM_CACHE_HANDLE": {
+            "fields": {
+                "eresource": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "nt_symbols!_ERESOURCE"
+                        }
+                    },
+                    "offset": 0
+                },
+                "rtl_avl_table": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_RTL_AVL_TABLE"
+                        }
+                    },
+                    "offset": 8
+                }
+            },
+            "kind": "struct",
+            "size": 8
+        },
+        "_LARGE_INTEGER": {
+            "fields": {
+                "HighPart": {
+                    "offset": 4,
+                    "type": {
+                        "kind": "base",
+                        "name": "long"
+                    }
+                },
+                "LowPart": {
+                    "offset": 0,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long"
+                    }
+                },
+                "QuadPart": {
+                    "offset": 0,
+                    "type": {
+                        "kind": "base",
+                        "name": "long long"
+                    }
+                },
+                "u": {
+                    "offset": 0,
+                    "type": {
+                        "kind": "struct",
+                        "name": "__unnamed_2"
+                    }
+                }
+            },
+            "kind": "union",
+            "size": 8
+        },
+        "__unnamed_2": {
+          "fields": {
+            "HighPart": {
+              "offset": 4,
+              "type": {
+                "kind": "base",
+                "name": "long"
+              }
+            },
+            "LowPart": {
+              "offset": 0,
+              "type": {
+                "kind": "base",
+                "name": "unsigned long"
+              }
+            }
+          },
+          "kind": "struct",
+          "size": 8
+        },
+        "SHIM_CACHE_ENTRY": {
+            "fields": {
+                "ListEntry": {
+                    "offset": 0,
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    }
+                },
+                "u1": {
+                    "offset": 16,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                    }
+                },
+                "Path": {
+                    "offset": 24,
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_UNICODE_STRING"
+                    }
+                },
+                "u2": {
+                    "offset": 40,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                    }
+                },
+                "u3": {
+                    "offset": 48,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                    }
+                },
+                "ListEntryDetail": {
+                    "offset": 56,
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "SHIM_CACHE_ENTRY_DETAIL"
+                        }
+                    }
+                }
+            },
+            "kind": "struct",
+            "size": 64
+        },
+        "SHIM_CACHE_ENTRY_DETAIL": {
+            "fields": {
+                "LastModified": {
+                    "offset": 0,
+                    "type": {
+                        "kind": "struct",
+                        "name": "_LARGE_INTEGER"
+                    }
+                },
+                "InsertFlags": {
+                    "offset": 8,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    }
+                },
+                "ShimFlags": {
+                    "offset": 12,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned int"
+                    }
+                },
+                "BlobSize": {
+                    "offset": 16,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                    }
+                },
+                "Padding": {
+                    "offset": 24,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                    }
+                },
+                "BlobBuffer": {
+                    "offset": 32,
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                    }
+                }
+            },
+            "kind": "struct",
+            "size": 40
+        }
+    },
+    "metadata": {
+        "producer": {
+            "version": "0.0.1",
+            "name": "dgmcdona by hand",
+            "datetime": "2024-07-05T18:28:00.000000+00:00"
+        },
+        "format": "4.0.0"
+    }
+}

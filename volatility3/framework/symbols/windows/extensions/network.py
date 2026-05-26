@@ -4,23 +4,23 @@
 
 import logging
 import socket
-from typing import Dict, Tuple, List, Union
+from typing import Dict, List, Optional, Tuple, Union
 
-from volatility3.framework import exceptions
-from volatility3.framework import objects, interfaces
-from volatility3.framework.objects import Array
+from volatility3.framework import exceptions, interfaces, objects
 from volatility3.framework.renderers import conversion
 
 vollog = logging.getLogger(__name__)
 
 
-def inet_ntop(address_family: int, packed_ip: Union[List[int], Array]) -> str:
+def inet_ntop(address_family: int, packed_ip: Union[List[int], objects.Array]) -> str:
     if address_family in [socket.AF_INET6, socket.AF_INET]:
         try:
             return socket.inet_ntop(address_family, bytes(packed_ip))
         except AttributeError:
-            raise RuntimeError("This version of python does not have socket.inet_ntop, please upgrade")
-    raise socket.error("[Errno 97] Address family not supported by protocol")
+            raise RuntimeError(
+                "This version of python does not have socket.inet_ntop, please upgrade"
+            )
+    raise OSError("[Errno 97] Address family not supported by protocol")
 
 
 # Python's socket.AF_INET6 is 0x1e but Microsoft defines it
@@ -54,15 +54,21 @@ class _TCP_LISTENER(objects.StructType):
     MIN_CREATETIME_YEAR = 1950
     MAX_CREATETIME_YEAR = 2200
 
-    def __init__(self, context: interfaces.context.ContextInterface, type_name: str,
-                 object_info: interfaces.objects.ObjectInformation, size: int,
-                 members: Dict[str, Tuple[int, interfaces.objects.Template]]) -> None:
-
-        super().__init__(context = context,
-                         type_name = type_name,
-                         object_info = object_info,
-                         size = size,
-                         members = members)
+    def __init__(
+        self,
+        context: interfaces.context.ContextInterface,
+        type_name: str,
+        object_info: interfaces.objects.ObjectInformation,
+        size: int,
+        members: Dict[str, Tuple[int, interfaces.objects.Template]],
+    ) -> None:
+        super().__init__(
+            context=context,
+            type_name=type_name,
+            object_info=object_info,
+            size=size,
+            members=members,
+        )
 
     def get_address_family(self):
         try:
@@ -73,24 +79,36 @@ class _TCP_LISTENER(objects.StructType):
 
     def get_owner(self):
         try:
-            return self.member('Owner').dereference()
+            return self.member("Owner").dereference()
 
         except exceptions.InvalidAddressException:
             return None
 
-    def get_owner_pid(self):
-        if self.get_owner().is_valid():
-            if self.get_owner().has_valid_member("UniqueProcessId"):
-                return self.get_owner().UniqueProcessId
+    def get_owner_pid(self) -> Optional[int]:
+        owner = self.get_owner()
+
+        if owner is None:
+            return None
+
+        if owner.is_valid():
+            if owner.has_valid_member("UniqueProcessId"):
+                return owner.UniqueProcessId
 
         return None
 
-    def get_owner_procname(self):
-        if self.get_owner().is_valid():
-            if self.get_owner().has_valid_member("ImageFileName"):
-                return self.get_owner().ImageFileName.cast("string",
-                                                           max_length = self.get_owner().ImageFileName.vol.count,
-                                                           errors = "replace")
+    def get_owner_procname(self) -> Optional[str]:
+        owner = self.get_owner()
+
+        if owner is None:
+            return None
+
+        if owner.is_valid():
+            if owner.has_valid_member("ImageFileName"):
+                return owner.ImageFileName.cast(
+                    "string",
+                    max_length=owner.ImageFileName.vol.count,
+                    errors="replace",
+                )
 
         return None
 
@@ -156,15 +174,17 @@ class _TCP_LISTENER(objects.StructType):
                 yield "v6", inaddr6_any, inaddr6_any
 
     def is_valid(self):
-
         try:
-            if not self.get_address_family() in (AF_INET, AF_INET6):
-                vollog.debug("netw obj 0x{:x} invalid due to invalid address_family {}".format(
-                    self.vol.offset, self.get_address_family()))
+            if self.get_address_family() not in (AF_INET, AF_INET6):
+                vollog.debug(
+                    f"netw obj 0x{self.vol.offset:x} invalid due to invalid address_family {self.get_address_family()}"
+                )
                 return False
 
         except exceptions.InvalidAddressException:
-            vollog.debug(f"netw obj 0x{self.vol.offset:x} invalid due to invalid address access")
+            vollog.debug(
+                f"netw obj 0x{self.vol.offset:x} invalid due to invalid address access"
+            )
             return False
         return True
 
@@ -173,7 +193,6 @@ class _TCP_ENDPOINT(_TCP_LISTENER):
     """Class for objects found in TcpE pools"""
 
     def _ipv4_or_ipv6(self, inaddr):
-
         if self.get_address_family() == AF_INET:
             return inet_ntop(socket.AF_INET, inaddr.addr4)
         else:
@@ -198,23 +217,39 @@ class _TCP_ENDPOINT(_TCP_LISTENER):
             return None
 
     def is_valid(self):
+        # netstat calls this before validating the object itself
+        try:
+            state = self.State
+        except exceptions.InvalidAddressException:
+            return False
 
-        if self.State not in self.State.choices.values():
-            vollog.debug(f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid tcp state {self.State}")
+        if state not in state.choices.values():
+            vollog.debug(
+                f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid tcp state {self.State}"
+            )
             return False
 
         try:
             if self.get_address_family() not in (AF_INET, AF_INET6):
-                vollog.debug(f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid address_family {self.get_address_family()}")
+                vollog.debug(
+                    f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid address_family {self.get_address_family()}"
+                )
                 return False
 
-            if not self.get_local_address() and (not self.get_owner() or self.get_owner().UniqueProcessId == 0
-                                                 or self.get_owner().UniqueProcessId > 65535):
-                vollog.debug(f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid owner data")
+            if not self.get_local_address() and (
+                not self.get_owner()
+                or self.get_owner().UniqueProcessId == 0
+                or self.get_owner().UniqueProcessId > 65535
+            ):
+                vollog.debug(
+                    f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid owner data"
+                )
                 return False
 
         except exceptions.InvalidAddressException:
-            vollog.debug(f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid address access")
+            vollog.debug(
+                f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid address access"
+            )
             return False
 
         return True
@@ -225,30 +260,28 @@ class _UDP_ENDPOINT(_TCP_LISTENER):
 
 
 class _LOCAL_ADDRESS(objects.StructType):
-
     @property
     def inaddr(self):
         return self.pData.dereference().dereference()
 
 
 class _LOCAL_ADDRESS_WIN10_UDP(objects.StructType):
-
     @property
     def inaddr(self):
         return self.pData.dereference()
 
 
 win10_x64_class_types = {
-    '_TCP_ENDPOINT': _TCP_ENDPOINT,
-    '_TCP_LISTENER': _TCP_LISTENER,
-    '_UDP_ENDPOINT': _UDP_ENDPOINT,
-    '_LOCAL_ADDRESS': _LOCAL_ADDRESS,
-    '_LOCAL_ADDRESS_WIN10_UDP': _LOCAL_ADDRESS_WIN10_UDP
+    "_TCP_ENDPOINT": _TCP_ENDPOINT,
+    "_TCP_LISTENER": _TCP_LISTENER,
+    "_UDP_ENDPOINT": _UDP_ENDPOINT,
+    "_LOCAL_ADDRESS": _LOCAL_ADDRESS,
+    "_LOCAL_ADDRESS_WIN10_UDP": _LOCAL_ADDRESS_WIN10_UDP,
 }
 
 class_types = {
-    '_TCP_ENDPOINT': _TCP_ENDPOINT,
-    '_TCP_LISTENER': _TCP_LISTENER,
-    '_UDP_ENDPOINT': _UDP_ENDPOINT,
-    '_LOCAL_ADDRESS': _LOCAL_ADDRESS
+    "_TCP_ENDPOINT": _TCP_ENDPOINT,
+    "_TCP_LISTENER": _TCP_LISTENER,
+    "_UDP_ENDPOINT": _UDP_ENDPOINT,
+    "_LOCAL_ADDRESS": _LOCAL_ADDRESS,
 }

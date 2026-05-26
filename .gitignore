@@ -27,6 +27,7 @@ config*.json
 # Pyinstaller files
 build
 dist
+*.egg-info
 
 # Environments
 .env
@@ -38,3 +39,10 @@ ENV/
 # Memory dump files
 *.dmp
 *.vmem
+*.img
+
+# PyTest cache files
+.pytest_cache/
+
+# Coverage cache
+.coverage

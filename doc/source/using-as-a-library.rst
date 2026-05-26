@@ -3,7 +3,7 @@ Using Volatility 3 as a Library
 
 This portion of the documentation discusses how to access the Volatility 3 framework from an external application.
 
-The general process of using volatility as a library is to as follows:
+The general process of using volatility as a library is as follows:
 
 1. :ref:`create_context`
 2. (Optional) :ref:`available_plugins`
@@ -21,7 +21,7 @@ Creating a context
 First we make sure the volatility framework works the way we expect it (and is the version we expect).  The
 versioning used is semantic versioning, meaning any version with the same major number and a higher or equal
 minor number will satisfy the requirement.  An example is below since the CLI doesn't need any of the features
-from versions 1.1 or 1.2:
+from version 1.1 or later:
 
 ::
 
@@ -54,6 +54,12 @@ also be included, which can be found in `volatility3.constants.PLUGINS_PATH`.
         volatility3.plugins.__path__ = <new_plugin_path> + constants.PLUGINS_PATH
         failures = framework.import_files(volatility3.plugins, True)
 
+.. note::
+
+    Volatility uses the `volatility3.plugins` namespace for all plugins (including those in `volatility3.framework.plugins`).
+    Please ensure you only use `volatility3.plugins` and only ever import plugins from this namespace.
+    This ensures the ability of users to override core plugins without needing write access to the framework directory.
+
 Once the plugins have been imported, we can interrogate which plugins are available.  The
 :py:func:`~volatility3.framework.list_plugins` call will
 return a dictionary of plugin names and the plugin classes.
@@ -67,9 +73,10 @@ return a dictionary of plugin names and the plugin classes.
 Determine what configuration options a plugin requires
 ------------------------------------------------------
 
-For each plugin class, we can call the classmethod `requirements` on it, which will return a list of objects that
-adhere to the :py:class:`~volatility3.framework.interfaces.configuration.RequirementInterface` method.  The various
-types of Requirement are split roughly in two,
+For each plugin class, we can call the classmethod 
+:py:func:`~volatility3.framework.interfaces.configuration.ConfigurableInterface.get_requirements` on it, which will 
+return a list of objects that adhere to the :py:class:`~volatility3.framework.interfaces.configuration.RequirementInterface` 
+method.  The various types of Requirement are split roughly in two,
 :py:class:`~volatility3.framework.interfaces.configuration.SimpleTypeRequirement` (such as integers, booleans, floats
 and strings) and more complex requirements (such as lists, choices, multiple requirements, translation layer
 requirements or symbol table requirements).  A requirement just specifies a type of data and a name, and must be
@@ -79,7 +86,7 @@ List requirements are a list of simple types (integers, booleans, floats and str
 options, multiple requirements needs all their subrequirements fulfilled and the other types require the names of
 valid translation layers or symbol tables within the context, respectively.  Luckily, each of these requirements can
 tell you whether they've been fulfilled or not later in the process.  For now, they can be used to ask the user to
-fill in any parameters they made need to.  Some requirements are optional, others are not.
+fill in any parameters they may need to.  Some requirements are optional, others are not.
 
 The plugin is essentially a multiple requirement.  It should also be noted that automagic classes can have requirements
 (as can translation layers).
@@ -93,7 +100,7 @@ Once you know what requirements the plugin will need, you can populate them with
 The configuration is essentially a hierarchical tree of values, much like the windows registry.
 Each plugin is instantiated at a particular branch within the hierarchy and will look for its configuration
 options under that hierarchy (if it holds any configurable items, it will likely instantiate those at a point
-underneaths its own branch).  To set the hierarchy, you'll need to know where the configurables will be constructed.
+underneath its own branch).  To set the hierarchy, you'll need to know where the configurables will be constructed.
 
 For this example, we'll assume plugins' base_config_path is set as `plugins`, and that automagics are configured under
 the `automagic` tree.  We'll see later how to ensure this matches up with the plugins and automagic when they're
@@ -132,7 +139,7 @@ A suitable list of automagics for a particular plugin (based on operating system
 
 This will take the plugin module, extract the operating system (first level of the hierarchy) and then return just
 the automagics which apply to the operating system.  Each automagic can exclude itself from being used for specific
-operating systems, so that an automagic designed for linux is not used for windows or mac plugins.
+operating systems, such that an automagic designed for linux is not used for windows or mac plugins.
 
 These automagics can then be run by providing the list, the context, the plugin to be run, the hierarchy name that
 the plugin will be constructed on ('plugins' by default) and a progress_callback.  This is a callable which takes
@@ -150,8 +157,8 @@ Any exceptions that occur during the execution of the automagic will be returned
 Run the plugin
 --------------
 
-Firstly, we should check whether the plugin will be able to run (ie, whether the configuration options it needs
-have been successfully set).  We do this as follow (where plugin_config_path is the base_config_path (which defaults
+Firstly, we should check whether the plugin will be able to run (i.e., whether the configuration options it needs
+have been successfully set).  We do this as follows, where plugin_config_path is the base_config_path (which defaults
 to `plugins` and then the name of the class itself):
 
 ::
@@ -159,7 +166,7 @@ to `plugins` and then the name of the class itself):
     unsatisfied = plugin.unsatisfied(context, plugin_config_path)
 
 If unsatisfied is an empty list, then the plugin has been given everything it requires.  If not, it will be a
-Dictionary of the hierarchy paths and their associated requirements that weren't satisfied.
+dict of the hierarchy paths and their associated requirements that weren't satisfied.
 
 The plugin can then be instantiated with the context (containing the plugin's configuration) and the path that the
 plugin can find its configuration at.  This configuration path only needs to be a unique value to identify where the

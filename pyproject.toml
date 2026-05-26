@@ -1,0 +1,101 @@
+[project]
+name = "volatility3"
+description = "Memory forensics framework"
+keywords = [
+    "volatility",
+    "memory",
+    "forensics",
+    "framework",
+    "windows",
+    "linux",
+    "volshell",
+]
+readme = "README.md"
+authors = [
+    { name = "Volatility Foundation", email = "volatility@volatilityfoundation.org" },
+]
+requires-python = ">=3.8.0"
+license = { text = "VSL" }
+dynamic = ["version"]
+
+dependencies = ["pefile>=2024.8.26"]
+
+[project.optional-dependencies]
+full = [
+    "yara-python>=4.5.1,<5",
+    "capstone>=5.0.3,<6",
+    "pycryptodome>=3.21.0,<4",
+    "leechcorepyc>=2.19.2,<3; sys_platform != 'darwin'",
+    # https://github.com/python-pillow/Pillow/blob/main/CHANGES.rst
+    # 10.0.0 dropped support for Python3.7
+    # 11.0.0 dropped support for Python3.8, which is still supported by Volatility3
+    "pillow>=10.0.0,<11.0.0",
+]
+
+cloud = ["gcsfs>=2024.10.0", "s3fs>=2024.10.0"]
+
+dev = [
+    "volatility3[full,cloud]",
+    "jsonschema>=4.23.0,<5",
+    "pyinstaller>=6.5.0,<7",
+    "pyinstaller-hooks-contrib>=2024.9",
+    "types-jsonschema>=4.23.0,<5",
+]
+
+arrow = ["pyarrow>=17.0.0"]
+
+test = [
+    "volatility3[dev]",
+    "pytest>=8.3.3,<9",
+    "pytest-cov>=5,<7",
+    "yara-x>=0.10.0,<1",
+]
+
+docs = [
+    "volatility3[dev]",
+    "sphinx>=4.0.0,<9",
+    "sphinx-autodoc-typehints>=3.0.0,<4; python_version >= '3.11'",
+    "sphinx-rtd-theme>=3.0.1,<4",
+]
+
+[project.urls]
+homepage = "https://github.com/volatilityfoundation/volatility3/"
+documentation = "https://volatility3.readthedocs.io/"
+repository = "https://github.com/volatilityfoundation/volatility3"
+issues = "https://github.com/volatilityfoundation/volatility3/issues"
+
+[project.scripts]
+vol = "volatility3.cli:main"
+volshell = "volatility3.cli.volshell:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "volatility3.framework.constants._version.PACKAGE_VERSION" }
+
+[tool.setuptools.packages.find]
+include = ["volatility3*"]
+
+[tool.mypy]
+mypy_path = "./stubs"
+show_traceback = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "F",   # pyflakes
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "G",   # flake8-logging-format
+    "PIE", # flake8-pie
+    "UP",  # pyupgrade
+]
+
+ignore = [
+    "E501", # ignore due to conflict with formatter
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

@@ -6,84 +6,107 @@
 Stores all the constant values that are generally fixed throughout
 volatility This includes default scanning block sizes, etc.
 """
+
 import enum
 import os.path
 import sys
+import warnings
 from typing import Callable, Optional
 
-import volatility3.framework.constants.linux
-import volatility3.framework.constants.windows
+from volatility3.framework.constants import linux as linux
+from volatility3.framework.constants import windows as windows
+from volatility3.framework.constants._version import (
+    PACKAGE_VERSION as PACKAGE_VERSION,
+    VERSION_MAJOR as VERSION_MAJOR,
+    VERSION_MINOR as VERSION_MINOR,
+    VERSION_PATCH as VERSION_PATCH,
+    VERSION_SUFFIX as VERSION_SUFFIX,
+)
+
+REQUIRED_PYTHON_VERSION = (3, 8, 0)
+
+CACHE_PATH = os.path.join(
+    os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache"),
+    "volatility3",
+)
+"""Default path to store cached data"""
+
+if sys.platform == "win32":
+    CACHE_PATH = os.path.realpath(
+        os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "volatility3")
+    )
+os.makedirs(CACHE_PATH, exist_ok=True)
 
 PLUGINS_PATH = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "plugins")),
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins"))
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins")),
 ]
 """Default list of paths to load plugins from (volatility3/plugins and volatility3/framework/plugins)"""
 
 SYMBOL_BASEPATHS = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "symbols")),
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "symbols"))
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "symbols")),
+    os.path.abspath(
+        os.path.join(CACHE_PATH, "symbols")
+    ),  # User cache fallback for automatically downloaded temporary symbols
 ]
 """Default list of paths to load symbols from (volatility3/symbols and volatility3/framework/symbols)"""
 
-ISF_EXTENSIONS = ['.json', '.json.xz', '.json.gz', '.json.bz2']
+ISF_EXTENSIONS = [".json", ".json.xz", ".json.gz", ".json.bz2"]
 """List of accepted extensions for ISF files"""
 
-if hasattr(sys, 'frozen') and sys.frozen:
+SYMBOL_SERVER_URL = "http://msdl.microsoft.com/download/symbols"
+
+if hasattr(sys, "frozen") and sys.frozen:
     # Ensure we include the executable's directory as the base for plugins and symbols
-    PLUGINS_PATH = [os.path.abspath(os.path.join(os.path.dirname(sys.executable), 'plugins'))] + PLUGINS_PATH
-    SYMBOL_BASEPATHS = [os.path.abspath(os.path.join(os.path.dirname(sys.executable), 'symbols'))] + SYMBOL_BASEPATHS
+    PLUGINS_PATH = [
+        os.path.abspath(os.path.join(os.path.dirname(sys.executable), "plugins"))
+    ] + PLUGINS_PATH
+    SYMBOL_BASEPATHS = [
+        os.path.abspath(os.path.join(os.path.dirname(sys.executable), "symbols"))
+    ] + SYMBOL_BASEPATHS
 
 BANG = "!"
 """Constant used to delimit table names from type names when referring to a symbol"""
 
-# We use the SemVer 2.0.0 versioning scheme
-VERSION_MAJOR = 2  # Number of releases of the library with a breaking change
-VERSION_MINOR = 2  # Number of changes that only add to the interface
-VERSION_PATCH = 0  # Number of changes that do not change the interface
-VERSION_SUFFIX = ""
-
-# TODO: At version 2.0.0, remove the symbol_shift feature
-
-PACKAGE_VERSION = ".".join([str(x) for x in [VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH]]) + VERSION_SUFFIX
-"""The canonical version of the volatility3 package"""
-
-AUTOMAGIC_CONFIG_PATH = 'automagic'
+AUTOMAGIC_CONFIG_PATH = "automagic"
 """The root section within the context configuration for automagic values"""
 
+LOGLEVEL_INFO = 20
+"""Logging level for information data, showed when use the requests any logging: -v"""
+LOGLEVEL_DEBUG = 10
+"""Logging level for debugging data, showed when the user requests more logging detail: -vv"""
 LOGLEVEL_V = 9
-"""Logging level for a single -v"""
+"""Logging level for the lowest "extra" level of logging: -vvv"""
 LOGLEVEL_VV = 8
-"""Logging level for -vv"""
+"""Logging level for two levels of detail: -vvvv"""
 LOGLEVEL_VVV = 7
-"""Logging level for -vvv"""
+"""Logging level for three levels of detail: -vvvvv"""
 LOGLEVEL_VVVV = 6
-"""Logging level for -vvvv"""
+"""Logging level for four levels of detail: -vvvvvv"""
 
-CACHE_PATH = os.path.join(os.path.expanduser("~"), ".cache", "volatility3")
-"""Default path to store cached data"""
 
-if sys.platform == 'win32':
-    CACHE_PATH = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "volatility3")
-os.makedirs(CACHE_PATH, exist_ok = True)
+SQLITE_CACHE_PERIOD = "-3 days"
+"""SQLite time modifier for how long each item is valid in the cache for"""
 
-LINUX_BANNERS_PATH = os.path.join(CACHE_PATH, "linux_banners.cache")
-""""Default location to record information about available linux banners"""
+IDENTIFIERS_FILENAME = "identifier.cache"
+"""Default location to record information about available identifiers"""
 
-MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
-""""Default location to record information about available mac banners"""
+CACHE_SQLITE_SCHEMA_VERSION = 1
+"""Version for the sqlite3 cache schema"""
 
 BUG_URL = "https://github.com/volatilityfoundation/volatility3/issues"
 
 ProgressCallback = Optional[Callable[[float, str], None]]
 """Type information for ProgressCallback objects"""
 
-OS_CATEGORIES = ['windows', 'mac', 'linux']
+OS_CATEGORIES = ["windows", "mac", "linux"]
 
 
 class Parallelism(enum.IntEnum):
     """An enumeration listing the different types of parallelism applied to
     volatility."""
+
     Off = 0
     Threading = 1
     Multiprocessing = 2
@@ -101,3 +124,30 @@ OFFLINE = False
 
 REMOTE_ISF_URL = None  # 'http://localhost:8000/banners.json'
 """Remote URL to query for a list of ISF addresses"""
+
+DOWNLOAD_TIMEOUT = 30
+"""Length of time (in seconds) to wait for another process to download a resource before using it"""
+
+###
+# DEPRECATED VALUES
+###
+
+_deprecated_LINUX_BANNERS_FILENAME = os.path.join(CACHE_PATH, "linux_banners.cache")
+"""This value is deprecated and is no longer used within volatility"""
+
+_deprecated_MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
+"""This value is deprecated and is no longer used within volatility"""
+
+_deprecated_IDENTIFIERS_PATH = os.path.join(CACHE_PATH, IDENTIFIERS_FILENAME)
+"""This value is deprecated in favour of CACHE_PATH joined to IDENTIFIER_FILENAME"""
+
+
+def __getattr__(name):
+    deprecated_tag = "_deprecated_"
+    if name in [
+        x[len(deprecated_tag) :] for x in globals() if x.startswith(deprecated_tag)
+    ]:
+        warnings.warn(f"{name} is deprecated", FutureWarning)
+        return globals()[f"{deprecated_tag}{name}"]
+
+    return getattr(__import__(__name__), name)

@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 from volatility3.cli.volshell import generic
 from volatility3.framework import constants, interfaces
@@ -15,13 +15,24 @@ class Volshell(generic.Volshell):
 
     @classmethod
     def get_requirements(cls):
-        return ([
-            requirements.ModuleRequirement(name = "kernel", description = "Darwin kernel module"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
-            requirements.IntRequirement(name = 'pid', description = "Process ID", optional = True)
-        ])
+        return [
+            requirements.ModuleRequirement(
+                name="kernel", description="Darwin kernel module"
+            ),
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
+            ),
+            requirements.IntRequirement(
+                name="pid", description="Process ID", optional=True
+            ),
+            requirements.VersionRequirement(
+                name="generic_volshell",
+                component=generic.Volshell,
+                version=(1, 0, 0),
+            ),
+        ] + super().get_requirements()
 
-    def change_task(self, pid = None):
+    def change_task(self, pid=None):
         """Change the current process and layer, based on a process ID"""
         tasks = self.list_tasks()
         for task in tasks:
@@ -29,37 +40,43 @@ class Volshell(generic.Volshell):
                 process_layer = task.add_process_layer()
                 if process_layer is not None:
                     self.change_layer(process_layer)
-                    return
+                    return None
                 print(f"Layer for task ID {pid} could not be constructed")
-                return
+                return None
         print(f"No task with task ID {pid} found")
 
-    def list_tasks(self, method = None):
+    def list_tasks(self, method=None):
         """Returns a list of task objects from the primary layer"""
         # We always use the main kernel memory and associated symbols
-        return list(pslist.PsList.get_list_tasks(method)(self.context, self.current_kernel_name))
+        return list(
+            pslist.PsList.get_list_tasks(method)(self.context, self.current_kernel_name)
+        )
 
     def construct_locals(self) -> List[Tuple[List[str], Any]]:
         result = super().construct_locals()
         result += [
-            (['ct', 'change_task', 'cp'], self.change_task),
-            (['lt', 'list_tasks', 'ps'], self.list_tasks),
-            (['symbols'], self.context.symbol_space[self.current_symbol_table]),
+            (["ct", "change_task", "cp"], self.change_task),
+            (["lt", "list_tasks", "ps"], self.list_tasks),
+            (["symbols"], self.context.symbol_space[self.current_symbol_table]),
         ]
-        if self.config.get('pid', None) is not None:
-            self.change_task(self.config['pid'])
+        if self.config.get("pid", None) is not None:
+            self.change_task(self.config["pid"])
         return result
 
-    def display_type(self,
-                     object: Union[str, interfaces.objects.ObjectInterface, interfaces.objects.Template],
-                     offset: int = None):
+    def display_type(
+        self,
+        object: Union[
+            str, interfaces.objects.ObjectInterface, interfaces.objects.Template
+        ],
+        offset: Optional[int] = None,
+    ):
         """Display Type describes the members of a particular object in alphabetical order"""
         if isinstance(object, str):
             if constants.BANG not in object:
                 object = self.current_symbol_table + constants.BANG + object
         return super().display_type(object, offset)
 
-    def display_symbols(self, symbol_table: str = None):
+    def display_symbols(self, symbol_table: Optional[str] = None):
         """Prints an alphabetical list of symbols for a symbol table"""
         if symbol_table is None:
             symbol_table = self.current_symbol_table

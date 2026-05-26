@@ -27,7 +27,7 @@ The object model has changed as well, objects now inherit directly from their Py
 object is actually a Python integer (and has all the associated methods, and can be used wherever a normal int could).
 In Volatility 2, a complex proxy object was constructed which tried to emulate all the methods of the host object, but
 ultimately it was a different type and could not be used in the same places (critically, it could make the ordering of
-operations important, since a + b might not work, but b + a might work fine).
+operations important, since x + y might not work, but y + x might work fine).
 
 Volatility 3 has also had significant speed improvements, where Volatility 2 was designed to allow access to live memory
 images and situations in which the underlying data could change during the run of the plugin, in Volatility 3 the data
@@ -36,11 +36,11 @@ This was because live memory analysis was barely ever used, and this feature cou
 re-read many times over for no benefit (particularly since each re-read could result in many additional image reads
 from following page table translations).
 
-Finally, in order to provide Volatility specific information without impact on the ability for structures to have members
+Further, in order to provide Volatility specific information without impact on the ability for structures to have members
 with arbitrary names, all the metadata about the object (such as its layer or offset) have been moved to a read-only :py:meth:`~volatility3.framework.interfaces.objects.ObjectInterface.vol`
 dictionary.
 
-Further the distinction between a :py:class:`~volatility3.framework.interfaces.objects.Template` (the thing that
+Finally, the distinction between a :py:class:`~volatility3.framework.interfaces.objects.Template` (the thing that
 constructs an object) and the :py:class:`Object <volatility3.framework.interfaces.objects.ObjectInterface>` itself has
 been made more explicit.  In Volatility 2, some information (such as size) could only be determined from a constructed object,
 leading to instantiating a template on an empty buffer, just to determine the size.  In Volatility 3, templates contain
@@ -56,15 +56,14 @@ Volatility 2 were strictly limited to a stack, one on top of one other.  In Vola
 
 Automagic
 ---------
-In Volatility 2, we often tried to make this simpler for both users and developers.  This resulted in something was
-referred to as automagic, in that it was magic that happened automatically.  We've now codified that more, so that the
+In Volatility 2, we often tried to make this simpler for both users and developers.  This resulted in something referred to as automagic, in that it was magic that happened automatically.  We've now codified that more, so that the
 automagic processes are clearly defined and can be enabled or disabled as necessary for any particular run.  We also
 included a stacker automagic to emulate the most common feature of Volatility 2, automatically stacking address spaces
 (now translation layers) on top of each other.
 
-By default the automagic chosen to be run are determined based on the plugin requested, so that linux plugins get linux
-specific automagic and windows plugins get windows specific automagic.  This should reduce unnecessarily searching for
-linux kernels in a windows image, for example.  At the moment this is not user configurableS.
+By default the automagic chosen to be run are determined based on the plugin requested, so that Linux plugins get Linux
+specific automagic and Windows plugins get Windows specific automagic.  This should reduce unnecessarily searching for
+Linux kernels in a Windows image, for example.  At the moment this is not user configurable.
 
 Searching and Scanning
 ----------------------

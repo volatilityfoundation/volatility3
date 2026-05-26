@@ -36,7 +36,7 @@ operating system mode for volshell, and the current layer available for use.
 
     (primary) >>>
 
-Volshell itself in essentially a plugin, but an interactive one.  As such, most values are accessed through `self`
+Volshell itself is essentially a plugin, but an interactive one.  As such, most values are accessed through `self`
 although there is also a `context` object whenever a context must be provided.
 
 The prompt for the tool will indicate the name of the current layer (which can be accessed as `self.current_layer`
@@ -92,7 +92,7 @@ It can also be provided with an object and will interpret the data for each in t
      0x2e8 :   UniqueProcessId                             symbol_table_name1!pointer                             4
     ...
 
-These values can be accessed directory as attributes
+These values can be accessed directly as attributes
 
 ::
 
@@ -144,12 +144,12 @@ We can provide arguments via the `dpo` method call:
     356	4	smss.exe	0x8c0bccf8d040	3	-	N/A	False	2021-03-13 17:25:33.000000 	N/A	Disabled
     ...
 
-Here's we've provided the kernel name that was requested by the volshell plugin itself (the generic volshell does not
+Here we've provided the kernel name that was requested by the volshell plugin itself (the generic volshell does not
 load a kernel module, and instead only has a TranslationLayerRequirement).
 A different module could be created and provided instead.  The context used
 by the `dpo` method is always `context`.
 
-Instead of print the results directly to screen, they can be gathered into a TreeGrid objects for direct access by
+Instead of printing the results directly to screen, they can be gathered into a TreeGrid objects for direct access by
 using the `generate_treegrid` or `gt` command.
 
 ::
@@ -180,15 +180,68 @@ used:
 
     layer = cc(mynewlayer.MyNewLayer, on_top_of = 'primary', other_parameter = 'important')
     with open('output.dmp', 'wb') as fp:
-        for i in range(0, 1073741824, 0x1000):
+        for i in range(0, 0x4000000, 0x1000):
             data = layer.read(i, 0x1000, pad = True)
             fp.write(data)
 
 As this demonstrates, all of the python is accessible, as are the volshell built in functions (such as `cc` which
 creates a constructable, like a layer or a symbol table).
 
+User Convenience
+----------------
+
+There are functions available that make often-done tasks easier, and generally provide a shell-like experience.  These can be listed using `help()` which, as already mentioned, is advertised when volshell starts.
+
 Loading files
--------------
+^^^^^^^^^^^^^
 
 Files can be loaded as physical layers using the `load_file` or `lf` command, which takes a filename or a URI.  This will be added
 to `context.layers` and can be accessed by the name returned by `lf`.
+
+Regex
+^^^^^
+
+It is easy to scan for some bytes or a pattern using `regex_scan` or `rx`.
+
+::
+
+    (layer_name) >>> rx(rb"(Linux version|Darwin Kernel Version) [0-9]+\.[0-9]+\.[0-9]+")
+    0x880001400070    4c 69 6e 75 78 20 76 65 72 73 69 6f 6e 20 33 2e    Linux.version.3.
+    0x880001400080    32 2e 30 2d 34 2d 61 6d 64 36 34 20 28 64 65 62    2.0-4-amd64.(deb
+    0x880001400090    69 61 6e 2d 6b 65 72 6e 65 6c 40 6c 69 73 74 73    ian-kernel@lists
+    0x8800014000a0    2e 64 65 62 69 61 6e 2e 6f 72 67 29 20 28 67 63    .debian.org).(gc
+    0x8800014000b0    63 20 76 65 72 73 69 6f 6e 20 34 2e 36 2e 33 20    c.version.4.6.3.
+    0x8800014000c0    28 44 65 62 69 61 6e 20 34 2e 36 2e 33 2d 31 34    (Debian.4.6.3-14
+    0x8800014000d0    29 20 29 20 23 31 20 53 4d 50 20 44 65 62 69 61    ).).#1.SMP.Debia
+    0x8800014000e0    6e 20 33 2e 32 2e 35 37 2d 33 2b 64 65 62 37 75    n.3.2.57-3+deb7u
+
+    0x880001769027    4c 69 6e 75 78 20 76 65 72 73 69 6f 6e 20 33 2e    Linux.version.3.
+    0x880001769037    32 2e 30 2d 34 2d 61 6d 64 36 34 20 28 64 65 62    2.0-4-amd64.(deb
+    0x880001769047    69 61 6e 2d 6b 65 72 6e 65 6c 40 6c 69 73 74 73    ian-kernel@lists
+    0x880001769057    2e 64 65 62 69 61 6e 2e 6f 72 67 29 20 28 67 63    .debian.org).(gc
+    0x880001769067    63 20 76 65 72 73 69 6f 6e 20 34 2e 36 2e 33 20    c.version.4.6.3.
+    0x880001769077    28 44 65 62 69 61 6e 20 34 2e 36 2e 33 2d 31 34    (Debian.4.6.3-14
+    0x880001769087    29 20 29 20 23 31 20 53 4d 50 20 44 65 62 69 61    ).).#1.SMP.Debia
+    0x880001769097    6e 20 33 2e 32 2e 35 37 2d 33 2b 64 65 62 37 75    n.3.2.57-3+deb7u
+
+    0xffff81400070    4c 69 6e 75 78 20 76 65 72 73 69 6f 6e 20 33 2e    Linux.version.3.
+    0xffff81400080    32 2e 30 2d 34 2d 61 6d 64 36 34 20 28 64 65 62    2.0-4-amd64.(deb
+    0xffff81400090    69 61 6e 2d 6b 65 72 6e 65 6c 40 6c 69 73 74 73    ian-kernel@lists
+    0xffff814000a0    2e 64 65 62 69 61 6e 2e 6f 72 67 29 20 28 67 63    .debian.org).(gc
+    0xffff814000b0    63 20 76 65 72 73 69 6f 6e 20 34 2e 36 2e 33 20    c.version.4.6.3.
+    0xffff814000c0    28 44 65 62 69 61 6e 20 34 2e 36 2e 33 2d 31 34    (Debian.4.6.3-14
+    0xffff814000d0    29 20 29 20 23 31 20 53 4d 50 20 44 65 62 69 61    ).).#1.SMP.Debia
+    0xffff814000e0    6e 20 33 2e 32 2e 35 37 2d 33 2b 64 65 62 37 75    n.3.2.57-3+deb7u
+
+    0xffff81769027    4c 69 6e 75 78 20 76 65 72 73 69 6f 6e 20 33 2e    Linux.version.3.
+    0xffff81769037    32 2e 30 2d 34 2d 61 6d 64 36 34 20 28 64 65 62    2.0-4-amd64.(deb
+    0xffff81769047    69 61 6e 2d 6b 65 72 6e 65 6c 40 6c 69 73 74 73    ian-kernel@lists
+    0xffff81769057    2e 64 65 62 69 61 6e 2e 6f 72 67 29 20 28 67 63    .debian.org).(gc
+    0xffff81769067    63 20 76 65 72 73 69 6f 6e 20 34 2e 36 2e 33 20    c.version.4.6.3.
+    0xffff81769077    28 44 65 62 69 61 6e 20 34 2e 36 2e 33 2d 31 34    (Debian.4.6.3-14
+    0xffff81769087    29 20 29 20 23 31 20 53 4d 50 20 44 65 62 69 61    ).).#1.SMP.Debia
+    0xffff81769097    6e 20 33 2e 32 2e 35 37 2d 33 2b 64 65 62 37 75    n.3.2.57-3+deb7u
+
+An optional size can be given for the displayed results as with the other fuctions (db, dw, dd, dq, etc).
+
+You can, of course, specify a different layer name as well.

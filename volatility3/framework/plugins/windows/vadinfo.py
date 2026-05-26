@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Callable, List, Generator, Iterable, Type, Optional
+from typing import Callable, List, Generator, Iterable, Type, Optional, Tuple
 
 from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
@@ -33,8 +33,8 @@ winnt_protections = {
 class VadInfo(interfaces.plugins.PluginInterface):
     """Lists process memory ranges."""
 
-    _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+    _required_framework_version = (2, 4, 0)
+    _version = (2, 0, 1)
     MAXSIZE_DEFAULT = 1024 * 1024 * 1024  # 1 Gb
 
     def __init__(self, *args, **kwargs):
@@ -44,33 +44,50 @@ class VadInfo(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return [requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                         architectures = ["Intel32", "Intel64"]),
-                # TODO: Convert this to a ListRequirement so that people can filter on sets of ranges
-                requirements.IntRequirement(name = 'address',
-                                            description = "Process virtual memory address to include " \
-                                                          "(all other address ranges are excluded). This must be " \
-                                                          "a base address, not an address within the desired range.",
-                                            optional = True),
-                requirements.ListRequirement(name = 'pid',
-                                             description = 'Filter on specific process IDs',
-                                             element_type = int,
-                                             optional = True),
-                requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
-                requirements.BooleanRequirement(name = 'dump',
-                                                description = "Extract listed memory ranges",
-                                                default = False,
-                                                optional = True),
-                requirements.IntRequirement(name = 'maxsize',
-                                            description = "Maximum size for dumped VAD sections " \
-                                                          "(all the bigger sections will be ignored)",
-                                            default = cls.MAXSIZE_DEFAULT,
-                                            optional = True),
-                ]
+        return [
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Windows kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            # TODO: Convert this to a ListRequirement so that people can filter on sets of ranges
+            requirements.IntRequirement(
+                name="address",
+                description="Process virtual memory address to include "
+                "(all other address ranges are excluded).",
+                optional=True,
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                description="Filter on specific process IDs",
+                element_type=int,
+                optional=True,
+            ),
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
+            ),
+            requirements.BooleanRequirement(
+                name="dump",
+                description="Extract listed memory ranges",
+                default=False,
+                optional=True,
+            ),
+            requirements.IntRequirement(
+                name="maxsize",
+                description="Maximum size for dumped VAD sections "
+                "(all the bigger sections will be ignored)",
+                default=cls.MAXSIZE_DEFAULT,
+                optional=True,
+            ),
+        ]
 
     @classmethod
-    def protect_values(cls, context: interfaces.context.ContextInterface, layer_name: str,
-                       symbol_table: str) -> Iterable[int]:
+    def protect_values(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        symbol_table: str,
+    ) -> Iterable[int]:
         """Look up the array of memory protection constants from the memory
         sample. These don't change often, but if they do in the future, then
         finding them dynamically versus hard-coding here will ensure we parse
@@ -82,16 +99,26 @@ class VadInfo(interfaces.plugins.PluginInterface):
             symbol_table: The name of the table containing the kernel symbols
         """
 
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
-        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
+        kvo = context.layers[layer_name].config.get("kernel_virtual_offset", None)
+        if not kvo:
+            raise ValueError(
+                "Intel layer does not have an associated kernel virtual offset, failing"
+            )
+        ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
         addr = ntkrnlmp.get_symbol("MmProtectToValue").address
-        values = ntkrnlmp.object(object_type = "array", offset = addr, subtype = ntkrnlmp.get_type("int"), count = 32)
+        values = ntkrnlmp.object(
+            object_type="array", offset=addr, subtype=ntkrnlmp.get_type("int"), count=32
+        )
         return values  # type: ignore
 
     @classmethod
-    def list_vads(cls, proc: interfaces.objects.ObjectInterface,
-                  filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: False) -> \
-            Generator[interfaces.objects.ObjectInterface, None, None]:
+    def list_vads(
+        cls,
+        proc: interfaces.objects.ObjectInterface,
+        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: (
+            False
+        ),
+    ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Lists the Virtual Address Descriptors of a specific process.
 
         Args:
@@ -106,12 +133,14 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 yield vad
 
     @classmethod
-    def vad_dump(cls,
-                 context: interfaces.context.ContextInterface,
-                 proc: interfaces.objects.ObjectInterface,
-                 vad: interfaces.objects.ObjectInterface,
-                 open_method: Type[interfaces.plugins.FileHandlerInterface],
-                 maxsize: int = MAXSIZE_DEFAULT) -> Optional[interfaces.plugins.FileHandlerInterface]:
+    def vad_dump(
+        cls,
+        context: interfaces.context.ContextInterface,
+        proc: interfaces.objects.ObjectInterface,
+        vad: interfaces.objects.ObjectInterface,
+        open_method: Type[interfaces.plugins.FileHandlerInterface],
+        maxsize: int = MAXSIZE_DEFAULT,
+    ) -> Optional[interfaces.plugins.FileHandlerInterface]:
         """Extracts the complete data for Vad as a FileInterface.
 
         Args:
@@ -132,8 +161,10 @@ class VadInfo(interfaces.plugins.PluginInterface):
             vollog.debug("Unable to find the starting/ending VPN member")
             return None
 
-        if 0 < maxsize < (vad_end - vad_start):
-            vollog.debug(f"Skip VAD dump {vad_start:#x}-{vad_end:#x} due to maxsize limit")
+        if 0 < maxsize < vad.get_size():
+            vollog.debug(
+                f"Skip VAD dump {vad_start:#x}-{vad_end:#x} due to maxsize limit"
+            )
             return None
 
         proc_id = "Unknown"
@@ -141,8 +172,9 @@ class VadInfo(interfaces.plugins.PluginInterface):
             proc_id = proc.UniqueProcessId
             proc_layer_name = proc.add_process_layer()
         except exceptions.InvalidAddressException as excp:
-            vollog.debug("Process {}: invalid address {} in layer {}".format(proc_id, excp.invalid_address,
-                                                                             excp.layer_name))
+            vollog.debug(
+                f"Process {proc_id}: invalid address {excp.invalid_address} in layer {excp.layer_name}"
+            )
             return None
 
         proc_layer = context.layers[proc_layer_name]
@@ -151,9 +183,10 @@ class VadInfo(interfaces.plugins.PluginInterface):
             file_handle = open_method(file_name)
             chunk_size = 1024 * 1024 * 10
             offset = vad_start
-            while offset < vad_end:
-                to_read = min(chunk_size, vad_end - offset)
-                data = proc_layer.read(offset, to_read, pad = True)
+            vad_size = vad.get_size()
+            while offset < vad_start + vad_size:
+                to_read = min(chunk_size, vad_start + vad_size - offset)
+                data = proc_layer.read(offset, to_read, pad=True)
                 if not data:
                     break
                 file_handle.write(data)
@@ -165,51 +198,105 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
         return file_handle
 
-    def _generator(self, procs):
-        kernel = self.context.modules[self.config['kernel']]
+    def _generator(
+        self, procs: List[interfaces.objects.ObjectInterface]
+    ) -> Generator[
+        Tuple[
+            int,
+            Tuple[
+                int,
+                str,
+                format_hints.Hex,
+                format_hints.Hex,
+                format_hints.Hex,
+                str,
+                str,
+                int,
+                int,
+                format_hints.Hex,
+                str,
+                str,
+            ],
+        ],
+        None,
+        None,
+    ]:
+        kernel = self.context.modules[self.config["kernel"]]
+        kernel_layer = self.context.layers[kernel.layer_name]
 
-        def passthrough(_: interfaces.objects.ObjectInterface) -> bool:
+        def passthrough(x: interfaces.objects.ObjectInterface) -> bool:
             return False
 
         filter_func = passthrough
-        if self.config.get('address', None) is not None:
+        if self.config.get("address", None) is not None:
 
             def filter_function(x: interfaces.objects.ObjectInterface) -> bool:
-                return x.get_start() not in [self.config['address']]
+                return not (x.get_start() <= self.config["address"] <= x.get_end())
 
             filter_func = filter_function
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
 
-            for vad in self.list_vads(proc, filter_func = filter_func):
-
+            for vad in self.list_vads(proc, filter_func=filter_func):
                 file_output = "Disabled"
-                if self.config['dump']:
-                    file_handle = self.vad_dump(self.context, proc, vad, self.open, self.config['maxsize'])
+                if self.config["dump"]:
+                    file_handle = self.vad_dump(
+                        self.context, proc, vad, self.open, self.config["maxsize"]
+                    )
                     file_output = "Error outputting file"
                     if file_handle:
                         file_handle.close()
                         file_output = file_handle.preferred_filename
 
-                yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.vol.offset),
-                           format_hints.Hex(vad.get_start()), format_hints.Hex(vad.get_end()), vad.get_tag(),
-                           vad.get_protection(
-                               self.protect_values(self.context, kernel.layer_name, kernel.symbol_table_name),
-                               winnt_protections), vad.get_commit_charge(), vad.get_private_memory(),
-                           format_hints.Hex(vad.get_parent()), vad.get_file_name(), file_output))
+                yield (
+                    0,
+                    (
+                        proc.UniqueProcessId,
+                        process_name,
+                        format_hints.Hex(kernel_layer.canonicalize(vad.vol.offset)),
+                        format_hints.Hex(vad.get_start()),
+                        format_hints.Hex(vad.get_end()),
+                        vad.get_tag(),
+                        vad.get_protection(
+                            self.protect_values(
+                                self.context,
+                                kernel.layer_name,
+                                kernel.symbol_table_name,
+                            ),
+                            winnt_protections,
+                        ),
+                        vad.get_commit_charge(),
+                        vad.get_private_memory(),
+                        format_hints.Hex(vad.get_parent()),
+                        vad.get_file_name(),
+                        file_output,
+                    ),
+                )
 
-    def run(self):
-        kernel = self.context.modules[self.config['kernel']]
+    def run(self) -> renderers.TreeGrid:
+        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
-        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
-
-        return renderers.TreeGrid([("PID", int), ("Process", str), ("Offset", format_hints.Hex),
-                                   ("Start VPN", format_hints.Hex), ("End VPN", format_hints.Hex), ("Tag", str),
-                                   ("Protection", str), ("CommitCharge", int), ("PrivateMemory", int),
-                                   ("Parent", format_hints.Hex), ("File", str), ("File output", str)],
-                                  self._generator(
-                                      pslist.PsList.list_processes(context = self.context,
-                                                                   layer_name = kernel.layer_name,
-                                                                   symbol_table = kernel.symbol_table_name,
-                                                                   filter_func = filter_func)))
+        return renderers.TreeGrid(
+            [
+                ("PID", int),
+                ("Process", str),
+                ("Offset", format_hints.Hex),
+                ("Start VPN", format_hints.Hex),
+                ("End VPN", format_hints.Hex),
+                ("Tag", str),
+                ("Protection", str),
+                ("CommitCharge", int),
+                ("PrivateMemory", int),
+                ("Parent", format_hints.Hex),
+                ("File", str),
+                ("File output", str),
+            ],
+            self._generator(
+                pslist.PsList.list_processes(
+                    context=self.context,
+                    kernel_module_name=self.config["kernel"],
+                    filter_func=filter_func,
+                )
+            ),
+        )

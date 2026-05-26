@@ -12,5 +12,13 @@ components of volatility to write plugins.
 # Import the submodules we want people to be able to use without importing them themselves
 # This will also avoid namespace issues, because people can use interfaces.layers to
 # avoid clashing with the layers package
-from volatility3.framework.interfaces import renderers, configuration, context, layers, objects, plugins, symbols, \
-    automagic
+from volatility3.framework.interfaces import (
+    renderers as renderers,
+    configuration as configuration,
+    context as context,
+    layers as layers,
+    objects as objects,
+    plugins as plugins,
+    symbols as symbols,
+    automagic as automagic,
+)

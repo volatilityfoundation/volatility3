@@ -1,7 +1,7 @@
 Volatility 3 Basics
 ===================
 
-Volatility splits memory analysis down to several components:
+Volatility splits memory analysis down to several components.  The main ones are:
 
 * Memory layers
 * Templates and Objects
@@ -13,26 +13,69 @@ which acts as a container for all the various layers and tables necessary to con
 Memory layers
 -------------
 
-A memory layer is a body of data that can be accessed by requesting data at a specific address.  Memory is seen as
-sequential when accessed through sequential addresses, however, there is no obligation for the data to be stored
-sequentially, and modern processors tend to store the memory in a paged format.  Moreover, there is no need for the data
-to be stored in an easily accessible format, it could be encoded or encrypted or more, it could be the combination of
-two other sources.  These are typically handled by programs that process file formats, or the memory manager of the
-processor, but these are all translations (either in the geometric or linguistic sense) of the original data.
+A memory layer is a body of data that can be accessed by requesting data at a specific address.  At its lowest level
+this data is stored on a phyiscal medium (RAM) and very early computers addressed locations in memory directly.  However,
+as the size of memory increased and it became more difficult to manage memory most architectures moved to a "paged" model 
+of memory, where the available memory is cut into specific fixed-sized pages.  To help further, programs can ask for any address 
+and the processor will look up their (virtual) address in a map, to find out where the (physical) address that it lives at is,
+in the actual memory of the system.
 
-In Volatility 3 this is represented by a directed graph, whose end nodes are
-:py:class:`DataLayers <volatility3.framework.interfaces.layers.DataLayerInterface>` and whose internal nodes are
-specifically called a :py:class:`TranslationLayer <volatility3.framework.interfaces.layers.TranslationLayerInterface>`.
-In this way, a raw memory image in the LiME file format and a page file can be
-combined to form a single Intel virtual memory layer.  When requesting addresses from the Intel layer, it will use the
-Intel memory mapping algorithm, along with the address of the directory table base or page table map, to translate that
+Volatility can work with these layers as long as it knows the map (so, for example that virtual address `1` looks up at physical
+address `9`).  The automagic that runs at the start of every volatility session often locates the kernel's memory map, and creates
+a kernel virtual layer, which allows for kernel addresses to be looked up and the correct data returned.  There can, however, be
+several maps, and in general there is a different map for each process (although a portion of the operating system's memory is
+usually mapped to the same location across all processes).  The maps may take the same address but point to a different part of 
+physical memory.  It also means that two processes could theoretically share memory, both having a virtual address mapped to the 
+same physical address.  See the worked example below for more information.
+
+To translate an address on a layer, call :py:meth:`layer.mapping(offset, length, ignore_errors) <volatility3.framework.interfaces.layers.TranslationLayerInterface.mapping>` and it will return a list of chunks without overlap, in order,
+for the requested range.  If a portion cannot be mapped, an exception will be thrown unless `ignore_errors` is true.  Each 
+chunk will contain the original offset of the chunk, the translated offset, the original size and the translated size of 
+the chunk, as well as the lower layer the chunk lives within.
+
+Worked example
+^^^^^^^^^^^^^^
+    
+The operating system and two programs may all appear to have access to  all of physical memory, but actually the maps they each have
+mean they each see something different:
+
+.. code-block::
+    :caption: Memory mapping example
+
+    Operating system map                        Physical Memory
+    1 -> 9                                      1  - Free
+    2 -> 3                                      2  - OS.4, Process 1.4, Process 2.4
+    3 -> 7                                      3  - OS.2
+    4 -> 2                                      4  - Free
+                                                5  - Free
+    Process 1 map                               6  - Process 1.2, Process 2.3
+    1 -> 12                                     7  - OS.3
+    2 -> 6                                      8  - Process1.3
+    3 -> 8                                      9  - OS.1
+    4 -> 2                                      10 - Process2.1
+                                                11 - Free
+    Process 2 map                               12 - Process1.1
+    1 -> 10                                     13 - Free
+    2 -> 15                                     14 - Free
+    3 -> 6                                      15 - Process2.2
+    4 -> 2                                      16 - Free
+
+In this example, part of the operating system is visible across all processes (although not all processes can write to the memory, there
+is a permissions model for Intel addressing which is not discussed further here).
+
+In Volatility 3 mappings are represented by a directed graph of layers, whose end nodes are
+:py:class:`DataLayers <volatility3.framework.interfaces.layers.DataLayerInterface>` and whose internal nodes are :py:class:`TranslationLayers <volatility3.framework.interfaces.layers.TranslationLayerInterface>`.
+In this way, a raw memory image in the LiME file format and a page file can be combined to form a single Intel virtual 
+memory layer.  When requesting addresses from the Intel layer, it will use the Intel memory mapping algorithm, along 
+with the address of the directory table base or page table map, to translate that
 address into a physical address, which will then either be directed towards the swap layer or the LiME layer.  Should it
-be directed towards the LiME layer, the LiME file format algorithm will be translated to determine where within the file
-the data is stored and that will be returned.
+be directed towards the LiME layer, the LiME file format algorithm will translate the new address to determine where 
+within the file the data is stored.  When the :py:meth:`layer.read() <volatility3.framework.interfaces.layers.TranslationLayerInterface.read>` 
+method is called, the translation is done automatically and the correct data gathered and combined.
 
 .. note:: Volatility 2 had a similar concept, called address spaces, but these could only stack linearly one on top of another.
 
-The list of layers supported by volatility can be determined by running the `frameworkinfo` plugin.
+The list of layers supported by Volatility can be determined by running the `frameworkinfo` plugin.
 
 Templates and Objects
 ---------------------
@@ -124,8 +167,7 @@ There are certain setup tasks that establish the context in a way favorable to a
 several tasks that are repetitive and also easy to get wrong.  These are called
 :py:class:`Automagic <volatility3.framework.interfaces.automagic.AutomagicInterface>`, since they do things like magically
 taking a raw memory image and automatically providing the plugin with an appropriate Intel translation layer and an
-accurate symbol table without either the plugin or the calling program having to specify all the necessary details.
+accurate symbol table without either the plugin or the calling program having to specify all the necessary details.  Automagics are a core component which consumers of the library can call or not at their discretion.
 
 .. note:: Volatility 2 used to do this as well, but it wasn't a particularly modular mechanism, and was used only for
     stacking address spaces (rather than identifying profiles), and it couldn't really be disabled/configured easily.
-    Automagics in Volatility 3 are a core component which consumers of the library can call or not at their discretion.

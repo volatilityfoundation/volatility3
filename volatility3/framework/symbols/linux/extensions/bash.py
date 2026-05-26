@@ -9,7 +9,6 @@ from volatility3.framework.renderers import conversion
 
 
 class hist_entry(objects.StructType):
-
     def is_valid(self):
         try:
             cmd = self.get_command()

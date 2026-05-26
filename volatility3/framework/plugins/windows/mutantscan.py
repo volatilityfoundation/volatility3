@@ -14,44 +14,51 @@ class MutantScan(interfaces.plugins.PluginInterface):
     """Scans for mutexes present in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'poolscanner', plugin = poolscanner.PoolScanner, version = (1, 0, 0)),
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Windows kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="poolscanner", component=poolscanner.PoolScanner, version=(3, 0, 0)
+            ),
         ]
 
     @classmethod
-    def scan_mutants(cls,
-                     context: interfaces.context.ContextInterface,
-                     layer_name: str,
-                     symbol_table: str) -> \
-            Iterable[interfaces.objects.ObjectInterface]:
+    def scan_mutants(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+    ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Scans for mutants using the poolscanner module and constraints.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the module for the kernel
 
         Returns:
               A list of Mutant objects found by scanning memory for the Mutant pool signatures
         """
 
-        constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Mut\xe1', b'Muta'])
+        kernel = context.modules[kernel_module_name]
 
-        for result in poolscanner.PoolScanner.generate_pool_scan(context, layer_name, symbol_table, constraints):
+        constraints = poolscanner.PoolScanner.builtin_constraints(
+            kernel.symbol_table_name, [b"Mut\xe1", b"Muta"]
+        )
 
+        for result in poolscanner.PoolScanner.generate_pool_scan(
+            context, kernel_module_name, constraints
+        ):
             _constraint, mem_object, _header = result
             yield mem_object
 
     def _generator(self):
-        kernel = self.context.modules[self.config['kernel']]
-
-        for mutant in self.scan_mutants(self.context, kernel.layer_name, kernel.symbol_table_name):
-
+        for mutant in self.scan_mutants(self.context, self.config["kernel"]):
             try:
                 name = mutant.get_name()
             except (ValueError, exceptions.InvalidAddressException):
@@ -60,7 +67,10 @@ class MutantScan(interfaces.plugins.PluginInterface):
             yield (0, (format_hints.Hex(mutant.vol.offset), name))
 
     def run(self):
-        return renderers.TreeGrid([
-            ("Offset", format_hints.Hex),
-            ("Name", str),
-        ], self._generator())
+        return renderers.TreeGrid(
+            [
+                ("Offset", format_hints.Hex),
+                ("Name", str),
+            ],
+            self._generator(),
+        )
