@@ -9,7 +9,7 @@ from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
-from volatility3.plugins.windows import modules, pslist, vadinfo
+from volatility3.plugins.windows import pslist, vadinfo
 
 vollog = logging.getLogger(__name__)
 
@@ -23,15 +23,23 @@ class VadTree(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.PluginRequirement(name = 'modules', plugin = modules.Modules, version = (1, 1, 0)),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
-            requirements.PluginRequirement(name = 'vadinfo', plugin = vadinfo.VadInfo, version = (2, 0, 0)),
-            requirements.ListRequirement(name = 'pid',
-                                         element_type = int,
-                                         description = "Process IDs to include (all other processes are excluded)",
-                                         optional = True)
+            requirements.ModuleRequirement(
+                name="kernel",
+                description="Windows kernel",
+                architectures=["Intel32", "Intel64"],
+            ),
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="vadinfo", component=vadinfo.VadInfo, version=(2, 0, 0)
+            ),
+            requirements.ListRequirement(
+                name="pid",
+                element_type=int,
+                description="Process IDs to include (all other processes are excluded)",
+                optional=True,
+            ),
         ]
 
     @classmethod
@@ -125,19 +133,23 @@ class VadTree(interfaces.plugins.PluginInterface):
                             vad.get_tag()))
 
     def run(self) -> renderers.TreeGrid:
-        kernel = self.context.modules[self.config['kernel']]
-        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
-        return renderers.TreeGrid([('PID', int),
-                                    ('Process', str),
-                                    ('Offset', format_hints.Hex),
-                                    ("Type", str),
-                                    ('Start', format_hints.Hex),
-                                    ('End', format_hints.Hex),
-                                    ('Tag', str)],
-                                    self._generator(
-                                        pslist.PsList.list_processes(
-                                            context = self.context,
-                                            layer_name = kernel.layer_name,
-                                            symbol_table = kernel.symbol_table_name,
-                                            filter_func = filter_func)))
+        return renderers.TreeGrid(
+            [
+                ("PID", int),
+                ("Process", str),
+                ("Offset", format_hints.Hex),
+                ("Type", str),
+                ("Start", format_hints.Hex),
+                ("End", format_hints.Hex),
+                ("Tag", str),
+            ],
+            self._generator(
+                pslist.PsList.list_processes(
+                    context=self.context,
+                    kernel_module_name=self.config["kernel"],
+                    filter_func=filter_func,
+                )
+            ),
+        )
