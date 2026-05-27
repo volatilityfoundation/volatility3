@@ -20,6 +20,7 @@ from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import pdbutil
 from volatility3.framework.symbols.windows.extensions import conversion
 from volatility3.plugins.windows import pslist, vadinfo, pe_symbols
+from volatility3.plugins import timeliner
 
 vollog = logging.getLogger(__name__)    
 
@@ -685,14 +686,16 @@ class Sessions(interfaces.plugins.PluginInterface, KlistCommand):
                 name="bytes_scanner",
                 component=scanners.BytesScanner,
                 version=(1, 0, 0),
-            ),
+            )
         ]
 
-    def _generator(self, procs):
-        """
-        Args:
-            procs: the process list filtered to lsass.exe instances
-        """
+    def _generator(self):
+        procs = pslist.PsList.list_processes(
+            context=self.context,
+            kernel_module_name=self.config["kernel"],
+            filter_func=self._lsass_proc_filter,
+        )
+
         proc_layer_name, kerberos_base, kerberos_types, kerberos_symbols = self._load_kerberos_type_and_symbol(procs)
         kerberos_sessions = self._find_kerberos_sessions(
             proc_layer_name, kerberos_base, kerberos_types, kerberos_symbols
@@ -723,16 +726,10 @@ class Sessions(interfaces.plugins.PluginInterface, KlistCommand):
                 ("TargetUsername", str),
                 ("Nb Tickets", int),
             ],
-            self._generator(
-                pslist.PsList.list_processes(
-                    context=self.context,
-                    kernel_module_name=self.config["kernel"],
-                    filter_func=self._lsass_proc_filter,
-                )
-            ),
+            self._generator()
         )
 
-class Tickets(interfaces.plugins.PluginInterface, KlistCommand):
+class Tickets(interfaces.plugins.PluginInterface, KlistCommand, timeliner.TimeLinerInterface):
     """Looks for tickets managed by the kerberos security provider"""
 
     _required_framework_version = (2, 4, 0)
@@ -764,6 +761,11 @@ class Tickets(interfaces.plugins.PluginInterface, KlistCommand):
                 component=scanners.BytesScanner,
                 version=(1, 0, 0),
             ),
+            requirements.VersionRequirement(
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
+            ),
             requirements.BooleanRequirement(
                 name="dump",
                 description="Extract listed tickets",
@@ -772,9 +774,13 @@ class Tickets(interfaces.plugins.PluginInterface, KlistCommand):
             )
         ]
 
-    def _generator(self, procs):
-        """
-        """
+    def _generator(self):
+        procs = pslist.PsList.list_processes(
+            context=self.context,
+            kernel_module_name=self.config["kernel"],
+            filter_func=self._lsass_proc_filter,
+        )
+
         proc_layer_name, kerberos_base, kerberos_types, kerberos_symbols = self._load_kerberos_type_and_symbol(procs)
         kerberos_sessions = self._find_kerberos_sessions(
             proc_layer_name, kerberos_base, kerberos_types, kerberos_symbols
@@ -818,6 +824,12 @@ class Tickets(interfaces.plugins.PluginInterface, KlistCommand):
                 if self.config["dump"]:
                     KlistCommand.dump_ticket(ticket_info, self.open)
 
+    def generate_timeline(self):
+        for row in self._generator():
+            _depth, row_data = row
+            description = f"Kerberos Ticket: {row_data[1]} {row_data[2]} ({row_data[9]})"
+            yield (description, timeliner.TimeLinerType.CREATED, row_data[5])
+            yield (description, timeliner.TimeLinerType.CHANGED, row_data[7])
 
     def run(self):
         return renderers.TreeGrid(
@@ -833,13 +845,7 @@ class Tickets(interfaces.plugins.PluginInterface, KlistCommand):
                 ("Session Key Type", str),
                 ("Kdc Called", str),
             ],
-            self._generator(
-                pslist.PsList.list_processes(
-                    context=self.context,
-                    kernel_module_name=self.config["kernel"],
-                    filter_func=self._lsass_proc_filter,
-                )
-            ),
+            self._generator()
         )
         
 class VadTicketScan(interfaces.plugins.PluginInterface, KlistCommand):
@@ -868,7 +874,13 @@ class VadTicketScan(interfaces.plugins.PluginInterface, KlistCommand):
             )
         ]
 
-    def _generator(self, procs):
+    def _generator(self):
+        procs = pslist.PsList.list_processes(
+            context=self.context,
+            kernel_module_name=self.config["kernel"],
+            filter_func=self._lsass_proc_filter,
+        )
+
         lsass_proc, proc_layer_name = self._find_lsass_proc(procs)
 
         if not lsass_proc:
@@ -986,11 +998,5 @@ class VadTicketScan(interfaces.plugins.PluginInterface, KlistCommand):
                 ("Session Key Type", str),
                 ("Kdc Called", str),
             ],
-            self._generator(
-                pslist.PsList.list_processes(
-                    context=self.context,
-                    kernel_module_name=self.config["kernel"],
-                    filter_func=self._lsass_proc_filter,
-                )
-            ),
+            self._generator()
         )
