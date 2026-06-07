@@ -489,6 +489,26 @@ class Intel32e(Intel):
     ]
 
 
+class Intel32e_LA57(Intel32e):
+    """Class for handling 64-bit Intel architectures with 5-level paging
+    (LA57).
+
+    LA57 extends the linear address space to 57 bits by adding a fifth
+    page map level (PML5) above the PML4.  All derived values
+    (maximum_address, address_mask, canonicalization prefix and the
+    translation walk) are computed from _maxvirtaddr and _structure.
+    """
+
+    _maxvirtaddr = 57
+    _structure = [
+        ("page map layer 5", 9, False),
+        ("page map layer 4", 9, False),
+        ("page directory pointer", 9, True),
+        ("page directory", 9, True),
+        ("page table", 9, False),
+    ]
+
+
 class WindowsMixin(Intel):
     @staticmethod
     def _page_is_valid(entry: int) -> bool:
@@ -556,6 +576,15 @@ class WindowsIntel32e(WindowsMixin, Intel32e):
     # TODO: Fix appropriately in a future release.
     # Currently just a temporary workaround to deal with custom bit flag
     # in the PFN field for pages in transition state.
+    # See https://github.com/volatilityfoundation/volatility3/pull/475
+    _maxphyaddr = 45
+
+    def _translate(self, offset: int) -> Tuple[int, int, str]:
+        return self._translate_swap(self, offset, self._bits_per_register // 2)
+
+
+class WindowsIntel32e_LA57(WindowsMixin, Intel32e_LA57):
+    # Same transition-state PFN workaround as WindowsIntel32e.
     # See https://github.com/volatilityfoundation/volatility3/pull/475
     _maxphyaddr = 45
 
@@ -643,3 +672,12 @@ class LinuxIntel32e(LinuxMixin, Intel32e):
     # it's difficult to detect the exact bit shift used in the current kernel.
     # Using 46 bits has proven reliable for our use case, as seen in tools like crashtool.
     _maxphyaddr = 46
+
+
+class LinuxIntel32e_LA57(LinuxMixin, Intel32e_LA57):
+    # 5-level paging requires kernel >= 4.14 (CONFIG_X86_5LEVEL), where
+    # __PHYSICAL_MASK_SHIFT is always 52 bits for x86-64
+    # (see b83ce5ee91471d19c403ff91227204fb37c95fb2).  LA57-capable hardware
+    # (Ice Lake and later) can also expose physical memory beyond 46 bits,
+    # so the 46-bit value used by LinuxIntel32e would truncate high PFNs.
+    _maxphyaddr = 52
