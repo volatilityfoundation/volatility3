@@ -2733,12 +2733,8 @@ class page(objects.StructType):
                     vmemmap_start = vmemmap_base_l4
                 else:
                     # 5-Level paging -> VMEMMAP_START = __VMEMMAP_BASE_L5
-                    # FIXME: Once 5-level paging is supported, uncomment the following lines and remove the exception
-                    # vmemmap_base_l5 = 0xFFD4000000000000
-                    # vmemmap_start = vmemmap_base_l5
-                    raise exceptions.VolatilityException(
-                        "5-level paging is not yet supported"
-                    )
+                    vmemmap_base_l5 = 0xFFD4000000000000
+                    vmemmap_start = vmemmap_base_l5
 
         elif vmlinux.has_symbol("mem_map"):
             # FLATMEM physical memory model, typically 32bit
