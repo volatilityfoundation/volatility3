@@ -29,4 +29,10 @@ PROCESSOR_START_BLOCK_LM_TARGET_OFFSET = (
 # CR3 register within structures describing initial processor state to be started
 PROCESSOR_START_BLOCK_CR3_OFFSET = 0xA0  # PROCESSOR_START_BLOCK->ProcessorState->SpecialRegisters->Cr3, ULONG64 8 bytes
 
+# CR4 register, immediately after Cr3 in KSPECIAL_REGISTERS (Cr0, Cr2, Cr3, Cr4)
+PROCESSOR_START_BLOCK_CR4_OFFSET = 0xA8  # PROCESSOR_START_BLOCK->ProcessorState->SpecialRegisters->Cr4, ULONG64 8 bytes
+
+# CR4.LA57 (bit 12): set when the CPU is running with 5-level paging
+CR4_LA57_MASK = 1 << 12
+
 MAX_PID = 0xFFFFFFFC
