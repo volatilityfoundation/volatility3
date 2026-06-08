@@ -268,8 +268,11 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             and not physical
             and context.layers[layer_to_scan].metadata.architecture in ["Intel64"]
         ):
-            # TODO: change this value accordingly when 5-Level paging is supported.
-            start_scan_address = 0x1F0 << 39
+            # Start scanning near the top of the canonical kernel space.  The
+            # top-level table index width is (maxvirtaddr - 9), so this is
+            # 0x1F0 << 39 for 4-level and 0x1F0 << 48 for 5-level (LA57).
+            maxvirtaddr = context.layers[layer_to_scan]._maxvirtaddr
+            start_scan_address = 0x1F0 << (maxvirtaddr - 9)
 
         kernel_pdb_names = [
             bytes(name + ".pdb", "utf-8")
@@ -439,8 +442,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 )
                 if 0x3 & potential_kernel_hint:
                     continue
-                kernel_hint = potential_kernel_hint & 0xFFFFFFFFFFFF
-                kernel_base = kernel_hint & (~0x1FFFFF) & 0xFFFFFFFFFFFF
+                kernel_hint = potential_kernel_hint & vlayer.address_mask
+                kernel_base = kernel_hint & (~0x1FFFFF) & vlayer.address_mask
                 break
             except exceptions.InvalidAddressException:
                 continue

@@ -31,7 +31,7 @@ import logging
 import struct
 from typing import Generator, Iterable, List, Optional, Tuple, Type
 
-from volatility3.framework import constants, interfaces, layers
+from volatility3.framework import constants, exceptions, interfaces, layers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel
 
@@ -194,6 +194,55 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 40
     exclusion_list = ["mac", "linux"]
 
+    @staticmethod
+    def _la57_from_low_stub(
+        base_layer: interfaces.layers.DataLayerInterface,
+        page_map_offset: Optional[int] = None,
+    ) -> Optional[bool]:
+        """Determines whether 5-level paging (LA57) is enabled by reading CR4
+        from the x64 Low Stub (_PROCESSOR_START_BLOCK).
+
+        The Low Stub holds the boot processor's CR3 and CR4 in its
+        SpecialRegisters.  CR4 bit 12 (LA57) is the authoritative runtime
+        indicator of 5-level paging, which the self-referential DTB scan
+        cannot distinguish (a PML5 looks identical to a PML4).
+
+        Returns True/False when a matching Low Stub is found, or None when no
+        Low Stub is present (e.g. virtualized snapshots), in which case the
+        caller should fall back to its default 4-level behaviour.
+        """
+        for offset in range(0x1000, 0x100000, 0x1000):
+            try:
+                jmp_and_completion = int.from_bytes(
+                    base_layer.read(offset, 0x8), "little"
+                )
+                if (
+                    0xFFFFFFFFFFFF00FF & jmp_and_completion
+                    != constants.windows.JMP_AND_COMPLETION_SIGNATURE
+                ):
+                    continue
+                cr3_value = int.from_bytes(
+                    base_layer.read(
+                        offset + constants.windows.PROCESSOR_START_BLOCK_CR3_OFFSET, 0x8
+                    ),
+                    "little",
+                )
+                # If we already know the DTB, only trust a Low Stub that agrees
+                if page_map_offset is not None and (
+                    cr3_value & ~0xFFF
+                ) != (page_map_offset & ~0xFFF):
+                    continue
+                cr4_value = int.from_bytes(
+                    base_layer.read(
+                        offset + constants.windows.PROCESSOR_START_BLOCK_CR4_OFFSET, 0x8
+                    ),
+                    "little",
+                )
+                return bool(cr4_value & constants.windows.CR4_LA57_MASK)
+            except exceptions.InvalidAddressException:
+                continue
+        return None
+
     # Group these by region so we only run over the data once
     test_sets = [
         (
@@ -256,6 +305,10 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
             layer_type: Type = intel.WindowsIntel
             if arch == "Intel64":
                 layer_type = intel.WindowsIntel32e
+                if cls._la57_from_low_stub(
+                    base_layer, base_layer.metadata.get("page_map_offset")
+                ):
+                    layer_type = intel.WindowsIntel32e_LA57
             elif base_layer.metadata.get("pae", False):
                 layer_type = intel.WindowsIntelPAE
             # Construct the layer
@@ -362,7 +415,14 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                             config_path, "page_map_offset"
                         )
                     ] = page_map_offset
-                    layer = test.layer_type(
+                    # A self-referential PML5 is indistinguishable from a PML4,
+                    # so refine the 64-bit choice with CR4.LA57 from the Low Stub
+                    layer_type = test.layer_type
+                    if layer_type is intel.WindowsIntel32e and cls._la57_from_low_stub(
+                        base_layer, page_map_offset
+                    ):
+                        layer_type = intel.WindowsIntel32e_LA57
+                    layer = layer_type(
                         context,
                         config_path=config_path,
                         name=new_layer_name,

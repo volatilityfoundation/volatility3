@@ -147,7 +147,12 @@ class Modules(interfaces.plugins.PluginInterface):
             context=context, symbol_table_name=module.symbol_table_name
         ):
             object_type = "unsigned long long"
-            default_start = 0xFFFF800000000000
+            # Derive the kernel-space start from the layer so it is correct for
+            # both 4-level (0xFFFF800000000000) and 5-level/LA57
+            # (0xFF00000000000000) paging.
+            layer = context.layers[module.layer_name]
+            kernel_half = 1 << (layer.maximum_address.bit_length() - 1)
+            default_start = layer.canonicalize(kernel_half)
         else:
             object_type = "unsigned long"
             default_start = 0x80000000

@@ -5,7 +5,7 @@
 import logging
 from typing import Optional, Tuple
 
-from volatility3.framework import constants, interfaces
+from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.automagic import symbol_cache, symbol_finder
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, scanners
@@ -71,7 +71,10 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                 )
 
                 if "init_top_pgt" in table.symbols:
-                    layer_class = intel.LinuxIntel32e
+                    if cls._l5_paging_enabled(context, layer_name, table, kaslr_shift):
+                        layer_class = intel.LinuxIntel32e_LA57
+                    else:
+                        layer_class = intel.LinuxIntel32e
                     dtb_symbol_name = "init_top_pgt"
                 elif "init_level4_pgt" in table.symbols:
                     layer_class = intel.LinuxIntel32e
@@ -197,6 +200,37 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         vollog.debug("Scanners could not determine any ASLR shifts, using 0 for both")
         return 0, 0
 
+    @classmethod
+    def _l5_paging_enabled(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        table: linux.LinuxKernelIntermedSymbols,
+        kaslr_shift: int,
+    ) -> bool:
+        """Determines whether the kernel is running with 5-level page tables
+        (LA57).
+
+        Kernels built with CONFIG_X86_5LEVEL only switch to 5-level paging
+        at boot when the CPU supports LA57, recording the decision in
+        __pgtable_l5_enabled (kernels >= 4.17).  The value is read directly
+        from the physical layer, since no Intel layer exists yet.  The
+        kernel text mapping used by virtual_to_physical_address is identical
+        under 4 and 5-level paging, so the conversion remains valid.
+        """
+        if "__pgtable_l5_enabled" not in table.symbols:
+            return False
+        vaddr = table.get_symbol("__pgtable_l5_enabled").address + kaslr_shift
+        paddr = cls.virtual_to_physical_address(vaddr)
+        try:
+            value = context.layers[layer_name].read(paddr, 4)
+        except exceptions.InvalidAddressException:
+            vollog.debug("Unable to read __pgtable_l5_enabled, assuming 4-level paging")
+            return False
+        enabled = int.from_bytes(value, "little") != 0
+        vollog.debug(f"Linux 5-level paging (LA57) enabled: {enabled}")
+        return enabled
+
     @staticmethod
     def virtual_to_physical_address(addr: int) -> int:
         """Converts a virtual linux address to a physical one (does not account
@@ -295,6 +329,10 @@ class LinuxIntelVMCOREINFOStacker(interfaces.automagic.StackerLayerInterface):
             is_32bit, is_pae = cls._vmcoreinfo_is_32bit(vmcoreinfo)
             if is_32bit:
                 layer_class = intel.IntelPAE if is_pae else intel.Intel
+            elif vmcoreinfo.get("NUMBER(pgtable_l5_enabled)", 0):
+                # Exported by kernels >= 4.17, set when the kernel switched
+                # to 5-level paging (LA57) at boot
+                layer_class = intel.Intel32e_LA57
             else:
                 layer_class = intel.Intel32e
 
