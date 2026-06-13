@@ -317,13 +317,12 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                     )
                 return max_ptr
 
-            def page_table_is_dummy(page_table, ptr_size: int):
-                """Verify that a page table has at least 12 valid pointers"""
+            def page_table_is_dummy(page_table, ptr_size: int, minimum: int = 10):
+                """Verify that a page table has at least `minimum` valid pointers"""
                 valid_pointers = 0
                 for _ in get_valid_page_table_pointers(page_table, ptr_size):
                     valid_pointers += 1
-                    # 10 is an arbitrary constant
-                    if valid_pointers >= 10:
+                    if valid_pointers >= minimum:
                         # Do not consume the entire generator to enhance performance
                         return False
                 vollog.debug(f"Found {valid_pointers} valid pointers")
@@ -337,10 +336,15 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                 # Turn the page tables into integers and find the largest one
                 page_table = base_layer.read(page_map_offset, 0x1000)
                 ptr_size = struct.calcsize(test.ptr_struct)
+                # The PAE top-level table (the PDPT pointed to by CR3) legitimately
+                # contains only four entries, so the dummy-table heuristic - aimed at
+                # modern x64 stub tables that hold ~2 entries - must use a lower
+                # threshold for PAE or it would discard every valid PAE DTB.
+                minimum_valid = 4 if test.layer_type is intel.WindowsIntelPAE else 10
                 # Modern windows can have a dummy page table with only about 2 entries, so sanity check
-                if page_table_is_dummy(page_table, ptr_size):
+                if page_table_is_dummy(page_table, ptr_size, minimum_valid):
                     vollog.debug(
-                        f"DTB {page_map_offset:x} contains less than 12 valid pointers, ignoring"
+                        f"DTB {page_map_offset:x} contains less than {minimum_valid} valid pointers, ignoring"
                     )
                     continue
 
