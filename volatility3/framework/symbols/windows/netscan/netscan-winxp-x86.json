@@ -1,0 +1,146 @@
+{
+ "base_types": {
+  "unsigned long": {
+   "kind": "int",
+   "size": 4,
+   "signed": false,
+   "endian": "little"
+  },
+  "unsigned short": {
+   "kind": "int",
+   "size": 2,
+   "signed": false,
+   "endian": "little"
+  },
+  "unsigned be short": {
+   "kind": "int",
+   "size": 2,
+   "signed": false,
+   "endian": "big"
+  },
+  "unsigned char": {
+   "kind": "char",
+   "size": 1,
+   "signed": false,
+   "endian": "little"
+  },
+  "long long": {
+   "kind": "int",
+   "size": 8,
+   "signed": true,
+   "endian": "little"
+  },
+  "pointer": {
+   "kind": "int",
+   "size": 4,
+   "signed": false,
+   "endian": "little"
+  }
+ },
+ "user_types": {
+  "_TCPT_OBJECT": {
+   "kind": "struct",
+   "size": 32,
+   "fields": {
+    "RemoteIpAddress": {
+     "offset": 12,
+     "type": {
+      "kind": "array",
+      "count": 4,
+      "subtype": {
+       "kind": "base",
+       "name": "unsigned char"
+      }
+     }
+    },
+    "LocalIpAddress": {
+     "offset": 16,
+     "type": {
+      "kind": "array",
+      "count": 4,
+      "subtype": {
+       "kind": "base",
+       "name": "unsigned char"
+      }
+     }
+    },
+    "RemotePort": {
+     "offset": 20,
+     "type": {
+      "kind": "base",
+      "name": "unsigned be short"
+     }
+    },
+    "LocalPort": {
+     "offset": 22,
+     "type": {
+      "kind": "base",
+      "name": "unsigned be short"
+     }
+    },
+    "Pid": {
+     "offset": 24,
+     "type": {
+      "kind": "base",
+      "name": "unsigned long"
+     }
+    }
+   }
+  },
+  "_ADDRESS_OBJECT": {
+   "kind": "struct",
+   "size": 352,
+   "fields": {
+    "LocalIpAddress": {
+     "offset": 44,
+     "type": {
+      "kind": "array",
+      "count": 4,
+      "subtype": {
+       "kind": "base",
+       "name": "unsigned char"
+      }
+     }
+    },
+    "LocalPort": {
+     "offset": 48,
+     "type": {
+      "kind": "base",
+      "name": "unsigned be short"
+     }
+    },
+    "Protocol": {
+     "offset": 50,
+     "type": {
+      "kind": "base",
+      "name": "unsigned short"
+     }
+    },
+    "Pid": {
+     "offset": 328,
+     "type": {
+      "kind": "base",
+      "name": "unsigned long"
+     }
+    },
+    "CreateTime": {
+     "offset": 344,
+     "type": {
+      "kind": "base",
+      "name": "long long"
+     }
+    }
+   }
+  }
+ },
+ "symbols": {},
+ "enums": {},
+ "metadata": {
+  "producer": {
+   "version": "0.0.1",
+   "name": "volatility3-xp-network-poc",
+   "datetime": "2026-06-14T00:00:00"
+  },
+  "format": "6.0.0"
+ }
+}
