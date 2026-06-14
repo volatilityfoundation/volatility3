@@ -12,9 +12,9 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import versions
-from volatility3.framework.symbols.windows.extensions import network
+from volatility3.framework.symbols.windows.extensions import network, network_xp
 from volatility3.plugins import timeliner
-from volatility3.plugins.windows import info, poolscanner, verinfo
+from volatility3.plugins.windows import info, poolscanner, pslist, verinfo
 
 vollog = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for network objects present in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+    _version = (2, 1, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -38,6 +38,9 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             ),
             requirements.VersionRequirement(
                 name="info", component=info.Info, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="timeliner",
@@ -68,6 +71,11 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         Returns:
             The list containing the built constraints.
         """
+
+        # Windows XP / Server 2003 use the legacy TCPT/TCPA pool tags rather
+        # than the Vista+ TcpL/TcpE/UdpA tags, so they need their own scan.
+        if symbol_table.startswith("netscan-winxp"):
+            return cls.create_xp_netscan_constraints(symbol_table)
 
         tcpl_size = context.symbol_space.get_type(
             symbol_table + constants.BANG + "_TCP_LISTENER"
@@ -117,6 +125,29 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             )
 
         return constraints
+
+    @classmethod
+    def create_xp_netscan_constraints(
+        cls, symbol_table: str
+    ) -> List[poolscanner.PoolConstraint]:
+        """Pool constraints for the Windows XP / Server 2003 network objects:
+        TCPT (TCP connections) and TCPA (bound/listening sockets).
+
+        These are tag-only constraints; false positives are rejected later by
+        the objects' ``is_valid()`` checks.
+        """
+        return [
+            poolscanner.PoolConstraint(
+                b"TCPT",
+                type_name=symbol_table + constants.BANG + "_TCPT_OBJECT",
+                size=(None, None),
+            ),
+            poolscanner.PoolConstraint(
+                b"TCPA",
+                type_name=symbol_table + constants.BANG + "_ADDRESS_OBJECT",
+                size=(None, None),
+            ),
+        ]
 
     @classmethod
     def determine_tcpip_version(
@@ -178,6 +209,13 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         vollog.debug(
             f"Determined OS Version: {kuser.NtMajorVersion}.{kuser.NtMinorVersion} {vers.MajorVersion}.{vers.MinorVersion}"
         )
+
+        # Windows XP / Server 2003 (NT 5.x) use a different family of network
+        # pool structures (TCPT/TCPA) than Vista and later (TcpL/TcpE/UdpA),
+        # carried in a dedicated ISF with its own class types.
+        if nt_major_version == 5 and arch == "x86":
+            vollog.debug("Detected NT 5.x x86: using XP/2003 network structures")
+            return "netscan-winxp-x86", network_xp.class_types
 
         if nt_major_version == 10 and arch == "x64":
             # win10 x64 has an additional class type we have to include.
@@ -391,6 +429,11 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             self.context, self.config["kernel"], self.config_path
         )
 
+        # XP/2003 objects only carry an owning PID, so resolve process names
+        # from a one-shot pslist walk to fill the Owner column.
+        is_xp = netscan_symbol_table.startswith("netscan-winxp")
+        pid_name_map = self._build_pid_name_map() if is_xp else {}
+
         for netw_obj in self.scan(
             self.context,
             self.config["kernel"],
@@ -401,6 +444,10 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             )
             # objects passed pool header constraints. check for additional constraints if strict flag is set.
             if not show_corrupt_results and not netw_obj.is_valid():
+                continue
+
+            if is_xp:
+                yield from self._generate_xp_rows(netw_obj, pid_name_map)
                 continue
 
             if isinstance(netw_obj, network._UDP_ENDPOINT):
@@ -482,6 +529,63 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 vollog.debug(
                     f"Found network object unsure of its type: {netw_obj} of type {type(netw_obj)}"
                 )
+
+    def _build_pid_name_map(self):
+        """Maps PID -> process image name via a single pslist walk, used to
+        populate the Owner column for XP/2003 network objects."""
+        pid_name_map = {}
+        for proc in pslist.PsList.list_processes(self.context, self.config["kernel"]):
+            try:
+                pid_name_map[int(proc.UniqueProcessId)] = proc.ImageFileName.cast(
+                    "string",
+                    max_length=proc.ImageFileName.vol.count,
+                    errors="replace",
+                )
+            except exceptions.InvalidAddressException:
+                continue
+        return pid_name_map
+
+    def _generate_xp_rows(self, netw_obj, pid_name_map):
+        """Renders an XP/2003 _TCPT_OBJECT or _ADDRESS_OBJECT into the shared
+        netscan TreeGrid row format."""
+        pid = int(netw_obj.Pid)
+        owner = pid_name_map.get(pid) or renderers.UnreadableValue()
+
+        if isinstance(netw_obj, network_xp._TCPT_OBJECT):
+            yield (
+                0,
+                (
+                    format_hints.Hex(netw_obj.vol.offset),
+                    "TCPv4",
+                    netw_obj.get_local_address() or renderers.UnreadableValue(),
+                    int(netw_obj.LocalPort),
+                    netw_obj.get_remote_address() or renderers.UnreadableValue(),
+                    int(netw_obj.RemotePort),
+                    # XP connection pool objects don't carry a recoverable state
+                    renderers.NotApplicableValue(),
+                    pid,
+                    owner,
+                    renderers.NotApplicableValue(),
+                ),
+            )
+        elif isinstance(netw_obj, network_xp._ADDRESS_OBJECT):
+            proto = netw_obj.get_protocol()
+            state = "LISTENING" if proto == "TCP" else renderers.NotApplicableValue()
+            yield (
+                0,
+                (
+                    format_hints.Hex(netw_obj.vol.offset),
+                    proto + "v4",
+                    netw_obj.get_local_address() or renderers.UnreadableValue(),
+                    int(netw_obj.LocalPort),
+                    "*",
+                    0,
+                    state,
+                    pid,
+                    owner,
+                    netw_obj.get_create_time(),
+                ),
+            )
 
     def generate_timeline(self):
         for row in self._generator():
