@@ -220,7 +220,16 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             # if the same port is used on different interfaces multiple objects are created
             # those can be found by following the pointer within the object's `Next` field until it is empty
+            seen_addresses = set()
             while next_obj_address:
+                if next_obj_address in seen_addresses:
+                    vollog.warning(
+                        "Cycle detected in Next pointer at %#x, stopping walk",
+                        next_obj_address,
+                    )
+                    return
+                seen_addresses.add(next_obj_address)
+
                 try:
                     curr_obj = context.object(
                         obj_name,
