@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-"""The configuration module contains classes and functions for interacting with
+"""The configuration module_name contains classes and functions for interacting with
 the configuration and requirement trees.
 
 Volatility plugins can specify a list of requirements (which may have
@@ -14,9 +14,9 @@ those requirements.  Where the user does not provide sufficient
 configuration values, automagic modules may extend the configuration
 tree themselves.
 """
-
 import collections.abc
 import copy
+import importlib
 import json
 import logging
 import random
@@ -36,6 +36,7 @@ from typing import (
     Tuple,
     Set,
 )
+
 
 from volatility3 import classproperty, framework
 from volatility3.framework import constants, interfaces
@@ -535,10 +536,19 @@ class ClassRequirement(RequirementInterface):
         self._cls = None
         if value is not None and isinstance(value, str):
             if "." in value:
-                # TODO: consider importing the prefix
-                module = sys.modules.get(value[: value.rindex(".")], None)
+                module_name = value[: value.rindex(".")]
                 class_name = value[value.rindex(".") + 1 :]
-                if hasattr(module, class_name):
+                module = sys.modules.get(module_name, None)
+                if module is None:
+                    try:
+                        module = importlib.import_module(module_name)
+                    except ImportError:
+                        vollog.log(
+                            constants.LOGLEVEL_V,
+                            f"ImportError - Could not import module {module_name} for ClassRequirement: {repr(value)}",
+                        )
+                        module = None
+                if module is not None and hasattr(module, class_name):
                     self._cls = getattr(module, class_name)
             else:
                 if value in globals():
