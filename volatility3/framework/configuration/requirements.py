@@ -148,8 +148,11 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
         elif value is None:
             context.config[config_path] = []
         if not isinstance(value, list):
-            # TODO: Check this is the correct response for an error
-            raise TypeError(f"Unexpected config value found: {repr(value)}")
+            vollog.log(
+                constants.LOGLEVEL_V,
+                f"TypeError - Unexpected config value found, expected list: {repr(value)}",
+            )
+            return {config_path: self}
         if not (self.min_elements <= len(value)):
             vollog.log(
                 constants.LOGLEVEL_V,
