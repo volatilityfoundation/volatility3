@@ -381,4 +381,6 @@ class GUIExtensions(interfaces.configuration.VersionableInterface):
         "tagDESKTOP": tagDESKTOP,
         "tagWND": tagWND,
         "_LARGE_UNICODE_STRING": LARGE_UNICODE_STRING,
+        "tagCLIPDATA": tagCLIPDATA,
+        "tagCLIP": tagCLIP,
     }

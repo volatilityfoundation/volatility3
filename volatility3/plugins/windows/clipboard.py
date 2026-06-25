@@ -9,7 +9,7 @@ from typing import List
 from volatility3.framework import interfaces, renderers, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
-from volatility3.plugins.windows import pslist, vadinfo
+from volatility3.plugins.windows import windowstations
 
 vollog = logging.getLogger(__name__)
 
@@ -29,132 +29,75 @@ class Clipboard(interfaces.plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="pslist",
-                component=pslist.PsList,
-                version=(3, 0, 0),
-            ),
-            requirements.VersionRequirement(
-                name="vadinfo",
-                component=vadinfo.VadInfo,
-                version=(2, 0, 0),
+                name="windowstations",
+                component=windowstations.WindowStations,
+                version=(1, 0, 0),
             ),
         ]
 
     def _generator(self):
-        """Scan csrss.exe VADs for clipboard data."""
+        """Walk window stations and extract clipboard data."""
         kernel_name = self.config["kernel"]
-        kernel = self.context.modules[kernel_name]
 
-        for proc in pslist.PsList.list_processes(
-            context=self.context,
-            kernel_module_name=kernel_name,
+        for winsta, station_name, session_id in windowstations.WindowStations.scan_window_stations(
+            self.context, self.config_path, kernel_name
         ):
             try:
-                proc_name = proc.ImageFileName.cast(
-                    "string",
-                    max_length=proc.ImageFileName.vol.count,
-                    errors="replace",
-                ).lower()
+                clip_count = int(winsta.cNumClipFormats)
+                if clip_count == 0 or clip_count > 512:
+                    continue
+
+                clip_array = winsta.pClipBase.dereference()
+
             except exceptions.InvalidAddressException:
+                vollog.debug(
+                    f"Could not read clipboard base for station {station_name}"
+                )
                 continue
 
-            if proc_name not in ("csrss.exe", "rdpclip.exe"):
-                continue
-
-            try:
-                proc_id = int(proc.UniqueProcessId)
-                proc_layer_name = proc.add_process_layer()
-            except exceptions.InvalidAddressException:
-                continue
-
-            proc_layer = self.context.layers[proc_layer_name]
-
-            protect_values = vadinfo.VadInfo.protect_values(
-                self.context,
-                kernel.layer_name,
-                kernel.symbol_table_name,
-            )
-
-            for vad in vadinfo.VadInfo.list_vads(proc):
+            for i in range(clip_count):
                 try:
-                    vad_start = vad.get_start()
-                    vad_size = vad.get_size()
-                    protection = vad.get_protection(
-                        protect_values,
-                        vadinfo.winnt_protections,
-                    )
-                    tag = vad.get_tag()
+                    clip = clip_array[i]
+                    fmt_name = clip.get_format_name()
+                    handle_val = int(clip.hData)
+
+                    clip_data_ptr = clip.hData.dereference()
+                    data = clip_data_ptr.get_data()
+
+                    if data is None:
+                        data_display = renderers.NotAvailableValue()
+                    else:
+                        text = clip_data_ptr.get_text(fmt_name)
+                        if text:
+                            data_display = text
+                        else:
+                            data_display = data.hex()
+
                 except exceptions.InvalidAddressException:
-                    continue
+                    fmt_name = renderers.NotAvailableValue()
+                    handle_val = 0
+                    data_display = renderers.NotAvailableValue()
 
-                if vad_size == 0 or vad_size > 0x200000:
-                    continue
+                yield (
+                    0,
+                    (
+                        session_id,
+                        station_name,
+                        fmt_name,
+                        format_hints.Hex(handle_val),
+                        data_display,
+                    ),
+                )
 
-                if protection not in (
-                    "PAGE_READWRITE",
-                    "PAGE_READONLY",
-                    "PAGE_EXECUTE_READ",
-                    "PAGE_EXECUTE_READWRITE",
-                ):
-                    continue
-
-                try:
-                    data = proc_layer.read(vad_start, vad_size, pad=True)
-                except exceptions.InvalidAddressException:
-                    continue
-
-                if not data:
-                    continue
-
-                # Try UTF-16-LE (most Windows clipboard text)
-                try:
-                    text = data.decode("utf-16-le", errors="ignore")
-                    text = text.strip("\x00").strip()
-                    if len(text) >= 4:
-                        printable = "".join(
-                            c for c in text if c.isprintable() or c in "\n\r\t"
-                        )
-                        if len(printable) >= 4:
-                            yield (
-                                0,
-                                (
-                                    proc_id,
-                                    proc_name,
-                                    format_hints.Hex(vad_start),
-                                    "UTF16: " + printable[:256],
-                                ),
-                            )
-                            continue
-                except Exception:
-                    pass
-
-                # Try UTF-8 / ASCII
-                try:
-                    text = data.decode("utf-8", errors="ignore").strip("\x00").strip()
-                    if len(text) >= 4:
-                        printable = "".join(
-                            c for c in text if c.isprintable() or c in "\n\r\t"
-                        )
-                        if len(printable) >= 4:
-                            yield (
-                                0,
-                                (
-                                    proc_id,
-                                    proc_name,
-                                    format_hints.Hex(vad_start),
-                                    "ASCII: " + printable[:256],
-                                ),
-                            )
-                except Exception:
-                    pass
-                
     def run(self):
         return renderers.TreeGrid(
             [
-                ("PID", int),
-                ("Process", str),
-                ("Offset", format_hints.Hex),
+                ("Session", int),
+                ("WindowStation", str),
+                ("Format", str),
+                ("Handle", format_hints.Hex),
                 ("Data", str),
             ],
             self._generator(),
         )
+
