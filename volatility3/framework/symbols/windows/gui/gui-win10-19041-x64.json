@@ -18070,6 +18070,30 @@
       },
       "kind": "struct",
       "size": 6
+    },
+    "tagCLIPDATA": {
+      "kind": "struct",
+      "size": 24,
+      "fields": {
+        "cbData": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "abData": {
+          "offset": 20,
+          "type": {
+            "kind": "array",
+            "count": 0,
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        }
+      }
     }
   },
   "base_types": {
