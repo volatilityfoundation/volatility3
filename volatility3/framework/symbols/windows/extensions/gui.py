@@ -304,7 +304,7 @@ class GUIExtensions(interfaces.configuration.VersionableInterface):
 
     # This is copy/paste from UNICODE_STRING in `symbols/windows/extensions/__init__.py`
     # The versioning of modules would get very ugly if we let different modules share implementations
-    # across different data structures
+    # across different data structure
     class LARGE_UNICODE_STRING(objects.StructType):
         """A class for Windows unicode string structures."""
 
@@ -323,6 +323,58 @@ class GUIExtensions(interfaces.configuration.VersionableInterface):
                 errors="replace",
                 encoding="utf16",
             )
+
+    class tagCLIPDATA(objects.StructType):
+        """A class for clipboard data objects stored in Windows memory"""
+
+        def get_data(self) -> Optional[bytes]:
+            """Returns the raw clipboard data as bytes"""
+            try:
+                size = self.cbData
+                if size == 0 or size > 0x100000:
+                    return None
+                return bytes(bytearray(self.abData))
+            except exceptions.InvalidAddressException:
+                return None
+
+        def get_text(self, fmt: str) -> Optional[str]:
+            """Returns clipboard data as readable text if format is text-based"""
+            data = self.get_data()
+            if data is None:
+                return None
+            try:
+                if "UNICODE" in fmt:
+                    return data.decode("utf-16-le", errors="replace").rstrip("\x00")
+                else:
+                    return data.decode("latin-1", errors="replace").rstrip("\x00")
+            except Exception:
+                return None
+
+    class tagCLIP(objects.StructType):
+        """A class for clipboard format entries (one per clipboard item)"""
+
+        # Common Windows clipboard format constants
+        CF_FORMATS = {
+            1: "CF_TEXT",
+            2: "CF_BITMAP",
+            3: "CF_METAFILEPICT",
+            7: "CF_OEMTEXT",
+            8: "CF_DIB",
+            13: "CF_UNICODETEXT",
+            14: "CF_ENHMETAFILE",
+            15: "CF_HDROP",
+            16: "CF_LOCALE",
+            17: "CF_DIBV5",
+        }
+
+        def get_format_name(self) -> str:
+            """Returns the clipboard format as a human-readable string"""
+            try:
+                fmt_val = int(self.fmt)
+                return self.CF_FORMATS.get(fmt_val, f"CF_UNKNOWN({fmt_val:#x})")
+            except exceptions.InvalidAddressException:
+                return "CF_UNKNOWN"
+
 
     class_types = {
         "tagWINDOWSTATION": tagWINDOWSTATION,
