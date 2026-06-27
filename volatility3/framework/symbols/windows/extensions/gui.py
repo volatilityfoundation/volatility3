@@ -304,7 +304,7 @@ class GUIExtensions(interfaces.configuration.VersionableInterface):
 
     # This is copy/paste from UNICODE_STRING in `symbols/windows/extensions/__init__.py`
     # The versioning of modules would get very ugly if we let different modules share implementations
-    # across different data structure
+    # across different data structures
     class LARGE_UNICODE_STRING(objects.StructType):
         """A class for Windows unicode string structures."""
 
@@ -324,36 +324,10 @@ class GUIExtensions(interfaces.configuration.VersionableInterface):
                 encoding="utf16",
             )
 
-    class tagCLIPDATA(objects.StructType):
-        """A class for clipboard data objects stored in Windows memory"""
-
-        def get_data(self) -> Optional[bytes]:
-            """Returns the raw clipboard data as bytes"""
-            try:
-                size = self.cbData
-                if size == 0 or size > 0x100000:
-                    return None
-                return bytes(bytearray(self.abData))
-            except exceptions.InvalidAddressException:
-                return None
-
-        def get_text(self, fmt: str) -> Optional[str]:
-            """Returns clipboard data as readable text if format is text-based"""
-            data = self.get_data()
-            if data is None:
-                return None
-            try:
-                if "UNICODE" in fmt:
-                    return data.decode("utf-16-le", errors="replace").rstrip("\x00")
-                else:
-                    return data.decode("latin-1", errors="replace").rstrip("\x00")
-            except Exception:
-                return None
-
     class tagCLIP(objects.StructType):
         """A class for clipboard format entries (one per clipboard item)"""
 
-        # Common Windows clipboard format constants
+        # TODO: Extend clipboard format mapping if needed.
         CF_FORMATS = {
             1: "CF_TEXT",
             2: "CF_BITMAP",
@@ -375,12 +349,52 @@ class GUIExtensions(interfaces.configuration.VersionableInterface):
             except exceptions.InvalidAddressException:
                 return "CF_UNKNOWN"
 
+    class tagCLIPDATA(objects.StructType):
+        """A class for clipboard data objects stored in Windows memory"""
+
+        def get_data(self) -> Optional[bytes]:
+            """Returns the raw clipboard data as bytes"""
+
+            # TODO: Verify abData consistency; future Windows may change tagCLIPDATA layout.
+            try:
+                size = int(self.cbData)
+
+                # TODO: Improve clipboard size validation if needed.
+                MAX_CLIPBOARD_SIZE = 50 * 1024 * 1024  # 50 MiB
+                if size == 0 or size > MAX_CLIPBOARD_SIZE:
+                    return None
+
+                layer = self._context.layers[self.vol.layer_name]
+                return layer.read(self.abData.vol.offset, size, pad=True)
+
+            except exceptions.InvalidAddressException:
+                return None
+
+        def get_text(self, fmt: str) -> Optional[str]:
+            """Returns clipboard data as readable text if format is text-based"""
+            data = self.get_data()
+
+            if data is None:
+                return None
+
+            # TODO: Extend support for more clipboard formats as needed.
+
+            if fmt == "CF_UNICODETEXT":
+                return data.decode("utf-16-le", errors="replace").rstrip("\x00")
+            elif fmt in ("CF_TEXT", "CF_OEMTEXT"):
+                return data.decode("latin-1", errors="replace").rstrip("\x00")
+
+            elif fmt == "CF_HDROP":
+                # File paths stored as null-separated UTF-16 list
+                return data.decode("utf-16-le", errors="replace").rstrip("\x00")
+            return None
 
     class_types = {
         "tagWINDOWSTATION": tagWINDOWSTATION,
         "tagDESKTOP": tagDESKTOP,
         "tagWND": tagWND,
         "_LARGE_UNICODE_STRING": LARGE_UNICODE_STRING,
+        # Clipboard plugin extensions
         "tagCLIPDATA": tagCLIPDATA,
         "tagCLIP": tagCLIP,
     }
