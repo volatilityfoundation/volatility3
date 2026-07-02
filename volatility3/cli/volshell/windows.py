@@ -17,13 +17,18 @@ class Volshell(generic.Volshell):
     def get_requirements(cls):
         return [
             requirements.ModuleRequirement(name="kernel", description="Windows kernel"),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.IntRequirement(
                 name="pid", description="Process ID", optional=True
             ),
-        ]
+            requirements.VersionRequirement(
+                name="generic_volshell",
+                component=generic.Volshell,
+                version=(1, 0, 0),
+            ),
+        ] + super().get_requirements()
 
     def change_process(self, pid=None):
         """Change the current process and layer, based on a process ID"""
@@ -39,9 +44,7 @@ class Volshell(generic.Volshell):
         """Returns a list of EPROCESS objects from the primary layer"""
         # We always use the main kernel memory and associated symbols
         return list(
-            pslist.PsList.list_processes(
-                self.context, self.current_layer, self.current_symbol_table
-            )
+            pslist.PsList.list_processes(self.context, self.current_kernel_name)
         )
 
     def get_process(self, pid=None, virtaddr=None, physaddr=None):

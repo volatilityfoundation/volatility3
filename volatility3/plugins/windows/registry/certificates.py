@@ -4,6 +4,7 @@ import struct
 from typing import Iterator, List, Optional, Tuple, Type
 
 from volatility3.framework import exceptions, interfaces, renderers
+from volatility3.framework.layers import registry as registry_layer
 from volatility3.framework.configuration import requirements
 from volatility3.framework.symbols.windows.extensions import registry
 from volatility3.plugins.windows.registry import hivelist, printkey
@@ -24,11 +25,11 @@ class Certificates(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="hivelist", component=hivelist.HiveList, version=(2, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="printkey", plugin=printkey.PrintKey, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="printkey", component=printkey.PrintKey, version=(1, 0, 0)
             ),
             requirements.BooleanRequirement(
                 name="dump",
@@ -69,13 +70,10 @@ class Certificates(interfaces.plugins.PluginInterface):
         return None
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[str, str, str, str]]]:
-        kernel = self.context.modules[self.config["kernel"]]
-
         for hive in hivelist.HiveList.list_hives(
-            self.context,
+            context=self.context,
             base_config_path=self.config_path,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            kernel_module_name=self.config["kernel"],
         ):
             for top_key in [
                 "Microsoft\\SystemCertificates",
@@ -83,7 +81,7 @@ class Certificates(interfaces.plugins.PluginInterface):
             ]:
                 with contextlib.suppress(
                     KeyError,
-                    registry.RegistryFormatException,
+                    registry_layer.RegistryException,
                     exceptions.InvalidAddressException,
                 ):
                     # Walk it

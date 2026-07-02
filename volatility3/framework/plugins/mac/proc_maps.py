@@ -28,8 +28,8 @@ class Maps(interfaces.plugins.PluginInterface):
                 description="Kernel module for the OS",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -65,9 +65,9 @@ class Maps(interfaces.plugins.PluginInterface):
     def list_vmas(
         cls,
         task: interfaces.objects.ObjectInterface,
-        filter_func: Callable[
-            [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: True,
+        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: (
+            True
+        ),
     ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Lists the Virtual Memory Areas of a specific process.
 

@@ -18,7 +18,7 @@ class Envars(plugins.PluginInterface):
     """Lists processes with their environment variables"""
 
     _required_framework_version = (2, 13, 0)
-    _version = (2, 0, 0)
+    _version = (2, 0, 1)
 
     @classmethod
     def get_requirements(cls):
@@ -29,8 +29,8 @@ class Envars(plugins.PluginInterface):
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(4, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -40,8 +40,9 @@ class Envars(plugins.PluginInterface):
             ),
         ]
 
-    @staticmethod
+    @classmethod
     def get_task_env_variables(
+        cls,
         context: interfaces.context.ContextInterface,
         task: interfaces.objects.ObjectInterface,
         env_area_max_size: int = 8192,
@@ -94,7 +95,9 @@ class Envars(plugins.PluginInterface):
         envar_data = envar_data.rstrip(b"\x00")
         for envar_pair in envar_data.split(b"\x00"):
             try:
-                env_key, env_value = envar_pair.decode().split("=", 1)
+                env_key, env_value = envar_pair.decode(
+                    encoding="utf8", errors="replace"
+                ).split("=", 1)
             except ValueError:
                 # Some legitimate programs, like 'avahi-daemon', avoid reallocating the args
                 # and instead exploit the fact that the environment variables area is contiguous

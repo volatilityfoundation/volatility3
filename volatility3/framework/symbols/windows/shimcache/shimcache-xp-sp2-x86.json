@@ -331,23 +331,23 @@
                 "LastModified": {
                     "type": {
                         "kind": "union",
-                        "name": "LARGE_INTEGER"
+                        "name": "_LARGE_INTEGER"
                     },
-                    "offset": 4
+                    "offset": 528
                 },
                 "FileSize": {
                     "type": {
                         "kind": "base",
                         "name": "long long"
                     },
-                    "offset": 8
+                    "offset": 536
                 },
                 "LastUpdate": {
                     "type": {
                         "kind": "union",
-                        "name": "LARGE_INTEGER"
+                        "name": "_LARGE_INTEGER"
                     },
-                    "offset": 12
+                    "offset": 544
                 }
             },
             "kind": "struct",

@@ -4,13 +4,12 @@
 """A module containing a plugin that lists loaded kernel modules."""
 
 import logging
-from typing import List, Iterable
+from typing import Iterable, List
 
-from volatility3.framework import exceptions, renderers, constants, interfaces
+import volatility3.framework.symbols.linux.utilities.modules as linux_utilities_modules
+from volatility3.framework import constants, deprecation, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
-from volatility3.framework.objects import utility
-from volatility3.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
 
@@ -19,7 +18,9 @@ class Lsmod(plugins.PluginInterface):
     """Lists loaded kernel modules."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+    _version = (3, 0, 3)
+
+    implementation = linux_utilities_modules.Modules.list_modules
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -27,50 +28,50 @@ class Lsmod(plugins.PluginInterface):
             requirements.ModuleRequirement(
                 name="kernel",
                 description="Linux kernel",
-                architectures=["Intel32", "Intel64"],
+                architectures=constants.architectures.LINUX_ARCHS,
+            ),
+            requirements.VersionRequirement(
+                name="linux_utilities_modules",
+                component=linux_utilities_modules.Modules,
+                version=(3, 0, 0),
+            ),
+            requirements.VersionRequirement(
+                name="linux_utilities_modules_module_display_plugin",
+                component=linux_utilities_modules.ModuleDisplayPlugin,
+                version=(2, 0, 0),
+            ),
+            requirements.BooleanRequirement(
+                name="dump",
+                description="Extract listed modules",
+                default=False,
+                optional=True,
             ),
         ]
 
     @classmethod
+    @deprecation.deprecated_method(
+        replacement=linux_utilities_modules.Modules.list_modules,
+        replacement_version=(3, 0, 0),
+        removal_date="2026-03-25",
+    )
     def list_modules(
         cls, context: interfaces.context.ContextInterface, vmlinux_module_name: str
     ) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Lists all the modules in the primary layer.
-
-        Args:
-            context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            vmlinux_symbols: The name of the table containing the kernel symbols
-
-        Yields:
-            The modules present in the `layer_name` layer's modules list
-
-        This function will throw a SymbolError exception if kernel module support is not enabled.
-        """
-        vmlinux = context.modules[vmlinux_module_name]
-
-        modules = vmlinux.object_from_symbol(symbol_name="modules").cast("list_head")
-
-        table_name = modules.vol.type_name.split(constants.BANG)[0]
-
-        yield from modules.to_list(table_name + constants.BANG + "module", "list")
-
-    def _generator(self):
-        try:
-            for module in self.list_modules(self.context, self.config["kernel"]):
-                mod_size = module.get_init_size() + module.get_core_size()
-
-                mod_name = utility.array_to_string(module.name)
-
-                yield 0, (format_hints.Hex(module.vol.offset), mod_name, mod_size)
-
-        except exceptions.SymbolError:
-            vollog.debug(
-                "The required symbol 'module' is not present in symbol table. Please check that kernel modules are enabled for the system under analysis."
-            )
+        return linux_utilities_modules.Modules.list_modules(
+            context, vmlinux_module_name
+        )
 
     def run(self):
         return renderers.TreeGrid(
-            [("Offset", format_hints.Hex), ("Name", str), ("Size", int)],
+            linux_utilities_modules.ModuleDisplayPlugin.columns_results,
             self._generator(),
+        )
+
+    def _generator(self):
+        yield from linux_utilities_modules.ModuleDisplayPlugin.generate_results(
+            self.context,
+            self.implementation,
+            self.config["kernel"],
+            self.config["dump"],
+            self.open,
         )

@@ -15,7 +15,9 @@ class ModScan(modules.Modules):
     """Scans for modules present in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+
+    # 3.0.0 changed the signature of enumeration methods (scan_modules)
+    _version = (3, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -30,10 +32,10 @@ class ModScan(modules.Modules):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="poolscanner", component=poolscanner.PoolScanner, version=(1, 0, 0)
+                name="poolscanner", component=poolscanner.PoolScanner, version=(3, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="modules", component=modules.Modules, version=(2, 0, 0)
+                name="modules", component=modules.Modules, version=(3, 0, 0)
             ),
             requirements.BooleanRequirement(
                 name="dump",
@@ -53,7 +55,7 @@ class ModScan(modules.Modules):
                 default=None,
             ),
             requirements.VersionRequirement(
-                name="pedump", component=pedump.PEDump, version=(1, 0, 0)
+                name="pedump", component=pedump.PEDump, version=(2, 0, 0)
             ),
         ]
 
@@ -61,26 +63,25 @@ class ModScan(modules.Modules):
     def scan_modules(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Scans for modules using the poolscanner module and constraints.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
-
+            kernel_module_name: Name of the module for the kernel
         Returns:
-            A list of Driver objects as found from the `layer_name` layer based on Driver pool signatures
+            A list of kernel module objects as found from the primary (kernel) layer based on module pool signatures
         """
 
+        kernel = context.modules[kernel_module_name]
+
         constraints = poolscanner.PoolScanner.builtin_constraints(
-            symbol_table, [b"MmLd"]
+            kernel.symbol_table_name, [b"MmLd"]
         )
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
-            context, layer_name, symbol_table, constraints
+            context, kernel_module_name, constraints
         ):
             _constraint, mem_object, _header = result
             yield mem_object

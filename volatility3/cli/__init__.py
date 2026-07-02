@@ -10,6 +10,7 @@ User interfaces make use of the framework to:
  * run the plugin
  * display the results
 """
+
 import argparse
 import inspect
 import io
@@ -29,11 +30,10 @@ try:
 except ImportError:
     HAS_ARGCOMPLETE = False
 
-from volatility3.cli import text_filter
 import volatility3.plugins
 import volatility3.symbols
 from volatility3 import framework
-from volatility3.cli import text_renderer, volargparse
+from volatility3.cli import text_filter, text_renderer, volargparse
 from volatility3.framework import (
     automagic,
     configuration,
@@ -105,13 +105,6 @@ class CommandLine:
         determining the plugin to run and then running it."""
 
         volatility3.framework.require_interface_version(2, 0, 0)
-
-        renderers = dict(
-            [
-                (x.name.lower(), x)
-                for x in framework.class_subclasses(text_renderer.CLIRenderer)
-            ]
-        )
 
         # Load up system defaults
         delayed_logs, default_config = self.load_system_defaults("vol.json")
@@ -194,14 +187,6 @@ class CommandLine:
             action="store_true",
         )
         parser.add_argument(
-            "-r",
-            "--renderer",
-            metavar="RENDERER",
-            help=f"Determines how to render the output ({', '.join(list(renderers))})",
-            default="quick",
-            choices=list(renderers),
-        )
-        parser.add_argument(
             "-f",
             "--file",
             metavar="FILE",
@@ -269,11 +254,6 @@ class CommandLine:
         # processed the plugin choice or had the plugin subparser added.
         known_args = [arg for arg in sys.argv if arg != "--help" and arg != "-h"]
         partial_args, _ = parser.parse_known_args(known_args)
-
-        banner_output = sys.stdout
-        if renderers[partial_args.renderer].structured_output:
-            banner_output = sys.stderr
-        banner_output.write(f"Volatility 3 Framework {constants.PACKAGE_VERSION}\n")
 
         ### Start up logging
         if partial_args.log:
@@ -346,6 +326,24 @@ class CommandLine:
 
         plugin_list = framework.list_plugins()
 
+        # Discover renderers after plugin directories are loaded
+        # This allows custom renderers to be found in plugin directories
+        renderers = dict(
+            [
+                (x.name.lower(), x)
+                for x in framework.class_subclasses(text_renderer.CLIRenderer)
+            ]
+        )
+
+        parser.add_argument(
+            "-r",
+            "--renderer",
+            metavar="RENDERER",
+            help=f"Determines how to render the output ({', '.join(list(renderers))})",
+            default="quick",
+            choices=list(renderers),
+        )
+
         seen_automagics = set()
         chosen_configurables_list = {}
         for amagic in automagics:
@@ -363,13 +361,34 @@ class CommandLine:
             metavar="PLUGIN",
         )
         for plugin in sorted(plugin_list):
+            # First line of a plugin docstring will be the short description for -h.
+            # Text after the first two consecutive new lines will be
+            # the additional description (argparse epilog).
+            short_help = additional_help = None
+            if plugin_list[plugin].__doc__ is not None:
+                doc_split = plugin_list[plugin].__doc__.split("\n\n", 1)
+                short_help = doc_split[0].strip()
+                if len(doc_split) > 1:
+                    additional_help = doc_split[1].strip()
+
             plugin_parser = subparser.add_parser(
                 plugin,
-                help=plugin_list[plugin].__doc__,
-                description=plugin_list[plugin].__doc__,
-                epilog=plugin_list[plugin].additional_description,
+                help=short_help,
+                description=short_help,
+                epilog=additional_help,
             )
             self.populate_requirements_argparse(plugin_parser, plugin_list[plugin])
+
+        # One last pass to get the renderer after we've loaded up plugins,
+        # so we can determine whether to show the banner on normal output or not...
+        known_args = [arg for arg in sys.argv[1:] if arg != "--help" and arg != "-h"]
+        partial_args, _ = parser.parse_known_args(known_args)
+
+        # Display banner - redirect to stderr if using structured output
+        banner_output = sys.stdout
+        if renderers[partial_args.renderer].structured_output:
+            banner_output = sys.stderr
+        banner_output.write(f"Volatility 3 Framework {constants.PACKAGE_VERSION}\n")
 
         ###
         # PASS TO UI
@@ -382,6 +401,7 @@ class CommandLine:
             # before all the plugins have been added
             argcomplete.autocomplete(parser)
         args = parser.parse_args()
+
         if args.plugin is None:
             parser.error(
                 f"Please select a plugin to run (see '{self.CLI_NAME} --help' for options"
@@ -443,8 +463,9 @@ class CommandLine:
                     raise ValueError(
                         "Invalid extension (extensions must be of the format \"conf.path.value='value'\")"
                     )
-                address, value = extension[: extension.find("=")], json.loads(
-                    extension[extension.find("=") + 1 :]
+                address, value = (
+                    extension[: extension.find("=")],
+                    json.loads(extension[extension.find("=") + 1 :]),
                 )
                 ctx.config[address] = value
 
@@ -472,7 +493,7 @@ class CommandLine:
                 )
                 args.save_config = "config.json"
             if args.save_config:
-                vollog.debug("Writing out configuration data to {args.save_config}")
+                vollog.debug(f"Writing out configuration data to {args.save_config}")
                 if os.path.exists(os.path.abspath(args.save_config)):
                     parser.error(
                         f"Cannot write configuration: file {args.save_config} already exists"
@@ -495,6 +516,9 @@ class CommandLine:
         try:
             # Construct and run the plugin
             if constructed:
+                vollog.debug(
+                    f"Successfully constructed {args.plugin} {constructed.version}"
+                )
                 grid = constructed.run()
                 renderer = renderers[args.renderer]()
                 renderer.filter = text_filter.CLIFilter(grid, args.filters)
@@ -556,7 +580,7 @@ class CommandLine:
                 delayed_logs.append(
                     (
                         logging.DEBUG,
-                        f"Loaded configuration: {json.dumps(result, indent = 2, sort_keys = True)}",
+                        f"Loaded configuration: {json.dumps(result, indent=2, sort_keys=True)}",
                     )
                 )
                 return delayed_logs, result
@@ -572,6 +596,8 @@ class CommandLine:
         # Log the full exception at a high level for easy access
         fulltrace = traceback.TracebackException.from_exception(excp).format(chain=True)
         vollog.debug("".join(fulltrace))
+
+        file_a_bug_msg = f"Please re-run with -vvv and file a bug with the output at {constants.BUG_URL}"
 
         if isinstance(excp, exceptions.InvalidAddressException):
             general = "Volatility was unable to read a requested page:"
@@ -617,9 +643,7 @@ class CommandLine:
         elif isinstance(excp, exceptions.LayerException):
             general = f"Volatility experienced a layer-related issue: {excp.layer_name}"
             detail = f"{excp}"
-            caused_by = [
-                "A faulty layer implementation (re-run with -vvv and file a bug)"
-            ]
+            caused_by = [f"A faulty layer implementation. {file_a_bug_msg}"]
         elif isinstance(excp, exceptions.MissingModuleException):
             general = f"Volatility could not import a necessary module: {excp.module}"
             detail = f"{excp}"
@@ -630,13 +654,17 @@ class CommandLine:
             general = "Volatility experienced an issue when rendering the output:"
             detail = f"{excp}"
             caused_by = ["An invalid renderer option, such as no visible columns"]
+        elif isinstance(excp, exceptions.VersionMismatchException):
+            general = "A version mismatch was detected between two components:"
+            detail = f"{excp}"
+            caused_by = [
+                excp.failure_reason or "An outdated API caller, such as a method.",
+                file_a_bug_msg,
+            ]
         else:
             general = "Volatility encountered an unexpected situation."
             detail = ""
-            caused_by = [
-                "Please re-run using with -vvv and file a bug with the output",
-                f"at {constants.BUG_URL}",
-            ]
+            caused_by = [file_a_bug_msg]
 
         # Code that actually renders the exception
         output = sys.stderr
@@ -741,7 +769,7 @@ class CommandLine:
                 constants.LOGLEVEL_VVVV,
             ]
         ):
-            logging.addLevelName(level_value, f"DETAIL {level+1}")
+            logging.addLevelName(level_value, f"DETAIL {level + 1}")
 
     def file_handler_class_factory(self, direct=True):
         output_dir = self.output_dir

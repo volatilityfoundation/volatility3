@@ -24,6 +24,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
     """Reads Shimcache entries from the ahcache.sys AVL tree"""
 
     _required_framework_version = (2, 0, 0)
+    _version = (1, 0, 1)
 
     # These checks must be completed from newest -> oldest OS version.
     _win_version_file_map: List[Tuple[versions.OsDistinguisher, bool, str]] = [
@@ -50,9 +51,17 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
     ) -> Iterator[Tuple[str, timeliner.TimeLinerType, datetime]]:
         for _, (_, last_modified, last_update, _, _, file_path) in self._generator():
             if isinstance(last_update, datetime):
-                yield f"Shimcache: File {file_path} executed", timeliner.TimeLinerType.ACCESSED, last_update
+                yield (
+                    f"Shimcache: File {file_path} executed",
+                    timeliner.TimeLinerType.ACCESSED,
+                    last_update,
+                )
             if isinstance(last_modified, datetime):
-                yield f"Shimcache: File {file_path} modified", timeliner.TimeLinerType.MODIFIED, last_modified
+                yield (
+                    f"Shimcache: File {file_path} modified",
+                    timeliner.TimeLinerType.MODIFIED,
+                    last_modified,
+                )
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -63,21 +72,27 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
             ),
             requirements.VersionRequirement(
                 name="vadinfo", component=vadinfo.VadInfo, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="modules", component=modules.Modules, version=(2, 0, 0)
+                name="modules", component=modules.Modules, version=(3, 0, 0)
             ),
         ]
 
-    @staticmethod
+    @classmethod
     def create_shimcache_table(
+        cls,
         context: interfaces.context.ContextInterface,
-        symbol_table: str,
+        symbol_table_name: str,
         config_path: str,
     ) -> str:
         """Creates a shimcache symbol table
@@ -90,16 +105,18 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         Returns:
             The name of the constructed shimcache table
         """
-        native_types = context.symbol_space[symbol_table].natives
-        is_64bit = symbols.symbol_table_is_64bit(context, symbol_table)
-        table_mapping = {"nt_symbols": symbol_table}
+        native_types = context.symbol_space[symbol_table_name].natives
+        is_64bit = symbols.symbol_table_is_64bit(
+            context=context, symbol_table_name=symbol_table_name
+        )
+        table_mapping = {"nt_symbols": symbol_table_name}
 
         try:
             symbol_filename = next(
                 filename
                 for version_check, for_64bit, filename in ShimcacheMem._win_version_file_map
                 if is_64bit == for_64bit
-                and version_check(context=context, symbol_table=symbol_table)
+                and version_check(context=context, symbol_table=symbol_table_name)
             )
         except StopIteration:
             raise NotImplementedError("This version of Windows is not supported!")
@@ -120,8 +137,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
     def find_shimcache_win_xp(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        kernel_symbol_table: str,
+        kernel_module_name: str,
         shimcache_symbol_table: str,
     ) -> Iterator[shimcache.SHIM_CACHE_ENTRY]:
         """Attempts to find the shimcache in a Windows XP memory image
@@ -140,9 +156,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
 
         seen = set()
 
-        for process in pslist.PsList.list_processes(
-            context, layer_name, kernel_symbol_table
-        ):
+        for process in pslist.PsList.list_processes(context, kernel_module_name):
             pid = process.UniqueProcessId
             vollog.debug("checking process %d", pid)
             for vad in vadinfo.VadInfo.list_vads(
@@ -155,7 +169,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
                     continue
 
                 try:
-                    if proc_layer.read(vad.get_start(), 4) != b"\xEF\xBE\xAD\xDE":
+                    if proc_layer.read(vad.get_start(), 4) != b"\xef\xbe\xad\xde":
                         if pid == 624:
                             vollog.debug("VAD magic bytes don't match DEADBEEF")
                         continue
@@ -167,6 +181,8 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
                     proc_layer_name,
                     vad.get_start() + SHIM_NUM_ENTRIES_OFFSET,
                 )
+
+                vollog.debug(f"Found {num_entries} shimcache entries")
 
                 if num_entries > SHIM_MAX_ENTRIES:
                     continue
@@ -198,7 +214,6 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
 
                     if physical_addr in seen:
                         continue
-                    seen.add(physical_addr)
 
                     shim_entry = proc_layer.context.object(
                         shimcache_symbol_table + constants.BANG + "SHIM_CACHE_ENTRY",
@@ -210,6 +225,8 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
                     if not shim_entry.is_valid():
                         continue
 
+                    seen.add(physical_addr)
+
                     yield shim_entry
 
     @classmethod
@@ -217,8 +234,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         cls,
         context: interfaces.context.ContextInterface,
         config_path: str,
-        kernel_layer_name: str,
-        nt_symbol_table: str,
+        kernel_module_name: str,
         shimcache_symbol_table: str,
     ) -> Iterator[shimcache.SHIM_CACHE_ENTRY]:
         """Implements the algorithm to search for the shim cache on Windows 2000
@@ -228,7 +244,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         2) Iterate over every 4/8 bytes (depending on OS bitness) in the .data
            section and test for the following:
            a) offset represents a valid RTL_AVL_TABLE object
-           b) RTL_AVL_TABLE is preceeded by an ERESOURCE object
+           b) RTL_AVL_TABLE is preceded by an ERESOURCE object
            c) RTL_AVL_TABLE is followed by the beginning of the SHIM LRU list
 
         :param context: The context to retrieve required elements (layers, symbol tables) from
@@ -237,31 +253,37 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         :param shimcache_symbol_table: The name of a symbol table containing the hand-crafted shimcache symbols
         """
 
+        kernel = context.modules[kernel_module_name]
+
         data_sec = cls.get_module_section_range(
             context,
             config_path,
-            kernel_layer_name,
-            nt_symbol_table,
+            kernel_module_name,
             cls.NT_KRNL_MODS,
             ".data",
         )
         mod_page = cls.get_module_section_range(
             context,
             config_path,
-            kernel_layer_name,
-            nt_symbol_table,
+            kernel_module_name,
             cls.NT_KRNL_MODS,
             "PAGE",
         )
 
         # We require both in order to accurately handle AVL table
         if not (data_sec and mod_page):
-            return None
+            return
 
         data_sec_offset, data_sec_size = data_sec
         mod_page_offset, mod_page_size = mod_page
 
-        addr_size = 8 if symbols.symbol_table_is_64bit(context, nt_symbol_table) else 4
+        addr_size = (
+            8
+            if symbols.symbol_table_is_64bit(
+                context=context, symbol_table_name=kernel.symbol_table_name
+            )
+            else 4
+        )
 
         shim_head = None
         for offset in range(
@@ -270,8 +292,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
             shim_head = cls.try_get_shim_head_at_offset(
                 context,
                 shimcache_symbol_table,
-                nt_symbol_table,
-                kernel_layer_name,
+                kernel_module_name,
                 mod_page_offset,
                 mod_page_offset + mod_page_size,
                 offset,
@@ -291,9 +312,8 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
     def try_get_shim_head_at_offset(
         cls,
         context: interfaces.context.ContextInterface,
-        symbol_table: str,
-        kernel_symbol_table: str,
-        layer_name: str,
+        shimcache_symbol_table: str,
+        kernel_module_name: str,
         mod_page_start: int,
         mod_page_end: int,
         offset: int,
@@ -305,9 +325,14 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         If a number of validity checks are passed, this method will return the `SHIM_CACHE_HEAD`
         object. Otherwise, `None` is returned.
         """
+
+        kernel = context.modules[kernel_module_name]
+
         # Check RTL_AVL_TABLE at offset
         rtl_avl_table = context.object(
-            symbol_table + constants.BANG + "_RTL_AVL_TABLE", layer_name, offset
+            shimcache_symbol_table + constants.BANG + "_RTL_AVL_TABLE",
+            kernel.layer_name,
+            offset,
         )
         if not rtl_avl_table.is_valid(mod_page_start, mod_page_end):
             return None
@@ -315,11 +340,13 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         vollog.debug(f"Candidate RTL_AVL_TABLE found at offset {offset:#x}")
 
         ersrc_size = context.symbol_space.get_type(
-            kernel_symbol_table + constants.BANG + "_ERESOURCE"
+            kernel.symbol_table_name + constants.BANG + "_ERESOURCE"
         ).size
         ersrc_alignment = (
             0x20
-            if symbols.symbol_table_is_64bit(context, kernel_symbol_table)
+            if symbols.symbol_table_is_64bit(
+                context=context, symbol_table_name=kernel.symbol_table_name
+            )
             else 0x10
             # 0x20 if context.symbol_space.get_type("pointer").size == 8 else 0x10
         )
@@ -332,8 +359,8 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
 
         vollog.debug(f"Constructing ERESOURCE at {eresource_offset:#x}")
         eresource = context.object(
-            kernel_symbol_table + constants.BANG + "_ERESOURCE",
-            layer_name,
+            kernel.symbol_table_name + constants.BANG + "_ERESOURCE",
+            kernel.layer_name,
             eresource_offset,
         )
         if not eresource.is_valid():
@@ -342,12 +369,12 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
 
         shim_head_offset = offset + rtl_avl_table.vol.size
 
-        if not context.layers[layer_name].is_valid(shim_head_offset):
+        if not context.layers[kernel.layer_name].is_valid(shim_head_offset):
             return None
 
         shim_head = context.object(
-            symbol_table + constants.BANG + "SHIM_CACHE_ENTRY",
-            layer_name,
+            shimcache_symbol_table + constants.BANG + "SHIM_CACHE_ENTRY",
+            kernel.layer_name,
             shim_head_offset,
         )
 
@@ -363,8 +390,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         cls,
         context: interfaces.context.ContextInterface,
         config_path: str,
-        kernel_layer_name: str,
-        nt_symbol_table: str,
+        kernel_module_name: str,
         shimcache_symbol_table: str,
     ) -> Iterator[shimcache.SHIM_CACHE_ENTRY]:
         """Attempts to locate and yield shimcache entries from a Windows 8 or later memory image.
@@ -374,10 +400,11 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         :param kernel_symbol_table: The name of an existing symbol table containing the kernel symbols
         :param shimcache_symbol_table: The name of a symbol table containing the hand-crafted shimcache symbols
         """
+        kernel = context.modules[kernel_module_name]
 
         is_8_1_or_later = versions.is_windows_8_1_or_later(
-            context, nt_symbol_table
-        ) or versions.is_win10(context, nt_symbol_table)
+            context, kernel.symbol_table_name
+        ) or versions.is_win10(context, kernel.symbol_table_name)
 
         module_names = ["ahcache.sys"] if is_8_1_or_later else cls.NT_KRNL_MODS
         vollog.debug(f"Searching for modules {module_names}")
@@ -385,16 +412,14 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         data_sec = cls.get_module_section_range(
             context,
             config_path,
-            kernel_layer_name,
-            nt_symbol_table,
+            kernel_module_name,
             module_names,
             ".data",
         )
         mod_page = cls.get_module_section_range(
             context,
             config_path,
-            kernel_layer_name,
-            nt_symbol_table,
+            kernel_module_name,
             module_names,
             "PAGE",
         )
@@ -417,12 +442,18 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         for offset in range(
             data_sec_offset,
             data_sec_offset + data_sec_size,
-            8 if symbols.symbol_table_is_64bit(context, nt_symbol_table) else 4,
+            (
+                8
+                if symbols.symbol_table_is_64bit(
+                    context=context, symbol_table_name=kernel.symbol_table_name
+                )
+                else 4
+            ),
         ):
             vollog.debug(f"Building shim handle pointer at {offset:#x}")
             shim_handle = context.object(
                 object_type=shimcache_symbol_table + constants.BANG + "pointer",
-                layer_name=kernel_layer_name,
+                layer_name=kernel.layer_name,
                 subtype=handle_type,
                 offset=offset,
             )
@@ -443,7 +474,9 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         # On Windows 8 x64, the first cache contains the shim cache.
         # On Windows 8 x86, 8.1 x86/x64, and 10, the second cache contains the shim cache.
         if (
-            not symbols.symbol_table_is_64bit(context, nt_symbol_table)
+            not symbols.symbol_table_is_64bit(
+                context=context, symbol_table_name=kernel.symbol_table_name
+            )
             and not is_8_1_or_later
         ):
             valid_head = shim_heads[1]
@@ -472,8 +505,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
             entries = self.find_shimcache_win_8_or_later(
                 self.context,
                 self.config_path,
-                kernel.layer_name,
-                kernel.symbol_table_name,
+                self.config["kernel"],
                 shimcache_table_name,
             )
 
@@ -486,8 +518,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
             entries = self.find_shimcache_win_2k3_to_7(
                 self.context,
                 self.config_path,
-                kernel.layer_name,
-                kernel.symbol_table_name,
+                self.config["kernel"],
                 shimcache_table_name,
             )
 
@@ -497,8 +528,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
             vollog.info("Finding shimcache entries for WinXP")
             entries = self.find_shimcache_win_xp(
                 self._context,
-                kernel.layer_name,
-                kernel.symbol_table_name,
+                self.config["kernel"],
                 shimcache_table_name,
             )
         else:
@@ -545,8 +575,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         cls,
         context: interfaces.context.ContextInterface,
         config_path: str,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         module_list: List[str],
         section_name: str,
     ) -> Optional[Tuple[int, int]]:
@@ -561,16 +590,22 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         :return: The offset and size of the module, if found; Otherwise, returns `None`
         """
 
-        try:
-            krnl_mod = next(
-                module
-                for module in modules.Modules.list_modules(
-                    context, layer_name, symbol_table
+        krnl_mod = None
+        for module in modules.Modules.list_modules(context, kernel_module_name):
+            try:
+                if module.BaseDllName.String in module_list:
+                    krnl_mod = module
+                    break
+            except exceptions.InvalidAddressException as exc:
+                vollog.warning(
+                    f"Failed to get kernel module due to {exc.__class__.__name__}: {exc.invalid_address:#x}"
                 )
-                if module.BaseDllName.String in module_list
-            )
-        except StopIteration:
+
+        if krnl_mod is None:
+            vollog.warning("Failed to find kernel module")
             return None
+
+        kernel = context.modules[kernel_module_name]
 
         pe_table_name = intermed.IntermediateSymbolTable.create(
             context,
@@ -583,7 +618,7 @@ class ShimcacheMem(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterf
         # code taken from Win32KBase._section_chunks (win32_core.py)
         dos_header = context.object(
             pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
-            layer_name,
+            kernel.layer_name,
             offset=krnl_mod.DllBase,
         )
 

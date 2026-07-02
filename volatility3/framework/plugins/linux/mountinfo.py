@@ -36,7 +36,7 @@ class MountInfo(plugins.PluginInterface):
     """Lists mount points on processes mount namespaces"""
 
     _required_framework_version = (2, 2, 0)
-    _version = (1, 2, 3)
+    _version = (1, 2, 4)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -46,8 +46,8 @@ class MountInfo(plugins.PluginInterface):
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(4, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="linuxutils", component=linux.LinuxUtilities, version=(2, 1, 0)
@@ -93,10 +93,13 @@ class MountInfo(plugins.PluginInterface):
             return None
 
         mnt_root_path = mnt_root.path()
-        superblock = mnt.get_mnt_sb()
 
         mnt_id: int = mnt.mnt_id
         parent_id: int = mnt.mnt_parent.mnt_id
+
+        superblock = mnt.get_mnt_sb()
+        if not (superblock and superblock.is_readable()):
+            return None
 
         st_dev = f"{superblock.major}:{superblock.minor}"
 
@@ -152,9 +155,11 @@ class MountInfo(plugins.PluginInterface):
             if not (
                 task
                 and task.fs
-                and task.fs.root
+                and task.fs.is_readable()
                 and task.nsproxy
+                and task.nsproxy.is_readable()
                 and task.nsproxy.mnt_ns
+                and task.nsproxy.mnt_ns.is_readable()
             ):
                 # This task doesn't have all the information required.
                 # It should be a kernel < 2.6.30
@@ -276,7 +281,7 @@ class MountInfo(plugins.PluginInterface):
 
             if sb_ptr in seen_sb_ptr:
                 continue
-            seen_sb_ptr.add(sb_ptr)
+            seen_sb_ptr.add(int(sb_ptr))
 
             superblock = sb_ptr.dereference()
 

@@ -34,7 +34,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
     """Lists process memory ranges."""
 
     _required_framework_version = (2, 4, 0)
-    _version = (2, 0, 0)
+    _version = (2, 0, 1)
     MAXSIZE_DEFAULT = 1024 * 1024 * 1024  # 1 Gb
 
     def __init__(self, *args, **kwargs):
@@ -63,8 +63,8 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 element_type=int,
                 optional=True,
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.BooleanRequirement(
                 name="dump",
@@ -99,7 +99,11 @@ class VadInfo(interfaces.plugins.PluginInterface):
             symbol_table: The name of the table containing the kernel symbols
         """
 
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
+        kvo = context.layers[layer_name].config.get("kernel_virtual_offset", None)
+        if not kvo:
+            raise ValueError(
+                "Intel layer does not have an associated kernel virtual offset, failing"
+            )
         ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
         addr = ntkrnlmp.get_symbol("MmProtectToValue").address
         values = ntkrnlmp.object(
@@ -111,9 +115,9 @@ class VadInfo(interfaces.plugins.PluginInterface):
     def list_vads(
         cls,
         proc: interfaces.objects.ObjectInterface,
-        filter_func: Callable[
-            [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: False,
+        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: (
+            False
+        ),
     ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Lists the Virtual Address Descriptors of a specific process.
 
@@ -194,7 +198,9 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
         return file_handle
 
-    def _generator(self, procs: List[interfaces.objects.ObjectInterface]) -> Generator[
+    def _generator(
+        self, procs: List[interfaces.objects.ObjectInterface]
+    ) -> Generator[
         Tuple[
             int,
             Tuple[
@@ -269,8 +275,6 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 )
 
     def run(self) -> renderers.TreeGrid:
-        kernel = self.context.modules[self.config["kernel"]]
-
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
         return renderers.TreeGrid(
@@ -291,8 +295,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
             self._generator(
                 pslist.PsList.list_processes(
                     context=self.context,
-                    layer_name=kernel.layer_name,
-                    symbol_table=kernel.symbol_table_name,
+                    kernel_module_name=self.config["kernel"],
                     filter_func=filter_func,
                 )
             ),

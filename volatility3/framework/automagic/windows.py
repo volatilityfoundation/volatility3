@@ -26,6 +26,7 @@ The self-referential indices for older versions of windows are listed below:
     | x64          | 0x1ED |
     +--------------+-------+
 """
+
 import logging
 import struct
 from typing import Generator, Iterable, List, Optional, Tuple, Type
@@ -152,8 +153,7 @@ class DtbSelfRefPae(DtbSelfReferential):
             # Mask off the page bits of top level page map
             page_table_mask = b"\x00\xf0\xff\xff\xff\xff\xff\xff" * 4
             page_table = data[
-                top_pae_page
-                - data_offset : top_pae_page
+                top_pae_page - data_offset : top_pae_page
                 - data_offset
                 + (4 * self.ptr_size)
             ]
@@ -199,12 +199,23 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
         (
             "Detecting Self-referential pointer for recent windows",
             [DtbSelfRef64bit()],
-            [(0x150000, 0x150000), (0x650000, 0xA0000)],
+            [
+                (0x150000, 0x150000),
+                (0x550000, 0x1A0000),
+                (0x900000, 0x100000),
+            ],
         ),
         (
             "Older windows fixed location self-referential pointers",
             [DtbSelfRefPae(), DtbSelfRef32bit(), DtbSelfRef64bitOldWindows()],
             [(0x30000, 0x1000000)],
+        ),
+        (
+            "Very large memory with high DTBs (slow)",
+            [DtbSelfRef64bit()],
+            [
+                (0xA00000, 0x5000000),
+            ],
         ),
     ]
 
@@ -286,28 +297,53 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                 """Key used to sort by tests"""
                 return tests.index(x[0]), x[1]
 
-            def get_max_pointer(page_table, test, ptr_size: int):
-                """Determines a pointer from a page_table"""
-                max_ptr = 0
+            def get_valid_page_table_pointers(page_table, ptr_size: int):
+                """Yields valid pointers from a page table"""
                 for index in range(0, len(page_table), ptr_size):
                     pointer = struct.unpack(
                         test.ptr_struct, page_table[index : index + ptr_size]
                     )[0]
                     # Make sure the pointer is valid, ignore large pages which would require more calculation
                     if pointer & 0x1 and not pointer & 0x80:
-                        max_ptr = max(
-                            max_ptr,
-                            (pointer ^ (pointer & 0xFFF))
-                            % test.layer_type.maximum_address,
-                        )
+                        yield pointer
+
+            def get_max_pointer(page_table, test, ptr_size: int):
+                """Determines a pointer from a page_table"""
+                max_ptr = 0
+                for pointer in get_valid_page_table_pointers(page_table, ptr_size):
+                    max_ptr = max(
+                        max_ptr,
+                        (pointer ^ (pointer & 0xFFF)) % test.layer_type.maximum_address,
+                    )
                 return max_ptr
 
+            def page_table_is_dummy(page_table, ptr_size: int):
+                """Verify that a page table has at least 12 valid pointers"""
+                valid_pointers = 0
+                for _ in get_valid_page_table_pointers(page_table, ptr_size):
+                    valid_pointers += 1
+                    # 10 is an arbitrary constant
+                    if valid_pointers >= 10:
+                        # Do not consume the entire generator to enhance performance
+                        return False
+                vollog.debug(f"Found {valid_pointers} valid pointers")
+                return True
+
             hits = sorted(list(hits), key=sort_by_tests)
+
+            vollog.debug(f"WindowsIntelStacker hits: {hits}")
 
             for test, page_map_offset in hits:
                 # Turn the page tables into integers and find the largest one
                 page_table = base_layer.read(page_map_offset, 0x1000)
                 ptr_size = struct.calcsize(test.ptr_struct)
+                # Modern windows can have a dummy page table with only about 2 entries, so sanity check
+                if page_table_is_dummy(page_table, ptr_size):
+                    vollog.debug(
+                        f"DTB {page_map_offset:x} contains less than 12 valid pointers, ignoring"
+                    )
+                    continue
+
                 max_pointer = get_max_pointer(page_table, test, ptr_size)
 
                 if max_pointer <= base_layer.maximum_address:

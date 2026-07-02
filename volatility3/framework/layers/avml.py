@@ -6,6 +6,7 @@
 
 The user of the file doesn't have to worry about the compression,
 but random access is not allowed."""
+
 import ctypes
 import logging
 import struct
@@ -159,8 +160,7 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
                 if frame_type == 0xFF:
                     if (
                         data[
-                            offset
-                            + frame_header_len : offset
+                            offset + frame_header_len : offset
                             + frame_header_len
                             + frame_size
                         ]

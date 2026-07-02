@@ -344,8 +344,9 @@ class VolShell(cli.CommandLine):
                     raise ValueError(
                         "Invalid extension (extensions must be of the format \"conf.path.value='value'\")"
                     )
-                address, value = extension[: extension.find("=")], json.loads(
-                    extension[extension.find("=") + 1 :]
+                address, value = (
+                    extension[: extension.find("=")],
+                    json.loads(extension[extension.find("=") + 1 :]),
                 )
                 ctx.config[address] = value
 
@@ -376,7 +377,7 @@ class VolShell(cli.CommandLine):
                 )
                 args.save_config = "config.json"
             if args.save_config:
-                vollog.debug("Writing out configuration data to {args.save_config}")
+                vollog.debug(f"Writing out configuration data to {args.save_config}")
                 if os.path.exists(os.path.abspath(args.save_config)):
                     parser.error(
                         f"Cannot write configuration: file {args.save_config} already exists"

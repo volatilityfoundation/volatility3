@@ -71,8 +71,8 @@ class Kevents(interfaces.plugins.PluginInterface):
                 description="Kernel module for the OS",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(3, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="macutils", component=mac.MacUtilities, version=(1, 2, 0)

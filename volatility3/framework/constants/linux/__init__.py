@@ -5,8 +5,13 @@
 
 Linux-specific values that aren't found in debug symbols
 """
-from enum import IntEnum, Flag
+
+import enum
 from dataclasses import dataclass
+
+# Exec argument limits
+# Ref: include/uapi/linux/binfmts.h (linux.git commit f6031913338f1dad5bd8cb7286ff4e53644b6940)
+MAX_ARG_STRLEN = 32 * 4096
 
 KERNEL_NAME = "__kernel__"
 
@@ -282,8 +287,54 @@ CAPABILITIES = (
 
 ELF_MAX_EXTRACTION_SIZE = 1024 * 1024 * 1024 * 4 - 1
 
+# For IFA_* below - Ref: include/net/ipv6.h
+IPV6_ADDR_LOOPBACK = 0x0010
+IPV6_ADDR_LINKLOCAL = 0x0020
+IPV6_ADDR_SITELOCAL = 0x0040
+# For inet6_ifaddr - Ref: include/net/if_inet6.h
+IFA_HOST = IPV6_ADDR_LOOPBACK
+IFA_LINK = IPV6_ADDR_LINKLOCAL
+IFA_SITE = IPV6_ADDR_SITELOCAL
 
-class ELF_IDENT(IntEnum):
+# Only for kernels < 3.15 when the net_device_flags enum didn't exist
+# ref include/uapi/linux/if.h
+NET_DEVICE_FLAGS = {
+    "IFF_UP": 0x1,
+    "IFF_BROADCAST": 0x2,
+    "IFF_DEBUG": 0x4,
+    "IFF_LOOPBACK": 0x8,
+    "IFF_POINTOPOINT": 0x10,
+    "IFF_NOTRAILERS": 0x20,
+    "IFF_RUNNING": 0x40,
+    "IFF_NOARP": 0x80,
+    "IFF_PROMISC": 0x100,
+    "IFF_ALLMULTI": 0x200,
+    "IFF_MASTER": 0x400,
+    "IFF_SLAVE": 0x800,
+    "IFF_MULTICAST": 0x1000,
+    "IFF_PORTSEL": 0x2000,
+    "IFF_AUTOMEDIA": 0x4000,
+    "IFF_DYNAMIC": 0x8000,
+    "IFF_LOWER_UP": 0x10000,
+    "IFF_DORMANT": 0x20000,
+    "IFF_ECHO": 0x40000,
+}
+
+
+# Kernels >= 2.6.17. See IF_OPER_* in include/uapi/linux/if.h
+class IF_OPER_STATES(enum.Enum):
+    """RFC 2863 - Network interface operational status"""
+
+    UNKNOWN = 0
+    NOTPRESENT = 1
+    DOWN = 2
+    LOWERLAYERDOWN = 3
+    TESTING = 4
+    DORMANT = 5
+    UP = 6
+
+
+class ELF_IDENT(enum.IntEnum):
     """ELF header e_ident indexes"""
 
     EI_MAG0 = 0
@@ -297,7 +348,7 @@ class ELF_IDENT(IntEnum):
     EI_PAD = 8
 
 
-class ELF_CLASS(IntEnum):
+class ELF_CLASS(enum.IntEnum):
     """ELF header class types"""
 
     ELFCLASSNONE = 0
@@ -320,8 +371,9 @@ PTRACE_O_EXITKILL = 1 << 20
 PTRACE_O_SUSPEND_SECCOMP = 1 << 21
 
 
-class PT_FLAGS(Flag):
+class PT_FLAGS(enum.Flag):
     "PTrace flags"
+
     PT_PTRACED = 0x00001
     PT_SEIZED = 0x10000
 
@@ -353,6 +405,47 @@ NSEC_PER_SEC = 1e9
 MODULE_MAXIMUM_CORE_SIZE = 20000000
 MODULE_MAXIMUM_CORE_TEXT_SIZE = 20000000
 MODULE_MINIMUM_SIZE = 4096
+
+# Kallsyms
+KSYM_NAME_LEN = 512
+NM_TYPES_DESC = {
+    "a": "Symbol is absolute and doesn't change during linking",
+    "b": "Symbol in the BSS section, typically holding zero-initialized or uninitialized data",
+    "c": "Symbol is common, typically holding uninitialized data",
+    "d": "Symbol is in the initialized data section",
+    "g": "Symbol is in an initialized data section for small objects",
+    "i": "Symbol is an indirect reference to another symbol",
+    "N": "Symbol is a debugging symbol",
+    "n": "Symbol is in a non-data, non-code, non-debug read-only section",
+    "p": "Symbol is in a stack unwind section",
+    "r": "Symbol is in a read only data section",
+    "s": "Symbol is in an uninitialized or zero-initialized data section for small objects",
+    "t": "Symbol is in the text (code) section",
+    "U": "Symbol is undefined",
+    "u": "Symbol is a unique global symbol",
+    "V": "Symbol is a weak object, with a default value",
+    "v": "Symbol is a weak object",
+    "W": "Symbol is a weak symbol but not marked as a weak object symbol, with a default value",
+    "w": "Symbol is a weak symbol but not marked as a weak object symbol",
+    "?": "Symbol type is unknown",
+}
+
+# VMCOREINFO
+VMCOREINFO_MAGIC = b"VMCOREINFO\x00"
+# Aligned to 4 bytes. See storenote() in kernels < 4.19 or append_kcore_note() in kernels >= 4.19
+VMCOREINFO_MAGIC_ALIGNED = VMCOREINFO_MAGIC + b"\x00"
+OSRELEASE_TAG = b"OSRELEASE="
+
+ATTRIBUTE_NAME_MAX_SIZE = 255
+"""
+In 5.9-rc1+, the Linux kernel limits the READ size of a section bin_attribute name to MODULE_SECT_READ_SIZE:
+
+- https://elixir.bootlin.com/linux/v6.15-rc4/source/kernel/module/sysfs.c#L106
+- https://github.com/torvalds/linux/commit/11990a5bd7e558e9203c1070fc52fb6f0488e75b
+
+However, the raw section name loaded from the .ko ELF can in theory be thousands of characters,
+and unless we do a NULL terminated search we can't set a perfect value.
+"""
 
 
 @dataclass
@@ -407,3 +500,28 @@ Documentation :
     - taint_flag kernel struct
     - taint_flags kernel constant
 """
+
+## ELF related constants
+
+# Elf Symbol Bindings
+STB_LOCAL = 0
+STB_GLOBAL = 1
+
+# Elf Symbol Types
+STT_NOTYPE = 0
+STT_OBJECT = 1
+STT_FUNC = 2
+STT_SECTION = 3
+
+# Elf Section Types
+SHT_NULL = 0
+SHT_PROGBITS = 1
+SHT_SYMTAB = 2
+SHT_STRTAB = 3
+SHT_RELA = 4
+SHT_NOTE = 7
+
+# Elf Section Attributes
+SHF_WRITE = 1
+SHF_ALLOC = 2
+SHF_EXECINSTR = 4

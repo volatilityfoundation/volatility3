@@ -53,9 +53,9 @@ to be able to run properly.  Any that are defined as optional need not necessari
                     description = "Process IDs to include (all other processes are excluded)",
                     optional = True
                 ),
-                requirements.PluginRequirement(
+                requirements.VersionRequirement(
                     name = 'pslist',
-                    plugin = pslist.PsList,
+                    component = pslist.PsList,
                     version = (2, 0, 0)
                 ),
             ]
@@ -198,7 +198,6 @@ that will be output as part of the :py:class:`~volatility3.framework.interfaces.
         def run(self):
 
             filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
-            kernel = self.context.modules[self.config['kernel']]
 
             return renderers.TreeGrid(
                 [
@@ -211,9 +210,8 @@ that will be output as part of the :py:class:`~volatility3.framework.interfaces.
                 ],
                 self._generator(
                     pslist.PsList.list_processes(
-                        self.context,
-                        kernel.layer_name,
-                        kernel.symbol_table_name,
+                        context=self.context,
+                        kernel_module_name=self.config['kernel'],
                         filter_func = filter_func
                     )
                 )
@@ -235,7 +233,7 @@ the :py:class:`~volatility3.plugins.windows.pslist.PsList` plugin.  That plugin 
 so that other plugins can call it.  As such, it takes all the necessary parameters rather than accessing them
 from a configuration.  Since it must be portable code, it takes a context, as well as the layer name,
 symbol table and optionally a filter.  In this instance we unconditionally
-pass it the values from the configuration for the layer and symbol table from the kernel module object, constructed from
+pass it the value from the configuration for the kernel module name, constructed from
 the ``kernel`` configuration requirement.  This will generate a list
 of :py:class:`~volatility3.framework.symbols.windows.extensions.EPROCESS` objects, as provided by the :py:class:`~volatility.plugins.windows.pslist.PsList` plugin,
 and is not covered here but is used as an example for how to share code across plugins

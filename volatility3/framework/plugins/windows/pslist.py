@@ -6,13 +6,13 @@ import datetime
 import logging
 from typing import Callable, Iterator, List, Optional, Type
 
-from volatility3.framework import renderers, interfaces, layers, exceptions, constants
+from volatility3.framework import constants, exceptions, interfaces, layers, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
-from volatility3.framework.symbols.windows.extensions import pe
 from volatility3.framework.symbols.windows import extensions
+from volatility3.framework.symbols.windows.extensions import pe
 from volatility3.plugins import timeliner
 
 vollog = logging.getLogger(__name__)
@@ -22,7 +22,9 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the processes present in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+
+    # 3.0.0 - changed signature for `list_processes`
+    _version = (3, 0, 1)
     PHYSICAL_DEFAULT = False
 
     @classmethod
@@ -38,6 +40,11 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 description="Display physical offsets instead of virtual",
                 default=cls.PHYSICAL_DEFAULT,
                 optional=True,
+            ),
+            requirements.VersionRequirement(
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -160,13 +167,15 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             Filter function for passing to the `list_processes` method
         """
 
-        return lambda x: not (
-            x.is_valid()
-            and x.ActiveThreads > 0
-            and x.UniqueProcessId != 4
-            and x.InheritedFromUniqueProcessId != 4
-            and x.ExitTime.QuadPart == 0
-            and x.get_handle_count() != renderers.UnreadableValue()
+        return lambda x: (
+            not (
+                x.is_valid()
+                and x.ActiveThreads > 0
+                and x.UniqueProcessId != 4
+                and x.InheritedFromUniqueProcessId != 4
+                and x.ExitTime.QuadPart == 0
+                and x.get_handle_count() != renderers.UnreadableValue()
+            )
         )
 
     @classmethod
@@ -206,31 +215,33 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def list_processes(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
-        filter_func: Callable[
-            [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: False,
+        kernel_module_name: str,
+        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: (
+            False
+        ),
     ) -> Iterator["extensions.EPROCESS"]:
-        """Lists all the processes in the primary layer that are in the pid
+        """Lists all the processes in the given layer that are in the pid
         config option.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            layer_iname: The name of the layer on which to operate
+            symbol_table_name: The name of the table containing the kernel symbols
             filter_func: A function which takes an EPROCESS object and returns True if the process should be ignored/filtered
 
         Returns:
             The list of EPROCESS objects from the `layer_name` layer's PsActiveProcessHead list after filtering
         """
 
-        # We only use the object factory to demonstrate how to use one
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
-        ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
+        kernel = context.modules[kernel_module_name]
 
-        ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
-        list_entry = ntkrnlmp.object(object_type="_LIST_ENTRY", offset=ps_aph_offset)
+        if not kernel.offset:
+            raise ValueError(
+                "Intel layer does not have an associated kernel virtual offset, failing"
+            )
+
+        ps_aph_offset = kernel.get_symbol("PsActiveProcessHead").address
+        list_entry = kernel.object(object_type="_LIST_ENTRY", offset=ps_aph_offset)
 
         # This is example code to demonstrate how to use symbol_space directly, rather than through a module:
         #
@@ -243,18 +254,27 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         # Note: "nt_symbols!_EPROCESS" could have been used, but would rely on the "nt_symbols" symbol table not already
         # having been present.  Strictly, the value of the requirement should be joined with the BANG character
         # defined in the constants file
-        reloff = ntkrnlmp.get_type("_EPROCESS").relative_child_offset(
+        reloff = kernel.get_type("_EPROCESS").relative_child_offset(
             "ActiveProcessLinks"
         )
-        eproc = ntkrnlmp.object(
+        eproc = kernel.object(
             object_type="_EPROCESS",
             offset=list_entry.vol.offset - reloff,
             absolute=True,
         )
 
-        for proc in eproc.ActiveProcessLinks:
-            if not filter_func(proc):
-                yield proc
+        seen = set()
+        for forward in (True, False):
+            for proc in eproc.ActiveProcessLinks.to_list(
+                symbol_type=eproc.vol.type_name,
+                member="ActiveProcessLinks",
+                forward=forward,
+            ):
+                if proc.vol.offset in seen:
+                    continue
+                seen.add(proc.vol.offset)
+                if not filter_func(proc):
+                    yield proc
 
     def _generator(self):
         kernel = self.context.modules[self.config["kernel"]]
@@ -269,8 +289,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         for proc in self.list_processes(
             self.context,
-            kernel.layer_name,
-            kernel.symbol_table_name,
+            self.config["kernel"],
             filter_func=self.create_pid_filter(self.config.get("pid", None)),
         ):
             if not self.config.get("physical", self.PHYSICAL_DEFAULT):

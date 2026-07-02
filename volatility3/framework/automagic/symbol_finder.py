@@ -40,7 +40,12 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                 name="SQLiteCache",
                 component=symbol_cache.SqliteCache,
                 version=(1, 0, 0),
-            )
+            ),
+            requirements.VersionRequirement(
+                name="multi_string_scanner",
+                component=scanners.MultiStringScanner,
+                version=(1, 0, 0),
+            ),
         ]
 
     @property

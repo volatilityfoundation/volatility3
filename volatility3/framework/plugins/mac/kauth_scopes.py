@@ -31,8 +31,8 @@ class Kauth_scopes(interfaces.plugins.PluginInterface):
             requirements.VersionRequirement(
                 name="macutils", component=mac.MacUtilities, version=(1, 1, 0)
             ),
-            requirements.PluginRequirement(
-                name="lsmod", plugin=lsmod.Lsmod, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="lsmod", component=lsmod.Lsmod, version=(2, 0, 0)
             ),
         ]
 

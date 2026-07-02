@@ -129,7 +129,13 @@ class NonLinearlySegmentedLayer(
                     return None
             # Crop it to the amount we need left
             chunk_size = min(size, length + offset - logical_offset)
-            yield logical_offset, chunk_size, mapped_offset, mapped_size, self._base_layer
+            yield (
+                logical_offset,
+                chunk_size,
+                mapped_offset,
+                mapped_size,
+                self._base_layer,
+            )
             current_offset += chunk_size
             # Terminate if we've gone (or reached) our required limit
             if current_offset >= offset + length:

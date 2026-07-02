@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import contextlib
+import functools
 import logging
 from typing import Generator, Iterable, Optional, Set, Tuple
 
@@ -17,6 +18,7 @@ class proc(generic.GenericIntelProcess):
     def get_task(self):
         return self.task.dereference().cast("task")
 
+    @functools.lru_cache
     def add_process_layer(
         self, config_prefix: Optional[str] = None, preferred_name: Optional[str] = None
     ) -> Optional[str]:

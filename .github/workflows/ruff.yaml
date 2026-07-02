@@ -4,12 +4,14 @@ name: Ruff
 on: [push, pull_request]
 
 jobs:
-  lint:
+  lint-and-format:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: astral-sh/ruff-action@v1
+      - uses: astral-sh/ruff-action@v3.2.1
         with:
           args: check
           src: "."
+
+      - run: "ruff format --check --diff"

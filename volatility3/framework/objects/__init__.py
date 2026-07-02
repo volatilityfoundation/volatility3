@@ -356,8 +356,9 @@ class String(PrimitiveObject, str):
             ),
             **params,
         )
-        if value.find("\x00") >= 0:
-            value = value[: value.find("\x00")]
+        index = value.find("\x00")
+        if index >= 0:
+            value = value[:index]
         return value
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
@@ -401,13 +402,35 @@ class Pointer(Integer):
         pointer should be recast.  The "pointer" must always live within
         the space (even if the data provided is invalid).
         """
+        mask = context.layers[object_info.native_layer_name].address_mask
+        new = (
+            cls._get_raw_value(
+                context, data_format, object_info.layer_name, object_info.offset
+            )
+            & mask
+        )
+        return new
+
+    @classmethod
+    def _get_raw_value(
+        cls,
+        context: interfaces.context.ContextInterface,
+        data_format: DataFormatInfo,
+        layer_name: str,
+        offset: int,
+    ) -> int:
         length, endian, signed = data_format
         if signed:
             raise ValueError("Pointers cannot have signed values")
-        mask = context.layers[object_info.native_layer_name].address_mask
-        data = context.layers.read(object_info.layer_name, object_info.offset, length)
+        data = context.layers.read(layer_name, offset, length)
         value = int.from_bytes(data, byteorder=endian, signed=signed)
-        return value & mask
+        return value
+
+    def get_raw_value(self) -> int:
+        raw = self._get_raw_value(
+            self._context, self.vol.data_format, self.vol.layer_name, self.vol.offset
+        )
+        return raw
 
     def dereference(
         self, layer_name: Optional[str] = None
@@ -435,6 +458,7 @@ class Pointer(Integer):
                     offset=offset,
                     parent=self,
                     size=self.vol.subtype.size,
+                    native_layer_name=layer_name,
                 ),
             )
         return self._cache[layer_name]
@@ -788,7 +812,7 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
                 layer_name=self.vol.layer_name,
                 offset=mask & (self.vol.offset + (self.vol.subtype.size * index)),
                 parent=self,
-                native_layer_name=self.vol.native_layer_name,
+                native_layer_name=self.vol.native_layer_name or self.vol.layer_name,
                 size=self.vol.subtype.size,
             )
             result += [self.vol.subtype(context=self._context, object_info=object_info)]
@@ -924,9 +948,9 @@ class AggregateType(interfaces.objects.ObjectInterface):
             if isinstance(cls, agg_type):
                 agg_name = agg_type.__name__
 
-        assert isinstance(
-            members, collections.abc.Mapping
-        ), f"{agg_name} members parameter must be a mapping: {type(members)}"
+        assert isinstance(members, collections.abc.Mapping), (
+            f"{agg_name} members parameter must be a mapping: {type(members)}"
+        )
         assert all(
             (isinstance(member, tuple) and len(member) == 2)
             for member in members.values()
@@ -955,7 +979,7 @@ class AggregateType(interfaces.objects.ObjectInterface):
                 offset=mask & (self.vol.offset + relative_offset),
                 member_name=attr,
                 parent=self,
-                native_layer_name=self.vol.native_layer_name,
+                native_layer_name=self.vol.native_layer_name or self.vol.layer_name,
                 size=template.size,
             )
             member = template(context=self._context, object_info=object_info)

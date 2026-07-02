@@ -27,7 +27,7 @@ For plugin requests, please create an issue with a description of the requested 
         windows.crashinfo.Crashinfo
         windows.dlllist.DllList
 
-.. note:: Here the the command is piped to grep and head to provide the start of a list of the available windows plugins.
+.. note:: Here the command is piped to grep and head to provide the start of a list of the available windows plugins.
 
 Using plugins
 -------------
@@ -97,7 +97,7 @@ windows.pstree
 
 ``windows.pstree`` helps to display the parent-child relationships between processes.
 
-.. note:: Here the the command is piped to head to provide smaller output, here listing only the first 20.
+.. note:: Here the command is piped to head to provide smaller output, here listing only the first 20.
 
 windows.hashdump
 ~~~~~~~~~~~~~~~~

@@ -32,14 +32,19 @@ class VadRegExScan(plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
                 description="Filter on specific process IDs",
                 element_type=int,
                 optional=True,
+            ),
+            requirements.VersionRequirement(
+                name="regex_scanner",
+                component=scanners.RegExScanner,
+                version=(1, 0, 0),
             ),
             requirements.StringRequirement(
                 name="pattern", description="RegEx pattern", optional=False
@@ -57,7 +62,6 @@ class VadRegExScan(plugins.PluginInterface):
         vollog.debug(f"RegEx Pattern: {regex_pattern}")
 
         for proc in procs:
-
             # attempt to create a process layer for each proc
             proc_layer_name = proc.add_process_layer()
             if not proc_layer_name:
@@ -81,7 +85,7 @@ class VadRegExScan(plugins.PluginInterface):
             ):
                 result_data = proc_layer.read(offset, self.MAXSIZE_DEFAULT, pad=True)
 
-                # reapply the regex in order to extact just the match
+                # reapply the regex in order to extract just the match
                 regex_result = re.match(regex_pattern, result_data)
 
                 if regex_result:
@@ -101,21 +105,22 @@ class VadRegExScan(plugins.PluginInterface):
                     max_length=proc.ImageFileName.vol.count,
                     errors="replace",
                 )
-                yield 0, (
-                    proc_id,
-                    process_name,
-                    format_hints.Hex(offset),
-                    text_result,
-                    bytes_result,
+                yield (
+                    0,
+                    (
+                        proc_id,
+                        process_name,
+                        format_hints.Hex(offset),
+                        text_result,
+                        bytes_result,
+                    ),
                 )
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
-        kernel = self.context.modules[self.config["kernel"]]
         procs = pslist.PsList.list_processes(
-            self.context,
-            kernel.layer_name,
-            kernel.symbol_table_name,
+            context=self.context,
+            kernel_module_name=self.config["kernel"],
             filter_func=filter_func,
         )
         return renderers.TreeGrid(

@@ -8,13 +8,14 @@ These requirement types allow plugins to request simple information
 types (such as strings, integers, etc) as well as indicating what they
 expect to be in the context (such as particular layers or symboltables).
 """
+
 import abc
 import logging
 import os
 from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Type
 from urllib import parse, request
 
-from volatility3.framework import constants, interfaces
+from volatility3.framework import constants, interfaces, deprecation, versionutils
 
 vollog = logging.getLogger(__name__)
 
@@ -551,7 +552,7 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
     ) -> Dict[str, interfaces.configuration.RequirementInterface]:
         # Mypy doesn't appreciate our classproperty implementation, self._plugin.version has no type
         config_path = interfaces.configuration.path_join(config_path, self.name)
-        if not self.matches_required(self._version, self._component.version):
+        if not versionutils.matches_required(self._version, self._component.version):
             return {config_path: self}
 
         recurse = True
@@ -593,13 +594,14 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
     def matches_required(
         cls, required: Tuple[int, ...], version: Tuple[int, int, int]
     ) -> bool:
-        if len(required) > 0 and version[0] != required[0]:
-            return False
-        if len(required) > 1 and version[1] < required[1]:
-            return False
-        return True
+        return versionutils.matches_required(required, version)
 
 
+@deprecation.renamed_class(
+    deprecated_class_name="PluginRequirement",
+    removal_date="2026-06-01",
+    message="PluginRequirement is to be deprecated. Use VersionRequirement instead.",
+)
 class PluginRequirement(VersionRequirement):
     def __init__(
         self,

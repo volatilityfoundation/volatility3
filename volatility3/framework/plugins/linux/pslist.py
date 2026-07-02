@@ -34,7 +34,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the processes present in a particular linux memory image."""
 
     _required_framework_version = (2, 13, 0)
-    _version = (4, 1, 0)
+    _version = (4, 1, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -44,14 +44,19 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="elfs", plugin=elfs.Elfs, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="elfs", component=elfs.Elfs, version=(2, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
                 description="Filter on specific process IDs",
                 element_type=int,
                 optional=True,
+            ),
+            requirements.VersionRequirement(
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
             ),
             requirements.BooleanRequirement(
                 name="threads",
@@ -85,7 +90,6 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         Returns:
             Function which, when provided a process object, returns True if the process is to be filtered out of the list
         """
-        # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
         filter_list = [x for x in pid_list if x is not None]
         if filter_list:
@@ -221,18 +225,21 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             task_euid = self._format_cred(task_fields.euid)
             task_egid = self._format_cred(task_fields.egid)
 
-            yield 0, (
-                format_hints.Hex(task_fields.offset),
-                task_fields.user_pid,
-                task_fields.user_tid,
-                task_fields.user_ppid,
-                task_fields.name,
-                task_uid,
-                task_gid,
-                task_euid,
-                task_egid,
-                task_fields.creation_time or renderers.NotAvailableValue(),
-                file_output,
+            yield (
+                0,
+                (
+                    format_hints.Hex(task_fields.offset),
+                    task_fields.user_pid,
+                    task_fields.user_tid,
+                    task_fields.user_ppid,
+                    task_fields.name,
+                    task_uid,
+                    task_gid,
+                    task_euid,
+                    task_egid,
+                    task_fields.creation_time or renderers.NotAvailableValue(),
+                    file_output,
+                ),
             )
 
     @classmethod
@@ -258,17 +265,27 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         init_task = vmlinux.object_from_symbol(symbol_name="init_task")
 
         # Note that the init_task itself is not yielded, since "ps" also never shows it.
-        for task in init_task.tasks:
-            if not task.is_valid():
-                continue
+        seen = set()
+        for forward in (True, False):
+            for task in init_task.tasks.to_list(
+                symbol_type=init_task.vol.type_name,
+                member="tasks",
+                forward=forward,
+            ):
+                if task.vol.offset in seen:
+                    continue
+                seen.add(task.vol.offset)
 
-            if filter_func(task):
-                continue
+                if not task.is_valid():
+                    continue
 
-            yield task
+                if filter_func(task):
+                    continue
 
-            if include_threads:
-                yield from task.get_threads()
+                yield task
+
+                if include_threads:
+                    yield from task.get_threads()
 
     def run(self):
         pids = self.config.get("pid")

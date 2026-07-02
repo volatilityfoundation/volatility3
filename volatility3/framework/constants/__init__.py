@@ -25,6 +25,18 @@ from volatility3.framework.constants._version import (
 
 REQUIRED_PYTHON_VERSION = (3, 8, 0)
 
+CACHE_PATH = os.path.join(
+    os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache"),
+    "volatility3",
+)
+"""Default path to store cached data"""
+
+if sys.platform == "win32":
+    CACHE_PATH = os.path.realpath(
+        os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "volatility3")
+    )
+os.makedirs(CACHE_PATH, exist_ok=True)
+
 PLUGINS_PATH = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "plugins")),
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins")),
@@ -34,11 +46,16 @@ PLUGINS_PATH = [
 SYMBOL_BASEPATHS = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "symbols")),
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "symbols")),
+    os.path.abspath(
+        os.path.join(CACHE_PATH, "symbols")
+    ),  # User cache fallback for automatically downloaded temporary symbols
 ]
 """Default list of paths to load symbols from (volatility3/symbols and volatility3/framework/symbols)"""
 
 ISF_EXTENSIONS = [".json", ".json.xz", ".json.gz", ".json.bz2"]
 """List of accepted extensions for ISF files"""
+
+SYMBOL_SERVER_URL = "http://msdl.microsoft.com/download/symbols"
 
 if hasattr(sys, "frozen") and sys.frozen:
     # Ensure we include the executable's directory as the base for plugins and symbols
@@ -69,20 +86,8 @@ LOGLEVEL_VVVV = 6
 """Logging level for four levels of detail: -vvvvvv"""
 
 
-CACHE_PATH = os.path.join(
-    os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache"),
-    "volatility3",
-)
-"""Default path to store cached data"""
-
 SQLITE_CACHE_PERIOD = "-3 days"
 """SQLite time modifier for how long each item is valid in the cache for"""
-
-if sys.platform == "win32":
-    CACHE_PATH = os.path.realpath(
-        os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "volatility3")
-    )
-os.makedirs(CACHE_PATH, exist_ok=True)
 
 IDENTIFIERS_FILENAME = "identifier.cache"
 """Default location to record information about available identifiers"""
@@ -119,6 +124,9 @@ OFFLINE = False
 
 REMOTE_ISF_URL = None  # 'http://localhost:8000/banners.json'
 """Remote URL to query for a list of ISF addresses"""
+
+DOWNLOAD_TIMEOUT = 30
+"""Length of time (in seconds) to wait for another process to download a resource before using it"""
 
 ###
 # DEPRECATED VALUES

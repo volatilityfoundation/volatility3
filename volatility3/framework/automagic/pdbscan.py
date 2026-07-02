@@ -7,6 +7,7 @@ from loaded PE files.
 This module contains a standalone scanner, and also a :class:`~volatility3.framework.interfaces.layers.ScannerInterface`
 based scanner for use within the framework by calling :func:`~volatility3.framework.interfaces.layers.DataLayerInterface.scan`.
 """
+
 import contextlib
 import logging
 import math
@@ -17,7 +18,7 @@ from volatility3.framework import constants, exceptions, interfaces, layers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, scanners
 from volatility3.framework.symbols import native
-from volatility3.framework.symbols.windows.pdbutil import PDBUtility
+from volatility3.framework.symbols.windows import pdbutil
 
 if __name__ == "__main__":
     import sys
@@ -49,6 +50,21 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     priority = 30
     max_pdb_size = 0x400000
     exclusion_list = ["linux", "mac"]
+
+    @classmethod
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+        return [
+            requirements.VersionRequirement(
+                name="pdb_utility",
+                component=pdbutil.PDBUtility,
+                version=(1, 0, 1),
+            ),
+            requirements.VersionRequirement(
+                name="bytes_scanner",
+                component=scanners.BytesScanner,
+                version=(1, 0, 0),
+            ),
+        ]
 
     def find_virtual_layers_from_req(
         self,
@@ -120,7 +136,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 ):
                     raise TypeError("PDB name or GUID not a string value")
 
-                PDBUtility.load_windows_symbol_table(
+                pdbutil.PDBUtility.load_windows_symbol_table(
                     context=context,
                     guid=kernel["GUID"],
                     age=kernel["age"],
@@ -259,7 +275,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             bytes(name + ".pdb", "utf-8")
             for name in constants.windows.KERNEL_MODULE_NAMES
         ]
-        kernels = PDBUtility.pdbname_scan(
+        kernels = pdbutil.PDBUtility.pdbname_scan(
             ctx=context,
             layer_name=layer_to_scan,
             start=start_scan_address,
@@ -362,7 +378,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         with contextlib.suppress(exceptions.InvalidAddressException):
             if vlayer.read(address, 0x2) == b"MZ":
                 res = list(
-                    PDBUtility.pdbname_scan(
+                    pdbutil.PDBUtility.pdbname_scan(
                         ctx=context,
                         layer_name=vlayer.name,
                         page_size=vlayer.page_size,
@@ -392,45 +408,49 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         # Try locating kernel base via x64 Low Stub in lower 1MB starting from second page (4KB)
         # If "Discard Low Memory" setting is disabled in BIOS, the Low Stub may be at the third/fourth or further pages
         for offset in range(0x1000, 0x100000, 0x1000):
-            jmp_and_completion_values = int.from_bytes(
-                physical_layer.read(offset, 0x8), "little"
-            )
-            if (
-                0xFFFFFFFFFFFF00FF & jmp_and_completion_values
-                != constants.windows.JMP_AND_COMPLETION_SIGNATURE
-            ):
-                continue
-            cr3_value = int.from_bytes(
-                physical_layer.read(
-                    offset + constants.windows.PROCESSOR_START_BLOCK_CR3_OFFSET, 0x8
-                ),
-                "little",
-            )
+            try:
+                jmp_and_completion_values = int.from_bytes(
+                    physical_layer.read(offset, 0x8), "little"
+                )
+                if (
+                    0xFFFFFFFFFFFF00FF & jmp_and_completion_values
+                    != constants.windows.JMP_AND_COMPLETION_SIGNATURE
+                ):
+                    continue
+                cr3_value = int.from_bytes(
+                    physical_layer.read(
+                        offset + constants.windows.PROCESSOR_START_BLOCK_CR3_OFFSET, 0x8
+                    ),
+                    "little",
+                )
 
-            # Compare previously observed valid page table address that's stored in vlayer._initial_entry
-            # with PROCESSOR_START_BLOCK->ProcessorState->SpecialRegisters->Cr3
-            # which was observed to be an invalid page address, so add 1 (to make it valid too)
-            if (cr3_value + 1) != vlayer._initial_entry:
+                # Compare previously observed valid page table address that's stored in vlayer._initial_entry
+                # with PROCESSOR_START_BLOCK->ProcessorState->SpecialRegisters->Cr3
+                # which was observed to be an invalid page address, so add 1 (to make it valid too)
+                if (cr3_value + 1) != vlayer._initial_entry:
+                    continue
+                potential_kernel_hint = int.from_bytes(
+                    physical_layer.read(
+                        offset
+                        + constants.windows.PROCESSOR_START_BLOCK_LM_TARGET_OFFSET,
+                        0x8,
+                    ),
+                    "little",
+                )
+                if 0x3 & potential_kernel_hint:
+                    continue
+                kernel_hint = potential_kernel_hint & 0xFFFFFFFFFFFF
+                kernel_base = kernel_hint & (~0x1FFFFF) & 0xFFFFFFFFFFFF
+                break
+            except exceptions.InvalidAddressException:
                 continue
-            potential_kernel_hint = int.from_bytes(
-                physical_layer.read(
-                    offset + constants.windows.PROCESSOR_START_BLOCK_LM_TARGET_OFFSET,
-                    0x8,
-                ),
-                "little",
-            )
-            if 0x3 & potential_kernel_hint:
-                continue
-            kernel_hint = potential_kernel_hint & 0xFFFFFFFFFFFF
-            kernel_base = kernel_hint & (~0x1FFFFF) & 0xFFFFFFFFFFFF
-            break
 
         if kernel_base:
             # Scanning 32mb in 2mb chunks for the 'ntoskrnl' base address
             while (kernel_base + 0x2000000) > kernel_hint:
                 for i in range(0, 0x200000, 0x1000):
                     valid_kernel = self.check_kernel_offset(
-                        context, vlayer, kernel_base, progress_callback
+                        context, vlayer, kernel_base + i, progress_callback
                     )
                     if valid_kernel:
                         return valid_kernel

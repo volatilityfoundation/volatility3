@@ -507,7 +507,7 @@ def load_cache_manager(cache_file: Optional[str] = None) -> CacheManagerInterfac
         cache_file = os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME)
     # Different implementations of cache
     if not os.path.exists(cache_file):
-        raise ValueError("Non-existant cache file provided")
+        raise ValueError("Non-existent cache file provided")
     with open(cache_file, "rb") as fp:
         header = fp.read(4)
         if header not in [b"SQLi"]:

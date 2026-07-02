@@ -25,9 +25,13 @@ class TimeLinerType(enum.IntEnum):
     CHANGED = 4
 
 
-class TimeLinerInterface(metaclass=abc.ABCMeta):
+class TimeLinerInterface(
+    interfaces.configuration.VersionableInterface, metaclass=abc.ABCMeta
+):
     """Interface defining methods that timeliner will use to generate a body
     file."""
+
+    _version = (1, 0, 0)
 
     @abc.abstractmethod
     def generate_timeline(
@@ -41,8 +45,8 @@ class TimeLinerInterface(metaclass=abc.ABCMeta):
 
 
 class Timeliner(interfaces.plugins.PluginInterface):
-    """Runs all relevant plugins that provide time related information and
-    orders the results by time."""
+    """Runs all relevant plugins that provide time related information and \
+orders the results by time."""
 
     _required_framework_version = (2, 0, 0)
     _version = (1, 1, 0)
@@ -149,6 +153,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
                         )
                     times[timestamp_type] = timestamp
                     self.timeline[(plugin_name, item)] = times
+
+                for plugin_name, item in self.timeline:
                     data.append(
                         (
                             0,

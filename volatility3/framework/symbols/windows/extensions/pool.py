@@ -4,7 +4,7 @@ import logging
 import struct
 from typing import Dict, List, Optional, Tuple, Union
 
-from volatility3.plugins.windows.poolscanner import PoolConstraint
+from volatility3.plugins.windows import poolscanner
 
 from volatility3.framework import (
     constants,
@@ -28,7 +28,7 @@ class POOL_HEADER(objects.StructType):
 
     def get_object(
         self,
-        constraint: PoolConstraint,
+        constraint: poolscanner.PoolConstraint,
         use_top_down: bool,
         kernel_symbol_table: Optional[str] = None,
         native_layer_name: Optional[str] = None,
@@ -78,7 +78,9 @@ class POOL_HEADER(objects.StructType):
 
         # otherwise we have an executive object in the pool
         else:
-            if symbols.symbol_table_is_64bit(self._context, symbol_table_name):
+            if symbols.symbol_table_is_64bit(
+                context=self._context, symbol_table_name=symbol_table_name
+            ):
                 alignment = 16
             else:
                 alignment = 8
@@ -95,7 +97,7 @@ class POOL_HEADER(objects.StructType):
                     optional_headers,
                     lengths_of_optional_headers,
                 ) = self._calculate_optional_header_lengths(
-                    self._context, symbol_table_name
+                    self._context, kernel_symbol_table
                 )
                 padding_available = (
                     None
@@ -124,8 +126,7 @@ class POOL_HEADER(objects.StructType):
                     infomask_value = infomask_data[addr + infomask_offset]
                     pointercount_value = int.from_bytes(
                         infomask_data[
-                            addr
-                            + pointercount_offset : addr
+                            addr + pointercount_offset : addr
                             + pointercount_offset
                             + pointercount_size
                         ],
@@ -163,8 +164,7 @@ class POOL_HEADER(objects.StructType):
                         (padding_length,) = struct.unpack(
                             "<I",
                             infomask_data[
-                                addr
-                                - optional_headers_length : addr
+                                addr - optional_headers_length : addr
                                 - optional_headers_length
                                 + 4
                             ],
@@ -326,12 +326,18 @@ class ExecutiveObject(interfaces.objects.ObjectInterface):
     """This is used as a "mixin" that provides all kernel executive objects
     with a means of finding their own object header."""
 
-    def get_object_header(self) -> "OBJECT_HEADER":
+    def get_object_header(
+        self, symbol_table_name: Optional[str] = None
+    ) -> "OBJECT_HEADER":
         if constants.BANG not in self.vol.type_name:
             raise ValueError(
                 f"Invalid symbol table name syntax (no {constants.BANG} found)"
             )
-        symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
+
+        # caller provided symbol table allows for scanning for objects from any module
+        if not symbol_table_name:
+            symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
+
         body_offset = self._context.symbol_space.get_type(
             symbol_table_name + constants.BANG + "_OBJECT_HEADER"
         ).relative_child_offset("Body")
@@ -341,6 +347,12 @@ class ExecutiveObject(interfaces.objects.ObjectInterface):
             offset=self.vol.offset - body_offset,
             native_layer_name=self.vol.native_layer_name,
         )
+
+    def get_name(self, symbol_table_name: Optional[str] = None) -> Optional[str]:
+        try:
+            return self.get_object_header(symbol_table_name).get_name()
+        except exceptions.InvalidAddressException:
+            return None
 
 
 class OBJECT_HEADER(objects.StructType):
@@ -450,3 +462,22 @@ class OBJECT_HEADER(objects.StructType):
             absolute=True,
         )
         return header
+
+    def get_name(self) -> Optional[str]:
+        """
+        Attempts to get the name of the object
+        Sanity checks size members to avoid FPs
+        Returns None if any issues detected
+        """
+        try:
+            name_info = self.NameInfo.Name
+            if (
+                name_info.Length == 0
+                or name_info.MaximumLength == 0
+                or name_info.Length > name_info.MaximumLength
+            ):
+                return None
+
+            return name_info.String
+        except (ValueError, exceptions.InvalidAddressException):
+            return None

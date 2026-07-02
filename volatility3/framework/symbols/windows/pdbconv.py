@@ -489,7 +489,7 @@ class PdbReader:
         """Strips unnecessary components from the start of a symbol name."""
         new_name = name
 
-        if new_name[:1] in ["_", "@", "\u007F"]:
+        if new_name[:1] in ["_", "@", "\u007f"]:
             new_name = new_name[1:]
 
         name_array = new_name.split("@")
@@ -950,7 +950,7 @@ class PdbRetreiver:
     ) -> Optional[str]:
         vollog.info("Download PDB file...")
         file_name = ".".join(file_name.split(".")[:-1] + ["pdb"])
-        for sym_url in ["http://msdl.microsoft.com/download/symbols"]:
+        for sym_url in [constants.SYMBOL_SERVER_URL]:
             url = sym_url + f"/{file_name}/{guid}/"
 
             result = None

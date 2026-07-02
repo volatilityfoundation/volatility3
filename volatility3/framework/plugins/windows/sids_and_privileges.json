@@ -573,7 +573,7 @@
 		["S-1-5-21-[0-9-]+-553$", "Remote Access Services (RAS)"]
 	],
 	"privileges":{
-	    "2": ["SeCreateTokenPrivilege", "Create a token object"],
+		"2": ["SeCreateTokenPrivilege", "Create a token object"],
 		"3": ["SeAssignPrimaryTokenPrivilege", "Replace a process-level token"],
 		"4": ["SeLockMemoryPrivilege", "Lock pages in memory"],
 		"5": ["SeIncreaseQuotaPrivilege", "Increase quotas"],

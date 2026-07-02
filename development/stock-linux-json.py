@@ -13,7 +13,6 @@ DWARF2JSON = "./dwarf2json"
 
 
 class Downloader:
-
     def __init__(self, url_lists: List[List[str]]) -> None:
         self.url_lists = url_lists
 

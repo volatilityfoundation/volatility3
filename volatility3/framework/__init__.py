@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 """Volatility 3 framework."""
+
 # Check the python version to ensure it's suitable
 import glob
 import sys
@@ -13,7 +14,7 @@ import os
 import traceback
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, TypeVar
 
-from volatility3.framework import constants, interfaces
+from volatility3.framework import constants, interfaces, versionutils
 
 if (
     sys.version_info.major != constants.REQUIRED_PYTHON_VERSION[0]
@@ -48,19 +49,13 @@ vollog = logging.getLogger(__name__)
 
 def require_interface_version(*args) -> None:
     """Checks the required version of a plugin."""
-    if len(args):
-        if args[0] != interface_version()[0]:
-            raise RuntimeError(
-                f"Framework interface version {interface_version()[0]} is incompatible with required version {args[0]}"
+    if not versionutils.matches_required(args, interface_version()):
+        raise RuntimeError(
+            "Framework interface version {} is incompatible with required version {}".format(
+                ".".join(str(x) for x in interface_version()[0:2]),
+                ".".join(str(x) for x in args[0:2]),
             )
-        if len(args) > 1:
-            if args[1] > interface_version()[1]:
-                raise RuntimeError(
-                    "Framework interface version {} is an older revision than the required version {}".format(
-                        ".".join(str(x) for x in interface_version()[0:2]),
-                        ".".join(str(x) for x in args[0:2]),
-                    )
-                )
+        )
 
 
 class NonInheritable:
@@ -218,4 +213,4 @@ def clear_cache(complete=True):
                 os.unlink(cache_filename)
         os.unlink(os.path.join(constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME))
     except FileNotFoundError:
-        vollog.log(constants.LOGLEVEL_VVVV, "Attempting to clear a non-existant cache")
+        vollog.log(constants.LOGLEVEL_VVVV, "Attempting to clear a non-existent cache")

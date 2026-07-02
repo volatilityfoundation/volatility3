@@ -3,7 +3,7 @@
 #
 import logging
 import ntpath
-from typing import List, Type, Optional
+from typing import List, Type, Optional, Iterator, Tuple
 
 from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
@@ -18,7 +18,9 @@ class PEDump(interfaces.plugins.PluginInterface):
     """Allows extracting PE Files from a specific address in a specific address space"""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+
+    # 2.0.0 - changed the signature of `dump_kernel_pe_at_base`
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -30,7 +32,10 @@ class PEDump(interfaces.plugins.PluginInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="pslist", component=pslist.PsList, version=(2, 0, 0)
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="modules", component=modules.Modules, version=(3, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -145,9 +150,19 @@ class PEDump(interfaces.plugins.PluginInterface):
         )
 
     @classmethod
-    def dump_kernel_pe_at_base(cls, context, kernel, pe_table_name, open_method, base):
+    def dump_kernel_pe_at_base(
+        cls,
+        context: interfaces.context.ContextInterface,
+        kernel_module_name: str,
+        pe_table_name: str,
+        open_method: Type[interfaces.plugins.FileHandlerInterface],
+        base: int,
+    ) -> Iterator[Tuple[int, str, str]]:
+        """
+        Extracts a PE file from kernel memory at the given base address
+        """
         session_layers = modules.Modules.get_session_layers(
-            context, kernel.layer_name, kernel.symbol_table_name
+            context=context, kernel_module_name=kernel_module_name
         )
 
         session_layer_name = modules.Modules.find_session_layer(
@@ -182,8 +197,7 @@ class PEDump(interfaces.plugins.PluginInterface):
 
         for proc in pslist.PsList.list_processes(
             context=context,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            kernel_module_name=kernel.name,
             filter_func=filter_func,
         ):
             pid = proc.UniqueProcessId
@@ -224,7 +238,11 @@ class PEDump(interfaces.plugins.PluginInterface):
 
         if self.config["kernel_module"]:
             pe_files = self.dump_kernel_pe_at_base(
-                self.context, kernel, pe_table_name, self.open, self.config["base"]
+                context=self.context,
+                kernel_module_name=self.config["kernel"],
+                pe_table_name=pe_table_name,
+                open_method=self.open,
+                base=self.config["base"],
             )
         else:
             filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))

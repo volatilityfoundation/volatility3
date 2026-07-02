@@ -23,7 +23,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for processes present in a particular windows memory image."""
 
     _required_framework_version = (2, 3, 1)
-    _version = (1, 1, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -33,11 +33,19 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="info", component=info.Info, version=(1, 0, 0)
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
+            ),
+            requirements.VersionRequirement(
+                name="info", component=info.Info, version=(2, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="poolscanner", component=poolscanner.PoolScanner, version=(3, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -141,29 +149,29 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def scan_processes(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
-        filter_func: Callable[
-            [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: False,
+        kernel_module_name: str,
+        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: (
+            False
+        ),
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Scans for processes using the poolscanner module and constraints.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the module for the kernel
 
         Returns:
             A list of processes found by scanning the `layer_name` layer for process pool signatures
         """
 
+        kernel = context.modules[kernel_module_name]
+
         constraints = poolscanner.PoolScanner.builtin_constraints(
-            symbol_table, [b"Pro\xe3", b"Proc"]
+            kernel.symbol_table_name, [b"Pro\xe3", b"Proc"]
         )
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
-            context, layer_name, symbol_table, constraints
+            context, kernel_module_name, constraints
         ):
             _constraint, mem_object, _header = result
             if not filter_func(mem_object):
@@ -173,16 +181,14 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def virtual_process_from_physical(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
         proc: interfaces.objects.ObjectInterface,
     ) -> Optional[interfaces.objects.ObjectInterface]:
         """Returns a virtual process from a physical addressed one
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the module inside the kernel
             proc: the process object with physical address
 
         Returns:
@@ -190,12 +196,9 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         """
 
-        version = cls.get_osversion(context, layer_name, symbol_table)
+        ntkrnlmp = context.modules[kernel_module_name]
 
-        # If it's WinXP->8.1 we have now a physical process address.
-        # We'll use the first thread to bounce back to the virtual process
-        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
-        ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
+        version = cls.get_osversion(context, kernel_module_name)
 
         tleoffset = ntkrnlmp.get_type("_ETHREAD").relative_child_offset(
             "ThreadListEntry"
@@ -205,7 +208,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         # If (and only if) we're dealing with 64-bit Windows 7 SP1
         # then add the other commonly seen member offset to the list
-        bits = context.layers[layer_name].bits_per_register
+        bits = context.layers[ntkrnlmp.layer_name].bits_per_register
         if version == (6, 1, 7601) and bits == 64:
             offsets.append(tleoffset + 8)
 
@@ -222,7 +225,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             # Sanity check the bounce.
             # This compares the original offset with the new one (translated from virtual layer)
             (_, _, ph_offset, _, _) = list(
-                context.layers[layer_name].mapping(
+                context.layers[ntkrnlmp.layer_name].mapping(
                     offset=virtual_process.vol.offset, length=0
                 )
             )[0]
@@ -234,23 +237,20 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def get_osversion(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
     ) -> Tuple[int, int, int]:
         """Returns the complete OS version (MAJ,MIN,BUILD)
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
-
+            kernel_module_name: The name of the module for the kernel
         Returns:
             A tuple with (MAJ,MIN,BUILD)
         """
-        kuser = info.Info.get_kuser_structure(context, layer_name, symbol_table)
+        kuser = info.Info.get_kuser_structure(context, kernel_module_name)
         nt_major_version = int(kuser.NtMajorVersion)
         nt_minor_version = int(kuser.NtMinorVersion)
-        vers = info.Info.get_version_structure(context, layer_name, symbol_table)
+        vers = info.Info.get_version_structure(context, kernel_module_name)
         build = vers.MinorVersion
         return (nt_major_version, nt_minor_version, build)
 
@@ -265,8 +265,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         for proc in self.scan_processes(
             self.context,
-            kernel.layer_name,
-            kernel.symbol_table_name,
+            self.config["kernel"],
             filter_func=pslist.PsList.create_pid_filter(self.config.get("pid", None)),
         ):
             file_output = "Disabled"
@@ -278,8 +277,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     try:
                         vproc = self.virtual_process_from_physical(
                             self.context,
-                            kernel.layer_name,
-                            kernel.symbol_table_name,
+                            self.config["kernel"],
                             proc,
                         )
                     except exceptions.PagedInvalidAddressException:

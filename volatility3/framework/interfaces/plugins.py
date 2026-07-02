@@ -112,8 +112,6 @@ class PluginInterface(
     # Be careful with inheritance around this (We default to requiring a version which doesn't exist, so it must be set)
     _required_framework_version: Tuple[int, int, int] = (0, 0, 0)
     """The _version variable is a quick way for plugins to define their current interface, it should follow SemVer rules"""
-    additional_description: str = None
-    """Display additional description of the plugin after the description of the arguments. See: https://docs.python.org/3/library/argparse.html#epilog"""
 
     def __init__(
         self,

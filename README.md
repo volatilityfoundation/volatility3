@@ -14,9 +14,32 @@ technical and performance challenges associated with the original
 code base that became apparent over the previous 10 years. Another benefit
 of the rewrite is that Volatility 3 could be released under a custom
 license that was more aligned with the goals of the Volatility community,
-the Volatility Software License (VSL). See the 
-[LICENSE](https://www.volatilityfoundation.org/license/vsl-v1.0) file for 
+the Volatility Software License (VSL). See the
+[LICENSE](https://www.volatilityfoundation.org/license/vsl-v1.0) file for
 more details.
+
+## Quick Start
+
+1. Install the required dependencies:
+
+    ```shell
+    pip install --user -e ".[full]"
+    ```
+
+2. See available options:
+
+    ```shell
+    vol -h
+    ```
+
+3. To get more information on a Windows memory sample and to make sure Volatility supports that sample type, run `vol -f <imagepath> windows.info`:
+
+    ```shell
+    vol -f /home/user/samples/stuxnet.vmem windows.info
+    ```
+
+4. Run some other plugins. The `-f` or `--single-location` is not strictly required, but most plugins expect a single sample.
+Some also require/accept other options.  Run `vol <plugin> -h` for more information on a particular command.
 
 ## Installing
 
@@ -35,41 +58,26 @@ The latest stable version of Volatility will always be the `stable` branch of th
 git clone https://github.com/volatilityfoundation/volatility3.git
 cd volatility3/
 python3 -m venv venv && . venv/bin/activate
-pip install -e .[dev]
+pip install -e ".[dev]"
 ```
-
-## Quick Start
-
-1. Install Volatility 3 as documented in the Installing section of the readme.
-
-2. See available options:
-
-    ```shell
-    vol -h
-    ```
-
-3. To get more information on a Windows memory sample and to make sure Volatility supports that sample type, run `vol -f <imagepath> windows.info`:
-
-    ```shell
-    vol -f /home/user/samples/stuxnet.vmem windows.info
-    ```
-
-4. Run some other plugins. The `-f` or `--single-location` is not strictly required, but most plugins expect a single sample.
-Some also require/accept other options.  Run `vol <plugin> -h` for more information on a particular command.
 
 ## Symbol Tables
 
 Symbol table packs for the various operating systems are available for download at:
 
-<https://downloads.volatilityfoundation.org/volatility3/symbols/windows.zip>  
-<https://downloads.volatilityfoundation.org/volatility3/symbols/mac.zip>  
-<https://downloads.volatilityfoundation.org/volatility3/symbols/linux.zip>  
+[windows.zip](https://github.com/volatilityfoundation/volatility3-test-data/releases/download/v0.0.1/windows.zip)
+
+[mac.zip](https://github.com/volatilityfoundation/volatility3-test-data/releases/download/v0.0.1/mac.zip)
+
+[linux.zip](https://github.com/volatilityfoundation/volatility3-test-data/releases/download/v0.0.1/linux.zip)
 
 The hashes to verify whether any of the symbol pack files have downloaded successfully or have changed can be found at:
 
-<https://downloads.volatilityfoundation.org/volatility3/symbols/SHA256SUMS>  
-<https://downloads.volatilityfoundation.org/volatility3/symbols/SHA1SUMS>  
-<https://downloads.volatilityfoundation.org/volatility3/symbols/MD5SUMS>  
+[SHA256SUMS](https://raw.githubusercontent.com/volatilityfoundation/volatility3-test-data/refs/tags/v0.0.1/symbols/SHA256SUMS)
+
+[SHA1SUMS](https://raw.githubusercontent.com/volatilityfoundation/volatility3-test-data/refs/tags/v0.0.1/symbols/SHA1SUMS)
+
+[MD5SUMS](https://raw.githubusercontent.com/volatilityfoundation/volatility3-test-data/refs/tags/v0.0.1/symbols/MD5SUMS)
 
 Symbol tables zip files must be placed, as named, into the `volatility3/symbols` directory (or just the symbols directory next to the executable file).
 
@@ -88,7 +96,7 @@ The latest generated copy of the documentation can be found at: <https://volatil
 
 ## Licensing and Copyright
 
-Copyright (C) 2007-2025 Volatility Foundation
+Copyright (C) 2007-2026 Volatility Foundation
 
 All Rights Reserved
 

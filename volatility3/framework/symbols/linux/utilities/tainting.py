@@ -93,8 +93,14 @@ class Tainting(interfaces.configuration.VersionableInterface):
         ):
             if is_module and not taint_flag.module:
                 continue
-            c_true = chr(taint_flag.c_true)
-            c_false = chr(taint_flag.c_false)
+
+            try:
+                c_true = chr(taint_flag.c_true)
+                c_false = chr(taint_flag.c_false)
+            except ValueError:
+                # thrown when the c_true or c_false values are out of range
+                continue
+
             if taints & (1 << taint_bit):
                 taints_string += c_true
             elif c_false != " ":

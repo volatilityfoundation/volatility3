@@ -14,7 +14,7 @@ class FileScan(interfaces.plugins.PluginInterface):
     """Scans for file objects present in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 1)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -24,8 +24,8 @@ class FileScan(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="poolscanner", plugin=poolscanner.PoolScanner, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="poolscanner", component=poolscanner.PoolScanner, version=(3, 0, 0)
             ),
         ]
 
@@ -33,36 +33,32 @@ class FileScan(interfaces.plugins.PluginInterface):
     def scan_files(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        symbol_table: str,
+        kernel_module_name: str,
     ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Scans for file objects using the poolscanner module and constraints.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            symbol_table: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the module for the kernel
 
         Returns:
             A list of File objects as found from the `layer_name` layer based on File pool signatures
         """
 
+        kernel = context.modules[kernel_module_name]
+
         constraints = poolscanner.PoolScanner.builtin_constraints(
-            symbol_table, [b"Fil\xe5", b"File"]
+            kernel.symbol_table_name, [b"Fil\xe5", b"File"]
         )
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
-            context, layer_name, symbol_table, constraints
+            context, kernel_module_name, constraints
         ):
             _constraint, mem_object, _header = result
             yield mem_object
 
     def _generator(self):
-        kernel = self.context.modules[self.config["kernel"]]
-
-        for fileobj in self.scan_files(
-            self.context, kernel.layer_name, kernel.symbol_table_name
-        ):
+        for fileobj in self.scan_files(self.context, self.config["kernel"]):
             try:
                 file_name = fileobj.FileName.String
             except exceptions.InvalidAddressException:

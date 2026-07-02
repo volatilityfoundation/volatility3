@@ -17,8 +17,8 @@ vollog = logging.getLogger(__name__)
 class VmaYaraScan(interfaces.plugins.PluginInterface):
     """Scans all virtual memory areas for tasks using yara."""
 
-    _required_framework_version = (2, 4, 0)
-    _version = (1, 0, 2)
+    _required_framework_version = (2, 22, 0)
+    _version = (1, 0, 4)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -30,11 +30,11 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                 description="Process IDs to include (all other processes are excluded)",
                 optional=True,
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(4, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="yarascan", plugin=yarascan.YaraScan, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="yarascan", component=yarascan.YaraScan, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="yarascanner", component=yarascan.YaraScanner, version=(2, 0, 0)
@@ -97,16 +97,26 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                 for offset, rule_name, name, value in scanner(
                     proc_layer.read(start, size, pad=True), start
                 ):
-                    yield 0, (
-                        format_hints.Hex(offset),
-                        task.tgid,
-                        rule_name,
-                        name,
-                        value,
+                    layer_data = renderers.LayerData(
+                        context=self.context,
+                        offset=offset,
+                        layer_name=proc_layer.name,
+                        length=len(value),
+                    )
+                    yield (
+                        0,
+                        (
+                            format_hints.Hex(offset),
+                            task.tgid,
+                            rule_name,
+                            name,
+                            layer_data,
+                        ),
                     )
 
-    @staticmethod
+    @classmethod
     def get_vma_maps(
+        cls,
         task: interfaces.objects.ObjectInterface,
     ) -> Iterable[Tuple[int, int]]:
         """Creates a map of start/end addresses for each virtual memory area in a task.
@@ -129,7 +139,7 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
                 ("PID", int),
                 ("Rule", str),
                 ("Component", str),
-                ("Value", bytes),
+                ("Value", renderers.LayerData),
             ],
             self._generator(),
         )

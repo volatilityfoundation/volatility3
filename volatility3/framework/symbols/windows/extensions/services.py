@@ -4,7 +4,7 @@
 
 from volatility3.framework import objects, interfaces
 from volatility3.framework import exceptions
-from volatility3.framework.symbols.wrappers import Flags
+from volatility3.framework.symbols import wrappers
 from volatility3.framework import renderers
 from typing import Union
 
@@ -91,7 +91,7 @@ class SERVICE_RECORD(objects.StructType):
             "SERVICE_INTERACTIVE_PROCESS": 256,
         }
 
-        type_flags = Flags(choices=SERVICE_TYPE_FLAGS)
+        type_flags = wrappers.Flags(choices=SERVICE_TYPE_FLAGS)
         return "|".join(type_flags(self.Type))
 
     def traverse(self):

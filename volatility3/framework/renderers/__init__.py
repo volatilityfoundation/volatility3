@@ -6,8 +6,10 @@
 Renderers display the unified output format in some manner (be it text
 or file or graphical output
 """
+
 import collections
 import collections.abc
+import dataclasses
 import datetime
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
@@ -22,15 +24,27 @@ class UnreadableValue(interfaces.renderers.BaseAbsentValue):
     """Class that represents values which are empty because the data cannot be
     read."""
 
+    def __str__(self) -> str:
+        """Fallback method for rendering basic types"""
+        return "-"
+
 
 class UnparsableValue(interfaces.renderers.BaseAbsentValue):
     """Class that represents values which are empty because the data cannot be
     interpreted correctly."""
 
+    def __str__(self) -> str:
+        """Fallback method for rendering basic types"""
+        return "-"
+
 
 class NotApplicableValue(interfaces.renderers.BaseAbsentValue):
     """Class that represents values which are empty because they don't make
     sense for this node."""
+
+    def __str__(self) -> str:
+        """Fallback method for rendering basic types"""
+        return "N/A"
 
 
 class NotAvailableValue(interfaces.renderers.BaseAbsentValue):
@@ -44,6 +58,70 @@ class NotAvailableValue(interfaces.renderers.BaseAbsentValue):
     unreadable or unparsable). Unreadable and Unparsable should be used
     in preference, and only if neither fits should this be used.
     """
+
+    def __str__(self) -> str:
+        """Fallback method for rendering basic types"""
+        return "N/A"
+
+
+##########
+### Basic Types
+
+
+class Disassembly(interfaces.renderers.BasicType):
+    """A class to indicate that the bytes provided should be disassembled
+    (based on the architecture)"""
+
+    possible_architectures = ["intel", "intel64", "arm", "arm64"]
+
+    def __init__(
+        self, data: bytes, offset: int = 0, architecture: str = "intel64"
+    ) -> None:
+        self.data = data
+        self.architecture = None
+        if architecture in self.possible_architectures:
+            self.architecture = architecture
+        if not isinstance(offset, int):
+            raise TypeError("Offset must be an integer type")
+        self.offset = offset
+
+    def __str__(self) -> str:
+        """Fallback method of rendering"""
+        return str(self.data)
+
+
+@dataclasses.dataclass
+class LayerData(interfaces.renderers.BasicType):
+    """Layer data
+
+    This requires the context to be passed in, in case plugins want to use multiple contexts
+    and to ensure the TreeGrid interface doesn't change, since this would break all existing plugins
+    """
+
+    context: "interfaces.context.ContextInterface"
+    layer_name: str
+    offset: int
+    length: int
+    no_surrounding: bool = False
+
+    @staticmethod
+    def from_object(
+        object: "interfaces.objects.ObjectInterface",
+        size: Optional[int] = None,
+        no_surrounding: bool = True,
+    ):
+        return LayerData(
+            context=object._context,
+            layer_name=object.vol.layer_name,
+            offset=object.vol.offset,
+            length=size or object.vol.size,
+            no_surrounding=no_surrounding,
+        )
+
+    def __str__(self) -> str:
+        """Fallback method of rendering"""
+        data = self.context.layers[self.layer_name].read(self.offset, self.length, True)
+        return str(data)
 
 
 class TreeNode(interfaces.renderers.TreeNode):

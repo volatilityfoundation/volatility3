@@ -8,6 +8,7 @@ These hints allow a plugin to indicate how they would like data from a particula
 
 Text renderers should attempt to honour all hints provided in this module where possible
 """
+
 from typing import Type, Union
 
 from volatility3.framework import interfaces

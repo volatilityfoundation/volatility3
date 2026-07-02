@@ -19,9 +19,7 @@ vollog = logging.getLogger(__name__)
 def createservicesid(svc) -> str:
     """Calculate the Service SID"""
     uni = "".join([c + "\x00" for c in svc])
-    sha = hashlib.sha1(
-        uni.upper().encode("utf-8")
-    ).digest()  # pylint: disable-msg=E1101
+    sha = hashlib.sha1(uni.upper().encode("utf-8")).digest()  # pylint: disable-msg=E1101
     dec = list()
     for i in range(5):
         ## The use of struct here is OK. It doesn't make much sense
@@ -68,19 +66,17 @@ class GetServiceSIDs(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="hivelist", plugin=hivelist.HiveList, version=(1, 0, 0)
+            requirements.VersionRequirement(
+                name="hivelist", component=hivelist.HiveList, version=(2, 0, 0)
             ),
         ]
 
     def _generator(self):
-        kernel = self.context.modules[self.config["kernel"]]
         # Get the system hive
         for hive in hivelist.HiveList.list_hives(
             context=self.context,
             base_config_path=self.config_path,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            kernel_module_name=self.config["kernel"],
             filter_string="machine\\system",
             hive_offsets=None,
         ):
@@ -90,22 +86,30 @@ class GetServiceSIDs(interfaces.plugins.PluginInterface):
             except (
                 KeyError,
                 exceptions.InvalidAddressException,
-                registry.RegistryFormatException,
+                registry.RegistryException,
             ):
                 try:
                     services = hive.get_key(r"ControlSet001\Services")
                 except (
                     KeyError,
                     exceptions.InvalidAddressException,
-                    registry.RegistryFormatException,
+                    registry.RegistryException,
                 ):
                     continue
 
             if services:
                 for s in services.get_subkeys():
-                    if s.get_name() not in self.servicesids.values():
-                        sid = createservicesid(s.get_name())
-                        yield (0, (sid, s.get_name()))
+                    try:
+                        sid_name = s.get_name()
+                    except (
+                        exceptions.InvalidAddressException,
+                        registry.RegistryException,
+                    ):
+                        continue
+
+                    if sid_name not in self.servicesids.values():
+                        sid = createservicesid(sid_name)
+                        yield (0, (sid, sid_name))
 
     def run(self):
         return renderers.TreeGrid([("SID", str), ("Service", str)], self._generator())

@@ -42,11 +42,16 @@ class VerInfo(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="modules", plugin=modules.Modules, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="modules", component=modules.Modules, version=(3, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="page_start_scanner",
+                component=scanners.BytesScanner,
+                version=(1, 0, 0),
             ),
             requirements.BooleanRequirement(
                 name="extensive",
@@ -176,7 +181,12 @@ class VerInfo(interfaces.plugins.PluginInterface):
                 (major, minor, product, build) = self.get_version_information(
                     self._context, pe_table_name, session_layer_name, mod.DllBase
                 )
-            except (exceptions.InvalidAddressException, TypeError, AttributeError):
+            except (
+                exceptions.InvalidAddressException,
+                ValueError,
+                TypeError,
+                AttributeError,
+            ):
                 (major, minor, product, build) = [renderers.UnreadableValue()] * 4
                 if (
                     not isinstance(BaseDllName, renderers.UnreadableValue)
@@ -253,19 +263,15 @@ class VerInfo(interfaces.plugins.PluginInterface):
                 )
 
     def run(self):
-        kernel = self.context.modules[self.config["kernel"]]
-
         procs = pslist.PsList.list_processes(
-            self.context, kernel.layer_name, kernel.symbol_table_name
+            context=self.context, kernel_module_name=self.config["kernel"]
         )
 
-        mods = modules.Modules.list_modules(
-            self.context, kernel.layer_name, kernel.symbol_table_name
-        )
+        mods = modules.Modules.list_modules(self.context, self.config["kernel"])
 
         # populate the session layers for kernel modules
         session_layers = modules.Modules.get_session_layers(
-            self.context, kernel.layer_name, kernel.symbol_table_name
+            context=self.context, kernel_module_name=self.config["kernel"]
         )
 
         return renderers.TreeGrid(

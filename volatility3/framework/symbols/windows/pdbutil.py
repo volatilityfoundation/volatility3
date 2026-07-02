@@ -16,7 +16,6 @@ from volatility3 import symbols
 from volatility3.framework import constants, contexts, exceptions, interfaces
 from volatility3.framework.automagic import symbol_cache
 from volatility3.framework.configuration import requirements
-from volatility3.framework.configuration.requirements import SymbolTableRequirement
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import pdbconv
 
@@ -140,7 +139,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         requirement_name = interfaces.configuration.path_head(config_path)
 
         # Construct the appropriate symbol table
-        requirement = SymbolTableRequirement(
+        requirement = requirements.SymbolTableRequirement(
             name=requirement_name, description="PDBUtility generated symbol table"
         )
         requirement.construct(context, parent_config_path)
@@ -290,7 +289,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
                         )
                 break
             except PermissionError:
-                vollog.warning(
+                vollog.debug(
                     f"Cannot write necessary symbol file, please check permissions on {potential_output_filename}"
                 )
                 continue
@@ -409,6 +408,12 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         _, symbol_table_name = cls._modtable_from_pdb(
             context, config_path, layer_name, pdb_name, module_offset, module_size
         )
+
+        if symbol_table_name is None:
+            raise exceptions.SymbolSpaceError(
+                f"Symbol table could not be reconstructed for module {pdb_name}"
+            )
+
         return symbol_table_name
 
     @classmethod
@@ -439,7 +444,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
         )
 
         if not guids:
-            raise exceptions.VolatilityException(
+            raise exceptions.SymbolSpaceError(
                 f"Did not find GUID of {pdb_name} in module @ 0x{module_offset:x}!"
             )
 
@@ -520,6 +525,10 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
     .. note:: The pdb_names must be a list of byte strings, unicode strs will not match against the data scanned
     """
 
+    _version = (1, 0, 0)
+
+    _required_framework_version = (2, 27, 0)
+
     overlap = 0x4000
     """The size of overlap needed for the signature to ensure data cannot hide between two scanned chunks"""
     thread_safe = True
@@ -543,9 +552,7 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
         )
         for match in re.finditer(pattern, data, flags=re.DOTALL):
             pdb_name = data[
-                match.start(0)
-                + 4
-                + self._RSDS_format.size : match.start(0)
+                match.start(0) + 4 + self._RSDS_format.size : match.start(0)
                 + len(match.group())
                 - 1
             ]

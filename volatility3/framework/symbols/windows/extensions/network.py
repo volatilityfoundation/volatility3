@@ -4,17 +4,15 @@
 
 import logging
 import socket
-from typing import Dict, Tuple, List, Union, Optional
+from typing import Dict, List, Optional, Tuple, Union
 
-from volatility3.framework import exceptions
-from volatility3.framework import objects, interfaces
-from volatility3.framework.objects import Array
+from volatility3.framework import exceptions, interfaces, objects
 from volatility3.framework.renderers import conversion
 
 vollog = logging.getLogger(__name__)
 
 
-def inet_ntop(address_family: int, packed_ip: Union[List[int], Array]) -> str:
+def inet_ntop(address_family: int, packed_ip: Union[List[int], objects.Array]) -> str:
     if address_family in [socket.AF_INET6, socket.AF_INET]:
         try:
             return socket.inet_ntop(address_family, bytes(packed_ip))

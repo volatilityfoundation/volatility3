@@ -21,7 +21,9 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Traverses network tracking structures present in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+
+    # 2.0.0 changed the signature of `get_tcpip_module`
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -32,16 +34,21 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
-                name="netscan", component=netscan.NetScan, version=(1, 0, 0)
+                name="netscan", component=netscan.NetScan, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="modules", component=modules.Modules, version=(2, 0, 0)
+                name="modules", component=modules.Modules, version=(3, 0, 0)
+            ),
+            requirements.VersionRequirement(
+                name="timeliner",
+                component=timeliner.TimeLinerInterface,
+                version=(1, 0, 0),
             ),
             requirements.VersionRequirement(
                 name="pdbutil", component=pdbutil.PDBUtility, version=(1, 0, 0)
             ),
             requirements.VersionRequirement(
-                name="info", component=info.Info, version=(1, 0, 0)
+                name="info", component=info.Info, version=(2, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="verinfo", component=verinfo.VerInfo, version=(1, 0, 0)
@@ -234,20 +241,18 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def get_tcpip_module(
         cls,
         context: interfaces.context.ContextInterface,
-        layer_name: str,
-        nt_symbols: str,
+        kernel_module_name: str,
     ) -> Optional[interfaces.objects.ObjectInterface]:
         """Uses `windows.modules` to find tcpip.sys in memory.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            nt_symbols: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the module for the kernel
 
         Returns:
             The constructed tcpip.sys module object.
         """
-        for mod in modules.Modules.list_modules(context, layer_name, nt_symbols):
+        for mod in modules.Modules.list_modules(context, kernel_module_name):
             if mod.BaseDllName.get_string() == "tcpip.sys":
                 vollog.debug(f"Found tcpip.sys image base @ 0x{mod.DllBase:x}")
                 return mod
@@ -319,7 +324,9 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         Returns:
             The list of TCP endpoint objects from the `layer_name` layer's `PartitionTable`
         """
-        if symbols.symbol_table_is_64bit(context, net_symbol_table):
+        if symbols.symbol_table_is_64bit(
+            context=context, symbol_table_name=net_symbol_table
+        ):
             alignment = 0x10
         else:
             alignment = 8
@@ -627,12 +634,10 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         kernel = self.context.modules[self.config["kernel"]]
 
         netscan_symbol_table = netscan.NetScan.create_netscan_symbol_table(
-            self.context, kernel.layer_name, kernel.symbol_table_name, self.config_path
+            self.context, self.config["kernel"], self.config_path
         )
 
-        tcpip_module = self.get_tcpip_module(
-            self.context, kernel.layer_name, kernel.symbol_table_name
-        )
+        tcpip_module = self.get_tcpip_module(self.context, self.config["kernel"])
         if not tcpip_module:
             vollog.error("Unable to locate symbols for the memory image's tcpip module")
 
@@ -647,6 +652,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             )
         except exceptions.VolatilityException:
             vollog.error("Unable to locate symbols for the memory image's tcpip module")
+            return
 
         for netw_obj in self.list_sockets(
             self.context,

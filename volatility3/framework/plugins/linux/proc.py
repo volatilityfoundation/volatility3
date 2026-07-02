@@ -21,7 +21,7 @@ class Maps(plugins.PluginInterface):
     """Lists all memory maps for all processes."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 2)
+    _version = (1, 0, 3)
 
     MAXSIZE_DEFAULT = 1024 * 1024 * 1024  # 1 Gb
 
@@ -34,8 +34,8 @@ class Maps(plugins.PluginInterface):
                 description="Linux kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(4, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(4, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -70,9 +70,9 @@ class Maps(plugins.PluginInterface):
     def list_vmas(
         cls,
         task: interfaces.objects.ObjectInterface,
-        filter_func: Callable[
-            [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: True,
+        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: (
+            True
+        ),
     ) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Lists the Virtual Memory Areas of a specific process.
 
@@ -83,18 +83,24 @@ class Maps(plugins.PluginInterface):
         Returns:
             Yields vmas based on the task and filtered based on the filter function
         """
-        if task.mm:
-            for vma in task.mm.get_vma_iter():
-                if filter_func(vma):
-                    yield vma
-                else:
-                    vollog.debug(
-                        f"Excluded vma at offset {vma.vol.offset:#x} for pid {task.pid} due to filter_func"
-                    )
-        else:
+        mm_pointer = task.mm
+        if not mm_pointer:
             vollog.debug(
-                f"Excluded pid {task.pid} as there is no mm member. It is likely a kernel thread."
+                f"Excluded pid {task.pid} as there is no mm member. It is likely a kernel thread"
             )
+            return
+
+        if not mm_pointer.is_readable():
+            vollog.error(f"Task {task.pid} has an invalid mm member")
+            return
+
+        for vma in mm_pointer.get_vma_iter():
+            if filter_func(vma):
+                yield vma
+            else:
+                vollog.debug(
+                    f"Excluded vma at offset {vma.vol.offset:#x} for pid {task.pid} due to filter_func"
+                )
 
     @classmethod
     def vma_dump(
@@ -174,31 +180,32 @@ class Maps(plugins.PluginInterface):
                 ]
 
                 # if any of the user supplied addresses would fall within this vma return true
-                if addrs_in_vma:
-                    return True
-                else:
-                    return False
+                return bool(addrs_in_vma)
 
             vma_filter_func = vma_filter_function
+
         for task in tasks:
-            if not task.mm:
+            if not (task.mm and task.mm.is_readable()):
                 continue
             name = utility.array_to_string(task.comm)
 
             for vma in self.list_vmas(task, filter_func=vma_filter_func):
                 flags = vma.get_protection()
                 page_offset = vma.get_page_offset()
-                major = 0
-                minor = 0
-                inode = 0
 
-                if vma.vm_file != 0:
+                inode_num = None
+                try:
                     dentry = vma.vm_file.get_dentry()
-                    if dentry != 0:
-                        inode_object = dentry.d_inode
-                        major = inode_object.i_sb.major
-                        minor = inode_object.i_sb.minor
-                        inode = inode_object.i_ino
+                    inode_ptr = dentry.d_inode
+                    inode_num = inode_ptr.i_ino
+                    major = inode_ptr.i_sb.major
+                    minor = inode_ptr.i_sb.minor
+                except exceptions.InvalidAddressException:
+                    if not inode_num:
+                        inode_num = 0
+                    major = 0
+                    minor = 0
+
                 path = vma.get_name(self.context, task)
 
                 file_output = "Disabled"
@@ -238,8 +245,8 @@ class Maps(plugins.PluginInterface):
                         format_hints.Hex(page_offset),
                         major,
                         minor,
-                        inode,
-                        path,
+                        inode_num,
+                        path or renderers.NotAvailableValue(),
                         file_output,
                     ),
                 )

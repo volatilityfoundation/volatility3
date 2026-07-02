@@ -28,3 +28,5 @@ PROCESSOR_START_BLOCK_LM_TARGET_OFFSET = (
 
 # CR3 register within structures describing initial processor state to be started
 PROCESSOR_START_BLOCK_CR3_OFFSET = 0xA0  # PROCESSOR_START_BLOCK->ProcessorState->SpecialRegisters->Cr3, ULONG64 8 bytes
+
+MAX_PID = 0xFFFFFFFC

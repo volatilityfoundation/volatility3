@@ -3,6 +3,7 @@
 #
 """A module containing a collection of plugins that produce data typically
 found in Mac's mount command."""
+
 from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
@@ -11,8 +12,8 @@ from volatility3.framework.symbols import mac
 
 
 class Mount(plugins.PluginInterface):
-    """A module containing a collection of plugins that produce data typically
-    found in Mac's mount command"""
+    """A module containing a collection of plugins that produce data typically \
+found in Mac's mount command"""
 
     _required_framework_version = (2, 0, 0)
 

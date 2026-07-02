@@ -4,6 +4,7 @@
 
 import logging
 from typing import Iterable, List, Tuple
+import datetime
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
@@ -17,8 +18,8 @@ vollog = logging.getLogger(__name__)
 class VadYaraScan(interfaces.plugins.PluginInterface):
     """Scans all the Virtual Address Descriptor memory maps using yara."""
 
-    _required_framework_version = (2, 4, 0)
-    _version = (1, 1, 1)
+    _required_framework_version = (2, 22, 0)
+    _version = (1, 1, 4)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -29,14 +30,14 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 description="Windows kernel",
                 architectures=["Intel32", "Intel64"],
             ),
-            requirements.PluginRequirement(
-                name="pslist", plugin=pslist.PsList, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="pslist", component=pslist.PsList, version=(3, 0, 0)
             ),
             requirements.VersionRequirement(
                 name="yarascanner", component=yarascan.YaraScanner, version=(2, 0, 0)
             ),
-            requirements.PluginRequirement(
-                name="yarascan", plugin=yarascan.YaraScan, version=(2, 0, 0)
+            requirements.VersionRequirement(
+                name="yarascan", component=yarascan.YaraScan, version=(2, 0, 0)
             ),
             requirements.ListRequirement(
                 name="pid",
@@ -53,8 +54,6 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
         return yarascan_requirements + vadyarascan_requirements
 
     def _generator(self):
-        kernel = self.context.modules[self.config["kernel"]]
-
         rules = yarascan.YaraScan.process_yara_options(dict(self.config))
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
@@ -63,8 +62,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
         for task in pslist.PsList.list_processes(
             context=self.context,
-            layer_name=kernel.layer_name,
-            symbol_table=kernel.symbol_table_name,
+            kernel_module_name=self.config["kernel"],
             filter_func=filter_func,
         ):
             layer_name = task.add_process_layer()
@@ -84,7 +82,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
             if not vad_maps_to_scan:
                 vollog.warning(
-                    f"No VADs were found for task {task.UniqueProcessID}, not scanning"
+                    f"No VADs were found for task {task.UniqueProcessId}, not scanning"
                 )
                 continue
 
@@ -96,16 +94,35 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 for offset, rule_name, name, value in scanner(
                     layer.read(start, size, pad=True), start
                 ):
-                    yield 0, (
-                        format_hints.Hex(offset),
-                        task.UniqueProcessId,
-                        rule_name,
-                        name,
-                        value,
+                    layer_data = renderers.LayerData(
+                        context=self.context,
+                        offset=offset,
+                        layer_name=layer.name,
+                        length=len(value),
+                    )
+                    yield (
+                        0,
+                        (
+                            format_hints.Hex(offset),
+                            task.UniqueProcessId,
+                            task.get_create_time(),
+                            task.InheritedFromUniqueProcessId,
+                            task.ImageFileName.cast(
+                                "string",
+                                max_length=task.ImageFileName.vol.count,
+                                errors="replace",
+                            ),
+                            task.get_session_id(),
+                            task.ActiveThreads,
+                            rule_name,
+                            name,
+                            layer_data,
+                        ),
                     )
 
-    @staticmethod
+    @classmethod
     def get_vad_maps(
+        cls,
         task: interfaces.objects.ObjectInterface,
     ) -> Iterable[Tuple[int, int]]:
         """Creates a map of start/end addresses within a virtual address
@@ -126,9 +143,14 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
             [
                 ("Offset", format_hints.Hex),
                 ("PID", int),
+                ("CreateTime", datetime.datetime),
+                ("PPID", int),
+                ("ImageFileName", str),
+                ("SessionId", int),
+                ("Threads", int),
                 ("Rule", str),
                 ("Component", str),
-                ("Value", bytes),
+                ("Value", renderers.LayerData),
             ],
             self._generator(),
         )
