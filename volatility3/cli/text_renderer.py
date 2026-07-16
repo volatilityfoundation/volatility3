@@ -3,6 +3,7 @@
 #
 import csv
 import datetime
+import itertools
 import json
 import logging
 import random
@@ -623,3 +624,121 @@ class JsonLinesRenderer(JsonRenderer):
         for line in result:
             outfd.write(json.dumps(line, sort_keys=True))
             outfd.write("\n")
+
+
+class MermaidRenderer(CLIRenderer):
+    _type_renderers = {
+        format_hints.Bin: optional(lambda x: f"0b{x:b}"),
+        format_hints.Hex: optional(lambda x: f"0x{x:x}"),
+        format_hints.HexBytes: optional(hex_bytes_as_text),
+        format_hints.MultiTypeData: optional(multitypedata_as_text),
+        interfaces.renderers.Disassembly: optional(display_disassembly),
+        bytes: optional(lambda x: " ".join([f"{b:02x}" for b in x])),
+        datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
+        "default": optional(lambda x: f"{x}"),
+    }
+
+    name = "mermaid"
+    structured_output = True
+
+    @staticmethod
+    def _mermaid_label(text: str) -> str:
+        """Escape a value for use inside a Mermaid node label (``["..."]``).
+
+        Double quotes terminate the label, so they must be replaced with the
+        Mermaid-supported entity. Newlines inside cell renderings are
+        converted to ``<br>`` so each row remains a single Mermaid node.
+        """
+        return text.replace('"', "&quot;").replace("\n", "<br>")
+
+    def get_render_options(self):
+        pass
+
+    def render(self, grid: interfaces.renderers.TreeGrid) -> None:
+        """Render the TreeGrid as a Mermaid ``graph TD`` flowchart.
+
+        The renderer is plugin-agnostic: it derives the parent/child
+        relationship from each node's ``path_depth`` in the grid, rather
+        than from any particular column (such as PID/PPID). This means
+        any tree-shaped plugin output -- pstree, vadwalk, handles tree,
+        future plugins -- renders without modification.
+
+        The algorithm maintains a parent stack while walking the rows in
+        traversal order:
+
+        * descending one or more levels pushes the previously-emitted
+          node onto the stack (once per level descended) so it becomes
+          the current parent;
+        * ascending pops the same number of levels off the stack;
+        * the top of the stack is always the parent of the next emitted
+          node, or empty for a root-level node.
+
+        Args:
+            grid: The TreeGrid object to render
+        """
+        outfd = sys.stdout
+
+        sys.stderr.write("Formatting...\n")
+
+        def format_row(node: interfaces.renderers.TreeNode) -> str:
+            """Build a Mermaid node label from every column of ``node``."""
+            cells = []
+            for column_index, column in enumerate(grid.columns):
+                renderer = self._type_renderers.get(
+                    column.type, self._type_renderers["default"]
+                )
+                value = renderer(node.values[column_index])
+                cells.append(f"{column.name}:{self._mermaid_label(value)}")
+            return "<br>".join(cells)
+
+        rows: List[Tuple[int, str]] = []
+
+        def visitor(
+            node: interfaces.renderers.TreeNode,
+            accumulator: List[Tuple[int, str]],
+        ) -> List[Tuple[int, str]]:
+            accumulator.append((node.path_depth, format_row(node)))
+            return accumulator
+
+        if not grid.populated:
+            grid.populate(visitor, rows)
+        else:
+            grid.visit(node=None, function=visitor, initial_accumulator=rows)
+
+        # Stable, unique per-node IDs. We never reuse a column value (e.g.
+        # PID) because (a) PID is not guaranteed unique across a TreeGrid,
+        # (b) it is plugin-specific, and (c) Mermaid IDs must avoid
+        # characters like parentheses that may appear in column data.
+        node_ids = itertools.count(1)
+
+        parent_stack: List[str] = []
+        prev_depth = 0
+        prev_id: Optional[str] = None
+
+        lines: List[str] = ["graph TD"]
+        for depth, label in rows:
+            node_id = f"n{next(node_ids)}"
+            if prev_id is not None:
+                if depth > prev_depth:
+                    # Descended one or more levels. Push prev_id once per
+                    # level so subsequent pops align even when the tree
+                    # skips levels (e.g. depth 1 -> depth 3).
+                    for _ in range(depth - prev_depth):
+                        parent_stack.append(prev_id)
+                elif depth < prev_depth:
+                    for _ in range(prev_depth - depth):
+                        if parent_stack:
+                            parent_stack.pop()
+                # depth == prev_depth: sibling, keep the same parent
+
+            if parent_stack:
+                parent = parent_stack[-1]
+                lines.append(f'\t{parent} --> {node_id}["{label}"]')
+            else:
+                # Root-level node: declare it on its own.
+                lines.append(f'\t{node_id}["{label}"]')
+
+            prev_id = node_id
+            prev_depth = depth
+
+        outfd.write("\n".join(lines) + "\n")
