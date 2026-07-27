@@ -325,76 +325,27 @@ class GUIExtensions(interfaces.configuration.VersionableInterface):
             )
 
     class tagCLIP(objects.StructType):
-        """A class for clipboard format entries (one per clipboard item)"""
-
-        # TODO: Extend clipboard format mapping if needed.
-        CF_FORMATS = {
-            1: "CF_TEXT",
-            2: "CF_BITMAP",
-            3: "CF_METAFILEPICT",
-            7: "CF_OEMTEXT",
-            8: "CF_DIB",
-            13: "CF_UNICODETEXT",
-            14: "CF_ENHMETAFILE",
-            15: "CF_HDROP",
-            16: "CF_LOCALE",
-            17: "CF_DIBV5",
-        }
+        """A clipboard format entry."""
 
         def get_format_name(self) -> str:
-            """Returns the clipboard format as a human-readable string"""
+            """Returns the symbol enum name, or a descriptive numeric fallback."""
             try:
                 fmt_val = int(self.fmt)
-                return self.CF_FORMATS.get(fmt_val, f"CF_UNKNOWN({fmt_val:#x})")
+                fmt_name = self.fmt.lookup()
+            except ValueError:
+                fmt_name = ""
             except exceptions.InvalidAddressException:
                 return "CF_UNKNOWN"
-
-    class tagCLIPDATA(objects.StructType):
-        """A class for clipboard data objects stored in Windows memory"""
-
-        def get_data(self) -> Optional[bytes]:
-            """Returns the raw clipboard data as bytes"""
-
-            # TODO: Verify abData consistency; future Windows may change tagCLIPDATA layout.
-            try:
-                size = int(self.cbData)
-
-                # TODO: Improve clipboard size validation if needed.
-                MAX_CLIPBOARD_SIZE = 50 * 1024 * 1024  # 50 MiB
-                if size == 0 or size > MAX_CLIPBOARD_SIZE:
-                    return None
-
-                layer = self._context.layers[self.vol.layer_name]
-                return layer.read(self.abData.vol.offset, size, pad=True)
-
-            except exceptions.InvalidAddressException:
-                return None
-
-        def get_text(self, fmt: str) -> Optional[str]:
-            """Returns clipboard data as readable text if format is text-based"""
-            data = self.get_data()
-
-            if data is None:
-                return None
-
-            # TODO: Extend support for more clipboard formats as needed.
-
-            if fmt == "CF_UNICODETEXT":
-                return data.decode("utf-16-le", errors="replace").rstrip("\x00")
-            elif fmt in ("CF_TEXT", "CF_OEMTEXT"):
-                return data.decode("latin-1", errors="replace").rstrip("\x00")
-
-            elif fmt == "CF_HDROP":
-                # File paths stored as null-separated UTF-16 list
-                return data.decode("utf-16-le", errors="replace").rstrip("\x00")
-            return None
+            if fmt_name and not fmt_name.isdecimal():
+                return fmt_name
+            if 0xC000 <= fmt_val <= 0xFFFF:
+                return f"REGISTERED_FORMAT({fmt_val:#x})"
+            return f"CF_UNKNOWN({fmt_val:#x})"
 
     class_types = {
         "tagWINDOWSTATION": tagWINDOWSTATION,
         "tagDESKTOP": tagDESKTOP,
         "tagWND": tagWND,
         "_LARGE_UNICODE_STRING": LARGE_UNICODE_STRING,
-        # Clipboard plugin extensions
-        "tagCLIPDATA": tagCLIPDATA,
         "tagCLIP": tagCLIP,
     }

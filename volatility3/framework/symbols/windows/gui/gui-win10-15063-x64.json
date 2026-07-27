@@ -13653,14 +13653,18 @@
     "tagWINDOWSTATION": {
       "fields": {
         "pClipBase": {
-          "offset": 96,
           "type": {
-            "kind": "pointer",
             "subtype": {
-              "kind": "struct",
-              "name": "tagCLIP"
-            }
-          }
+              "count": 104,
+              "subtype": {
+                "kind": "struct",
+                "name": "tagCLIP"
+              },
+              "kind": "array"
+            },
+            "kind": "pointer"
+          },
+          "offset": 96
         },
         "dwSessionId": {
           "type": {
@@ -18023,30 +18027,6 @@
       },
       "kind": "struct",
       "size": 6
-    },
-    "tagCLIPDATA": {
-      "kind": "struct",
-      "size": 24,
-      "fields": {
-        "cbData": {
-          "offset": 16,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long"
-          }
-        },
-        "abData": {
-          "offset": 20,
-          "type": {
-            "kind": "array",
-            "subtype": {
-              "kind": "base",
-              "name": "unsigned char"
-            },
-            "count": 0
-          }
-        }
-      }
     }
   },
   "base_types": {
