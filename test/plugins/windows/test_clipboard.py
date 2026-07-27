@@ -106,18 +106,18 @@ def test_clipboard_requires_64_bit_kernel():
     assert kernel_requirement.requirements["layer_name"].architectures == ["Intel64"]
 
 
-def test_clipboard_format_handles_non_int_fmt():
-    """If int(self.fmt) is non-convertible (raises), return CF_UNKNOWN."""
+def test_clipboard_format_handles_non_int_fmt_with_lookup():
+    """If int(self.fmt) raises, use a valid non-decimal lookup name."""
 
     class _NonIntFmt:
         def __int__(self):
             raise ValueError("non-int")
 
         def lookup(self):
-            return "CF_I_SHOULD_NOT_BE_USED"
+            return "CF_LOOKUP_FORMAT"
 
     get_format_name = gui.GUIExtensions.tagCLIP.get_format_name
-    assert get_format_name(SimpleNamespace(fmt=_NonIntFmt())) == "CF_UNKNOWN"
+    assert get_format_name(SimpleNamespace(fmt=_NonIntFmt())) == "CF_LOOKUP_FORMAT"
 
 
 def test_clipboard_format_handles_missing_lookup():
