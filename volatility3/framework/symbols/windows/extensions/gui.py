@@ -328,19 +328,34 @@ class GUIExtensions(interfaces.configuration.VersionableInterface):
         """A clipboard format entry."""
 
         def get_format_name(self) -> str:
-            """Returns the symbol enum name, or a descriptive numeric fallback."""
+            """Returns the symbol enum name, or a descriptive numeric fallback.
+
+            Robust against partially-readable or malformed `fmt` objects.
+            """
+            # Try to read numeric value; treat InvalidAddressException as unknown.
             try:
                 fmt_val = int(self.fmt)
-                fmt_name = self.fmt.lookup()
-            except ValueError:
-                fmt_name = ""
             except exceptions.InvalidAddressException:
                 return "CF_UNKNOWN"
+            except Exception:
+                # Non-numeric fmt value (e.g., **int** raises ValueError)
+                fmt_val = None
+
+            # Try to read the enum/string name via lookup() if present.
+            try:
+                fmt_name = self.fmt.lookup()
+            except (AttributeError, ValueError, exceptions.InvalidAddressException):
+                fmt_name = ""
+
             if fmt_name and not fmt_name.isdecimal():
                 return fmt_name
-            if 0xC000 <= fmt_val <= 0xFFFF:
-                return f"REGISTERED_FORMAT({fmt_val:#x})"
-            return f"CF_UNKNOWN({fmt_val:#x})"
+
+            if fmt_val is not None:
+                if 0xC000 <= fmt_val <= 0xFFFF:
+                    return f"REGISTERED_FORMAT({fmt_val:#x})"
+                return f"CF_UNKNOWN({fmt_val:#x})"
+
+            return "CF_UNKNOWN"
 
     class_types = {
         "tagWINDOWSTATION": tagWINDOWSTATION,
