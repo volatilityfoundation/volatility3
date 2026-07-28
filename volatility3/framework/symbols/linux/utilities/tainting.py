@@ -14,7 +14,7 @@ class Tainting(interfaces.configuration.VersionableInterface):
         - kernel: print_tainted
     """
 
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
     _required_framework_version = (2, 0, 0)
 
     framework.require_interface_version(*_required_framework_version)
@@ -91,7 +91,8 @@ class Tainting(interfaces.configuration.VersionableInterface):
         for taint_bit, taint_flag in enumerate(
             cls._get_kernel_taint_flags_list(context, kernel_module_name)
         ):
-            if is_module and not taint_flag.module:
+            # https://lore.kernel.org/all/20251022082938.26670-1-petr.pavlu@suse.com/T/#u: "taint/module: Remove unnecessary taint_flag.module field"
+            if is_module and taint_flag.has_member("module") and not taint_flag.module:
                 continue
 
             try:
