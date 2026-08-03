@@ -337,8 +337,8 @@ class GUIExtensions(interfaces.configuration.VersionableInterface):
                 fmt_val = int(self.fmt)
             except exceptions.InvalidAddressException:
                 return "CF_UNKNOWN"
-            except Exception:
-                # Non-numeric fmt value (e.g., **int** raises ValueError)
+            except (TypeError, ValueError, OverflowError):
+                # Non-numeric fmt value (e.g., int(...) raises ValueError)
                 fmt_val = None
 
             # Try to read the enum/string name via lookup() if present.
