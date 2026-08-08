@@ -620,10 +620,10 @@ class TestLinuxPscallstack:
         )
 
 
-class TestLinuxIptables:
+class TestLinuxIptablesLegacy:
     def test_linux_generic_iptables(self, image, volatility, python):
         rc, out, _err = test_volatility.runvol_plugin(
-            "linux.iptables.IPTables", image, volatility, python
+            "linux.iptables_legacy.IPTables", image, volatility, python
         )
 
         # The test image may have no active iptables rules.
