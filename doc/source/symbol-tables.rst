@@ -49,6 +49,8 @@ tables they come from, meaning the precise file names don't matter and can be or
 under the symbols directory.
 
 Linux and Mac symbol tables can be generated from a DWARF file using a tool called `dwarf2json <https://github.com/volatilityfoundation/dwarf2json>`_.
+This process applies to both x86-64 and AArch64 (ARM64) Linux kernels. The kernel
+architecture is detected automatically from the symbols in the generated JSON file.
 Currently a kernel with debugging symbols is the only suitable means for recovering all the information required by
 most Volatility plugins.  Note that in most linux distributions, the standard kernel is stripped of debugging information
 and the kernel with debugging information is stored in a package that must be acquired separately.

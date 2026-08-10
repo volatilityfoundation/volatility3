@@ -13,6 +13,7 @@ from volatility3.framework.layers import scanners
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins.linux import pslist
+from volatility3.framework.constants import architectures
 
 vollog = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class VmaRegExScan(plugins.PluginInterface):
             requirements.ModuleRequirement(
                 name="kernel",
                 description="Linux kernel",
-                architectures=["Intel32", "Intel64"],
+                architectures=architectures.LINUX_ARCHS,
             ),
             requirements.VersionRequirement(
                 name="pslist", component=pslist.PsList, version=(4, 0, 0)

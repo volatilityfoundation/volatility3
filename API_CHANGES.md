@@ -4,6 +4,13 @@ API Changes
 When an addition to the existing API is made, the minor version is bumped.
 When an API feature or function is removed or changed, the major version is bumped.
 
+2.29.0
+======
+AArch64 (ARM64) translation layer support added for Linux.
+New module: `volatility3.framework.layers.arm` with AArch64, AArch64_39, AArch64_48, AArch64_52 classes and Linux variants.
+New automagic: `LinuxAArch64Stacker` in `volatility3.framework.automagic.linux`.
+`LINUX_ARCHS` and `FRAMEWORK_ARCHS` constants updated to include "AArch64".
+
 2.25.0
 ======
 Pointer class now supports `get_raw_value()`.

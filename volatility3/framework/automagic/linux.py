@@ -8,7 +8,7 @@ from typing import Optional, Tuple
 from volatility3.framework import constants, interfaces
 from volatility3.framework.automagic import symbol_cache, symbol_finder
 from volatility3.framework.configuration import requirements
-from volatility3.framework.layers import intel, scanners
+from volatility3.framework.layers import arm, intel, scanners
 from volatility3.framework.symbols import linux
 
 vollog = logging.getLogger(__name__)
@@ -30,9 +30,9 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         layer = context.layers[layer_name]
         join = interfaces.configuration.path_join
 
-        # Never stack on top of an intel layer
+        # Never stack on top of a translation layer
         # FIXME: Find a way to improve this check
-        if isinstance(layer, intel.Intel):
+        if isinstance(layer, (intel.Intel, arm.AArch64)):
             return None
 
         linux_banners = symbol_cache.load_cache_manager().get_identifier_dictionary(
@@ -82,6 +82,16 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                     layer_class = intel.LinuxIntelPAE
                     dtb_symbol_name = "swapper_pg_dir"
                 else:
+                    # Skip if swapper_pg_dir is in 64-bit address range without
+                    # Intel-specific symbols — this is likely an ARM64 kernel
+                    if "swapper_pg_dir" in table.symbols:
+                        swapper_addr = table.get_symbol("swapper_pg_dir").address
+                        if swapper_addr > 0xFFFFFFFF:
+                            vollog.debug(
+                                "Skipping non-Intel kernel: swapper_pg_dir at "
+                                f"0x{swapper_addr:x} without Intel page table symbols"
+                            )
+                            continue
                     layer_class = intel.LinuxIntel
                     dtb_symbol_name = "swapper_pg_dir"
 
@@ -206,6 +216,223 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         return addr - 0xC0000000
 
 
+class LinuxAArch64Stacker(interfaces.automagic.StackerLayerInterface):
+    stack_order = 35
+    exclusion_list = ["mac", "windows"]
+
+    # PAGE_OFFSET thresholds for VA_BITS detection
+    # PAGE_OFFSET = -(1 << VA_BITS) (unsigned 64-bit)
+    _PAGE_OFFSET_39 = (-1 << 39) & ((1 << 64) - 1)  # 0xFFFFFF8000000000
+    _PAGE_OFFSET_48 = (-1 << 48) & ((1 << 64) - 1)  # 0xFFFF000000000000
+    _PAGE_OFFSET_52 = (-1 << 52) & ((1 << 64) - 1)  # 0xFFF0000000000000
+
+    @classmethod
+    def stack(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        progress_callback: constants.ProgressCallback = None,
+    ) -> Optional[interfaces.layers.DataLayerInterface]:
+        """Attempts to identify linux AArch64 within this layer."""
+        layer = context.layers[layer_name]
+        join = interfaces.configuration.path_join
+
+        # Never stack on top of a translation layer
+        if isinstance(layer, (intel.Intel, arm.AArch64)):
+            return None
+
+        linux_banners = symbol_cache.load_cache_manager().get_identifier_dictionary(
+            operating_system="linux"
+        )
+        if not linux_banners:
+            vollog.info(
+                "No Linux banners found - if this is a linux plugin, please check your symbol files location"
+            )
+            return None
+
+        mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
+        for _, banner in layer.scan(
+            context=context, scanner=mss, progress_callback=progress_callback
+        ):
+            dtb = None
+            vollog.debug(f"Identified banner: {repr(banner)}")
+
+            isf_path = linux_banners.get(banner, None)
+            if isf_path:
+                table_name = context.symbol_space.free_table_name("LinuxAArch64Stacker")
+                table = linux.LinuxKernelIntermedSymbols(
+                    context,
+                    "temporary." + table_name,
+                    name=table_name,
+                    isf_url=isf_path,
+                )
+                context.symbol_space.append(table)
+
+                # Check if this is an ARM64 kernel by examining swapper_pg_dir address
+                if "swapper_pg_dir" not in table.symbols:
+                    continue
+
+                swapper_addr = table.get_symbol("swapper_pg_dir").address
+
+                # Determine VA_BITS and layer class from swapper_pg_dir address
+                layer_class, va_bits = cls._detect_va_bits(table, swapper_addr)
+                if layer_class is None:
+                    continue
+
+                vollog.debug(
+                    f"AArch64 detected: VA_BITS={va_bits}, swapper_pg_dir=0x{swapper_addr:x}"
+                )
+
+                dtb, aslr_shift = cls.find_aslr(
+                    context,
+                    table_name,
+                    layer_name,
+                    progress_callback=progress_callback,
+                )
+
+                # Build the new layer
+                new_layer_name = context.layers.free_layer_name("AArch64Layer")
+                config_path = join("AArch64Helper", new_layer_name)
+                context.config[join(config_path, "memory_layer")] = layer_name
+                context.config[join(config_path, "page_map_offset")] = dtb
+                context.config[
+                    join(config_path, LinuxSymbolFinder.banner_config_key)
+                ] = str(banner, "latin-1")
+
+                layer = layer_class(
+                    context,
+                    config_path=config_path,
+                    name=new_layer_name,
+                    metadata={"os": "Linux"},
+                )
+                layer.config["kernel_virtual_offset"] = aslr_shift
+
+            if layer and dtb:
+                vollog.debug(f"DTB was found at: 0x{dtb:0x}")
+                return layer
+        vollog.debug("No suitable linux AArch64 banner could be matched")
+        return None
+
+    @classmethod
+    def _detect_va_bits(cls, table, swapper_addr):
+        """Detect VA_BITS configuration and return (layer_class, va_bits) or (None, None).
+
+        Uses swapper_pg_dir address to infer VA_BITS, and confirms this is ARM64
+        (not Intel) by checking for the absence of Intel-specific symbols.
+        """
+        # Intel x86-64 kernels have init_top_pgt or init_level4_pgt
+        has_intel_symbols = (
+            "init_top_pgt" in table.symbols or "init_level4_pgt" in table.symbols
+        )
+
+        if swapper_addr >= cls._PAGE_OFFSET_39:
+            # Could be 39-bit ARM64 or Intel x86-64/x86-32
+            if has_intel_symbols:
+                return None, None
+            # Also skip if this looks like x86-32 (address below 64-bit range)
+            if swapper_addr < 0xFFFF000000000000 and swapper_addr < cls._PAGE_OFFSET_39:
+                return None, None
+            return arm.LinuxAArch64_39, 39
+        elif swapper_addr >= cls._PAGE_OFFSET_48:
+            if has_intel_symbols:
+                return None, None
+            return arm.LinuxAArch64_48, 48
+        elif swapper_addr >= cls._PAGE_OFFSET_52:
+            return arm.LinuxAArch64_52, 52
+        else:
+            return None, None
+
+    @classmethod
+    def find_aslr(
+        cls,
+        context: interfaces.context.ContextInterface,
+        symbol_table: str,
+        layer_name: str,
+        progress_callback: constants.ProgressCallback = None,
+    ) -> Tuple[int, int]:
+        """Determines the DTB and ASLR shift for ARM64 Linux.
+
+        On ARM64, kernel image symbols are not mapped at PAGE_OFFSET (unlike x86),
+        so we cannot use a simple virtual_to_physical_address() formula. Instead,
+        we exploit the fact that all kernel image symbols share the same
+        virtual-to-physical offset (kimage_voffset). By finding init_task in
+        physical memory and knowing the virtual offset between init_task and
+        swapper_pg_dir from the ISF, we can compute swapper_pg_dir's physical
+        address directly.
+
+        Returns:
+            Tuple of (dtb_physical_address, aslr_shift)
+        """
+        init_task_symbol = symbol_table + constants.BANG + "init_task"
+        init_task_json_address = context.symbol_space.get_symbol(
+            init_task_symbol
+        ).address
+        swapper_json_address = context.symbol_space.get_symbol(
+            symbol_table + constants.BANG + "swapper_pg_dir"
+        ).address
+        swapper_signature = rb"swapper(\/0|\x00\x00)\x00\x00\x00\x00\x00\x00"
+        module = context.module(symbol_table, layer_name, 0)
+        address_mask = context.symbol_space[symbol_table].config.get(
+            "symbol_mask", None
+        )
+
+        task_symbol = module.get_type("task_struct")
+        comm_child_offset = task_symbol.relative_child_offset("comm")
+
+        # Relative offset between init_task and swapper_pg_dir in the kernel image
+        # This offset is preserved in physical memory regardless of KASLR
+        init_task_to_swapper_offset = init_task_json_address - swapper_json_address
+
+        for offset in context.layers[layer_name].scan(
+            scanner=scanners.RegExScanner(swapper_signature),
+            context=context,
+            progress_callback=progress_callback,
+        ):
+            init_task_address = offset - comm_child_offset
+            init_task = module.object(
+                object_type="task_struct", offset=init_task_address, absolute=True
+            )
+            if init_task.pid != 0:
+                continue
+            elif (
+                init_task.has_member("state")
+                and init_task.state.cast("unsigned int") != 0
+            ):
+                continue
+            elif init_task.active_mm.cast("long unsigned int") == module.get_symbol(
+                "init_mm"
+            ).address and init_task.tasks.next.cast(
+                "long unsigned int"
+            ) == init_task.tasks.prev.cast("long unsigned int"):
+                continue
+
+            aslr_shift = (
+                int.from_bytes(
+                    init_task.files.cast("bytes", length=init_task.files.vol.size),
+                    byteorder=init_task.files.vol.data_format.byteorder,
+                )
+                - module.get_symbol("init_files").address
+            )
+            if address_mask:
+                aslr_shift = aslr_shift & address_mask
+
+            # Compute DTB (swapper_pg_dir physical address) using relative offset
+            dtb = init_task_address - init_task_to_swapper_offset
+
+            if aslr_shift & 0xFFF != 0 or dtb & 0xFFF != 0:
+                continue
+            vollog.debug(
+                f"Linux AArch64 ASLR shift determined: virtual {aslr_shift:0x}, "
+                f"DTB computed at 0x{dtb:x}"
+            )
+            return dtb, aslr_shift
+
+        vollog.debug(
+            "Scanners could not determine AArch64 DTB/ASLR, using 0 for both"
+        )
+        return 0, 0
+
+
 class LinuxSymbolFinder(symbol_finder.SymbolFinder):
     """Linux symbol loader based on uname signature strings."""
 
@@ -256,9 +483,9 @@ class LinuxIntelVMCOREINFOStacker(interfaces.automagic.StackerLayerInterface):
         # Bail out by default unless we can stack properly
         layer = context.layers[layer_name]
 
-        # Never stack on top of an intel layer
+        # Never stack on top of a translation layer
         # FIXME: Find a way to improve this check
-        if isinstance(layer, intel.Intel):
+        if isinstance(layer, (intel.Intel, arm.AArch64)):
             return None
 
         linux_banners = symbol_cache.load_cache_manager().get_identifier_dictionary(

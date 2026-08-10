@@ -14,6 +14,7 @@ from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux.extensions import elf
 from volatility3.plugins import timeliner
 from volatility3.plugins.linux import elfs
+from volatility3.framework.constants import architectures
 
 
 @dataclasses.dataclass
@@ -42,7 +43,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             requirements.ModuleRequirement(
                 name="kernel",
                 description="Linux kernel",
-                architectures=["Intel32", "Intel64"],
+                architectures=architectures.LINUX_ARCHS,
             ),
             requirements.VersionRequirement(
                 name="elfs", component=elfs.Elfs, version=(2, 0, 0)

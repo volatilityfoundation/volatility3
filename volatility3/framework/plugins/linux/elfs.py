@@ -16,6 +16,7 @@ from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux.extensions import elf
 from volatility3.framework.constants import linux as linux_constants
 from volatility3.plugins.linux import pslist
+from volatility3.framework.constants import architectures
 
 
 vollog = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ class Elfs(plugins.PluginInterface):
             requirements.ModuleRequirement(
                 name="kernel",
                 description="Linux kernel",
-                architectures=["Intel32", "Intel64"],
+                architectures=architectures.LINUX_ARCHS,
             ),
             requirements.VersionRequirement(
                 name="pslist", component=pslist.PsList, version=(4, 0, 0)
