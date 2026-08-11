@@ -1145,10 +1145,12 @@ def read_xt_name(header_bytes: bytes, layer) -> str:
     2.  Dereference pointer + _XT_MATCH_NAME_OFF via *layer* to get the name
         from the live xt_match / xt_target struct (authoritative, works for
         any name length).
-    3.  Fall back to reading bytes[2:] of the header with first-NUL stop.
-        This is correct for names whose NUL byte falls before _KT_POINTER_OFF
-        (i.e., names ≤ 5 chars: "udp", "tcp", "state", "ERROR", etc.) and
-        for the standard verdict target (name = "").
+    3.  Fall back to bytes[2:_KT_POINTER_OFF] of the header, first-NUL
+        stop. Exact for names <= 5 chars ("udp", "tcp", "state", "ERROR")
+        and the empty verdict-target name. For longer names when strategy
+        1 fails (e.g. *layer* has no page-table walk and can't reach
+        kernel module space), this returns a truncated prefix instead of
+        reading into the pointer bytes and returning corrupted text.
     """
     # --- strategy 1: dereference the kernel.match pointer ---
     if len(header_bytes) >= _KT_POINTER_OFF + 8:
@@ -1160,6 +1162,6 @@ def read_xt_name(header_bytes: bytes, layer) -> str:
             except Exception:
                 pass
 
-    # --- strategy 2: first NUL in the raw bytes[2:] ---
-    name_raw = header_bytes[2 : 2 + XT_FUNCTION_MAXNAMELEN - 1]
+    # --- strategy 2: first NUL in the preserved bytes[2:_KT_POINTER_OFF] ---
+    name_raw = header_bytes[2:_KT_POINTER_OFF]
     return _cstr(name_raw)

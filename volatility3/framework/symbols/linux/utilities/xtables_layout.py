@@ -272,6 +272,11 @@ class XtTableInfoLayout(NamedTuple):
     hook_entry_off: int  # offset of hook_entry[NF_INET_NUMHOOKS]
     underflow_off: int  # offset of underflow[NF_INET_NUMHOOKS]
     entries_off: int  # offset of entries[] flex array (= sizeof xt_table_info)
+    # True if `entries` at entries_off is a pointer (kernel <4.2's
+    # `void *entries[NR_CPUS]`, per-CPU rule-blob pointers) rather than an
+    # embedded byte array (kernel >=4.2's `unsigned char entries[0]`).
+    # Defaults False so existing >=4.0 results are unaffected.
+    entries_indirect: bool = False
 
 
 # Fallback table: (major, minor_min, minor_max) -> XtTableLayout
@@ -286,6 +291,17 @@ class XtTableInfoLayout(NamedTuple):
 # table is only a last-resort fallback when neither BTF nor (opt-in)
 # network fetch are available.
 _XT_TABLE_LAYOUT_FALLBACKS: list[tuple[tuple[int, int, int], XtTableLayout]] = [
+    (
+        (3, 0, 19),
+        XtTableLayout(
+            name_off=48,
+            valid_hooks_off=16,
+            private_off=24,
+            me_off=32,
+            af_off=40,
+            read_size=84,
+        ),
+    ),
     (
         (4, 0, 14),
         XtTableLayout(
@@ -335,6 +351,47 @@ _XT_TABLE_LAYOUT_FALLBACKS: list[tuple[tuple[int, int, int], XtTableLayout]] = [
 XT_TABLE_INFO_FALLBACK = XtTableInfoLayout(
     size_off=0, hook_entry_off=12, underflow_off=32, entries_off=64
 )
+
+# Two independent xt_table_info changes, both in x_tables.h:
+#
+# 1. v4.1 -> v4.2: `void *entries[NR_CPUS]` (per-CPU pointers to the rule
+#    blob) became `unsigned char entries[0]` (blob embedded directly).
+#    Reading entries_off as the blob itself is only correct >=4.2; below
+#    that it reads a pointer value as rule bytes. Encoded as
+#    entries_indirect; see iptables_legacy._read_entries_blob().
+# 2. v4.2 -> v4.3: the `stackptr` field before entries[] was dropped,
+#    shifting entries_off from 72 to 64 (matches XT_TABLE_INFO_FALLBACK
+#    above, and this file's NetfilterImp_to_4_3 boundary for the
+#    unrelated hook struct).
+#
+# Net effect: 3.x-4.1 need entries_off=72, entries_indirect=True; >=4.3
+# needs the defaults above. 4.2 itself (entries_off=72, indirect=False)
+# has no dedicated entry -- a short-lived mainline release, not worth it.
+# Anything below this table's floor still uses XT_TABLE_INFO_FALLBACK.
+_XT_TABLE_INFO_LAYOUT_FALLBACKS: list[
+    tuple[tuple[int, int, int], XtTableInfoLayout]
+] = [
+    (
+        (3, 0, 99),
+        XtTableInfoLayout(
+            size_off=0,
+            hook_entry_off=12,
+            underflow_off=32,
+            entries_off=72,
+            entries_indirect=True,
+        ),
+    ),
+    (
+        (4, 0, 1),
+        XtTableInfoLayout(
+            size_off=0,
+            hook_entry_off=12,
+            underflow_off=32,
+            entries_off=72,
+            entries_indirect=True,
+        ),
+    ),
+]
 
 _XT_TABLE_HEADER = "include/linux/netfilter/x_tables.h"
 
@@ -405,21 +462,27 @@ def _fetch_xt_table_layout_from_source(major: int, minor: int) -> XtTableLayout 
         required_info = ("size", "hook_entry", "underflow", "jumpstack")
         if all(f in info_offs for f in required_info):
             entries_off = info_offs["jumpstack"] + 8
+            # kernel <4.2: `void *entries[NR_CPUS]` (per-CPU pointers).
+            # >=4.2: `unsigned char entries[0]` (embedded). Read from the
+            # actual declaration, like every other field here.
+            entries_indirect = bool(re.search(r"\*\s*entries\s*\[", info_body))
             tbl_info_layout = XtTableInfoLayout(
                 size_off=info_offs["size"],
                 hook_entry_off=info_offs["hook_entry"],
                 underflow_off=info_offs["underflow"],
                 entries_off=entries_off,
+                entries_indirect=entries_indirect,
             )
             _table_info_layout_cache[(major, minor)] = tbl_info_layout
             vollog.warning(
                 "Fetched xt_table_info offsets for kernel %s: "
-                "size=%d hook_entry=%d underflow=%d entries=%d",
+                "size=%d hook_entry=%d underflow=%d entries=%d indirect=%s",
                 tag,
                 tbl_info_layout.size_off,
                 tbl_info_layout.hook_entry_off,
                 tbl_info_layout.underflow_off,
                 tbl_info_layout.entries_off,
+                tbl_info_layout.entries_indirect,
             )
 
     return layout
@@ -569,7 +632,12 @@ def get_xt_table_info_layout(
     key = (major, minor)
     if key not in _table_info_layout_cache:
         get_xt_table_layout(major, minor, context=context, layer_name=layer_name)
-    return _table_info_layout_cache.get(key, XT_TABLE_INFO_FALLBACK)
+    if key in _table_info_layout_cache:
+        return _table_info_layout_cache[key]
+    for (maj, mn_min, mn_max), fallback in _XT_TABLE_INFO_LAYOUT_FALLBACKS:
+        if major == maj and mn_min <= minor <= mn_max:
+            return fallback
+    return XT_TABLE_INFO_FALLBACK
 
 
 # ---------------------------------------------------------------------------

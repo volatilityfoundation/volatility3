@@ -476,6 +476,28 @@ def _read_entries_blob(
         return None
     blob_addr = private_ptr + info_layout.entries_off
     try:
+        if info_layout.entries_indirect:
+            # Kernel <4.2: entries_off holds `void *entries[NR_CPUS]`, a
+            # pointer per CPU to a separate copy of the rule blob, not the
+            # blob itself. Copies are rule-identical, so entries[0] (CPU 0)
+            # is enough.
+            #
+            # Some vendor kernels backport the >=4.2 embedded-array layout
+            # without their version number implying it, so entries[0] may
+            # not actually be a pointer -- check before dereferencing, and
+            # fall back to treating entries_off as the blob start directly
+            # if it isn't.
+            ptr = struct.unpack_from("<Q", layer.read(blob_addr, 8))[0]
+            if _is_kernel_ptr(ptr):
+                blob_addr = ptr
+            else:
+                vollog.debug(
+                    "entries[0] at 0x%x is not a kernel pointer (0x%x) -- "
+                    "treating as an embedded (>=4.2-style) entries blob "
+                    "instead of a per-CPU pointer array",
+                    blob_addr,
+                    ptr,
+                )
         return layer.read(blob_addr, blob_size)
     except Exception as exc:
         vollog.debug("Cannot read entries blob at 0x%x: %s", blob_addr, exc)
@@ -1348,6 +1370,12 @@ class IPTables(plugins.PluginInterface):
         Multiple subclasses can legitimately match the same kernel at once
         (e.g. the regular hook family and netdev-ingress are independent),
         so every match is walked, not just the first.
+
+        Constructed with resolve_hook_owners=False: AbstractNetfilter's
+        default constructor scans every loaded module to attribute each
+        hook to its owner (self.handlers, used only by
+        linux.malware.netfilter's own report) -- over 90% of runtime, for
+        a result this function never reads.
         """
         vmlinux = context.modules[kernel_module_name]
         matched_any = False
@@ -1358,7 +1386,11 @@ class IPTables(plugins.PluginInterface):
             except Exception:
                 continue
             try:
-                impl = subclass(context=context, kernel_module_name=kernel_module_name)
+                impl = subclass(
+                    context=context,
+                    kernel_module_name=kernel_module_name,
+                    resolve_hook_owners=False,
+                )
             except Exception as exc:
                 # Not just PluginRequirementException: a subclass whose
                 # symtab_checks() passed can still fail to construct for
