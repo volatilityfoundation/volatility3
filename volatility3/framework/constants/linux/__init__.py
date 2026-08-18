@@ -487,7 +487,7 @@ TAINT_FLAGS = {
     "L": TaintFlag(shift=1 << 14, desc="SOFTLOCKUP", when_present=True, module=False),
     "K": TaintFlag(shift=1 << 15, desc="LIVEPATCH", when_present=True, module=True),
     "X": TaintFlag(shift=1 << 16, desc="AUX", when_present=True, module=True),
-    "T": TaintFlag(shift=1 << 17, desc="RANDSTRUCT", when_present=True, module=True),
+    "T": TaintFlag(shift=1 << 17, desc="RANDSTRUCT", when_present=True, module=False),
     "N": TaintFlag(shift=1 << 18, desc="TEST", when_present=True, module=True),
     "J": TaintFlag(shift=1 << 19, desc="FWCTL", when_present=True, module=False),
 }
