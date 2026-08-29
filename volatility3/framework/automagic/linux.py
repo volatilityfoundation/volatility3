@@ -296,7 +296,10 @@ class LinuxIntelVMCOREINFOStacker(interfaces.automagic.StackerLayerInterface):
             if is_32bit:
                 layer_class = intel.IntelPAE if is_pae else intel.Intel
             else:
-                layer_class = intel.Intel32e
+                if cls._vmcoreinfo_is_5level(vmcoreinfo):
+                    layer_class = intel.Intel32e5Level
+                else:
+                    layer_class = intel.Intel32e
 
             uts_release = vmcoreinfo["OSRELEASE"]
 
@@ -426,3 +429,12 @@ class LinuxIntelVMCOREINFOStacker(interfaces.automagic.StackerLayerInterface):
             is_32bit = dtb_vaddr <= 2**32
 
         return is_32bit, is_pae
+
+    @staticmethod
+    def _vmcoreinfo_is_5level(vmcoreinfo) -> bool:
+        """Returns True if 5-level paging is enabled at runtime"""
+        pgtable_l5 = vmcoreinfo.get("NUMBER(pgtable_l5_enabled)")
+        if pgtable_l5 is not None:
+            return pgtable_l5 == 1
+
+        return False
