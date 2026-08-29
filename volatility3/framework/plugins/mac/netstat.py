@@ -130,7 +130,7 @@ class Netstat(plugins.PluginInterface):
                 vals = socket.get_converted_connection_info()
 
                 if vals:
-                    (lip, lport, rip, rport) = vals
+                    lip, lport, rip, rport = vals
 
                     yield (
                         0,

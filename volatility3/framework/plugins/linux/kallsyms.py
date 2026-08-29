@@ -11,7 +11,6 @@ from volatility3.framework.renderers import format_hints
 from volatility3.framework.constants import architectures
 from volatility3.framework.symbols.linux import kallsyms
 
-
 vollog = logging.getLogger(__name__)
 
 

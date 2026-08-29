@@ -13,7 +13,6 @@ from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux.extensions import elf
 from volatility3.plugins.linux import pslist
 
-
 vollog = logging.getLogger(__name__)
 
 

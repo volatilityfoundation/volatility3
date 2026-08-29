@@ -4,17 +4,15 @@
 
 import datetime
 import logging
-from typing import Iterable, Callable, Optional, Tuple
+from typing import Callable, Iterable, Optional, Tuple
 
-from volatility3.framework import renderers, interfaces, layers, exceptions
+from volatility3.framework import exceptions, interfaces, layers, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
 from volatility3.plugins import timeliner
-from volatility3.plugins.windows import info
-from volatility3.plugins.windows import poolscanner
-from volatility3.plugins.windows import pslist
+from volatility3.plugins.windows import info, poolscanner, pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -86,9 +84,9 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         if not isinstance(memory, layers.intel.Intel):
             raise TypeError("Primary layer is not an intel layer")
 
-        (_, _, ph_offset, _, _) = list(
-            memory.mapping(offset=proc.vol.offset, length=0)
-        )[0]
+        _, _, ph_offset, _, _ = list(memory.mapping(offset=proc.vol.offset, length=0))[
+            0
+        ]
 
         return ph_offset
 
@@ -165,13 +163,19 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         """
 
         kernel = context.modules[kernel_module_name]
+        scan_layer_name = context.layers[kernel.layer_name].config.get(
+            "memory_layer", kernel.layer_name
+        )
 
         constraints = poolscanner.PoolScanner.builtin_constraints(
             kernel.symbol_table_name, [b"Pro\xe3", b"Proc"]
         )
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
-            context, kernel_module_name, constraints
+            context,
+            kernel_module_name,
+            constraints,
+            scan_layer_name=scan_layer_name,
         ):
             _constraint, mem_object, _header = result
             if not filter_func(mem_object):
@@ -224,7 +228,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             virtual_process = ethread.owning_process()
             # Sanity check the bounce.
             # This compares the original offset with the new one (translated from virtual layer)
-            (_, _, ph_offset, _, _) = list(
+            _, _, ph_offset, _, _ = list(
                 context.layers[ntkrnlmp.layer_name].mapping(
                     offset=virtual_process.vol.offset, length=0
                 )
@@ -299,7 +303,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if not self.config["physical"]:
                 offset = proc.vol.offset
             else:
-                (_, _, offset, _, _) = list(
+                _, _, offset, _, _ = list(
                     memory.mapping(offset=proc.vol.offset, length=0)
                 )[0]
 
