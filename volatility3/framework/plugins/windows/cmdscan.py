@@ -152,6 +152,7 @@ class CmdScan(interfaces.plugins.PluginInterface):
 
             sections = cls.get_filtered_vads(conhost_proc)
             found_history_for_proc = False
+            command_history = None
             # scan for potential _COMMAND_HISTORY structures by using the CommandHistorySize
             for max_history_value in max_history:
                 max_history_bytes = struct.pack("H", max_history_value)

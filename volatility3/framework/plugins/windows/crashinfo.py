@@ -36,11 +36,13 @@ class Crashinfo(interfaces.plugins.PluginInterface):
             dump_type = "Full Dump (0x1)"
         elif header.DumpType == 0x5:
             dump_type = "Bitmap Dump (0x5)"
+        elif header.DumpType == 0x6:
+            dump_type = "Kernel Bitmap Dump (0x6)"
         else:
-            # this should never happen since the crash layer only accepts 0x1 and 0x5
+            # this should never happen since the crash layer only accepts 0x1, 0x5, and 0x6
             dump_type = f"Unknown/Unsupported ({header.DumpType:#x})"
 
-        if header.DumpType == 0x5:
+        if header.DumpType in (0x5, 0x6):
             summary_header = layer.get_summary_header()
             bitmap_header_size = format_hints.Hex(summary_header.HeaderSize)
             bitmap_size = format_hints.Hex(summary_header.BitmapSize)

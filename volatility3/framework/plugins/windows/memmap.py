@@ -57,6 +57,23 @@ class Memmap(interfaces.plugins.PluginInterface):
                 )
                 continue
 
+            # Kernel bitmap dumps (DumpType=6) may or may not include user-space
+            # physical pages depending on how the dump was created.  When user pages
+            # are absent, page tables are still present as kernel data so VA→PA
+            # translation succeeds, but every physical frame lookup fails — iterating
+            # O(mapped user pages) times at 4 KB/step is extremely slow.  Probe the
+            # PEB (a guaranteed user-space VA) to decide cheaply: if its physical
+            # backing is absent, the dump has no user pages and we can skip the walk.
+            phys_layer = self.context.layers.get(proc_layer._base_layer)
+            if getattr(phys_layer, "dump_type", None) == 6:
+                peb_va = int(proc.Peb)
+                if peb_va and not proc_layer.is_valid(peb_va):
+                    vollog.debug(
+                        f"Process {pid}: skipping memmap walk on kernel bitmap dump"
+                        f" (DumpType=6, user pages absent)"
+                    )
+                    continue
+
             if self.config["dump"]:
                 file_handle = self.open(f"pid.{pid}.dmp")
             else:
