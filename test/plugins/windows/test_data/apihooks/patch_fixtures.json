@@ -1,0 +1,10 @@
+{
+  "early_ret": "c3",
+  "ret_imm": "c21400",
+  "xor_eax_ret": "31c0c3",
+  "sub_eax_ret": "29c0c3",
+  "mov_eax_zero_ret": "b800000000c3",
+  "mov_eax_hresult_ret": "b857000780c3",
+  "push0_pop_eax_ret": "6a0058c3",
+  "benign_near_miss": "558bec83ec08"
+}
