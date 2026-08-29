@@ -292,7 +292,7 @@ class MountInfo(plugins.PluginInterface):
         mount_ns_ids = self.config.get("mntns")
         mount_format = self.config.get("mount-format")
 
-        pid_filter = pslist.PsList.create_pid_filter(pids)
+        pid_filter = pslist.PsList.create_user_tid_filter(pids)
         tasks = pslist.PsList.list_tasks(
             self.context, self.config["kernel"], filter_func=pid_filter
         )
