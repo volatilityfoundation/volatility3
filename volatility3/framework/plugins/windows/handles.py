@@ -48,6 +48,12 @@ class Handles(interfaces.plugins.PluginInterface):
                 description="Process offset in the physical address space",
                 optional=True,
             ),
+            requirements.ListRequirement(
+                name="types",
+                element_type=str,
+                description="Types of handles to include (all other handle types are excluded)",
+                optional=True,
+            ),
         ]
 
     @classmethod
@@ -322,6 +328,8 @@ class Handles(interfaces.plugins.PluginInterface):
             context=self.context, kernel_module_name=self.config["kernel"]
         )
 
+        object_types = [s.lower() for s in self.config.get("types", [])]
+
         cookie = self.find_cookie(
             context=self.context, kernel_module_name=self.config["kernel"]
         )
@@ -345,6 +353,9 @@ class Handles(interfaces.plugins.PluginInterface):
                     obj_type = entry.get_object_type(type_map, cookie)
                     if obj_type is None:
                         continue
+                    elif object_types and obj_type.lower() not in object_types:
+                        continue
+
                     if obj_type == "File":
                         item = entry.Body.cast("_FILE_OBJECT")
                         obj_name = item.file_name_with_device()
