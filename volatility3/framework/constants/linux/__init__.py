@@ -487,16 +487,18 @@ TAINT_FLAGS = {
     "L": TaintFlag(shift=1 << 14, desc="SOFTLOCKUP", when_present=True, module=False),
     "K": TaintFlag(shift=1 << 15, desc="LIVEPATCH", when_present=True, module=True),
     "X": TaintFlag(shift=1 << 16, desc="AUX", when_present=True, module=True),
-    "T": TaintFlag(shift=1 << 17, desc="RANDSTRUCT", when_present=True, module=True),
+    "T": TaintFlag(shift=1 << 17, desc="RANDSTRUCT", when_present=True, module=False),
     "N": TaintFlag(shift=1 << 18, desc="TEST", when_present=True, module=True),
+    "J": TaintFlag(shift=1 << 19, desc="FWCTL", when_present=True, module=False),
 }
 """Flags used to taint kernel and modules, for debugging purposes.
 
-Map based on 6.12-rc5.
+Map based on 7.2.0-rc5.
 
 Documentation :
     - https://www.kernel.org/doc/Documentation/admin-guide/sysctl/kernel.rst#:~:text=guide/sysrq.rst.-,tainted,-%3D%3D%3D%3D%3D%3D%3D%0A%0ANon%2Dzero%20if
     - https://www.kernel.org/doc/Documentation/admin-guide/tainted-kernels.rst#:~:text=More%20detailed%20explanation%20for%20tainting
+    - https://docs.kernel.org/admin-guide/tainted-kernels.html#table-for-decoding-tainted-state
     - taint_flag kernel struct
     - taint_flags kernel constant
 """
