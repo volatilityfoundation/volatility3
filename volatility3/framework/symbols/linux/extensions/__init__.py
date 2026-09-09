@@ -2688,6 +2688,14 @@ class page(objects.StructType):
 
         return True
 
+    @property
+    def index(self) -> int:
+        if self.has_member("__folio_index"):
+            # if __folio_index exists then we are post: https://lists.openwall.net/linux-kernel/2025/05/14/1508
+            return self.__folio_index
+
+        return self.member("index")
+
     @functools.cached_property
     def pageflags_enum(self) -> Dict:
         """Returns 'pageflags' enumeration key/values
@@ -2816,12 +2824,12 @@ class page(objects.StructType):
         Returns:
             List of page flags
         """
-        flags = []
-        for name, value in self.pageflags_enum.items():
-            if self.flags & (1 << value) != 0:
-                flags.append(name)
-
-        return flags
+        # if .f exists we are post memdesc_flags_t introduction
+        # https://github.com/torvalds/linux/commit/53fbef56e07df822ea3029109ffca25328c2e5ac
+        flags = getattr(self.flags, "f", self.flags)
+        return [
+            name for name, value in self.pageflags_enum.items() if flags & (1 << value)
+        ]
 
 
 class IDR(objects.StructType):
