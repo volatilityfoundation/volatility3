@@ -1615,9 +1615,7 @@ class hlist_head(objects.StructType):
         vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
 
         current = self.first
-        seen = set()
-        while current and current.is_readable() and current.vol.offset not in seen:
-            seen.add(current.vol.offset)
+        while current and current.is_readable():
             yield linux.LinuxUtilities.container_of(
                 current, symbol_type, member, vmlinux
             )
