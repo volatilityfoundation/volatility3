@@ -528,8 +528,7 @@ class InodePages(plugins.PluginInterface):
                 max_length = inode_size - current_fp
                 page_bytes_len = min(max_length, len(page_content))
                 if current_fp >= inode_size or current_fp + page_bytes_len > inode_size:
-                    vollog.log(
-                        constants.LOGLEVEL_VVV,
+                    vollog.error(
                         "Page out of file bounds: inode 0x%x, inode size %d, page index %d",
                         inode.vol.offset,
                         inode_size,
@@ -561,9 +560,8 @@ class InodePages(plugins.PluginInterface):
         try:
             for page_obj in inode.get_pages():
                 if page_obj.mapping != inode.i_mapping:
-                    vollog.log(
-                        constants.LOGLEVEL_VVV,
-                        f"Cached page at {page_obj.vol.offset:#x} has a mismatched address space with the inode. Skipping page",
+                    vollog.warning(
+                        f"Cached page at {page_obj.vol.offset:#x} has a mismatched address space with the inode. Skipping page"
                     )
                     continue
                 page_vaddr = page_obj.vol.offset
@@ -662,7 +660,7 @@ class RecoverFs(plugins.PluginInterface):
     Troubleshooting: to fix extraction errors related to long paths, please consider using https://github.com/mxmlnkn/ratarmount.
     """
 
-    _version = (1, 0, 2)
+    _version = (1, 0, 1)
     _required_framework_version = (2, 21, 0)
 
     @classmethod
@@ -795,11 +793,9 @@ class RecoverFs(plugins.PluginInterface):
         vmlinux_module_name = self.config["kernel"]
         vmlinux = self.context.modules[vmlinux_module_name]
         vmlinux_layer = self.context.layers[vmlinux.layer_name]
-
-        output_filename = f"recovered_fs.tar.{self.config['compression_format']}"
-        output_file = self.open(output_filename)
+        tar_buffer = BytesIO()
         tar = tarfile.open(
-            fileobj=output_file,
+            fileobj=tar_buffer,
             mode=f"w:{self.config['compression_format']}",
         )
         # Set a unique timestamp for all extracted files
@@ -900,7 +896,10 @@ class RecoverFs(plugins.PluginInterface):
             yield (0, astuple(inode_out) + (extracted_file_size,))
 
         tar.close()
-        output_file.close()
+        tar_buffer.seek(0)
+        output_filename = f"recovered_fs.tar.{self.config['compression_format']}"
+        with self.open(output_filename) as f:
+            f.write(tar_buffer.getvalue())
 
     def run(self):
         headers = [
