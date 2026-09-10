@@ -79,7 +79,7 @@ class ObjectInformation:
         raise KeyError(f"No {key} present in ObjectInformation")
 
     def __contains__(self, key):
-        return any(field.name == key for field in dataclasses.fields(self))
+        return key in [field.name for field in dataclasses.fields(self)]
 
 
 class ObjectInterface(metaclass=abc.ABCMeta):
