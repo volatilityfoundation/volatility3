@@ -124,7 +124,7 @@ class Envars(plugins.PluginInterface):
                 yield (0, (task_pid, task_ppid, task_name, env_key, env_value))
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
+        filter_func = pslist.PsList.create_user_tid_filter(self.config.get("pid", None))
         tasks = pslist.PsList.list_tasks(
             self.context, self.config["kernel"], filter_func=filter_func
         )

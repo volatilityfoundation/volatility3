@@ -613,7 +613,7 @@ class Sockstat(plugins.PluginInterface):
         symbol_table = self.context.symbol_space[vmlinux.symbol_table_name]
         network.NetSymbols.apply(symbol_table)
 
-        filter_func = pslist.PsList.create_pid_filter(pids)
+        filter_func = pslist.PsList.create_user_tid_filter(pids)
         socket_generator = self.list_sockets(
             self.context, kernel_module_name, filter_func=filter_func
         )

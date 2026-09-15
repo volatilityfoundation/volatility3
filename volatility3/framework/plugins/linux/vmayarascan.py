@@ -59,7 +59,7 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
         sanity_check = 1024 * 1024 * 1024  # 1 GB
 
         # filter based on the pid option if provided
-        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
+        filter_func = pslist.PsList.create_user_tid_filter(self.config.get("pid", None))
         for task in pslist.PsList.list_tasks(
             context=self.context,
             vmlinux_module_name=self.config["kernel"],

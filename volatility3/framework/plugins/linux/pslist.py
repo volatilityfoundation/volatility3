@@ -8,7 +8,6 @@ from typing import Any, Callable, Iterable, List, Optional
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux.extensions import elf
@@ -79,7 +78,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     @classmethod
-    def create_pid_filter(
+    def create_user_tid_filter(
         cls, pid_list: Optional[List[int]] = None
     ) -> Callable[[Any], bool]:
         """Constructs a filter function for process IDs.
@@ -95,7 +94,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         if filter_list:
 
             def filter_func(x):
-                return x.pid not in filter_list
+                return x.get_user_tid() not in filter_list
 
             return filter_func
         else:
@@ -115,7 +114,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         Returns:
             A TaskFields object with the fields to show in the plugin output.
         """
-        name = utility.array_to_string(task.comm)
+        name = task.get_name()
         if decorate_comm:
             if task.is_kernel_thread:
                 name = f"[{name}]"
@@ -131,9 +130,9 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         return TaskFields(
             offset=task.vol.offset,
-            user_pid=task.tgid,
-            user_tid=task.pid,
-            user_ppid=task.get_parent_pid(),
+            user_pid=task.get_user_pid(),
+            user_tid=task.get_user_tid(),
+            user_ppid=task.get_user_parent_pid(),
             name=name,
             uid=task.cred.uid if valid_cred else None,
             gid=task.cred.gid if valid_cred else None,
@@ -292,7 +291,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         include_threads = self.config.get("threads")
         decorate_comm = self.config.get("decorate_comm")
         dump = self.config.get("dump")
-        filter_func = self.create_pid_filter(pids)
+        filter_func = self.create_user_tid_filter(pids)
 
         columns = [
             ("OFFSET (V)", format_hints.Hex),
@@ -313,7 +312,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     def generate_timeline(self):
         pids = self.config.get("pid")
-        filter_func = self.create_pid_filter(pids)
+        filter_func = self.create_user_tid_filter(pids)
         for task in self.list_tasks(
             self.context, self.config["kernel"], filter_func, include_threads=True
         ):

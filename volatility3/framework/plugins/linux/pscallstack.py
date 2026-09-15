@@ -163,7 +163,7 @@ class PsCallStack(plugins.PluginInterface):
         include_unresolved = self.config.get("unresolved", False)
 
         pids = self.config.get("pid", None)
-        filter_func = pslist.PsList.create_pid_filter(pids)
+        filter_func = pslist.PsList.create_user_tid_filter(pids)
         for task in pslist.PsList.list_tasks(
             self.context, vmlinux.name, filter_func=filter_func, include_threads=True
         ):

@@ -183,7 +183,7 @@ class Elfs(plugins.PluginInterface):
                 )
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
+        filter_func = pslist.PsList.create_user_tid_filter(self.config.get("pid", None))
 
         return renderers.TreeGrid(
             [
