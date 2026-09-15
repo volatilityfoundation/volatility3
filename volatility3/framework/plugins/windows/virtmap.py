@@ -17,7 +17,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
     """Lists virtual mapped sections."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 1)
+    _version = (1, 0, 2)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -42,7 +42,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
         """Returns the virtual map from a windows kernel module."""
         layer = module.context.layers[module.layer_name]
         if not isinstance(layer, intel.Intel):
-            raise
+            raise TypeError("Kernel layer is not an intel layer")
 
         result: Dict[str, List[Tuple[int, int]]] = {}
         system_va_type = module.get_enumeration("_MI_SYSTEM_VA_TYPE")

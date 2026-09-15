@@ -83,7 +83,7 @@ class Crashinfo(interfaces.plugins.PluginInterface):
 
         if crash_layer is None:
             vollog.error("This plugin requires a Windows crash dump")
-            raise
+            raise TypeError("This plugin requires a Windows crash dump")
 
         return renderers.TreeGrid(
             [
