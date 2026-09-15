@@ -3,7 +3,7 @@
 #
 
 import logging
-import urllib.parse
+import urllib.request
 from typing import Optional, Any, List
 
 try:
@@ -22,7 +22,7 @@ except ImportError:
 
 from volatility3.framework.layers import resources
 
-vollog = logging.getLogger(__file__)
+vollog = logging.getLogger(__name__)
 
 if HAS_S3FS:
 
