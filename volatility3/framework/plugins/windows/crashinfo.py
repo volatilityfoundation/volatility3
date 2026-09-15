@@ -36,8 +36,10 @@ class Crashinfo(interfaces.plugins.PluginInterface):
             dump_type = "Full Dump (0x1)"
         elif header.DumpType == 0x5:
             dump_type = "Bitmap Dump (0x5)"
+        elif header.DumpType == 0x4:
+            dump_type = "Mini Kernel Dump (0x4)"
         else:
-            # this should never happen since the crash layer only accepts 0x1 and 0x5
+            # this should never happen since the crash layers only accept known dump types
             dump_type = f"Unknown/Unsupported ({header.DumpType:#x})"
 
         if header.DumpType == 0x5:
@@ -77,7 +79,10 @@ class Crashinfo(interfaces.plugins.PluginInterface):
         crash_layer = None
         for layer_name in self._context.layers:
             layer = self._context.layers[layer_name]
-            if isinstance(layer, crash.WindowsCrashDump32Layer):
+            if isinstance(
+                layer,
+                (crash.WindowsCrashDump32Layer, crash.WindowsMiniKernelDump64Layer),
+            ):
                 crash_layer = layer
                 break
 

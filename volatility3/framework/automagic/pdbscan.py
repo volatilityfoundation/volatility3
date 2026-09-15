@@ -16,7 +16,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Un
 
 from volatility3.framework import constants, exceptions, interfaces, layers
 from volatility3.framework.configuration import requirements
-from volatility3.framework.layers import intel, scanners
+from volatility3.framework.layers import crash, intel, scanners
 from volatility3.framework.symbols import native
 from volatility3.framework.symbols.windows import pdbutil
 
@@ -66,6 +66,20 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             ),
         ]
 
+    @staticmethod
+    def _is_scannable_windows_kernel_layer(
+        layer: interfaces.layers.DataLayerInterface,
+    ) -> bool:
+        """Determines whether a layer can be scanned for a Windows kernel PDB."""
+
+        return isinstance(
+            layer,
+            (
+                intel.Intel,
+                crash.WindowsMiniKernelDump64Layer,
+            ),
+        )
+
     def find_virtual_layers_from_req(
         self,
         context: interfaces.context.ContextInterface,
@@ -98,9 +112,14 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 interfaces.configuration.path_join(sub_config_path, "memory_layer"),
                 None,
             )
+            if layer_name is None:
+                layer_name = context.config.get(
+                    interfaces.configuration.path_join(sub_config_path, "base_layer"),
+                    None,
+                )
             if layer_name and virtual_layer_name:
                 memlayer = context.layers[virtual_layer_name]
-                if isinstance(memlayer, intel.Intel):
+                if self._is_scannable_windows_kernel_layer(memlayer):
                     results = [virtual_layer_name]
         else:
             for subreq in requirement.requirements.values():
@@ -172,9 +191,15 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 vollog.debug(f"Setting kernel_virtual_offset to {hex(kvo)}")
 
     def get_physical_layer_name(self, context, vlayer):
-        return context.config.get(
+        physical_layer_name = context.config.get(
             interfaces.configuration.path_join(vlayer.config_path, "memory_layer"), None
         )
+        if physical_layer_name is None:
+            physical_layer_name = context.config.get(
+                interfaces.configuration.path_join(vlayer.config_path, "base_layer"),
+                None,
+            )
+        return physical_layer_name
 
     def method_slow_scan(
         self,
@@ -493,6 +518,15 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             vlayer = context.layers.get(virtual_layer_name, None)
             if isinstance(vlayer, layers.intel.Intel):
                 for method in self.methods:
+                    valid_kernel = method(self, context, vlayer, progress_callback)
+                    if valid_kernel:
+                        break
+            elif vlayer is not None and self._is_scannable_windows_kernel_layer(vlayer):
+                for method in [
+                    KernelPDBScanner.method_kdbg_offset,
+                    KernelPDBScanner.method_module_offset,
+                    KernelPDBScanner.method_slow_scan,
+                ]:
                     valid_kernel = method(self, context, vlayer, progress_callback)
                     if valid_kernel:
                         break

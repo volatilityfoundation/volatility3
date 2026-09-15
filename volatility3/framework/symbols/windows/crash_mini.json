@@ -1,0 +1,123 @@
+{
+  "symbols": {
+  },
+  "user_types": {
+    "_MINI_KERNEL_DUMP_SECONDARY": {
+      "fields": {
+        "StackOffset": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "BugCheckDataOffset": {
+          "offset": 40,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "BugCheckDataSize": {
+          "offset": 44,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ModuleTableOffset": {
+          "offset": 48,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ModuleCount": {
+          "offset": 52,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "StringTableOffset": {
+          "offset": 56,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "StringTableSize": {
+          "offset": 60,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "RangeTableOffset": {
+          "offset": 120,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "RangeTableCount": {
+          "offset": 124,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 128
+    }
+  },
+  "enums": {
+  },
+  "base_types": {
+    "unsigned char": {
+      "endian": "little",
+      "kind": "char",
+      "signed": false,
+      "size": 1
+    },
+    "unsigned short": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 2
+    },
+    "long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 4
+    },
+    "unsigned long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    },
+    "long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 8
+    },
+    "unsigned long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 8
+    }
+  },
+  "metadata": {
+    "producer": {
+      "version": "0.0.1",
+      "name": "kreijstal-by-hand",
+      "datetime": "2026-04-29T00:00:00"
+    },
+    "format": "6.2.0"
+  }
+}
