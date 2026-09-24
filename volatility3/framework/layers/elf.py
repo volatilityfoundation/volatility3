@@ -10,7 +10,6 @@ from volatility3.framework.constants import linux as linux_constants
 from volatility3.framework.layers import segmented
 from volatility3.framework.symbols import intermed
 
-
 vollog = logging.getLogger(__name__)
 
 
@@ -94,7 +93,7 @@ class Elf64Layer(segmented.SegmentedLayer):
                 base_layer.name,
                 f"Offset 0x{offset:0x} does not exist within the base layer",
             )
-        (magic, elf_class, elf_data_encoding, elf_version) = cls._header_struct.unpack(
+        magic, elf_class, elf_data_encoding, elf_version = cls._header_struct.unpack(
             header_data
         )
         if magic != cls.MAGIC:

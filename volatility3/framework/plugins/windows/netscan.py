@@ -375,11 +375,18 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         Returns:
             A list of network objects found by scanning the `layer_name` layer for network pool signatures
         """
+        kernel = context.modules[kernel_module_name]
+        scan_layer_name = context.layers[kernel.layer_name].config.get(
+            "memory_layer", kernel.layer_name
+        )
 
         constraints = cls.create_netscan_constraints(context, netscan_symbol_table)
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
-            context, kernel_module_name, constraints
+            context,
+            kernel_module_name,
+            constraints,
+            scan_layer_name=scan_layer_name,
         ):
             _constraint, mem_object, _header = result
             yield mem_object

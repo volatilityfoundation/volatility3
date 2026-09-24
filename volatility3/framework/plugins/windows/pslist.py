@@ -295,7 +295,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if not self.config.get("physical", self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset
             else:
-                (_, _, offset, _, _) = list(
+                _, _, offset, _, _ = list(
                     memory.mapping(offset=proc.vol.offset, length=0)
                 )[0]
 

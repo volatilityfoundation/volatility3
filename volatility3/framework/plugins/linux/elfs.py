@@ -17,7 +17,6 @@ from volatility3.framework.symbols.linux.extensions import elf
 from volatility3.framework.constants import linux as linux_constants
 from volatility3.plugins.linux import pslist
 
-
 vollog = logging.getLogger(__name__)
 
 

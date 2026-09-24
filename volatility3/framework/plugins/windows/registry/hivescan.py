@@ -4,11 +4,11 @@
 
 from typing import Iterable
 
-from volatility3.framework import renderers, interfaces, symbols
+from volatility3.framework import interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols.windows import versions
-from volatility3.plugins.windows import poolscanner, bigpools
+from volatility3.plugins.windows import bigpools, poolscanner
 
 
 class HiveScan(interfaces.plugins.PluginInterface):
@@ -74,9 +74,15 @@ class HiveScan(interfaces.plugins.PluginInterface):
             constraints = poolscanner.PoolScanner.builtin_constraints(
                 kernel.symbol_table_name, [b"CM10"]
             )
+            scan_layer_name = context.layers[kernel.layer_name].config.get(
+                "memory_layer", kernel.layer_name
+            )
 
             for result in poolscanner.PoolScanner.generate_pool_scan(
-                context, kernel_name, constraints
+                context,
+                kernel_name,
+                constraints,
+                scan_layer_name=scan_layer_name,
             ):
                 _constraint, mem_object, _header = result
                 yield mem_object

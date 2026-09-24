@@ -92,7 +92,7 @@ class PsTree(interfaces.plugins.PluginInterface):
             else:
                 layer_name = kernel.layer_name
                 memory = self.context.layers[layer_name]
-                (_, _, offset, _, _) = list(
+                _, _, offset, _, _ = list(
                     memory.mapping(offset=proc.vol.offset, length=0)
                 )[0]
 

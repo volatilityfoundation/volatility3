@@ -4,7 +4,7 @@
 
 from typing import Iterable
 
-from volatility3.framework import renderers, interfaces, exceptions
+from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins.windows import poolscanner
@@ -46,13 +46,19 @@ class MutantScan(interfaces.plugins.PluginInterface):
         """
 
         kernel = context.modules[kernel_module_name]
+        scan_layer_name = context.layers[kernel.layer_name].config.get(
+            "memory_layer", kernel.layer_name
+        )
 
         constraints = poolscanner.PoolScanner.builtin_constraints(
             kernel.symbol_table_name, [b"Mut\xe1", b"Muta"]
         )
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
-            context, kernel_module_name, constraints
+            context,
+            kernel_module_name,
+            constraints,
+            scan_layer_name=scan_layer_name,
         ):
             _constraint, mem_object, _header = result
             yield mem_object

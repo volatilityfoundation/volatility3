@@ -141,7 +141,7 @@ class XenCoreDumpLayer(elf.Elf64Layer):
                 base_layer.name,
                 f"Offset 0x{offset:0x} does not exist within the base layer",
             )
-        (magic, elf_class, elf_data_encoding, elf_version) = cls._header_struct.unpack(
+        magic, elf_class, elf_data_encoding, elf_version = cls._header_struct.unpack(
             header_data
         )
         if magic != cls.MAGIC:

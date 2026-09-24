@@ -6,7 +6,7 @@ from typing import Iterable
 
 from volatility3.framework import interfaces
 from volatility3.framework.configuration import requirements
-from volatility3.plugins.windows import poolscanner, modules, pedump
+from volatility3.plugins.windows import modules, pedump, poolscanner
 
 vollog = logging.getLogger(__name__)
 
@@ -75,13 +75,19 @@ class ModScan(modules.Modules):
         """
 
         kernel = context.modules[kernel_module_name]
+        scan_layer_name = context.layers[kernel.layer_name].config.get(
+            "memory_layer", kernel.layer_name
+        )
 
         constraints = poolscanner.PoolScanner.builtin_constraints(
             kernel.symbol_table_name, [b"MmLd"]
         )
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
-            context, kernel_module_name, constraints
+            context,
+            kernel_module_name,
+            constraints,
+            scan_layer_name=scan_layer_name,
         ):
             _constraint, mem_object, _header = result
             yield mem_object
