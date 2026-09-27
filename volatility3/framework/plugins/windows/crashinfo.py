@@ -17,6 +17,7 @@ class Crashinfo(interfaces.plugins.PluginInterface):
     """Lists the information from a Windows crash dump."""
 
     _required_framework_version = (2, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls):
@@ -83,7 +84,7 @@ class Crashinfo(interfaces.plugins.PluginInterface):
 
         if crash_layer is None:
             vollog.error("This plugin requires a Windows crash dump")
-            raise
+            raise TypeError("This plugin requires a Windows crash dump")
 
         return renderers.TreeGrid(
             [
