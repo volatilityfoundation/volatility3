@@ -620,6 +620,34 @@ class TestLinuxPscallstack:
         )
 
 
+class TestLinuxIptablesLegacy:
+    def test_linux_generic_iptables(self, image, volatility, python):
+        rc, out, _err = test_volatility.runvol_plugin(
+            "linux.iptables_legacy.IPTables", image, volatility, python
+        )
+
+        # The test image may have no active iptables rules.
+        # This validates that plugin requirements are met and exceptions are not raised.
+        assert rc == 0
+        assert b"NetNS" in out
+        assert b"Chain" in out
+        assert b"Target" in out
+
+
+class TestLinuxIptablesNft:
+    def test_linux_generic_iptables_nft(self, image, volatility, python):
+        rc, out, _err = test_volatility.runvol_plugin(
+            "linux.iptables_nft.IPTablesNFT", image, volatility, python
+        )
+
+        # The test image may have no active nftables rules.
+        # This validates that plugin requirements are met and exceptions are not raised.
+        assert rc == 0
+        assert b"NetNS" in out
+        assert b"Chain" in out
+        assert b"Target" in out
+
+
 class TestLinuxSockscan:
     def test_linux_sockscan(self, volatility, python):
         # designed for linux-sample-1.dmp SHA1:1C3A4627EDCA94A7ADE3414592BEF0E62D7D3BB6
