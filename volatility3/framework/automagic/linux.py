@@ -190,6 +190,16 @@ class LinuxStacker(interfaces.automagic.StackerLayerInterface):
                 and init_task.state.cast("unsigned int") != 0
             ):
                 continue
+            elif init_task.active_mm.cast("long unsigned int") == module.get_symbol(
+                "init_mm"
+            ).address and init_task.tasks.next.cast(
+                "long unsigned int"
+            ) == init_task.tasks.prev.cast("long unsigned int"):
+                # The idle task steals `mm` from previously running task, i.e.,
+                # `init_mm` is only used as long as no CPU has ever been idle.
+                # This catches cases where we found a fragment of the
+                # unrelocated ELF file instead of the running kernel.
+                continue
 
             # ASLR calculation
             aslr_shift = (

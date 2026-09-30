@@ -7,7 +7,11 @@ import logging
 from struct import pack, unpack
 from typing import List, Optional, Tuple
 
-from Crypto.Cipher import AES, ARC4, DES
+try:
+    from Crypto.Cipher import ARC4, DES, AES
+except ImportError:
+    # Debian/Ubuntu ship pycryptodome under Cryptodome namespace
+    from Cryptodome.Cipher import ARC4, DES, AES
 
 from volatility3.framework import interfaces, renderers, exceptions, constants
 from volatility3.framework.configuration import requirements

@@ -5,8 +5,13 @@ import logging
 from struct import unpack
 from typing import Tuple
 
-from Crypto.Cipher import ARC4, AES
-from Crypto.Hash import HMAC
+try:
+    from Crypto.Cipher import ARC4, AES
+    from Crypto.Hash import HMAC
+except ImportError:
+    # Debian/Ubuntu ship pycryptodome under Cryptodome namespace
+    from Cryptodome.Cipher import ARC4, AES
+    from Cryptodome.Hash import HMAC
 
 from volatility3.framework import interfaces, renderers, exceptions
 from volatility3.framework.configuration import requirements

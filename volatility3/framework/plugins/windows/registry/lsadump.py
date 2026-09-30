@@ -6,7 +6,11 @@ from struct import unpack
 from typing import Optional
 import hashlib
 
-from Crypto.Cipher import ARC4, DES, AES
+try:
+    from Crypto.Cipher import ARC4, DES, AES
+except ImportError:
+    # Debian/Ubuntu ship pycryptodome under Cryptodome namespace
+    from Cryptodome.Cipher import ARC4, DES, AES
 
 from volatility3.framework import interfaces, renderers, exceptions
 from volatility3.framework.configuration import requirements

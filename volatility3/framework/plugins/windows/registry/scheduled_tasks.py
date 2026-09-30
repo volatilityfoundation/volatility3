@@ -1119,7 +1119,7 @@ class ScheduledTasks(interfaces.plugins.PluginInterface, timeliner.TimeLinerInte
             requirements.ModuleRequirement(
                 name="kernel",
                 description="Windows kernel",
-                architectures=["Intel33", "Intel64"],
+                architectures=["Intel32", "Intel64"],
             ),
             requirements.VersionRequirement(
                 name="hivelist", component=hivelist.HiveList, version=(2, 0, 0)

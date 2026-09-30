@@ -5,7 +5,7 @@ The coding standards for volatility are mostly by our linter and our code format
 All code submissions will be vetted automatically through tests from both and the submission will not be accepted if either of these fail.
 
 Code Linter: Ruff
-Code Formatter: Black
+Code Formatter: Ruff
 
 In addition, there are some coding practices that we employ to prevent specific failure cases and ensure consistency across the codebase.  These are documented below along with the rationale for the decision.
 

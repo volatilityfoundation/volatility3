@@ -948,9 +948,9 @@ class AggregateType(interfaces.objects.ObjectInterface):
             if isinstance(cls, agg_type):
                 agg_name = agg_type.__name__
 
-        assert isinstance(
-            members, collections.abc.Mapping
-        ), f"{agg_name} members parameter must be a mapping: {type(members)}"
+        assert isinstance(members, collections.abc.Mapping), (
+            f"{agg_name} members parameter must be a mapping: {type(members)}"
+        )
         assert all(
             (isinstance(member, tuple) and len(member) == 2)
             for member in members.values()

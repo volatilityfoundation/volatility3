@@ -17,11 +17,12 @@ import io
 import json
 import logging
 import os
+import pathlib
 import sys
 import tempfile
 import traceback
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
-from urllib import parse, request
+from urllib import parse
 
 try:
     import argcomplete
@@ -30,11 +31,10 @@ try:
 except ImportError:
     HAS_ARGCOMPLETE = False
 
-from volatility3.cli import text_filter
 import volatility3.plugins
 import volatility3.symbols
 from volatility3 import framework
-from volatility3.cli import text_renderer, volargparse
+from volatility3.cli import text_filter, text_renderer, volargparse
 from volatility3.framework import (
     automagic,
     configuration,
@@ -380,6 +380,17 @@ class CommandLine:
             )
             self.populate_requirements_argparse(plugin_parser, plugin_list[plugin])
 
+        # One last pass to get the renderer after we've loaded up plugins,
+        # so we can determine whether to show the banner on normal output or not...
+        known_args = [arg for arg in sys.argv[1:] if arg != "--help" and arg != "-h"]
+        partial_args, _ = parser.parse_known_args(known_args)
+
+        # Display banner - redirect to stderr if using structured output
+        banner_output = sys.stdout
+        if renderers[partial_args.renderer].structured_output:
+            banner_output = sys.stderr
+        banner_output.write(f"Volatility 3 Framework {constants.PACKAGE_VERSION}\n")
+
         ###
         # PASS TO UI
         ###
@@ -391,12 +402,6 @@ class CommandLine:
             # before all the plugins have been added
             argcomplete.autocomplete(parser)
         args = parser.parse_args()
-
-        # Display banner - redirect to stderr if using structured output
-        banner_output = sys.stdout
-        if renderers[args.renderer].structured_output:
-            banner_output = sys.stderr
-        banner_output.write(f"Volatility 3 Framework {constants.PACKAGE_VERSION}\n")
 
         if args.plugin is None:
             parser.error(
@@ -489,7 +494,7 @@ class CommandLine:
                 )
                 args.save_config = "config.json"
             if args.save_config:
-                vollog.debug("Writing out configuration data to {args.save_config}")
+                vollog.debug(f"Writing out configuration data to {args.save_config}")
                 if os.path.exists(os.path.abspath(args.save_config)):
                     parser.error(
                         f"Cannot write configuration: file {args.save_config} already exists"
@@ -739,7 +744,10 @@ class CommandLine:
                                     raise FileNotFoundError(
                                         f"Non-existent file {value} passed to URIRequirement"
                                     )
-                                value = f"file://{request.pathname2url(os.path.abspath(value))}"
+                                # as_uri builds a correctly formed file URL on
+                                # every platform, whereas prefixing the scheme
+                                # by hand leaves too many slashes on Windows
+                                value = pathlib.Path(os.path.abspath(value)).as_uri()
                     if isinstance(requirement, requirements.ListRequirement):
                         if not isinstance(value, list):
                             raise TypeError(

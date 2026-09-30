@@ -53,9 +53,9 @@ class PsTree(interfaces.plugins.PluginInterface):
     def find_level(
         self,
         pid: int,
-        filter_func: Callable[
-            [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: False,
+        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: (
+            False
+        ),
     ) -> None:
         """Finds how deep the pid is in the processes list."""
         seen = {pid}
@@ -77,9 +77,9 @@ class PsTree(interfaces.plugins.PluginInterface):
 
     def _generator(
         self,
-        filter_func: Callable[
-            [interfaces.objects.ObjectInterface], bool
-        ] = lambda _: False,
+        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: (
+            False
+        ),
     ):
         """Generates the Tree of processes."""
         kernel = self.context.modules[self.config["kernel"]]

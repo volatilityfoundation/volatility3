@@ -49,7 +49,9 @@ class PsList(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def get_list_tasks(cls, method: str) -> Callable[
+    def get_list_tasks(
+        cls, method: str
+    ) -> Callable[
         [interfaces.context.ContextInterface, str, Callable[[int], bool]],
         Iterable[interfaces.objects.ObjectInterface],
     ]:

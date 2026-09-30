@@ -25,7 +25,8 @@ except ImportError:
     has_capstone = False
 
 try:
-    from IPython import terminal
+    from IPython.terminal import embed, prompts
+
     from traitlets import config as traitlets_config
 
     has_ipython = True
@@ -135,16 +136,16 @@ class Volshell(interfaces.plugins.PluginInterface):
         combined_locals.update(self._construct_locals_dict())
         if has_ipython:
 
-            class LayerNamePrompt(terminal.prompts.Prompts):
+            class LayerNamePrompt(prompts.Prompts):
                 def in_prompt_tokens(self, cli=None):
                     slf = self.shell.user_ns.get("self")
                     layer_name = slf.current_layer if slf else "no_layer"
-                    return [(terminal.prompts.Token.Prompt, f"[{layer_name}]> ")]
+                    return [(prompts.Token.Prompt, f"[{layer_name}]> ")]
 
             c = traitlets_config.Config()
             c.TerminalInteractiveShell.prompts_class = LayerNamePrompt
             c.InteractiveShellEmbed.banner2 = banner
-            self.__console = terminal.embed.InteractiveShellEmbed(
+            self.__console = embed.InteractiveShellEmbed(
                 config=c, user_ns=combined_locals
             )
         else:

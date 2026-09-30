@@ -15,8 +15,8 @@ Memory layers
 
 A memory layer is a body of data that can be accessed by requesting data at a specific address.  At its lowest level
 this data is stored on a phyiscal medium (RAM) and very early computers addressed locations in memory directly.  However,
-as the size of memory increased and it became more difficult to manage memory most architectures moved to a "paged" model 
-of memory, where the available memory is cut into specific fixed-sized pages.  To help further, programs can ask for any address 
+as the size of memory increased and it became more difficult to manage memory most architectures moved to a "paged" model
+of memory, where the available memory is cut into specific fixed-sized pages.  To help further, programs can ask for any address
 and the processor will look up their (virtual) address in a map, to find out where the (physical) address that it lives at is,
 in the actual memory of the system.
 
@@ -24,18 +24,18 @@ Volatility can work with these layers as long as it knows the map (so, for examp
 address `9`).  The automagic that runs at the start of every volatility session often locates the kernel's memory map, and creates
 a kernel virtual layer, which allows for kernel addresses to be looked up and the correct data returned.  There can, however, be
 several maps, and in general there is a different map for each process (although a portion of the operating system's memory is
-usually mapped to the same location across all processes).  The maps may take the same address but point to a different part of 
-physical memory.  It also means that two processes could theoretically share memory, both having a virtual address mapped to the 
+usually mapped to the same location across all processes).  The maps may take the same address but point to a different part of
+physical memory.  It also means that two processes could theoretically share memory, both having a virtual address mapped to the
 same physical address.  See the worked example below for more information.
 
 To translate an address on a layer, call :py:meth:`layer.mapping(offset, length, ignore_errors) <volatility3.framework.interfaces.layers.TranslationLayerInterface.mapping>` and it will return a list of chunks without overlap, in order,
-for the requested range.  If a portion cannot be mapped, an exception will be thrown unless `ignore_errors` is true.  Each 
-chunk will contain the original offset of the chunk, the translated offset, the original size and the translated size of 
+for the requested range.  If a portion cannot be mapped, an exception will be thrown unless `ignore_errors` is true.  Each
+chunk will contain the original offset of the chunk, the translated offset, the original size and the translated size of
 the chunk, as well as the lower layer the chunk lives within.
 
 Worked example
 ^^^^^^^^^^^^^^
-    
+
 The operating system and two programs may all appear to have access to  all of physical memory, but actually the maps they each have
 mean they each see something different:
 
@@ -65,12 +65,12 @@ is a permissions model for Intel addressing which is not discussed further here)
 
 In Volatility 3 mappings are represented by a directed graph of layers, whose end nodes are
 :py:class:`DataLayers <volatility3.framework.interfaces.layers.DataLayerInterface>` and whose internal nodes are :py:class:`TranslationLayers <volatility3.framework.interfaces.layers.TranslationLayerInterface>`.
-In this way, a raw memory image in the LiME file format and a page file can be combined to form a single Intel virtual 
-memory layer.  When requesting addresses from the Intel layer, it will use the Intel memory mapping algorithm, along 
+In this way, a raw memory image in the LiME file format and a page file can be combined to form a single Intel virtual
+memory layer.  When requesting addresses from the Intel layer, it will use the Intel memory mapping algorithm, along
 with the address of the directory table base or page table map, to translate that
 address into a physical address, which will then either be directed towards the swap layer or the LiME layer.  Should it
-be directed towards the LiME layer, the LiME file format algorithm will translate the new address to determine where 
-within the file the data is stored.  When the :py:meth:`layer.read() <volatility3.framework.interfaces.layers.TranslationLayerInterface.read>` 
+be directed towards the LiME layer, the LiME file format algorithm will translate the new address to determine where
+within the file the data is stored.  When the :py:meth:`layer.read() <volatility3.framework.interfaces.layers.TranslationLayerInterface.read>`
 method is called, the translation is done automatically and the correct data gathered and combined.
 
 .. note:: Volatility 2 had a similar concept, called address spaces, but these could only stack linearly one on top of another.
@@ -149,6 +149,9 @@ a table, or inserted into a database like Elastic Search and trawled using an ex
 
 The renderers only need to know how to process very basic types (booleans, strings, integers, bytes) and a few additional specific
 ones (disassembly and various absent values).
+
+Renderers can also be added to volatility automatically.  There is an additional arrow/parquet format renderer available (but requires
+the pyarrow dependency to be installed), but this is not shipped with the EXE version because it doubles the size of the executable.
 
 Configuration Tree
 ------------------
