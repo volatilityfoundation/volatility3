@@ -8,7 +8,7 @@ import datetime
 import time
 import tarfile
 from dataclasses import dataclass, astuple
-from typing import IO, List, Set, Type, Iterable, Tuple, Union
+from typing import BinaryIO, IO, List, Set, Type, Iterable, Tuple, Union
 from io import BytesIO
 from pathlib import PurePath
 
@@ -791,13 +791,15 @@ class RecoverFs(plugins.PluginInterface):
             tar_info.mtime = mtime
         tar.addfile(tar_info)
 
-    def _generator(self):
+    def _recover_files(self, output_file: BinaryIO) -> Iterable[Tuple[int, Tuple]]:
+        """Recover files from the pagecache and store them in the specified
+        file.
+
+        Args:
+            output_file: Open file handler to write the raw buffer to."""
         vmlinux_module_name = self.config["kernel"]
         vmlinux = self.context.modules[vmlinux_module_name]
         vmlinux_layer = self.context.layers[vmlinux.layer_name]
-
-        output_filename = f"recovered_fs.tar.{self.config['compression_format']}"
-        output_file = self.open(output_filename)
         tar = tarfile.open(
             fileobj=output_file,
             mode=f"w:{self.config['compression_format']}",
@@ -900,7 +902,11 @@ class RecoverFs(plugins.PluginInterface):
             yield (0, astuple(inode_out) + (extracted_file_size,))
 
         tar.close()
-        output_file.close()
+
+    def _generator(self):
+        output_filename = f"recovered_fs.tar.{self.config['compression_format']}"
+        with self.open(output_filename) as output_file:
+            yield from self._recover_files(output_file)
 
     def run(self):
         headers = [
