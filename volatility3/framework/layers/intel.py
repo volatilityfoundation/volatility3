@@ -130,6 +130,14 @@ class Intel(linear.LinearlyMappedLayer):
         """Returns whether a particular page is valid based on its entry."""
         return bool(entry & 1)
 
+    def _page_is_large(self, entry: int) -> bool:
+        """Returns whether a valid directory entry maps a large page instead of pointing to the next table."""
+        return bool(entry & self._PAGE_PSE)
+
+    def _large_page_frame_is_valid(self, frame: int, page_size: int) -> bool:
+        """Returns whether a large page's frame address is acceptable; layers may be stricter."""
+        return True
+
     @staticmethod
     def _page_is_dirty(entry: int) -> bool:
         """Returns whether a particular page is dirty based on its entry."""
@@ -172,10 +180,21 @@ class Intel(linear.LinearlyMappedLayer):
             )
 
         pfn = self._pte_pfn(entry)
+        page_size = 1 << (position + 1)
+        if page_size > self.page_size and not self._large_page_frame_is_valid(
+            pfn << self.page_shift, page_size
+        ):
+            raise exceptions.PagedInvalidAddressException(
+                self.name,
+                offset,
+                position + 1,
+                entry,
+                f"Large page frame {pfn << self.page_shift:#x} is not aligned to its size {page_size:#x}",
+            )
         page_offset = self._mask(offset, position, 0)
         page = pfn << self.page_shift | page_offset
 
-        return page, 1 << (position + 1), self._base_layer
+        return page, page_size, self._base_layer
 
     def _pte_pfn(self, entry: int) -> int:
         """Extracts the page frame number (PFN) from the page table entry (PTE) entry"""
@@ -256,7 +275,9 @@ class Intel(linear.LinearlyMappedLayer):
             (entry,) = struct.unpack(self._entry_format, entry_data)
 
             # Check if we're a large page
-            if large_page and (entry & self._PAGE_PSE):
+            # The bit test first keeps the common path as cheap as before: the method is only
+            # consulted for entries that could map a large page
+            if large_page and (entry & self._PAGE_PSE) and self._page_is_large(entry):
                 # Mask off the PAT bit
                 if entry & self._PAGE_PAT_LARGE:
                     entry -= self._PAGE_PAT_LARGE
@@ -502,6 +523,32 @@ class WindowsMixin(Intel):
         For more information, see Windows Internals (6th Ed, Part 2, pages 268-269)
         """
         return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
+
+    def _page_is_large(self, entry: int) -> bool:
+        """Only a present entry can map a large page.
+
+        _page_is_valid also accepts transition entries (bit 0 clear, bit 11 set), the state
+        Windows gives a page table that is no longer mapped but still in RAM.  In that state
+        bits 5 to 9 hold the page protection, so bit 7 can be set by chance and does not mean
+        "large page"; Windows never pages large pages out, so they never reach transition.
+        Reading bit 7 there made a transition entry a fake 1 GB or 2 MB page, starting at the
+        next page table, and scan() and read() then disagreed about its bytes.  See upstream
+        pull request 518, which this follows for Windows only (Linux keeps PROT_NONE huge pages
+        with the present bit clear, so the rule cannot apply to every Intel layer).
+        """
+        return bool(entry & self._PAGE_PRESENT and entry & self._PAGE_PSE)
+
+    def _large_page_frame_is_valid(self, frame: int, page_size: int) -> bool:
+        """A 2 MB or 1 GB page must start on a multiple of its size.
+
+        The CPU treats the low frame bits of a large-page entry as reserved and faults if any is
+        set, so no real mapping looks like this.  Such entries come from a stale page-table page
+        that now holds other data.  Translating through one anyway made scan() (which adds the
+        offset to the frame) and read() (which ORs it in) disagree about the same address.  Kept
+        to Windows: Volatility's Linux layers recover PROT_NONE huge-page frames with a 4 KB mask,
+        which leaves low bits set, and changing that is a separate matter.
+        """
+        return not frame & (page_size - 1)
 
     def _translate_swap(
         self, layer: Intel, offset: int, bit_offset: int
