@@ -32,7 +32,6 @@ if HAS_LEECHCORE:
             self._cursor = 0
             self._handle = None
             self._pad = True
-            self._chunk_size = 0x1000000
 
         @property
         def maxaddr(self):
