@@ -27,7 +27,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
     """Dumps cached file contents from Windows memory samples."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -60,6 +60,11 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 description="Dump files matching regular expression FILTER",
                 optional=True,
             ),
+            requirements.IntRequirement(
+    	    	name="size",
+   		        description="Specify the expected size of the dumped file in bytes",
+    		    optional=True,
+	        ),
             requirements.BooleanRequirement(
                 name="ignore-case",
                 description="Ignore case in filter match",
@@ -76,12 +81,13 @@ class DumpFiles(interfaces.plugins.PluginInterface):
 
     @classmethod
     def dump_file_producer(
-        cls,
-        file_object: interfaces.objects.ObjectInterface,
-        memory_object: interfaces.objects.ObjectInterface,
-        open_method: Type[interfaces.plugins.FileHandlerInterface],
-        layer: interfaces.layers.DataLayerInterface,
-        desired_file_name: str,
+    	cls,
+    	file_object: interfaces.objects.ObjectInterface,
+    	memory_object: interfaces.objects.ObjectInterface,
+    	open_method: Type[interfaces.plugins.FileHandlerInterface],
+    	layer: interfaces.layers.DataLayerInterface,
+    	desired_file_name: str,
+    	size: Optional[int] = None,
     ) -> Optional[interfaces.plugins.FileHandlerInterface]:
         """Produce a file from the memory object's get_available_pages() interface.
 
@@ -102,7 +108,14 @@ class DumpFiles(interfaces.plugins.PluginInterface):
         bytes_written = 0
         try:
             for memoffset, fileoffset, datasize in memory_object.get_available_pages():
-                data = layer.read(memoffset, datasize, pad=True)
+                if size is not None and fileoffset >= size:
+                    break
+                
+                read_len = datasize
+                if size is not None and (fileoffset + read_len) > size:
+                    read_len = size - fileoffset
+                    
+                data = layer.read(memoffset, read_len, pad=True)
                 bytes_written += len(data)
                 filedata.seek(fileoffset)
                 filedata.write(data)
@@ -125,6 +138,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
         primary_layer_name: str,
         open_method: Type[interfaces.plugins.FileHandlerInterface],
         file_obj: interfaces.objects.ObjectInterface,
+        size: Optional[int] = None,
     ) -> Generator[Tuple, None, None]:
         """Given a FILE_OBJECT, dump data to separate files for each of the three file caches.
 
@@ -196,7 +210,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
             desired_file_name = f"file.{file_obj.vol.offset:#x}.{memory_object.vol.offset:#x}.{cache_name}.{ntpath.basename(obj_name)}.{extension}"
 
             file_handle = cls.dump_file_producer(
-                file_obj, memory_object, open_method, layer, desired_file_name
+                file_obj, memory_object, open_method, layer, desired_file_name, size
             )
 
             file_output = "Error dumping file"
@@ -268,7 +282,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                             dumped_files.add(file_obj.vol.offset)
 
                             for result in self.process_file_object(
-                                self.context, kernel.layer_name, self.open, file_obj
+                                self.context, kernel.layer_name, self.open, file_obj, self.config.get("size")
                             ):
                                 yield (0, result)
                     except exceptions.InvalidAddressException:
@@ -337,7 +351,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                         offset=offset,
                     )
                     for result in self.process_file_object(
-                        self.context, virtual_layer_name, self.open, file_obj
+                        self.context, virtual_layer_name, self.open, file_obj, self.config.get("size")
                     ):
                         yield (0, result)
                 except exceptions.InvalidAddressException:
