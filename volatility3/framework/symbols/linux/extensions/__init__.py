@@ -750,9 +750,19 @@ class task_struct(generic.GenericIntelProcess):
         """Returns the boot time in a Timespec64Concrete object."""
 
         vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
-        if vmlinux.has_symbol("tk_core"):
+        if vmlinux.has_symbol("timekeeper_data"):
+            # kernels >= 6.17 | timekeeper_data[TIMEKEEPER_CORE] | 22c62b9a84b8f16ca0277e133a0cd62a259fee7c
+            # tk_core became a macro for this. TIMEKEEPER_CORE is always 0: it is the first
+            # enumerator of enum timekeeper_ids (include/linux/timekeeper_internal.h), with
+            # or without CONFIG_POSIX_AUX_CLOCKS.
+            tk_core = vmlinux.object_from_symbol("timekeeper_data")[0]
+        elif vmlinux.has_symbol("tk_core"):
             # kernels >= 3.17 | tk_core | 3fdb14fd1df70325e1e91e1203a699a4803ed741
             tk_core = vmlinux.object_from_symbol("tk_core")
+        else:
+            tk_core = None
+
+        if tk_core is not None:
             timekeeper = tk_core.timekeeper
             if not timekeeper.offs_real.has_member("tv64"):
                 # kernels >= 4.10 - Tested on Ubuntu 6.8.0-41
