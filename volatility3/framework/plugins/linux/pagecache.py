@@ -8,7 +8,7 @@ import datetime
 import time
 import tarfile
 from dataclasses import dataclass, astuple
-from typing import IO, List, Set, Type, Iterable, Tuple, Union
+from typing import IO, List, Set, Type, Iterable, Tuple, Union, Optional
 from io import BytesIO
 from pathlib import PurePath
 
@@ -58,12 +58,14 @@ class InodeInternal:
         mountpoint: Superblock mountpoint path
         inode: 'inode' struct
         path: Dentry full path
+        symlink_target: Target path of a (fast) symlink. None for non-symlinks
     """
 
     superblock: interfaces.objects.ObjectInterface
     mountpoint: str
     inode: interfaces.objects.ObjectInterface
     path: str
+    symlink_target: Optional[str] = None
 
     def to_user(
         self, kernel_layer: interfaces.layers.TranslationLayerInterface
@@ -92,6 +94,12 @@ class InodeInternal:
         change_time_dt = self.inode.get_change_time()
         inode_size = int(self.inode.i_size)
 
+        # Keep the "source -> target" symlink representation for display purposes
+        # only, so the real filesystem path can still be matched against (--find)
+        path = self.path
+        if self.symlink_target:
+            path = InodeUser.format_symlink(path, self.symlink_target)
+
         inode_user = InodeUser(
             superblock_addr=superblock_addr,
             mountpoint=self.mountpoint,
@@ -105,7 +113,7 @@ class InodeInternal:
             access_time=access_time_dt,
             modification_time=modification_time_dt,
             change_time=change_time_dt,
-            path=self.path,
+            path=path,
             inode_size=inode_size,
         )
         return inode_user
@@ -116,7 +124,7 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (1, 1, 0)
+    _version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -148,20 +156,18 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     @staticmethod
-    def _follow_symlink(
+    def _get_symlink_target(
         inode: interfaces.objects.ObjectInterface,
-        symlink_path: str,
-    ) -> str:
-        """Follows (fast) symlinks (kernels >= 4.2.x).
+    ) -> Optional[str]:
+        """Returns the target of a (fast) symlink (kernels >= 4.2.x).
         Fast symlinks are filesystem agnostic.
 
         Args:
-            inode: The inode (or pointer) to dump
-            symlink_path: The symlink name
+            inode: The symlink inode (or pointer)
 
         Returns:
-            If it can resolve the symlink, it returns a string "symlink_path -> target_path"
-            Otherwise, it returns the same symlink_path
+            If it can resolve the symlink, it returns the target string.
+            Otherwise, it returns None
         """
         # i_link (fast symlinks) were introduced in 4.2
         if (
@@ -171,12 +177,11 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
             and inode.i_link
             and inode.i_link.is_readable()
         ):
-            symlink_dest = inode.i_link.dereference().cast(
+            return inode.i_link.dereference().cast(
                 "string", max_length=255, encoding="utf-8", errors="replace"
             )
-            symlink_path = InodeUser.format_symlink(symlink_path, symlink_dest)
 
-        return symlink_path
+        return None
 
     @classmethod
     def _walk_dentry(
@@ -331,13 +336,16 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
                     continue
                 seen_inodes.add(int(file_inode_ptr))
 
+                symlink_target = None
                 if follow_symlinks:
-                    file_path = cls._follow_symlink(file_inode_ptr, file_path)
+                    symlink_target = cls._get_symlink_target(file_inode_ptr)
+
                 inode_in = InodeInternal(
                     superblock=superblock,
                     mountpoint=mountpoint,
                     inode=file_inode,
                     path=file_path,
+                    symlink_target=symlink_target,
                 )
                 yield inode_in
 
