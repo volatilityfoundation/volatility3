@@ -374,6 +374,9 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 inode_out = inode_in.to_user(vmlinux_layer)
 
                 yield (0, astuple(inode_out))
+        else:
+            if self.config["find"]:
+                vollog.error("Unable to find inode with path %s", self.config["find"])
 
     def generate_timeline(self):
         """Generates tuples of (description, timestamp_type, timestamp)

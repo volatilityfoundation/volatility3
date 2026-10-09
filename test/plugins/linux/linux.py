@@ -426,6 +426,22 @@ class TestLinuxPageCacheInodepages:
                 os.remove(inode_dump_filename)
 
 
+class TestLinuxPagecacheFilesFindMissing:
+    def test_linux_specific_pagecache_files_find_missing(self, volatility, python):
+        image = LinuxSamples.LINUX_GENERIC.value.path
+        rc, _out, err = test_volatility.runvol_plugin(
+            "linux.pagecache.Files",
+            image,
+            volatility,
+            python,
+            pluginargs=("--find", "/this/path/does/not/exist"),
+        )
+
+        # A --find miss must not be silent, matching the InodePages behaviour
+        assert rc == 0
+        assert b"Unable to find inode with path /this/path/does/not/exist" in err
+
+
 class TestLinuxPagecacheSymlinks:
     """Symlink path handling tests. They don't require a memory image"""
 
