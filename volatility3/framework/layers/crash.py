@@ -127,7 +127,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
                 )
                 offset += run.PageCount
 
-        elif self.dump_type == 0x05:
+        elif self.dump_type == 0x05 or self.dump_type == 0x06:
             summary_header = self.get_summary_header()
             seg_first_bit = None  # First bit in a run
             seg_first_offset = 0  # File offset of first bit
@@ -254,14 +254,16 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
 class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
     """A Windows crash format TranslationLayer.
-    This TranslationLayer supports Microsoft complete memory dump files.
-    It currently does not support kernel or small memory dump files.
+    This TranslationLayer supports Microsoft complete memory dump files
+    (DumpType=1), full bitmap dump files (DumpType=5), and kernel bitmap
+    dump files (DumpType=6). It does not support legacy summary kernel
+    dumps (DumpType=2) or small memory (triage) dumps (DumpType=4).
     """
 
     VALIDDUMP = 0x34365544
     crashdump_json = "crash64"
     dump_header_name = "_DUMP_HEADER64"
-    supported_dumptypes = [0x1, 0x05]
+    supported_dumptypes = [0x1, 0x05, 0x06]
     headerpages = 2
 
 

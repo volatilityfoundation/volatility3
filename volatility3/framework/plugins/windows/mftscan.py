@@ -126,6 +126,8 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             mft_flag = mft_record.Flags.lookup()
         except ValueError:
             mft_flag = hex(mft_record.Flags)
+        except exceptions.InvalidAddressException:
+            return
 
         # Standard Information Attribute
         try:
@@ -162,6 +164,8 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             mft_flag = mft_record.Flags.lookup()
         except ValueError:
             mft_flag = hex(mft_record.Flags)
+        except exceptions.InvalidAddressException:
+            return
 
         # File Name Attribute
         try:
