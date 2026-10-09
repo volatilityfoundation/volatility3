@@ -2,7 +2,10 @@ import contextlib
 import tempfile
 import os
 import re
+import types
+
 from test import test_volatility, LinuxSamples
+from volatility3.plugins.linux import pagecache
 
 
 class TestLinuxVolshell:
@@ -421,6 +424,61 @@ class TestLinuxPageCacheInodepages:
         finally:
             with contextlib.suppress(FileNotFoundError):
                 os.remove(inode_dump_filename)
+
+
+class TestLinuxPagecacheFilesFindMissing:
+    def test_linux_specific_pagecache_files_find_missing(self, volatility, python):
+        image = LinuxSamples.LINUX_GENERIC.value.path
+        rc, _out, err = test_volatility.runvol_plugin(
+            "linux.pagecache.Files",
+            image,
+            volatility,
+            python,
+            pluginargs=("--find", "/this/path/does/not/exist"),
+        )
+
+        # A --find miss must not be silent, matching the InodePages behaviour
+        assert rc == 0
+        assert b"Unable to find inode with path /this/path/does/not/exist" in err
+
+
+class TestLinuxPagecacheSymlinks:
+    """Symlink path handling tests. They don't require a memory image"""
+
+    def test_symlink_paths_kept_real_internally(self):
+        superblock = types.SimpleNamespace(
+            vol=types.SimpleNamespace(offset=0xDEAD0000), major=0, minor=1
+        )
+        inode = types.SimpleNamespace(
+            vol=types.SimpleNamespace(offset=0xBEEF0000),
+            i_ino=4321,
+            i_size=9,
+            i_mapping=types.SimpleNamespace(nrpages=1),
+            get_inode_type=lambda: "LNK",
+            get_file_mode=lambda: "lrwxrwxrwx",
+            get_access_time=lambda: None,
+            get_modification_time=lambda: None,
+            get_change_time=lambda: None,
+        )
+        kernel_layer = types.SimpleNamespace(page_size=4096)
+
+        symlink_source = "/mnt/dir/symlink"
+        symlink_dest = "../relative_target"
+        inode_in = pagecache.InodeInternal(
+            superblock=superblock,
+            mountpoint="/mnt",
+            inode=inode,
+            path=symlink_source,
+            symlink_target=symlink_dest,
+        )
+
+        # The internal representation must keep the real filesystem path,
+        # so --find can match against it
+        assert inode_in.path == symlink_source
+
+        inode_out = inode_in.to_user(kernel_layer)
+        # The "source -> destination" representation is display-only
+        assert inode_out.path == f"{symlink_source} -> {symlink_dest}"
 
 
 class TestLinuxCheckAfinfo:
