@@ -800,7 +800,7 @@ class RecoverFs(plugins.PluginInterface):
         vmlinux_module_name = self.config["kernel"]
         vmlinux = self.context.modules[vmlinux_module_name]
         vmlinux_layer = self.context.layers[vmlinux.layer_name]
-        tar = tarfile.open(
+        with tarfile.open(
             fileobj=output_file,
             mode=f"w:{self.config['compression_format']}",
         )
