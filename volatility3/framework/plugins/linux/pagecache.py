@@ -901,7 +901,6 @@ class RecoverFs(plugins.PluginInterface):
             inode_out = inode_in.to_user(vmlinux_layer)
             yield (0, astuple(inode_out) + (extracted_file_size,))
 
-        tar.close()
 
     def _generator(self):
         output_filename = f"recovered_fs.tar.{self.config['compression_format']}"
