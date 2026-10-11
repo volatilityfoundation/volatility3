@@ -14,7 +14,7 @@ Memory layers
 -------------
 
 A memory layer is a body of data that can be accessed by requesting data at a specific address.  At its lowest level
-this data is stored on a phyiscal medium (RAM) and very early computers addressed locations in memory directly.  However,
+this data is stored on a physical medium (RAM) and very early computers addressed locations in memory directly.  However,
 as the size of memory increased and it became more difficult to manage memory most architectures moved to a "paged" model
 of memory, where the available memory is cut into specific fixed-sized pages.  To help further, programs can ask for any address
 and the processor will look up their (virtual) address in a map, to find out where the (physical) address that it lives at is,
@@ -110,8 +110,8 @@ templates as a :py:class:`Symbol <volatility3.framework.interfaces.symbols.Symbo
 be used to refer to either independently.  Lookup tables of these symbols are often produced as debugging information
 alongside the compilation of the program.  Volatility 3 provides access to these through a
 :py:class:`SymbolTable <volatility3.framework.interfaces.symbols.SymbolTableInterface>`, many of which can be collected
-within a :py:class:`~volatility3.framework.contexts.Context` as a :py:class:`SymbolSpace <volatility.framework.interfaces.symbols.SymbolSpaceInterface>`.
-A :py:class:`~volatility3.framework.contexts.Context` can store only one :py:class:`~volatility.framework.symbols.SymbolSpace`
+within a :py:class:`~volatility3.framework.contexts.Context` as a :py:class:`SymbolSpace <volatility3.framework.interfaces.symbols.SymbolSpaceInterface>`.
+A :py:class:`~volatility3.framework.contexts.Context` can store only one :py:class:`~volatility3.framework.symbols.SymbolSpace`
 at a time, although a :py:class:`~volatility3.framework.symbols.SymbolSpace` can store as
 many :py:class:`~volatility3.framework.symbols.SymbolTable` items as necessary.
 
