@@ -803,7 +803,7 @@ class RecoverFs(plugins.PluginInterface):
         with tarfile.open(
             fileobj=output_file,
             mode=f"w:{self.config['compression_format']}",
-        )
+        ) as tar:
         # Set a unique timestamp for all extracted files
         mtime = time.time()
 
