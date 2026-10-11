@@ -10,9 +10,9 @@ have a single offset that will allow manipulation of the page tables themselves.
 
 In older windows version the self-referential pointer was at a specific fixed index within the table,
 which was different for each architecture.  In very recent Windows versions, the self-referential pointer
-index has been randomized, so a different heuristic must be used.  In these versions of windows it was found
-that the physical offset for the DTB was always within the range of 0x1a0000 to 0x1b0000.  As such, a search
-for any self-referential pointer within these pages gives a high probability of being an accurate DTB.
+index has been randomized, so a different heuristic must be used.  In these versions of windows the physical
+offset for the DTB falls within a set of observed ranges near the start of physical memory.  A search for any
+self-referential pointer within these ranges gives a high probability of being an accurate DTB.
 
 The self-referential indices for older versions of windows are listed below:
 
@@ -254,9 +254,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
             "Detecting Self-referential pointer for recent windows",
             [DtbSelfRef64bit()],
             [
-                (0x150000, 0x150000),
-                (0x550000, 0x1A0000),
-                (0x900000, 0x100000),
+                (0x150000, 0x8B0000),
             ],
         ),
         (
@@ -284,11 +282,11 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
         where possible.
 
         Where the DTB scan fails, it attempts a heuristic of checking
-        for the DTB within a specific range. New versions of windows,
+        for the DTB within a set of physical address ranges. New versions of windows,
         with randomized self-referential pointers, appear to always load
-        their dtb within a small specific range (`0x1a0000` and
-        `0x1b0000`), so instead we scan for all self-referential
-        pointers in that range, and ignore any that contain multiple
+        their dtb within observed ranges near the start of physical memory,
+        so instead we scan for all self-referential
+        pointers in those ranges, and ignore any that contain multiple
         self-references (since the DTB is very unlikely to point to
         itself more than once).
         """
