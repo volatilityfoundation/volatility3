@@ -6,6 +6,7 @@ import datetime
 import json
 import logging
 import os
+import pathlib
 import sqlite3
 import urllib
 import urllib.parse
@@ -13,7 +14,7 @@ import urllib.request
 from abc import abstractmethod
 from typing import Dict, Generator, Iterable, List, Optional, Tuple
 
-from volatility3 import framework, schemas
+from volatility3 import framework, schemas, symbols
 from volatility3.framework import constants, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import resources
@@ -256,6 +257,52 @@ class SqliteCache(CacheManagerInterface):
         parsed = urllib.parse.urlparse(url)
         return parsed.scheme in ["file", "jar"]
 
+    @staticmethod
+    def _location_pathname(location: str) -> Optional[str]:
+        """Returns the filesystem path a local location refers to, or None.
+
+        Handles both plain ``file:`` locations and the ``jar:file:...!name``
+        locations produced for symbol files held inside zip archives.
+        """
+        parsed = urllib.parse.urlparse(location)
+        if parsed.scheme == "file":
+            return urllib.request.url2pathname(parsed.path)
+        if parsed.scheme == "jar":
+            inner_url = urllib.parse.urlparse(parsed.path)
+            if inner_url.scheme == "file":
+                return inner_url.path.split("!")[0]
+        return None
+
+    @classmethod
+    def _installation_roots(cls) -> List[str]:
+        """The directories this installation searches for local symbol files.
+
+        The identifier cache is shared between every installation of the same
+        user, but each installation only scans its own symbol directories.
+        Roots are needed so that entries belonging to a different installation
+        can be told apart from entries that have genuinely gone missing.
+        """
+        roots = []
+        for path in symbols.__path__:
+            if not os.path.isabs(path):
+                path = os.path.abspath(os.path.join(__file__, path))
+            roots.append(str(pathlib.Path(path).resolve()))
+        return roots
+
+    def _is_managed_location(self, location: str, roots: Iterable[str]) -> bool:
+        """Whether a cached local location lies under one of this installation's roots.
+
+        Locations outside every root were placed in the cache by a different
+        installation, so this installation must not consider them stale.
+        """
+        pathname = self._location_pathname(location)
+        if pathname is None:
+            return False
+        pathname = os.path.normpath(pathname)
+        return any(
+            pathname == root or pathname.startswith(root + os.sep) for root in roots
+        )
+
     def get_identifier(self, location: str) -> Optional[bytes]:
         results = (
             self._database.cursor()
@@ -317,7 +364,18 @@ class SqliteCache(CacheManagerInterface):
         cached_locations = set(self.get_local_locations())
 
         new_locations = on_disk_locations.difference(cached_locations)
-        missing_locations = cached_locations.difference(on_disk_locations)
+
+        # Only locations under this installation's own symbol directories can be
+        # treated as stale.  The identifier cache is shared by every installation
+        # of the same user, but each installation scans only its own directories,
+        # so anything outside them was placed there by a different installation
+        # and must be left alone (issue #2050).
+        roots = self._installation_roots()
+        missing_locations = {
+            location
+            for location in cached_locations.difference(on_disk_locations)
+            if self._is_managed_location(location, roots)
+        }
 
         # Missing entries
         if missing_locations:
@@ -340,14 +398,7 @@ class SqliteCache(CacheManagerInterface):
                 timestamp = stored_timestamp  # Default to requiring update
 
                 # See if the file is a local URL type we can handle:
-                parsed = urllib.parse.urlparse(location)
-                pathname = None
-                if parsed.scheme == "file":
-                    pathname = urllib.request.url2pathname(parsed.path)
-                if parsed.scheme == "jar":
-                    inner_url = urllib.parse.urlparse(parsed.path)
-                    if inner_url.scheme == "file":
-                        pathname = inner_url.path.split("!")[0]
+                pathname = self._location_pathname(location)
 
                 if pathname and os.path.exists(pathname):
                     timestamp = datetime.datetime.fromtimestamp(
