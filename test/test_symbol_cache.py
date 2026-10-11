@@ -61,9 +61,7 @@ def test_update_preserves_other_installations_entries(tmp_path, monkeypatch):
 
     other_root = str(tmp_path / "other-installation" / "symbols")
     os.makedirs(other_root)
-    foreign_location = _file_url(
-        os.path.join(other_root, "foreign-symbols.json.xz")
-    )
+    foreign_location = _file_url(os.path.join(other_root, "foreign-symbols.json.xz"))
 
     _insert(cache, own_location)
     _insert(cache, foreign_location)
@@ -75,9 +73,9 @@ def test_update_preserves_other_installations_entries(tmp_path, monkeypatch):
 
     remaining = _locations(cache)
     assert own_location in remaining, "an existing local entry was pruned"
-    assert (
-        foreign_location in remaining
-    ), "an entry belonging to another installation was deleted"
+    assert foreign_location in remaining, (
+        "an entry belonging to another installation was deleted"
+    )
 
 
 def test_update_still_prunes_removed_local_entries(tmp_path, monkeypatch):
@@ -109,9 +107,15 @@ def test_location_pathname_handles_both_uri_forms():
     """Both file: and jar:file:...!name locations must resolve to a path."""
 
     plain = _file_url("/tmp/some/dir/symbols.json.xz")
-    assert symbol_cache.SqliteCache._location_pathname(plain) == "/tmp/some/dir/symbols.json.xz"
+    assert (
+        symbol_cache.SqliteCache._location_pathname(plain)
+        == "/tmp/some/dir/symbols.json.xz"
+    )
 
     zipped = "jar:file:/tmp/some/dir/archive.zip!/inner/symbols.json.xz"
-    assert symbol_cache.SqliteCache._location_pathname(zipped) == "/tmp/some/dir/archive.zip"
+    assert (
+        symbol_cache.SqliteCache._location_pathname(zipped)
+        == "/tmp/some/dir/archive.zip"
+    )
 
     assert symbol_cache.SqliteCache._location_pathname("https://example.com/x") is None
