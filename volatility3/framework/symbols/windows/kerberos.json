@@ -1,0 +1,629 @@
+{
+  "symbols": {},
+  "user_types": {
+	"_LARGE_INTEGER": {
+		"fields": {
+			"HighPart": {
+				"offset": 4,
+				"type": {
+					"kind": "base",
+					"name": "unsigned long"
+				}
+			},
+			"LowPart": {
+				"offset": 0,
+				"type": {
+					"kind": "base",
+					"name": "unsigned long"
+				}
+			},
+			"QuadPart": {
+				"offset": 0,
+				"type": {
+					"kind": "base",
+					"name": "unsigned long long"
+				}
+			}
+		},
+		"kind": "union",
+		"size": 8
+	},
+	"LUID": {
+		"fields": {
+			"LowPart": {
+				"type": {
+				"kind": "base",
+				"name": "unsigned int"
+				},
+				"offset": 0
+			},
+			"HighPart": {
+				"type": {
+				"kind": "base",
+				"name": "unsigned int"
+				},
+				"offset": 4
+			}
+		},
+	"kind": "struct",
+	"size": 8
+    },
+    "RTL_BALANCED_LINKS": {
+      "fields": {
+        "Parent": {
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "RTL_BALANCED_LINKS"
+            }
+          },
+          "offset": 0
+        },
+        "LeftChild": {
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "RTL_BALANCED_LINKS"
+            }
+          },
+          "offset": 8
+        },
+        "RightChild": {
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "RTL_BALANCED_LINKS"
+            }
+          },
+          "offset": 16
+        },
+        "Balance": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          },
+          "offset": 24
+        },
+        "Reserved": {
+          "type": {
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            },
+            "count": 3
+          },
+          "offset": 25
+        },
+        "pad": {
+          "type": {
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            },
+            "count": 4
+          },
+          "offset": 28
+        }
+      },
+      "kind": "struct",
+      "size": 32
+    },
+    "_RTL_AVL_TABLE": {
+      "fields": {
+        "BalancedRoot": {
+          "type": {
+            "kind": "struct",
+            "name": "RTL_BALANCED_LINKS"
+          },
+          "offset": 0
+        },
+        "OrderedPointer": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          },
+          "offset": 32
+        },
+        "WhichOrderedElement": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 40
+        },
+        "NumberGenericTableElements": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 44
+        },
+        "DepthOfTree": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 48
+        },
+        "pad1": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 52
+        },
+        "RestartKey": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          },
+          "offset": 56
+        },
+        "DeleteCount": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 64
+        },
+        "pad2": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 68
+        },
+        "CompareRoutine": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          },
+          "offset": 72
+        },
+        "AllocateRoutine": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          },
+          "offset": 80
+        },
+        "FreeRoutine": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          },
+          "offset": 88
+        },
+        "TableContext": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          },
+          "offset": 96
+        }
+      },
+      "kind": "struct",
+      "size": 104
+    },
+    "_KERB_PLAINTEXT_PASSWORD": {
+      "fields": {
+        "unkObj": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          },
+          "offset": 0
+        },
+        "isProtected": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 8
+        },
+        "str": {
+          "type": {
+            "kind": "struct",
+            "name": "nt_symbols!_UNICODE_STRING"
+          },
+          "offset": 16
+        }
+      },
+      "kind": "struct",
+      "size": 32
+    },
+    "KERB_SESSION_KEY_V1": {
+      "fields": {
+        "EType": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 0
+        },
+        "Size": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 8
+        },
+        "Buffer": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          },
+          "offset": 16
+        }
+      },
+      "kind": "struct",
+      "size": 24
+    },
+	"KERB_SESSION_KEY_V2": {
+      "fields": {
+        "EType": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 4
+        },
+        "Size": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 8
+        },
+        "Buffer": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          },
+          "offset": 16
+        }
+      },
+      "kind": "struct",
+      "size": 24
+    },
+	"_KERB_TICKET": {
+      "fields": {
+        "pad": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 0
+        },
+        "tkt_vno": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 4
+        },
+        "Realm": {
+          "type": {
+            "kind": "pointer",
+			"subtype":{
+				"kind": "base",
+				"name": "unsigned char"
+			}
+          },
+          "offset": 8
+        },
+		"unk_0": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          },
+          "offset": 16
+        },
+        "Sname": {
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_KERB_INTERNAL_NAME"
+            }
+          },
+          "offset": 24
+        },
+        "unk_1": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 32
+        },
+        "EType": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 36
+        },
+        "Kvno": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          },
+          "offset": 40
+        },
+        "CipherLength": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          },
+          "offset": 48
+        },
+        "Cipher": {
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          },
+          "offset": 56
+        }
+      },
+      "kind": "struct",
+      "size": 64
+    },
+    "_KERB_PRIMARY_CREDENTIAL": {
+      "fields": {
+        "Username": {
+          "type": {
+            "kind": "struct",
+            "name": "nt_symbols!_UNICODE_STRING"
+          },
+          "offset": 0
+        },
+        "Realm": {
+          "type": {
+            "kind": "struct",
+            "name": "nt_symbols!_UNICODE_STRING"
+          },
+          "offset": 16
+        }
+      },
+      "kind": "struct",
+      "size": 0
+    },
+    "_KERB_CREDENTIAL": {
+      "fields": {
+        "head": {
+          "type": {
+            "kind": "struct",
+            "name": "nt_symbols!_LIST_ENTRY"
+          },
+          "offset": 0
+        },
+		"LogonSessionId_1": {
+          "type": {
+            "kind": "struct",
+            "name": "LUID"
+          },
+          "offset": 56
+        },
+		"LogonSessionId_2": {
+          "type": {
+            "kind": "struct",
+            "name": "LUID"
+          },
+          "offset": 64
+        }
+	  },
+	  
+      "kind": "struct",
+      "size": 0
+    },
+    "_KERB_LOGON_SESSION": {
+      "fields": {
+        "type": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          },
+          "offset": 0
+        },
+        "Credentials": {
+          "type": {
+            "kind": "struct",
+            "name": "_KERB_CREDENTIAL"
+          },
+          "offset": 8
+        }
+      },
+      "kind": "struct",
+      "size": 488
+    },
+    "_KERB_LOGON_SESSION_ENTRY": {
+      "fields": {
+        "header": {
+          "type": {
+            "kind": "struct",
+            "name": "RTL_BALANCED_LINKS"
+          },
+          "offset": 0
+        },
+        "entry": {
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_KERB_LOGON_SESSION"
+            }
+          },
+          "offset": 32
+        }
+      },
+      "kind": "struct",
+      "size": 40
+    },
+    "_KERB_TICKET_INFO": {
+      "fields": {
+        "head": {
+          "type": {
+            "kind": "struct",
+            "name": "nt_symbols!_LIST_ENTRY"
+          },
+          "offset": 0
+        },
+        "ServiceName": {
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_KERB_INTERNAL_NAME"
+            }
+          },
+          "offset": 32
+        },
+        "TargetName": {
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_KERB_INTERNAL_NAME"
+            }
+          },
+          "offset": 40
+        },
+        "ServerRealm": {
+          "type": {
+            "kind": "struct",
+            "name": "nt_symbols!_UNICODE_STRING"
+          },
+          "offset": 48
+        },
+        "TargetDomainName": {
+          "type": {
+            "kind": "struct",
+            "name": "nt_symbols!_UNICODE_STRING"
+          },
+          "offset": 64
+        },
+        "AltTargetDomainName": {
+          "type": {
+            "kind": "struct",
+            "name": "nt_symbols!_UNICODE_STRING"
+          },
+          "offset": 96
+        },
+        "KdcCalled": {
+          "type": {
+            "kind": "struct",
+            "name": "nt_symbols!_UNICODE_STRING"
+          },
+          "offset": 112
+        },
+        "ClientName": {
+          "type": {
+            "kind": "pointer",
+            "subtype": {
+              "kind": "struct",
+              "name": "_KERB_INTERNAL_NAME"
+            }
+          },
+          "offset": 144
+        }
+      },
+      "kind": "struct",
+      "size": 368
+    },
+    "_KERB_INTERNAL_NAME": {
+      "fields": {
+        "PrincipalType": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          },
+          "offset": 0
+        },
+        "NbString": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          },
+          "offset": 2
+        },
+        "pad": {
+          "type": {
+            "kind": "base",
+            "name": "unsigned int"
+          },
+          "offset": 4
+        },
+        "array": {
+          "type": {
+            "kind": "struct",
+            "name": "nt_symbols!_UNICODE_STRING"
+          },
+          "offset": 8
+        }
+      },
+      "kind": "struct",
+      "size": 24
+    }
+  },
+  "enums": {},
+  "base_types": {
+    "unsigned long": {
+      "kind": "int",
+      "size": 4,
+      "signed": false,
+      "endian": "little"
+    },
+    "unsigned long long": {
+      "kind": "int",
+      "size": 8,
+      "signed": false,
+      "endian": "little"
+    },
+    "unsigned char": {
+      "kind": "char",
+      "size": 1,
+      "signed": false,
+      "endian": "little"
+    },
+    "pointer": {
+      "kind": "int",
+      "size": 8,
+      "signed": false,
+      "endian": "little"
+    },
+    "unsigned int": {
+      "kind": "int",
+      "size": 4,
+      "signed": false,
+      "endian": "little"
+    },
+    "unsigned short": {
+      "kind": "int",
+      "size": 2,
+      "signed": false,
+      "endian": "little"
+    },
+    "long": {
+      "kind": "int",
+      "size": 4,
+      "signed": false,
+      "endian": "little"
+    }
+  },
+  "metadata": {
+    "producer": {
+      "version": "0.0.1",
+      "name": "airbus-cert by c2json",
+      "datetime": "2025-12-15T16:36:36.703042"
+    },
+    "format": "4.0.0"
+  }
+}
