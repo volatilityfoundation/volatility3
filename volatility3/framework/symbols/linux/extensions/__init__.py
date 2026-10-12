@@ -703,6 +703,201 @@ class task_struct(generic.GenericIntelProcess):
         # time namespace was added in kernels 5.6, it already included the ns member.
         return time_ns.ns.inum
 
+    def get_mnt_namespace(self) -> Optional[interfaces.objects.ObjectInterface]:
+        """Returns the task's mount namespace"""
+        if not self.has_member("nsproxy"):
+            # kernels < 2.6.19: ab516013ad9ca47f1d3a936fa81303bfbf734d52
+            return None
+
+        return self.nsproxy.mnt_ns
+
+    def get_mnt_namespace_id(self) -> int:
+        """Returns the task's mount namespace ID"""
+        mnt_ns = self.get_mnt_namespace()
+        if not mnt_ns:
+            return None
+
+        return mnt_ns.get_inode()
+
+    def get_uts_namespace(self) -> Optional[interfaces.objects.ObjectInterface]:
+        """Returns the task's UTS namespace"""
+        if not self.has_member("nsproxy"):
+            # kernels < 2.6.19: ab516013ad9ca47f1d3a936fa81303bfbf734d52
+            return None
+
+        return self.nsproxy.uts_ns
+
+    def get_uts_namespace_id(self) -> int:
+        """Returns the task's UTS namespace ID"""
+        uts_ns = self.get_uts_namespace()
+        if not uts_ns:
+            return None
+
+        return uts_ns.ns.inum
+
+    def get_uts_nodename(self) -> Optional[str]:
+        """Returns the task's UTS nodename (hostname)"""
+        uts_ns = self.get_uts_namespace()
+        if not uts_ns:
+            return None
+
+        try:
+            return utility.array_to_string(uts_ns.name.nodename)
+        except (AttributeError, exceptions.InvalidAddressException):
+            return None
+
+    def get_net_namespace(self) -> Optional[interfaces.objects.ObjectInterface]:
+        """Returns the task's network namespace"""
+        if not self.has_member("nsproxy"):
+            # kernels < 2.6.19: ab516013ad9ca47f1d3a936fa81303bfbf734d52
+            return None
+
+        return self.nsproxy.net_ns
+
+    def get_net_namespace_id(self) -> int:
+        """Returns the task's network namespace ID"""
+        net_ns = self.get_net_namespace()
+        if not net_ns:
+            return None
+
+        try:
+            return net_ns.get_inode()
+        except (AttributeError, exceptions.InvalidAddressException):
+            return None
+
+    def get_ipc_namespace(self) -> Optional[interfaces.objects.ObjectInterface]:
+        """Returns the task's IPC namespace"""
+        if not self.has_member("nsproxy"):
+            # kernels < 2.6.19: ab516013ad9ca47f1d3a936fa81303bfbf734d52
+            return None
+
+        return self.nsproxy.ipc_ns
+
+    def get_ipc_namespace_id(self) -> int:
+        """Returns the task's IPC namespace ID"""
+        ipc_ns = self.get_ipc_namespace()
+        if not ipc_ns:
+            return None
+
+        return ipc_ns.ns.inum
+
+    def get_cgroup_namespace(self) -> Optional[interfaces.objects.ObjectInterface]:
+        """Returns the task's cgroup namespace"""
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        if not self.has_member("nsproxy"):
+            # kernels < 2.6.19: ab516013ad9ca47f1d3a936fa81303bfbf734d52
+            return None
+
+        if not vmlinux.get_type("nsproxy").has_member("cgroup_ns"):
+            # kernels < 4.6
+            return None
+
+        return self.nsproxy.cgroup_ns
+
+    def get_cgroup_namespace_id(self) -> int:
+        """Returns the task's cgroup namespace ID"""
+        cgroup_ns = self.get_cgroup_namespace()
+        if not cgroup_ns:
+            # kernels < 4.6
+            return None
+
+        return cgroup_ns.ns.inum
+
+    def get_user_namespace(self) -> Optional[interfaces.objects.ObjectInterface]:
+        """Returns the task's user namespace (from its credentials)"""
+        if not self.has_member("cred"):
+            return None
+
+        cred = self.cred
+        if not (cred and cred.is_readable() and cred.has_member("user_ns")):
+            return None
+
+        return cred.user_ns
+
+    def get_user_namespace_id(self) -> int:
+        """Returns the task's user namespace ID"""
+        user_ns = self.get_user_namespace()
+        if not user_ns:
+            return None
+
+        return user_ns.ns.inum
+
+    def get_pid_namespace(self) -> Optional[interfaces.objects.ObjectInterface]:
+        """Returns the pid namespace the task resides in.
+
+        The task's own pid namespace is deliberately NOT in nsproxy (which
+        only holds pid_ns_for_children); it must be resolved through
+        thread_pid -> numbers[level]. Falls back to pid_ns_for_children for
+        kernels predating thread_pid (approximation, as the prior art does).
+        """
+        upid = self._get_upid()
+        if upid is not None:
+            try:
+                return upid.ns.dereference()
+            except (
+                AttributeError,
+                exceptions.InvalidAddressException,
+                exceptions.PagedInvalidAddressException,
+            ):
+                return None
+
+        if self.has_member("nsproxy") and self.nsproxy:
+            return self.nsproxy.pid_ns_for_children
+
+        return None
+
+    def get_pid_namespace_id(self) -> int:
+        """Returns the task's pid namespace ID"""
+        pid_ns = self.get_pid_namespace()
+        if not pid_ns:
+            return None
+
+        try:
+            return pid_ns.ns.inum
+        except (AttributeError, exceptions.InvalidAddressException):
+            # pre-3.19 kernels use proc_inum (see network.py's net id accessor)
+            try:
+                return pid_ns.proc_inum
+            except (AttributeError, exceptions.InvalidAddressException):
+                return None
+
+    def get_pid_in_namespace(self) -> Optional[int]:
+        """Returns the task's pid as seen from within its own pid namespace."""
+        upid = self._get_upid()
+        if upid is None:
+            return None
+
+        try:
+            return upid.nr
+        except (AttributeError, exceptions.InvalidAddressException):
+            return None
+
+    def _get_upid(self) -> Optional[interfaces.objects.ObjectInterface]:
+        """Returns the task's upid within its own (deepest) pid namespace."""
+        if not self.has_member("thread_pid"):
+            return None
+
+        pid_struct = self.thread_pid
+        if not (pid_struct and pid_struct.is_readable()):
+            return None
+
+        try:
+            level = pid_struct.level
+            numbers = pid_struct.numbers
+            try:
+                return numbers[level]
+            except IndexError:
+                # numbers[] is declared as a single element in some symbol
+                # tables but is variable-length in the kernel; resize it
+                numbers.count = level + 1
+                return numbers[level]
+        except (
+            AttributeError,
+            exceptions.InvalidAddressException,
+            exceptions.PagedInvalidAddressException,
+        ):
+            return None
+
     def _get_time_namespace_offsets(
         self,
     ) -> Optional[interfaces.objects.ObjectInterface]:
