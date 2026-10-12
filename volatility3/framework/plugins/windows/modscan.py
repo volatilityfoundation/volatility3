@@ -4,7 +4,7 @@
 import logging
 from typing import Iterable
 
-from volatility3.framework import interfaces
+from volatility3.framework import exceptions, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.plugins.windows import poolscanner, modules, pedump
 
@@ -17,7 +17,8 @@ class ModScan(modules.Modules):
     _required_framework_version = (2, 0, 0)
 
     # 3.0.0 changed the signature of enumeration methods (scan_modules)
-    _version = (3, 0, 0)
+    # 3.0.1 scan_modules discards results whose base is not page aligned
+    _version = (3, 0, 1)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -76,6 +77,10 @@ class ModScan(modules.Modules):
 
         kernel = context.modules[kernel_module_name]
 
+        # taken from the kernel's own layer, which is always the virtual layer,
+        # so that this holds regardless of which layer the scan itself runs against
+        page_size = context.layers[kernel.layer_name].page_size
+
         constraints = poolscanner.PoolScanner.builtin_constraints(
             kernel.symbol_table_name, [b"MmLd"]
         )
@@ -84,4 +89,21 @@ class ModScan(modules.Modules):
             context, kernel_module_name, constraints
         ):
             _constraint, mem_object, _header = result
+
+            try:
+                dll_base = mem_object.DllBase
+            except exceptions.InvalidAddressException:
+                continue
+
+            # A loaded module is always mapped on a page boundary, so a base with
+            # any of the low bits set means the pool tag was matched in unrelated
+            # data rather than in a real allocation. A base of zero is kept, since
+            # that means the base could not be determined rather than that the
+            # entry itself is invalid.
+            if dll_base % page_size:
+                vollog.debug(
+                    f"Skipping module at {mem_object.vol.offset:#x} with base {dll_base:#x} that is not page aligned"
+                )
+                continue
+
             yield mem_object
