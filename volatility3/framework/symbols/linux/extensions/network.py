@@ -546,8 +546,10 @@ class inet_sock(objects.StructType):
 
     def get_src_addr(self) -> Optional[str]:
         sk_common = self.sk.__sk_common
-        family = sk_common.skc_family
-        if family == socket_module.AF_INET:
+        # Interpret the Linux family independently of the analysis host OS.
+        family = self.get_family()
+        if family == "AF_INET":
+            host_family = socket_module.AF_INET
             addr_size = 4
             if hasattr(self, "rcv_saddr"):
                 saddr = self.rcv_saddr
@@ -555,7 +557,8 @@ class inet_sock(objects.StructType):
                 saddr = self.inet_rcv_saddr
             else:
                 saddr = sk_common.skc_rcv_saddr
-        elif family == socket_module.AF_INET6:
+        elif family == "AF_INET6":
+            host_family = socket_module.AF_INET6
             addr_size = 16
             saddr = self.pinet6.saddr
         else:
@@ -568,12 +571,14 @@ class inet_sock(objects.StructType):
                 f"Unable to read socket src address from {saddr.vol.offset:#x}"
             )
             return None
-        return socket_module.inet_ntop(family, addr_bytes)
+        return socket_module.inet_ntop(host_family, addr_bytes)
 
     def get_dst_addr(self) -> Optional[str]:
         sk_common = self.sk.__sk_common
-        family = sk_common.skc_family
-        if family == socket_module.AF_INET:
+        # Interpret the Linux family independently of the analysis host OS.
+        family = self.get_family()
+        if family == "AF_INET":
+            host_family = socket_module.AF_INET
             if hasattr(self, "daddr") and self.daddr:
                 daddr = self.daddr
             elif hasattr(self, "inet_daddr") and self.inet_daddr:
@@ -581,7 +586,8 @@ class inet_sock(objects.StructType):
             else:
                 daddr = sk_common.skc_daddr
             addr_size = 4
-        elif family == socket_module.AF_INET6:
+        elif family == "AF_INET6":
+            host_family = socket_module.AF_INET6
             if hasattr(self.pinet6, "daddr"):
                 daddr = self.pinet6.daddr
             else:
@@ -597,7 +603,7 @@ class inet_sock(objects.StructType):
                 f"Unable to read socket dst address from {daddr.vol.offset:#x}"
             )
             return None
-        return socket_module.inet_ntop(family, addr_bytes)
+        return socket_module.inet_ntop(host_family, addr_bytes)
 
 
 class netlink_sock(objects.StructType):
