@@ -2702,7 +2702,7 @@ class page(objects.StructType):
     def index(self) -> int:
         if self.has_member("__folio_index"):
             # if __folio_index exists then we are post: https://lists.openwall.net/linux-kernel/2025/05/14/1508
-            return self.__folio_index
+            return self.member("__folio_index")
 
         return self.member("index")
 
