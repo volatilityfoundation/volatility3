@@ -9,6 +9,7 @@ no memory image is required.
 """
 
 import struct
+from typing import Optional
 
 from volatility3.framework import constants, contexts
 from volatility3.framework.automagic import windows
@@ -60,16 +61,12 @@ class TestLa57FromLowStub:
     def test_matching_dtb_accepted(self):
         layer = make_layer(constants.windows.CR4_LA57_MASK)
         # page_map_offset agrees with the stub's CR3 (ignoring low 12 bits)
-        assert (
-            windows.WindowsIntelStacker._la57_from_low_stub(layer, CR3_VALUE) is True
-        )
+        assert windows.WindowsIntelStacker._la57_from_low_stub(layer, CR3_VALUE) is True
 
     def test_mismatching_dtb_rejected(self):
         layer = make_layer(constants.windows.CR4_LA57_MASK)
         # A Low Stub whose CR3 disagrees with the discovered DTB is ignored
-        assert (
-            windows.WindowsIntelStacker._la57_from_low_stub(layer, 0xDEAD000) is None
-        )
+        assert windows.WindowsIntelStacker._la57_from_low_stub(layer, 0xDEAD000) is None
 
 
 # --- End-to-end stacking through the real WindowsIntelStacker.stack() --------
@@ -78,21 +75,32 @@ class TestLa57FromLowStub:
 # DTB (so the DtbSelfRef64bit scan finds it) and an x64 Low Stub (so the
 # LA57 refinement runs). A self-referential PML5 is byte-for-byte identical to
 # a PML4, so the only thing that decides WindowsIntel32e vs WindowsIntel32e_LA57
-# is CR4.LA57 from the Low Stub -- which is exactly what we exercise here.
+# is LA57 detection (CR4.LA57 from the Low Stub, or the _KUSER_SHARED_DATA
+# mapping without one) -- which is exactly what we exercise here.
 
-# Place the DTB inside the first section the stacker scans, (0x150000, 0x150000).
+# Place the DTB inside the first section the stacker scans, (0x150000, 0x8B0000).
 STACK_DTB_OFFSET = 0x1A0000
 STACK_STUB_OFFSET = 0x3000
 # Cover the whole first section so _coalesce_sections trims the later (larger)
 # sections cleanly instead of clipping this one.
-STACK_IMAGE_SIZE = 0x2A1000
+STACK_IMAGE_SIZE = 0xA00000
 # Self-referential index, within DtbSelfRef64bit.valid_range == range(0x100, 0x1FF)
 SELF_REF_INDEX = 0x1ED
 
 
-def build_la57_physical_image(*, cr4_la57: bool, with_stub: bool = True) -> bytes:
+# Free physical pages used for the _KUSER_SHARED_DATA mapping
+KUSER_TABLES_OFFSET = 0x30000
+KUSER_PAGE_OFFSET = 0x40000
+
+
+def build_la57_physical_image(
+    *, cr4_la57: bool, with_stub: bool = True, kuser_levels: Optional[int] = None
+) -> bytes:
     """Builds a synthetic Windows physical image with a self-referential x64
-    DTB and (optionally) a Low Stub advertising LA57 via CR4."""
+    DTB and (optionally) a Low Stub advertising LA57 via CR4.
+
+    kuser_levels (4 or 5) additionally maps _KUSER_SHARED_DATA from the DTB
+    using that many paging levels."""
     buffer = bytearray(STACK_IMAGE_SIZE)
 
     # --- Self-referential top-level page table (PML4/PML5) at STACK_DTB_OFFSET
@@ -107,6 +115,24 @@ def build_la57_physical_image(*, cr4_la57: bool, with_stub: bool = True) -> byte
     # none alias the DTB offset.
     for i in range(12):
         put_entry(i, (0x10000 + i * 0x1000) | 0x3)
+
+    # --- _KUSER_SHARED_DATA mapping (4K pages) -----------------------------
+    if kuser_levels:
+        va = windows.Intel64LayerCheck.KUSER_KERNEL_SPACE_ADDR
+        shifts = [48, 39, 30, 21, 12][5 - kuser_levels :]
+        table = STACK_DTB_OFFSET
+        for level, shift in enumerate(shifts):
+            if level == len(shifts) - 1:
+                target = KUSER_PAGE_OFFSET
+            else:
+                target = KUSER_TABLES_OFFSET + level * 0x1000
+            off = table + ((va >> shift) & 0x1FF) * 8
+            buffer[off : off + 8] = struct.pack("<Q", target | 0x3)
+            table = target
+        off = (
+            KUSER_PAGE_OFFSET + windows.Intel64LayerCheck.KUSER_SHARED_DATA_NTMAJOR_OFF
+        )
+        buffer[off : off + 4] = struct.pack("<I", 10)
 
     # --- x64 Low Stub (_PROCESSOR_START_BLOCK) -----------------------------
     if with_stub:
@@ -150,18 +176,34 @@ class TestLa57Stacking:
         constants.PARALLELISM = self._saved_parallelism
 
     def test_stacks_la57_layer_when_cr4_set(self):
-        layer = stack_la57_image(cr4_la57=True)
+        layer = stack_la57_image(cr4_la57=True, kuser_levels=5)
         assert layer is not None
         assert type(layer) is intel.WindowsIntel32e_LA57
 
     def test_stacks_plain_64bit_when_cr4_clear(self):
-        layer = stack_la57_image(cr4_la57=False)
+        layer = stack_la57_image(cr4_la57=False, kuser_levels=4)
         assert layer is not None
         # CR4.LA57 clear -> ordinary 4-level layer, not the LA57 subclass
         assert type(layer) is intel.WindowsIntel32e
 
-    def test_stacks_plain_64bit_without_low_stub(self):
-        # No Low Stub at all (e.g. a snapshot) -> fall back to 4-level
-        layer = stack_la57_image(cr4_la57=True, with_stub=False)
+    def test_rejects_dtb_without_kuser_shared_data(self):
+        # Neither paging mode maps _KUSER_SHARED_DATA -> the layer check
+        # discards the DTB
+        assert stack_la57_image(cr4_la57=False, with_stub=False) is None
+
+    def test_stacks_la57_without_low_stub_via_kuser_shared_data(self):
+        # No Low Stub, but only a 5-level walk maps _KUSER_SHARED_DATA
+        layer = stack_la57_image(cr4_la57=False, with_stub=False, kuser_levels=5)
+        assert layer is not None
+        assert type(layer) is intel.WindowsIntel32e_LA57
+
+    def test_stacks_plain_64bit_without_low_stub_via_kuser_shared_data(self):
+        # No Low Stub, and a 4-level walk maps _KUSER_SHARED_DATA
+        layer = stack_la57_image(cr4_la57=False, with_stub=False, kuser_levels=4)
         assert layer is not None
         assert type(layer) is intel.WindowsIntel32e
+
+    def test_low_stub_overrides_kuser_shared_data(self):
+        # CR4.LA57 clear in the Low Stub is authoritative, so the 5-level
+        # mapping walked as 4-level fails the layer check
+        assert stack_la57_image(cr4_la57=False, kuser_levels=5) is None

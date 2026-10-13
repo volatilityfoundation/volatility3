@@ -71,10 +71,8 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                 )
 
                 if "init_top_pgt" in table.symbols:
-                    if cls._l5_paging_enabled(context, layer_name, table, kaslr_shift):
-                        layer_class = intel.LinuxIntel32e_LA57
-                    else:
-                        layer_class = intel.LinuxIntel32e
+                    # May be refined to LinuxIntel32e_LA57 once the DTB is known
+                    layer_class = intel.LinuxIntel32e
                     dtb_symbol_name = "init_top_pgt"
                 elif "init_level4_pgt" in table.symbols:
                     layer_class = intel.LinuxIntel32e
@@ -100,6 +98,17 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[
                     join(config_path, LinuxSymbolFinder.banner_config_key)
                 ] = str(banner, "latin-1")
+
+                if dtb_symbol_name == "init_top_pgt" and cls._l5_paging_enabled(
+                    context,
+                    layer_name,
+                    table,
+                    kaslr_shift,
+                    aslr_shift,
+                    config_path,
+                    new_layer_name,
+                ):
+                    layer_class = intel.LinuxIntel32e_LA57
 
                 layer = layer_class(
                     context,
@@ -207,28 +216,91 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         layer_name: str,
         table: linux.LinuxKernelIntermedSymbols,
         kaslr_shift: int,
+        aslr_shift: int,
+        config_path: str,
+        new_layer_name: str,
     ) -> bool:
         """Determines whether the kernel is running with 5-level page tables
         (LA57).
 
         Kernels built with CONFIG_X86_5LEVEL only switch to 5-level paging
         at boot when the CPU supports LA57, recording the decision in
-        __pgtable_l5_enabled (kernels >= 4.17).  The value is read directly
-        from the physical layer, since no Intel layer exists yet.  The
-        kernel text mapping used by virtual_to_physical_address is identical
-        under 4 and 5-level paging, so the conversion remains valid.
+        __pgtable_l5_enabled (kernels >= 4.17), which is authoritative when
+        present.  Otherwise (e.g. kernels 4.14-4.16, where 5-level paging was
+        a build-time choice, or kernels without that variable), fall back to
+        probing which paging mode translates init_task correctly.
+        """
+        enabled = cls._l5_paging_from_symbol(context, layer_name, table, kaslr_shift)
+        if enabled is None:
+            enabled = cls._l5_paging_from_init_task(
+                context, table, kaslr_shift, aslr_shift, config_path, new_layer_name
+            )
+        vollog.debug(f"Linux 5-level paging (LA57) enabled: {enabled}")
+        return enabled
+
+    @classmethod
+    def _l5_paging_from_symbol(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        table: linux.LinuxKernelIntermedSymbols,
+        kaslr_shift: int,
+    ) -> Optional[bool]:
+        """Reads __pgtable_l5_enabled directly from the physical layer, since
+        no Intel layer exists yet.  The kernel text mapping used by
+        virtual_to_physical_address is identical under 4 and 5-level paging,
+        so the conversion remains valid.
+
+        Returns None when the symbol is missing or unreadable.
         """
         if "__pgtable_l5_enabled" not in table.symbols:
-            return False
+            return None
         vaddr = table.get_symbol("__pgtable_l5_enabled").address + kaslr_shift
         paddr = cls.virtual_to_physical_address(vaddr)
         try:
             value = context.layers[layer_name].read(paddr, 4)
         except exceptions.InvalidAddressException:
-            vollog.debug("Unable to read __pgtable_l5_enabled, assuming 4-level paging")
+            vollog.debug("Unable to read __pgtable_l5_enabled")
+            return None
+        return int.from_bytes(value, "little") != 0
+
+    @classmethod
+    def _l5_paging_from_init_task(
+        cls,
+        context: interfaces.context.ContextInterface,
+        table: linux.LinuxKernelIntermedSymbols,
+        kaslr_shift: int,
+        aslr_shift: int,
+        config_path: str,
+        new_layer_name: str,
+    ) -> bool:
+        """Determines the paging mode structurally, using the layer
+        configuration already stored under config_path.
+
+        A PML5 walked as a PML4 cannot map the kernel text, so the paging
+        mode is the one that translates init_task to its known physical
+        address.  Defaults to 4-level paging when neither (or both) match.
+        """
+        if "init_task" not in table.symbols:
             return False
-        enabled = int.from_bytes(value, "little") != 0
-        vollog.debug(f"Linux 5-level paging (LA57) enabled: {enabled}")
+        init_task_address = table.get_symbol("init_task").address
+        vaddr = init_task_address + aslr_shift
+        expected_paddr = cls.virtual_to_physical_address(
+            init_task_address + kaslr_shift
+        )
+
+        def translates(layer_class) -> bool:
+            layer = layer_class(context, config_path=config_path, name=new_layer_name)
+            try:
+                return layer.translate(vaddr)[0] == expected_paddr
+            except exceptions.InvalidAddressException:
+                return False
+
+        if translates(intel.LinuxIntel32e):
+            return False
+        enabled = translates(intel.LinuxIntel32e_LA57)
+        if enabled:
+            vollog.debug("LA57 inferred from the init_task translation")
         return enabled
 
     @staticmethod
