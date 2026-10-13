@@ -74,8 +74,8 @@ def build_la57_buffer(layer_class) -> bytes:
     buffer = bytearray(BUFFER_SIZE)
 
     def set_entry(table_offset: int, index: int, value: int) -> None:
-        buffer[table_offset + index * 8 : table_offset + (index + 1) * 8] = (
-            struct.pack("<Q", value)
+        buffer[table_offset + index * 8 : table_offset + (index + 1) * 8] = struct.pack(
+            "<Q", value
         )
 
     # 5-level chain for VA_4K (and VA_HIGH, which shares everything below PML5)
@@ -252,9 +252,18 @@ class TestWindowsIntel32eLA57:
 
 
 class TestLinuxIntel32eLA57:
-    def test_maxphyaddr_is_52_bits(self):
-        """5-level kernels always use a 52-bit __PHYSICAL_MASK_SHIFT."""
-        assert intel.LinuxIntel32e_LA57._maxphyaddr == 52
+    def test_maxphyaddr_matches_4level(self):
+        """46 bits, as LinuxIntel32e, so encryption bits (AMD SME C-bit,
+        Intel TDX shared bit) at bit 51 are not read as part of the PFN."""
+        assert (
+            intel.LinuxIntel32e_LA57._maxphyaddr
+            == intel.LinuxIntel32e._maxphyaddr
+            == 46
+        )
+
+    def test_encryption_bit_not_in_pfn(self):
+        layer = build_layer(intel.LinuxIntel32e_LA57)
+        assert layer._pte_pfn((1 << 51) | DATA_OFFSET | 0x3) == DATA_OFFSET >> 12
 
     def test_protnone_inverted_pfn(self):
         """A PROT_NONE PTE stores its PFN inverted (L1TF mitigation); the

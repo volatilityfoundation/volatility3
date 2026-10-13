@@ -675,9 +675,8 @@ class LinuxIntel32e(LinuxMixin, Intel32e):
 
 
 class LinuxIntel32e_LA57(LinuxMixin, Intel32e_LA57):
-    # 5-level paging requires kernel >= 4.14 (CONFIG_X86_5LEVEL), where
-    # __PHYSICAL_MASK_SHIFT is always 52 bits for x86-64
-    # (see b83ce5ee91471d19c403ff91227204fb37c95fb2).  LA57-capable hardware
-    # (Ice Lake and later) can also expose physical memory beyond 46 bits,
-    # so the 46-bit value used by LinuxIntel32e would truncate high PFNs.
-    _maxphyaddr = 52
+    # Same 46 bits as LinuxIntel32e (64 TiB of physical memory).  Although
+    # __PHYSICAL_MASK_SHIFT is 52 bits on 5-level kernels, on LA57 hardware
+    # the AMD SME C-bit or the Intel TDX shared bit can sit at bit 51, and a
+    # 52-bit mask would read them as part of the PFN.
+    _maxphyaddr = 46
