@@ -377,8 +377,12 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         virtual_layer_name = vlayer.name
         with contextlib.suppress(exceptions.InvalidAddressException):
             if vlayer.read(address, 0x2) == b"MZ":
-                res = list(
-                    pdbutil.PDBUtility.pdbname_scan(
+                # The scan window can extend past this image into the next
+                # one (e.g. from hal.dll into ntoskrnl), so only accept a
+                # kernel PDB whose image starts at this address
+                res = [
+                    kernel
+                    for kernel in pdbutil.PDBUtility.pdbname_scan(
                         ctx=context,
                         layer_name=vlayer.name,
                         page_size=vlayer.page_size,
@@ -387,7 +391,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         start=address,
                         end=address + self.max_pdb_size,
                     )
-                )
+                    if kernel["mz_offset"] == address
+                ]
                 if res:
                     valid_kernel = (virtual_layer_name, address, res[0])
         return valid_kernel
