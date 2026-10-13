@@ -405,9 +405,32 @@ class Intel(linear.LinearlyMappedLayer):
                 chunk_offset, page_size, layer_name = self._translate(offset)
                 # Page align the chunk size value
                 chunk_size = min(page_size - (offset % page_size), length)
-                if not self._context.layers[layer_name].is_valid(
-                    chunk_offset, chunk_size
+                base = self._context.layers[layer_name]
+                if (
+                    ignore_errors
+                    and chunk_size > self.page_size
+                    and isinstance(base, interfaces.layers.TranslationLayerInterface)
+                    and not base.is_valid(chunk_offset, chunk_size)
                 ):
+                    # A large page whose physical range the layer below holds only in
+                    # part (a hibernation file does not store every page of it) gives
+                    # the pieces that layer maps, instead of being skipped whole. A
+                    # plain data layer (a raw file) is valid in one run, so it keeps
+                    # the skip below.
+                    for start, size, _, _, _ in base.mapping(
+                        chunk_offset, chunk_size, ignore_errors=True
+                    ):
+                        yield (
+                            offset + (start - chunk_offset),
+                            size,
+                            start,
+                            size,
+                            layer_name,
+                        )
+                    length -= chunk_size
+                    offset += chunk_size
+                    continue
+                if not base.is_valid(chunk_offset, chunk_size):
                     # Virtual -> physical is contiguous in the chunk_size range.
                     # If we fail, we can jump directly to the end as we know all bytes in between
                     # aren't mapped (virtually and) physically anyway.
