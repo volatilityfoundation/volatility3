@@ -248,6 +248,109 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 40
     exclusion_list = ["mac", "linux"]
 
+    @staticmethod
+    def _la57_from_low_stub(
+        base_layer: interfaces.layers.DataLayerInterface,
+        page_map_offset: Optional[int] = None,
+    ) -> Optional[bool]:
+        """Determines whether 5-level paging (LA57) is enabled by reading CR4
+        from the x64 Low Stub (_PROCESSOR_START_BLOCK).
+
+        The Low Stub holds the boot processor's CR3 and CR4 in its
+        SpecialRegisters.  CR4 bit 12 (LA57) is the authoritative runtime
+        indicator of 5-level paging, which the self-referential DTB scan
+        cannot distinguish (a PML5 looks identical to a PML4).
+
+        Returns True/False when a matching Low Stub is found, or None when no
+        Low Stub is present (e.g. virtualized snapshots), in which case the
+        caller should fall back to its default 4-level behaviour.
+        """
+        for offset in range(0x1000, 0x100000, 0x1000):
+            try:
+                jmp_and_completion = int.from_bytes(
+                    base_layer.read(offset, 0x8), "little"
+                )
+                if (
+                    0xFFFFFFFFFFFF00FF & jmp_and_completion
+                    != constants.windows.JMP_AND_COMPLETION_SIGNATURE
+                ):
+                    continue
+                cr3_value = int.from_bytes(
+                    base_layer.read(
+                        offset + constants.windows.PROCESSOR_START_BLOCK_CR3_OFFSET, 0x8
+                    ),
+                    "little",
+                )
+                # If we already know the DTB, only trust a Low Stub that agrees
+                if page_map_offset is not None and (cr3_value & ~0xFFF) != (
+                    page_map_offset & ~0xFFF
+                ):
+                    continue
+                cr4_value = int.from_bytes(
+                    base_layer.read(
+                        offset + constants.windows.PROCESSOR_START_BLOCK_CR4_OFFSET, 0x8
+                    ),
+                    "little",
+                )
+                return bool(cr4_value & constants.windows.CR4_LA57_MASK)
+            except exceptions.InvalidAddressException:
+                continue
+        return None
+
+    @staticmethod
+    def _la57_from_kuser_shared_data(
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        layer_name: str,
+    ) -> bool:
+        """Determines whether 5-level paging (LA57) is enabled by checking
+        which paging mode maps _KUSER_SHARED_DATA.
+
+        Used when no Low Stub is available.  _KUSER_SHARED_DATA lives at a
+        fixed kernel address under both 4 and 5-level paging, so a PML5
+        walked as a PML4 fails Intel64LayerCheck.  Only switches to LA57
+        when the 4-level layer fails that check and the 5-level one passes.
+        """
+
+        def passes_check(layer_type: Type) -> bool:
+            layer = layer_type(context, config_path=config_path, name=layer_name)
+            try:
+                return Intel64LayerCheck.check(layer)
+            except exceptions.InvalidAddressException:
+                return False
+
+        if passes_check(intel.WindowsIntel32e):
+            return False
+        enabled = passes_check(intel.WindowsIntel32e_LA57)
+        if enabled:
+            vollog.debug(
+                "No Low Stub found, LA57 inferred from _KUSER_SHARED_DATA mapping"
+            )
+        return enabled
+
+    @classmethod
+    def _la57_enabled(
+        cls,
+        context: interfaces.context.ContextInterface,
+        base_layer: interfaces.layers.DataLayerInterface,
+        config_path: str,
+        layer_name: str,
+    ) -> bool:
+        """Determines whether a 64-bit Windows layer whose configuration is
+        already stored under config_path uses 5-level paging (LA57).
+
+        CR4 from the Low Stub is authoritative; without one (e.g. virtualized
+        snapshots or dumps lacking the first MB), fall back to probing the
+        _KUSER_SHARED_DATA mapping.
+        """
+        page_map_offset = context.config[
+            interfaces.configuration.path_join(config_path, "page_map_offset")
+        ]
+        la57 = cls._la57_from_low_stub(base_layer, page_map_offset)
+        if la57 is None:
+            la57 = cls._la57_from_kuser_shared_data(context, config_path, layer_name)
+        return la57
+
     # Group these by region so we only run over the data once
     test_sets = [
         (
@@ -304,13 +407,6 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
             arch = base_layer.metadata.get("architecture", None)
             if arch not in ["Intel32", "Intel64"]:
                 return None
-            # Set the layer type
-            layer_type: Type = intel.WindowsIntel
-            if arch == "Intel64":
-                layer_type = intel.WindowsIntel32e
-            elif base_layer.metadata.get("pae", False):
-                layer_type = intel.WindowsIntelPAE
-            # Construct the layer
             new_layer_name = context.layers.free_layer_name("IntelLayer")
             config_path = interfaces.configuration.path_join(
                 "IntelHelper", new_layer_name
@@ -321,6 +417,15 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
             context.config[
                 interfaces.configuration.path_join(config_path, "page_map_offset")
             ] = base_layer.metadata["page_map_offset"]
+            # Set the layer type
+            layer_type: Type = intel.WindowsIntel
+            if arch == "Intel64":
+                layer_type = intel.WindowsIntel32e
+                if cls._la57_enabled(context, base_layer, config_path, new_layer_name):
+                    layer_type = intel.WindowsIntel32e_LA57
+            elif base_layer.metadata.get("pae", False):
+                layer_type = intel.WindowsIntelPAE
+            # Construct the layer
             layer = layer_type(
                 context,
                 config_path=config_path,
@@ -395,7 +500,16 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                             config_path, "page_map_offset"
                         )
                     ] = page_map_offset
-                    tmp_layer = test.layer_type(
+                    # A self-referential PML5 is indistinguishable from a PML4,
+                    # so refine the 64-bit choice by detecting LA57 before
+                    # running the layer check, which a PML5 walked as a PML4
+                    # would fail
+                    layer_type = test.layer_type
+                    if layer_type is intel.WindowsIntel32e and cls._la57_enabled(
+                        context, base_layer, config_path, new_layer_name
+                    ):
+                        layer_type = intel.WindowsIntel32e_LA57
+                    tmp_layer = layer_type(
                         context,
                         config_path=config_path,
                         name=new_layer_name,
@@ -403,7 +517,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                     )
                     if not test.layer_check(tmp_layer):
                         vollog.debug(
-                            f"DTB {page_map_offset:x} failed {test.layer_type.__name__} _KUSER_SHARED_DATA check, ignoring"
+                            f"DTB {page_map_offset:x} failed {layer_type.__name__} _KUSER_SHARED_DATA check, ignoring"
                         )
                         continue
                     layer = tmp_layer

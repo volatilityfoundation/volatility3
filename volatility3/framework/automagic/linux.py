@@ -3,9 +3,9 @@
 #
 
 import logging
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Type
 
-from volatility3.framework import constants, interfaces
+from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.automagic import symbol_cache, symbol_finder
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, scanners
@@ -71,6 +71,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                 )
 
                 if "init_top_pgt" in table.symbols:
+                    # May be refined to LinuxIntel32e_LA57 once the DTB is known
                     layer_class = intel.LinuxIntel32e
                     dtb_symbol_name = "init_top_pgt"
                 elif "init_level4_pgt" in table.symbols:
@@ -97,6 +98,19 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[
                     join(config_path, LinuxSymbolFinder.banner_config_key)
                 ] = str(banner, "latin-1")
+
+                if dtb_symbol_name == "init_top_pgt":
+                    layer_class = cls.select_intel64_layer_class(
+                        context,
+                        config_path,
+                        new_layer_name,
+                        table.get_symbol(dtb_symbol_name).address + aslr_shift,
+                        cls._l5_paging_from_symbol(
+                            context, layer_name, table, kaslr_shift
+                        ),
+                        intel.LinuxIntel32e,
+                        intel.LinuxIntel32e_LA57,
+                    )
 
                 layer = layer_class(
                     context,
@@ -198,6 +212,79 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         return 0, 0
 
     @staticmethod
+    def select_intel64_layer_class(
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        layer_name: str,
+        dtb_vaddr: int,
+        l5_flag: Optional[bool],
+        layer_class: Type[intel.Intel],
+        la57_layer_class: Type[intel.Intel],
+    ) -> Type[intel.Intel]:
+        """Chooses between 4-level and 5-level (LA57) paging for a 64-bit
+        kernel whose layer configuration is already stored under config_path.
+
+        The kernel maps its own top-level page table, so the paging mode in
+        use is the one that translates the table's virtual address
+        (dtb_vaddr) back to the DTB; walking a PML5 as a PML4, or the
+        reverse, lands on the wrong table.  This covers kernels 4.14-4.16,
+        where 5-level paging was a build-time choice without a runtime flag.
+        The runtime flag (__pgtable_l5_enabled, or its VMCOREINFO export)
+        only decides when both or neither walk succeeds, defaulting to
+        4-level paging when it is unavailable.
+        """
+        page_map_offset = context.config[
+            interfaces.configuration.path_join(config_path, "page_map_offset")
+        ]
+
+        def maps_itself(candidate: Type[intel.Intel]) -> bool:
+            layer = candidate(context, config_path=config_path, name=layer_name)
+            try:
+                paddr = layer.translate(dtb_vaddr)[0]
+            except exceptions.InvalidAddressException:
+                return False
+            return paddr & ~0xFFF == page_map_offset & ~0xFFF
+
+        four_level = maps_itself(layer_class)
+        five_level = maps_itself(la57_layer_class)
+        if four_level != five_level:
+            enabled = five_level
+        else:
+            enabled = bool(l5_flag)
+        vollog.debug(
+            f"Linux 5-level paging (LA57) enabled: {enabled} "
+            f"(4-level walk: {four_level}, 5-level walk: {five_level}, flag: {l5_flag})"
+        )
+        return la57_layer_class if enabled else layer_class
+
+    @classmethod
+    def _l5_paging_from_symbol(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        table: linux.LinuxKernelIntermedSymbols,
+        kaslr_shift: int,
+    ) -> Optional[bool]:
+        """Reads __pgtable_l5_enabled (kernels >= 4.17 built with
+        CONFIG_X86_5LEVEL) directly from the physical layer, since no Intel
+        layer exists yet.  The kernel text mapping used by
+        virtual_to_physical_address is identical under 4 and 5-level paging,
+        so the conversion remains valid.
+
+        Returns None when the symbol is missing or unreadable.
+        """
+        if "__pgtable_l5_enabled" not in table.symbols:
+            return None
+        vaddr = table.get_symbol("__pgtable_l5_enabled").address + kaslr_shift
+        paddr = cls.virtual_to_physical_address(vaddr)
+        try:
+            value = context.layers[layer_name].read(paddr, 4)
+        except exceptions.InvalidAddressException:
+            vollog.debug("Unable to read __pgtable_l5_enabled")
+            return None
+        return int.from_bytes(value, "little") != 0
+
+    @staticmethod
     def virtual_to_physical_address(addr: int) -> int:
         """Converts a virtual linux address to a physical one (does not account
         of ASLR)"""
@@ -296,6 +383,7 @@ class LinuxIntelVMCOREINFOStacker(interfaces.automagic.StackerLayerInterface):
             if is_32bit:
                 layer_class = intel.IntelPAE if is_pae else intel.Intel
             else:
+                # May be refined to Intel32e_LA57 once the layer is configured
                 layer_class = intel.Intel32e
 
             uts_release = vmcoreinfo["OSRELEASE"]
@@ -349,6 +437,18 @@ class LinuxIntelVMCOREINFOStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[join(config_path, "memory_layer")] = layer_name
                 context.config[join(config_path, "page_map_offset")] = dtb
                 context.config[join(config_path, "kernel_virtual_offset")] = aslr_shift
+                if layer_class is intel.Intel32e:
+                    # NUMBER(pgtable_l5_enabled) is exported by kernels >= 4.17
+                    l5_flag = vmcoreinfo.get("NUMBER(pgtable_l5_enabled)")
+                    layer_class = LinuxIntelStacker.select_intel64_layer_class(
+                        context,
+                        config_path,
+                        new_layer_name,
+                        vmcoreinfo["SYMBOL(swapper_pg_dir)"],
+                        None if l5_flag is None else bool(l5_flag),
+                        intel.Intel32e,
+                        intel.Intel32e_LA57,
+                    )
                 layer = layer_class(
                     context,
                     config_path=config_path,
