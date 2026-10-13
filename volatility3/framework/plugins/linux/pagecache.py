@@ -220,6 +220,13 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
             # This allows us to have consistent paths
             if dentry.d_name.name:
                 basename = dentry.d_name.name_as_str()
+                if basename in (".", "..") or "/" in basename:
+                    vollog.warning(
+                        "Skipping dentry with suspicious name %r at offset %#x",
+                        basename,
+                        dentry_addr,
+                    )
+                    continue
                 # Do NOT use os.path.join() below
                 file_path = parent_dir + "/" + basename
             else:
@@ -692,6 +699,16 @@ class RecoverFs(plugins.PluginInterface):
             ),
         ]
 
+    @staticmethod
+    def _sanitize_tar_path(path: str) -> str:
+        """Remove path traversal components from tar member paths.
+
+        Prevents tar-slip attacks when archive members are constructed
+        from untrusted memory contents (dentry names).
+        """
+        parts = path.split("/")
+        return "/".join(p for p in parts if p not in (".", ".."))
+
     def _tar_add_reg_inode(
         self,
         context: interfaces.context.ContextInterface,
@@ -721,7 +738,9 @@ class RecoverFs(plugins.PluginInterface):
         inode_content_buffer.seek(0)
         handle_buffer_size = inode_content_buffer.getbuffer().nbytes
 
-        tar_info = tarfile.TarInfo(path_prefix + reg_inode_in.path)
+        tar_info = tarfile.TarInfo(
+            self._sanitize_tar_path(path_prefix + reg_inode_in.path)
+        )
         # The tarfile module only has read support for sparse files:
         # https://docs.python.org/3.12/library/tarfile.html#tarfile.LNKTYPE:~:text=and%20longlink%20extensions%2C-,read%2Donly%20support,-for%20all%20variants
         tar_info.type = tarfile.REGTYPE
@@ -746,7 +765,7 @@ class RecoverFs(plugins.PluginInterface):
             directory_path: The directory path to create
             mtime: The modification time to set the TarInfo object to
         """
-        tar_info = tarfile.TarInfo(directory_path)
+        tar_info = tarfile.TarInfo(self._sanitize_tar_path(directory_path))
         tar_info.type = tarfile.DIRTYPE
         tar_info.mode = 0o755
         if mtime is not None:
@@ -781,7 +800,9 @@ class RecoverFs(plugins.PluginInterface):
                 )
                 / relative_dest
             ).as_posix()
-        tar_info = tarfile.TarInfo(symlink_source_prefix + symlink_source)
+        tar_info = tarfile.TarInfo(
+            self._sanitize_tar_path(symlink_source_prefix + symlink_source)
+        )
         tar_info.type = tarfile.SYMTYPE
         tar_info.linkname = symlink_dest
         tar_info.mode = 0o444
