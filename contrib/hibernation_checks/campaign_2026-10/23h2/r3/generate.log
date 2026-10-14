@@ -1,0 +1,53 @@
+== 2026-10-14 04:13:50 build 23h2 round 3
+-- domains before:
+Name                                        ID   Mem VCPUs	State	Time(s)
+Domain-0                                     0  4096     8     r-----  309870.3
+-- restore snapshot after-install-cold
+rc=0
+-- cfg (cdroms removed, boot from disk):
+name = "win11-23h2-test"
+memory = 6144
+vcpus = 4
+boot = "c"
+disk = [
+acpi_s3 = 1
+acpi_s4 = 1
+-- 2026-10-14 04:13:51 xl create (host UTC: 2026-10-14 08:13:51)
+Parsing config from <work>/win11-23h2-test.cfg
+rc=0
+-- 120 s for the desktop to settle
+-- 2026-10-14 04:15:52 probe (procmon 15 s) with drakvuf
+   running processes seen: 0, explorer.exe PID: none
+   no explorer.exe, next attempt
+-- 2026-10-14 04:20:34 probe (procmon 15 s) with drakvuf(build 2)
+   running processes seen: 126, explorer.exe PID: 1192
+4028
+-- 2026-10-14 04:20:49 inject: drakvuf(build 2) -m createproc -i 1192
+4028 -e 'C:\Windows\System32\cmd.exe' (args in -e)
+   drakvuf exit=0 ; inject line: "Plugin": "inject", "TimeStamp": "1791966051.627528", "Method": "CreateProc", "Status": "Success", "ProcessName": "C:\\Windows\\System32\\cmd.exe", "Arguments":
+   stderr tail: 1791966049.917310 DRAKVUF v1.1-b2f64d8 Copyright (C) 2014-2024 Tamas K Lengyel 
+   2026-10-14 04:22:11 domain gone: hybrid shutdown done (on_poweroff=destroy)
+-- ro mount of /dev/nbd0p2 rc=0
+-rwxrwxrwx 1 root root 6433652736 2026-10-14 02:21:32.928976500 -0400 /mnt/hibw/hiberfil.sys
+copy rc=0
+/dev/nbd0 disconnected
+-- signature: HIBR
+-- size: 6433652736 bytes
+-- sha256: 9f8ec611fe07bff569548295bd3a0148de8e7ecd5b6ced9b8fed8d0476e7f1e5
+-- windows.hibernation.Info (the SystemTime must be after the host UTC time of xl create, 2026-10-14 08:13:51):
+<this branch>/volatility3/framework/deprecation.py:105: FutureWarning: This plugin (PluginRequirement) has been renamed and will be removed in the first release after 2026-06-01. PluginRequirement is to be deprecated. Use VersionRequirement instead.
+  warnings.warn(
+Volatility 3 Framework 2.28.1
+
+Variable	Value
+
+Signature	HIBR
+Comment	The hibernation file header signature is correct.
+PageSize	4096
+SystemTime	2026-10-14 06:21:33+00:00
+FirstBootRestorePage	7
+NumPageForLoader	25239
+-- domains after:
+Name                                        ID   Mem VCPUs	State	Time(s)
+Domain-0                                     0  4096     8     r-----  310486.0
+== 2026-10-14 04:23:00 end, hybrid shutdown ok=1

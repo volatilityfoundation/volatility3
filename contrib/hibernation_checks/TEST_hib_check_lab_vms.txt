@@ -1,0 +1,149 @@
+##### lab VM file: win10 (Fast Startup: Windows 10 22H2 / Windows 11 24H2 build 26100.1742)
+signature            : b'HIBR'
+file size            : about 4 GiB
+NumPagesForLoader    : 18919
+
+=== layout 23h2 (KernelPagesProcessed @ 0x230) ===
+KernelPagesProcessed : 222203
+boot section         : 1183 sets, 18919/18919 pages, ok, MATCH
+kernel section       : 13888 sets, 222203/222203 pages, ok, MATCH
+
+=== layout 24h2 (KernelPagesProcessed @ 0x250) ===
+KernelPagesProcessed : 75013
+boot section         : 1183 sets, 18919/18919 pages, ok, MATCH
+kernel section       : 4689 sets, 75024/75013 pages, ok, MISMATCH
+
+=== layout 24h2-early (KernelPagesProcessed @ 0x238) ===
+KernelPagesProcessed : 17612265
+boot section         : 1183 sets, 18919/18919 pages, ok, MATCH
+kernel section       : 13888 sets, 222203/17612265 pages, INVALID SET HEADER, MISMATCH
+
+=== header bits, 24h2 rules ===
+  boot: set kinds (kind, bit29, bit30):
+     plain-lz77  bit29=0 bit30=0 : 1183
+  boot: largest set size 53665 bytes (16 bits), header bits set:
+     bit 25 : 0 sets
+     bit 26 : 0 sets
+     bit 27 : 0 sets
+     bit 28 : 0 sets
+     bit 29 : 0 sets
+     bit 30 : 0 sets
+     bit 31 : 0 sets
+  boot: sets larger than 64 KiB : 0
+  boot: huffman sets with pages != 16 : 0
+  boot: compressed sets classified differently by the 23h2 rules : 0
+  boot: compressed sets sized differently by the 23h2 rules : 0
+
+=== kernel chain walked to its natural end, 23h2 set rules ===
+13888 sets, 222203 pages | header qwords equal to that page count: 0x230 | equal to its length in bytes: 0x240
+
+=== kernel chain walked to its natural end, 24h2 set rules ===
+13888 sets, 222203 pages | header qwords equal to that page count: 0x230 | equal to its length in bytes: 0x240
+
+=== decompression (algorithm selected by each layout; output size checked) ===
+23h2 layout, boot section: 1183 compressed sets | plain LZ77 ok=1183 failed=0 | Huffman ok=0 failed=0 (ok only with the exact size argument: 0)
+23h2 layout, kernel section: 13850 compressed sets | plain LZ77 ok=13572 failed=0 | Huffman ok=278 failed=0 (ok only with the exact size argument: 0)
+24h2 layout, boot section: 1183 compressed sets | plain LZ77 ok=1183 failed=0 | Huffman ok=0 failed=0 (ok only with the exact size argument: 0)
+24h2 layout, kernel section: not walked (section skipped or chain does not match)
+24h2-early layout, boot section: 1183 compressed sets | plain LZ77 ok=1183 failed=0 | Huffman ok=0 failed=0 (ok only with the exact size argument: 0)
+24h2-early layout, kernel section: not walked (section skipped or chain does not match)
+
+##### lab VM file: w11fs (Fast Startup: Windows 10 22H2 / Windows 11 24H2 build 26100.1742)
+signature            : b'HIBR'
+file size            : about 6 GiB
+NumPagesForLoader    : 30093
+
+=== layout 23h2 (KernelPagesProcessed @ 0x230) ===
+KernelPagesProcessed : 30093
+boot section         : 1881 sets, 30093/30093 pages, ok, MATCH
+kernel section       : 25 sets, 400/30093 pages, INVALID SET HEADER, MISMATCH
+
+=== layout 24h2 (KernelPagesProcessed @ 0x250) ===
+KernelPagesProcessed : 10338
+boot section         : 1881 sets, 30093/30093 pages, ok, MATCH
+kernel section       : 647 sets, 10352/10338 pages, ok, MISMATCH
+
+=== layout 24h2-early (KernelPagesProcessed @ 0x238) ===
+KernelPagesProcessed : 322278
+boot section         : 1881 sets, 30093/30093 pages, ok, MATCH
+kernel section       : 20143 sets, 322278/322278 pages, ok, MATCH
+
+=== header bits, 24h2 rules ===
+  boot: set kinds (kind, bit29, bit30):
+     plain-lz77  bit29=0 bit30=0 : 1881
+  boot: largest set size 55327 bytes (16 bits), header bits set:
+     bit 25 : 0 sets
+     bit 26 : 0 sets
+     bit 27 : 0 sets
+     bit 28 : 0 sets
+     bit 29 : 0 sets
+     bit 30 : 0 sets
+     bit 31 : 0 sets
+  boot: sets larger than 64 KiB : 0
+  boot: huffman sets with pages != 16 : 0
+  boot: compressed sets classified differently by the 23h2 rules : 0
+  boot: compressed sets sized differently by the 23h2 rules : 0
+
+=== kernel chain walked to its natural end, 23h2 set rules ===
+25 sets, 400 pages | header qwords equal to that page count: none | equal to its length in bytes: none
+
+=== kernel chain walked to its natural end, 24h2 set rules ===
+20143 sets, 322278 pages | header qwords equal to that page count: 0x238 | equal to its length in bytes: 0x248
+
+=== decompression (algorithm selected by each layout; output size checked) ===
+23h2 layout, boot section: 1881 compressed sets | plain LZ77 ok=1881 failed=0 | Huffman ok=0 failed=0 (ok only with the exact size argument: 0)
+23h2 layout, kernel section: not walked (section skipped or chain does not match)
+24h2 layout, boot section: 1881 compressed sets | plain LZ77 ok=1881 failed=0 | Huffman ok=0 failed=0 (ok only with the exact size argument: 0)
+24h2 layout, kernel section: not walked (section skipped or chain does not match)
+24h2-early layout, boot section: 1881 compressed sets | plain LZ77 ok=1881 failed=0 | Huffman ok=0 failed=0 (ok only with the exact size argument: 0)
+24h2-early layout, kernel section: 19579 compressed sets | plain LZ77 ok=19174 failed=0 | Huffman ok=405 failed=0 (ok only with the exact size argument: 0)
+
+##### lab VM file: Windows 10 22H2 full hibernation (shutdown /h)
+signature            : b'HIBR'
+file size            : about 4 GiB
+NumPagesForLoader    : 19211
+
+=== layout 23h2 (KernelPagesProcessed @ 0x230) ===
+KernelPagesProcessed : 291139
+boot section         : 1201 sets, 19211/19211 pages, ok, MATCH
+kernel section       : 18197 sets, 291139/291139 pages, ok, MATCH
+
+=== layout 24h2 (KernelPagesProcessed @ 0x250) ===
+KernelPagesProcessed : 89229
+boot section         : 1201 sets, 19211/19211 pages, ok, MATCH
+kernel section       : 5577 sets, 89232/89229 pages, ok, MISMATCH
+
+=== layout 24h2-early (KernelPagesProcessed @ 0x238) ===
+KernelPagesProcessed : 17850400
+boot section         : 1201 sets, 19211/19211 pages, ok, MATCH
+kernel section       : 18197 sets, 291139/17850400 pages, INVALID SET HEADER, MISMATCH
+
+=== header bits, 24h2 rules ===
+  boot: set kinds (kind, bit29, bit30):
+     plain-lz77  bit29=0 bit30=0 : 1201
+  boot: largest set size 54147 bytes (16 bits), header bits set:
+     bit 25 : 0 sets
+     bit 26 : 0 sets
+     bit 27 : 0 sets
+     bit 28 : 0 sets
+     bit 29 : 0 sets
+     bit 30 : 0 sets
+     bit 31 : 0 sets
+  boot: sets larger than 64 KiB : 0
+  boot: huffman sets with pages != 16 : 0
+  boot: compressed sets classified differently by the 23h2 rules : 0
+  boot: compressed sets sized differently by the 23h2 rules : 0
+
+=== kernel chain walked to its natural end, 23h2 set rules ===
+18197 sets, 291139 pages | header qwords equal to that page count: 0x230 | equal to its length in bytes: 0x240
+
+=== kernel chain walked to its natural end, 24h2 set rules ===
+18197 sets, 291139 pages | header qwords equal to that page count: 0x230 | equal to its length in bytes: 0x240
+
+=== decompression (algorithm selected by each layout; output size checked) ===
+23h2 layout, boot section: 1201 compressed sets | plain LZ77 ok=1201 failed=0 | Huffman ok=0 failed=0 (ok only with the exact size argument: 0)
+23h2 layout, kernel section: 18175 compressed sets | plain LZ77 ok=24 failed=0 | Huffman ok=18150 failed=1 (ok only with the exact size argument: 1)
+24h2 layout, boot section: 1201 compressed sets | plain LZ77 ok=1201 failed=0 | Huffman ok=0 failed=0 (ok only with the exact size argument: 0)
+24h2 layout, kernel section: not walked (section skipped or chain does not match)
+24h2-early layout, boot section: 1201 compressed sets | plain LZ77 ok=1201 failed=0 | Huffman ok=0 failed=0 (ok only with the exact size argument: 0)
+24h2-early layout, kernel section: not walked (section skipped or chain does not match)

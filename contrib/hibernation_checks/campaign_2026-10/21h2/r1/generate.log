@@ -1,0 +1,50 @@
+== 2026-10-14 00:14:16 build 21h2 round 1
+-- domains before:
+Name                                        ID   Mem VCPUs	State	Time(s)
+Domain-0                                     0  4096     8     r-----  292473.4
+-- restore snapshot after-install-cold
+rc=0
+-- cfg (cdroms removed, boot from disk):
+name = "win11-21h2-test"
+memory = 6144
+vcpus = 4
+boot = "c"
+disk = [
+acpi_s3 = 1
+acpi_s4 = 1
+-- 2026-10-14 00:14:16 xl create (host UTC: 2026-10-14 04:14:16)
+Parsing config from <work>/win11-21h2-test.cfg
+rc=0
+-- 120 s for the desktop to settle
+-- 2026-10-14 00:16:18 probe (procmon 15 s) with drakvuf
+   running processes seen: 110, explorer.exe PID: 5184
+1052
+-- 2026-10-14 00:16:33 inject: drakvuf -m createproc -i 5184
+1052 -e 'C:\Windows\System32\cmd.exe' (args in -e)
+   drakvuf exit=0 ; inject line: "Plugin": "inject", "TimeStamp": "1791951394.088732", "Method": "CreateProc", "Status": "Success", "ProcessName": "C:\\Windows\\System32\\cmd.exe", "Arguments":
+   stderr tail: 1791951393.655292 DRAKVUF v1.1-071b0f2 Copyright (C) 2014-2024 Tamas K Lengyel 
+   2026-10-14 00:17:44 domain gone: hybrid shutdown done (on_poweroff=destroy)
+-- ro mount of /dev/nbd0p2 rc=0
+-rwxrwxrwx 1 root root 6433652736 2026-10-13 22:16:59.942935700 -0400 /mnt/hibw/hiberfil.sys
+copy rc=0
+/dev/nbd0 disconnected
+-- signature: HIBR
+-- size: 6433652736 bytes
+-- sha256: dff5de4bd7e4ccf43cbaba1336b352170c465afa89e03a5dd3ea5117fa720c9f
+-- windows.hibernation.Info (the SystemTime must be after the host UTC time of xl create, 2026-10-14 04:14:16):
+<this branch>/volatility3/framework/deprecation.py:105: FutureWarning: This plugin (PluginRequirement) has been renamed and will be removed in the first release after 2026-06-01. PluginRequirement is to be deprecated. Use VersionRequirement instead.
+  warnings.warn(
+Volatility 3 Framework 2.28.1
+
+Variable	Value
+
+Signature	HIBR
+Comment	The hibernation file header signature is correct.
+PageSize	4096
+SystemTime	2026-10-14 02:17:00+00:00
+FirstBootRestorePage	7
+NumPageForLoader	25095
+-- domains after:
+Name                                        ID   Mem VCPUs	State	Time(s)
+Domain-0                                     0  4096     8     r-----  293071.3
+== 2026-10-14 00:18:44 end, hybrid shutdown ok=1
