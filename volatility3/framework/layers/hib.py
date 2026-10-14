@@ -8,7 +8,8 @@
 #   - https://pypi.org/project/xpress-lz77/: The decompression algorithm developped for the integration to volatility3
 
 from typing import Optional
-import logging, struct
+import logging
+import struct
 
 from volatility3.framework import interfaces, constants, exceptions
 from volatility3.framework.layers import segmented
@@ -35,26 +36,28 @@ if HAS_XPRESS:
         WINDOW_8 = 1
         WINDOWS_10_2016_1507_1511 = 2
         WINDOWS_10_2016_1607 = 3
+        WINDOWS_11_24H2 = 4
 
         # TODO: Make me compatible with x86 by checking the page_size.
         PAGE_SIZE = 4096  # x64 page size.
         HEADER_SIZE = 4
         PAGE_DESC_SIZE = 8
 
-        def _uncompress(self, data: bytes, flag):
+        def _uncompress(self, data: bytes, flag, out_size: int = 65536):
             """
             Desc:
             Params:
                 - data: the compressed data from a compression set
                 - flag: what is the decompression algorithm to use.
-                - out_size: Size of the decompressed data
+                - out_size: Size of the decompressed data (LZ77+Huffman needs it exactly: a set
+                  of fewer than 16 pages fails with "EOF Error" if 65536 is asked)
             Return: The decompressed data (consecutive pages).
             """
             if flag == 0 or flag == 1:
                 return bytes(xpress_lz77.lz77_plain_decompress_py(data))
 
             elif flag == 2 or flag == 3:
-                return bytes(xpress_lz77.lz77_huffman_decompress_py(data, 65536))
+                return bytes(xpress_lz77.lz77_huffman_decompress_py(data, out_size))
             else:
                 vollog.warning(
                     f"A compression set could not be decompressed: Compression algorithm : {flag}"
@@ -71,12 +74,9 @@ if HAS_XPRESS:
             """
             Initializes the Hibernation file layer.
             """
-            self._compressed = (
-                {}
-            )  # Keep track of which compression algorithm by each mapped compressed data.
-            self._mapping = (
-                {}
-            )  # This will hold the mapping between the PageNumber in the decompressed data vs the physical page number.
+            self._compressed = {}  # Keep track of which compression algorithm by each mapped compressed data.
+            self._uncompressed_size = {}  # Size of the decompressed data of each compression set, by mapped compressed data.
+            self._mapping = {}  # This will hold the mapping between the PageNumber in the decompressed data vs the physical page number.
 
             if "plugins.Dump.version" in context.config:
                 # The user is using the hibernation.Dump plugin, so the version must be known.
@@ -97,11 +97,18 @@ if HAS_XPRESS:
             | Windows 10 2016 1507-1511                 |               0x70            |	        0x218           |
             | Windows 10 2016 1607                      |               0x70            |	        0x220           |
             | Windows 10 2016 1703 - Windows 11 23H2    |               0x70            |	        0x230           |
+            | Windows 11 24H2 (build 26100)             |               0x70            |	 0x238 or 0x250 (see below) |
             ---------------------------------------------------------------------------------------------------------
             """
             if self.version == self.WINDOWS_10_2016_1703_TO_23H2:
                 self.FKRP_OFFSET = 0x070
                 self.KPP_OFFSET = 0x230
+            elif self.version == self.WINDOWS_11_24H2:
+                # The KernelPagesProcessed counter is not at the same offset in every build 26100
+                # (0x238 in 26100.1742, 0x250 in later ones), so it is picked in _load_segments by
+                # checking it against the chain of compression sets.
+                self.FKRP_OFFSET = 0x070
+                self.KPP_OFFSET = None
             elif self.version == self.WINDOW_8:
                 self.FKRP_OFFSET = 0x68
                 self.KPP_OFFSET = 0x1C8
@@ -155,9 +162,14 @@ if HAS_XPRESS:
                 FirstKernelRestorePage = int.from_bytes(
                     base_layer.read(self.FKRP_OFFSET, 8), "little"
                 )
-                KernelPagesProcessed = int.from_bytes(
-                    base_layer.read(self.KPP_OFFSET, 8), "little"
-                )
+                if self.KPP_OFFSET is None:
+                    KernelPagesProcessed = self._find_kernel_pages_processed(
+                        FirstKernelRestorePage
+                    )
+                else:
+                    KernelPagesProcessed = int.from_bytes(
+                        base_layer.read(self.KPP_OFFSET, 8), "little"
+                    )
                 offset = FirstKernelRestorePage * self.PAGE_SIZE
                 total_pages = KernelPagesProcessed
 
@@ -167,6 +179,68 @@ if HAS_XPRESS:
                     offset += next_compression_set
                     treated += page_read
             self._segments = sorted(self._segments, key=lambda x: x[0])
+
+        # Offsets of KernelPagesProcessed seen in Windows 11 24H2 (build 26100) hibernation files.
+        KPP_OFFSETS_24H2 = (0x238, 0x250)
+
+        def _kernel_chain_has_pages(self, offset: int, wanted_pages: int) -> bool:
+            """
+            Desc: Follow the chain of compression sets of the kernel section without mapping anything.
+            Return: True if every header on the way is valid and the sets add up to exactly wanted_pages.
+            """
+            base_layer = self.context.layers[self._base_layer]
+            pages = 0
+            try:
+                while pages < wanted_pages:
+                    header = base_layer.read(offset, self.HEADER_SIZE)
+                    data = struct.unpack("<I", header)[0]
+                    number_of_descs = data & 0xFF
+                    size_of_compressed_data = (data >> 8) & 0x1FFFFF
+                    if (
+                        number_of_descs == 0
+                        or number_of_descs > 16
+                        or size_of_compressed_data == 0
+                    ):
+                        return False
+                    descs = base_layer.read(
+                        offset + self.HEADER_SIZE, number_of_descs * self.PAGE_DESC_SIZE
+                    )
+                    for i in range(number_of_descs):
+                        start = i * self.PAGE_DESC_SIZE
+                        desc = int.from_bytes(
+                            descs[start : start + self.PAGE_DESC_SIZE], "little"
+                        )
+                        pages += 1 + (desc & 0b1111)
+                    offset += (
+                        self.HEADER_SIZE
+                        + number_of_descs * self.PAGE_DESC_SIZE
+                        + size_of_compressed_data
+                    )
+            except (exceptions.InvalidAddressException, struct.error):
+                return False
+            return pages == wanted_pages
+
+        def _find_kernel_pages_processed(self, first_kernel_restore_page: int) -> int:
+            """
+            Desc: Windows 11 24H2 only. Return the KernelPagesProcessed counter, taken from the first
+            of the known offsets whose value matches the chain of compression sets of the kernel section.
+            """
+            base_layer = self.context.layers[self._base_layer]
+            for kpp_offset in self.KPP_OFFSETS_24H2:
+                counter = int.from_bytes(base_layer.read(kpp_offset, 8), "little")
+                if counter and self._kernel_chain_has_pages(
+                    first_kernel_restore_page * self.PAGE_SIZE, counter
+                ):
+                    vollog.info(
+                        f"KernelPagesProcessed found at offset {hex(kpp_offset)}: {counter} pages"
+                    )
+                    return counter
+            raise exceptions.LayerException(
+                self.name,
+                "No KernelPagesProcessed counter matches the kernel section (checked offsets "
+                + ", ".join(hex(o) for o in self.KPP_OFFSETS_24H2)
+                + "): this hibernation file is not a supported Windows 11 24H2 layout.",
+            )
 
         def _read_compression_set(self, offset):
             """
@@ -187,10 +261,16 @@ if HAS_XPRESS:
                     self.name, "The hibernation file is corrupted."
                 )
 
-            size_of_compressed_data = (
-                data >> 8
-            ) & 0x3FFFFF  # Next 22 least significant bytes.
-            huffman_compressed = (data >> 30) & 0x3  # Most significant bit.
+            if self.version == self.WINDOWS_11_24H2:
+                # Windows 11 24H2 (build 26100): the size is in bits 8-28 (bit 29 is not part of
+                # it) and bit 30 selects LZ77+Huffman (otherwise plain LZ77).
+                size_of_compressed_data = (data >> 8) & 0x1FFFFF
+                huffman_compressed = 2 if (data >> 30) & 1 else 0
+            else:
+                size_of_compressed_data = (
+                    data >> 8
+                ) & 0x3FFFFF  # Next 22 least significant bytes.
+                huffman_compressed = (data >> 30) & 0x3  # Most significant bit.
 
             # Now we know where is the start of the page descriptors in the hibernation file.
             mapped_address = (
@@ -227,6 +307,7 @@ if HAS_XPRESS:
             if total_page_size != size_of_compressed_data:
                 # This means compression so we track wich compression sets we actually need to decompress
                 self._compressed[mapped_address] = huffman_compressed
+                self._uncompressed_size[mapped_address] = total_page_size
             return total_page_count, (
                 4 + size_of_compressed_data + number_of_descs * self.PAGE_DESC_SIZE
             )  # Number of pages in the set, Size of the entire compression set
@@ -248,7 +329,9 @@ if HAS_XPRESS:
             )
             if mapped_offset in self._compressed:
                 decoded_data = self._uncompress(
-                    data=data, flag=self._compressed[mapped_offset]
+                    data=data,
+                    flag=self._compressed[mapped_offset],
+                    out_size=self._uncompressed_size[mapped_offset],
                 )
             else:
                 # The data is not in our mapping so it's uncompressed.
