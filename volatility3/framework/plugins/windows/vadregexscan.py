@@ -20,7 +20,7 @@ class VadRegExScan(plugins.PluginInterface):
     """Scans all virtual memory areas for tasks using RegEx."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
     MAXSIZE_DEFAULT = 128
 
     @classmethod
@@ -58,6 +58,7 @@ class VadRegExScan(plugins.PluginInterface):
         ]
 
     def _generator(self, regex_pattern, procs):
+        maxsize = self.config.get("maxsize", self.MAXSIZE_DEFAULT)
         regex_pattern = bytes(regex_pattern, "UTF-8")
         vollog.debug(f"RegEx Pattern: {regex_pattern}")
 
@@ -83,19 +84,19 @@ class VadRegExScan(plugins.PluginInterface):
                 sections=sections,
                 progress_callback=self._progress_callback,
             ):
-                result_data = proc_layer.read(offset, self.MAXSIZE_DEFAULT, pad=True)
+                result_data = proc_layer.read(offset, maxsize, pad=True)
 
                 # reapply the regex in order to extract just the match
                 regex_result = re.match(regex_pattern, result_data)
 
                 if regex_result:
-                    # the match is within the results_data (e.g. it fits within MAXSIZE_DEFAULT)
+                    # the match is within the results_data (e.g. it fits within maxsize)
                     # extract just the match itself
                     regex_match = regex_result.group(0)
                     text_result = str(regex_match, encoding="UTF-8", errors="replace")
                     bytes_result = regex_match
                 else:
-                    # the match is not with the results_data (e.g. it doesn't fit within MAXSIZE_DEFAULT)
+                    # the match is not with the results_data (e.g. it doesn't fit within maxsize)
                     text_result = str(result_data, encoding="UTF-8", errors="replace")
                     bytes_result = result_data
 
