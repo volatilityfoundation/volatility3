@@ -158,7 +158,7 @@ class PsTree(interfaces.plugins.PluginInterface):
                     yield fields
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
+        filter_func = pslist.PsList.create_user_tid_filter(self.config.get("pid", None))
         include_threads = self.config.get("threads")
         decorate_comm = self.config.get("decorate_comm")
 
