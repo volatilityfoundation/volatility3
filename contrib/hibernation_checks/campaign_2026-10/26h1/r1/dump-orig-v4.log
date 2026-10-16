@@ -1,0 +1,17 @@
+== 2026-10-14 02:21:47 26h1 round 1 : orig-v4 : <work>/vol3-orig : --version 4
+$ python vol.py -f hiberfil.sys -o out windows.hibernation.Dump --version 4
+<original 603b53f8>/volatility3/framework/deprecation.py:105: FutureWarning: This plugin (PluginRequirement) has been renamed and will be removed in the first release after 2026-06-01. PluginRequirement is to be deprecated. Use VersionRequirement instead.
+  warnings.warn(
+Progress:    0.00		Scanning FileLayer using PageMapScannerProgress:   15.11		Scanning FileLayer using PageMapScannerProgress:   64.75		Scanning FileLayer using PageMapScannerProgress:    0.00		Scanning FileLayer using PageMapScannerProgress:    0.00		Scanning FileLayer using PageMapScannerProgress:   20.00		Scanning FileLayer using PageMapScannerProgress:   40.00		Scanning FileLayer using PageMapScannerProgress:   60.00		Scanning FileLayer using PageMapScannerProgress:   80.00		Scanning FileLayer using PageMapScannerProgress:  100.00		Stacking attempts finished             Progress:  100.00		PDB scanning finished                  Volatility 3 Framework 2.28.1
+
+Status
+
+Your hibernation file could not be converted, this can be the case for multiple reasons:
+                    - The hibernation file you are trying to dump is corrupted.
+                    - The version you provided is not expected (see --help).
+                    - The file you are trying to dump is not an hibernation file.
+                    - Missing requirements: Make sure all the requirements are installed (requirements.txt).
+                    
+exit=0 wall=4s
+no memory_layer.raw produced
+== 2026-10-14 02:21:51 end

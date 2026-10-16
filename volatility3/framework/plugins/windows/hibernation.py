@@ -3,7 +3,8 @@
 #
 
 from typing import List
-import logging, os
+import logging
+import os
 from volatility3.framework import constants
 from volatility3.framework.renderers import conversion
 from volatility3.framework.configuration import requirements
@@ -106,7 +107,7 @@ class Dump(plugins.PluginInterface):
             ),
             requirements.IntRequirement(
                 name="version",
-                description="The Windows version of the hibernation file : 0=>[Windows 10 1703 to Windows 11 23H2] 1=>[Windows 8/8.1] 2=>[Windows 10 1507 to 1511] 3=>[Windows 10 1607]",
+                description="The Windows version of the hibernation file : 0=>[Windows 10 1703 to Windows 11 23H2] 1=>[Windows 8/8.1] 2=>[Windows 10 1507 to 1511] 3=>[Windows 10 1607] 4=>[Windows 11 24H2 (build 26100)]",
                 optional=False,
             ),
             requirements.TranslationLayerRequirement(
@@ -132,9 +133,12 @@ class Dump(plugins.PluginInterface):
                     progress_callback=self._progress_callback,
                 )
                 file_handle.close()
-            except IOError as excp:
-                yield 0, (
-                    f"Layer cannot be written to {self.config['output_name']}: {excp}",
+            except OSError as excp:
+                yield (
+                    0,
+                    (
+                        f"Layer cannot be written to {self.config['output_name']}: {excp}",
+                    ),
                 )
             yield 0, (f"The hibernation file was converted to {output_name}",)
         else:
