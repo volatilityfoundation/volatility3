@@ -1,0 +1,28 @@
+{
+  "reasonable_directory_sets": [
+    {
+      "size_of_image": 4096,
+      "directories": {
+        "export": {"virtual_address": 512, "size": 128},
+        "import": {"virtual_address": 768, "size": 128},
+        "delay_import": {"virtual_address": 1024, "size": 128}
+      }
+    },
+    {
+      "size_of_image": 8192,
+      "directories": {
+        "export": {"virtual_address": 768, "size": 192},
+        "import": {"virtual_address": 1536, "size": 256},
+        "delay_import": {"virtual_address": 2048, "size": 128}
+      }
+    },
+    {
+      "size_of_image": 4096,
+      "directories": {
+        "export": {"virtual_address": 512, "size": 128},
+        "import": {"virtual_address": 20480, "size": 128},
+        "delay_import": {"virtual_address": 768, "size": 20480}
+      }
+    }
+  ]
+}
