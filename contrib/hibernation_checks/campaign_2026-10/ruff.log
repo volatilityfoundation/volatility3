@@ -1,0 +1,23 @@
+ruff 0.11.6
+--- files of this PR
+All checks passed!
+ruff check (PR files) exit=0
+7 files already formatted
+ruff format (PR files) exit=0
+--- whole tree (pre-existing issues of the base branch included)
+volatility3/framework/layers/codecs/__init__.py:3:8: F401 `codecs` imported but unused
+  |
+1 | # This file is Copyright 2024 Volatility Foundation and licensed under the Volatility Software License 1.0
+2 | # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
+3 | import codecs
+  |        ^^^^^^ F401
+4 |
+5 | """Codecs used for encoding or decoding data should live here"""
+  |
+  = help: Remove unused import: `codecs`
+
+Found 1 error.
+ruff check (tree) exit=1
+Would reformat: volatility3/framework/plugins/linux/sockscan.py
+1 file would be reformatted, 342 files already formatted
+ruff format (tree) exit=1

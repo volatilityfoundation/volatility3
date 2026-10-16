@@ -1,0 +1,146 @@
+test_every_page_reads_back (test_hib_layer.HibernationLayerOnSyntheticFiles.test_every_page_reads_back) ... 
+  test_every_page_reads_back (test_hib_layer.HibernationLayerOnSyntheticFiles.test_every_page_reads_back) (layout='23h2', version=0) ... ERROR
+  test_every_page_reads_back (test_hib_layer.HibernationLayerOnSyntheticFiles.test_every_page_reads_back) (layout='24h2-early', version=4) ... ERROR
+  test_every_page_reads_back (test_hib_layer.HibernationLayerOnSyntheticFiles.test_every_page_reads_back) (layout='24h2', version=4) ... ERROR
+test_small_huffman_set_does_not_abort_the_conversion (test_hib_layer.HibernationLayerOnSyntheticFiles.test_small_huffman_set_does_not_abort_the_conversion) ... 
+  test_small_huffman_set_does_not_abort_the_conversion (test_hib_layer.HibernationLayerOnSyntheticFiles.test_small_huffman_set_does_not_abort_the_conversion) (layout='23h2') ... ERROR
+  test_small_huffman_set_does_not_abort_the_conversion (test_hib_layer.HibernationLayerOnSyntheticFiles.test_small_huffman_set_does_not_abort_the_conversion) (layout='24h2-early') ... ERROR
+  test_small_huffman_set_does_not_abort_the_conversion (test_hib_layer.HibernationLayerOnSyntheticFiles.test_small_huffman_set_does_not_abort_the_conversion) (layout='24h2') ... ERROR
+test_wrong_counter_offset_is_refused_for_24h2 (test_hib_layer.HibernationLayerOnSyntheticFiles.test_wrong_counter_offset_is_refused_for_24h2) ... ok
+
+======================================================================
+ERROR: test_every_page_reads_back (test_hib_layer.HibernationLayerOnSyntheticFiles.test_every_page_reads_back) (layout='23h2', version=0)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<this branch>/contrib/hibernation_checks/test_hib_layer.py", line 78, in test_every_page_reads_back
+    layer.read(pfn * PAGE, PAGE),
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/interfaces/layers.py", line 497, in read
+    processed_data = self._decode_data(
+        unprocessed_data, mapped_offset, layer_offset, sublength
+    )
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/layers/hib.py", line 331, in _decode_data
+    decoded_data = self._uncompress(
+        data=data,
+        flag=self._compressed[mapped_offset],
+        out_size=self._uncompressed_size[mapped_offset],
+    )
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/layers/hib.py", line 60, in _uncompress
+    return bytes(xpress_lz77.lz77_huffman_decompress_py(data, 65536))
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+ValueError: EOF Error
+
+======================================================================
+ERROR: test_every_page_reads_back (test_hib_layer.HibernationLayerOnSyntheticFiles.test_every_page_reads_back) (layout='24h2-early', version=4)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<this branch>/contrib/hibernation_checks/test_hib_layer.py", line 78, in test_every_page_reads_back
+    layer.read(pfn * PAGE, PAGE),
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/interfaces/layers.py", line 497, in read
+    processed_data = self._decode_data(
+        unprocessed_data, mapped_offset, layer_offset, sublength
+    )
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/layers/hib.py", line 331, in _decode_data
+    decoded_data = self._uncompress(
+        data=data,
+        flag=self._compressed[mapped_offset],
+        out_size=self._uncompressed_size[mapped_offset],
+    )
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/layers/hib.py", line 60, in _uncompress
+    return bytes(xpress_lz77.lz77_huffman_decompress_py(data, 65536))
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+ValueError: EOF Error
+
+======================================================================
+ERROR: test_every_page_reads_back (test_hib_layer.HibernationLayerOnSyntheticFiles.test_every_page_reads_back) (layout='24h2', version=4)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<this branch>/contrib/hibernation_checks/test_hib_layer.py", line 78, in test_every_page_reads_back
+    layer.read(pfn * PAGE, PAGE),
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/interfaces/layers.py", line 497, in read
+    processed_data = self._decode_data(
+        unprocessed_data, mapped_offset, layer_offset, sublength
+    )
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/layers/hib.py", line 331, in _decode_data
+    decoded_data = self._uncompress(
+        data=data,
+        flag=self._compressed[mapped_offset],
+        out_size=self._uncompressed_size[mapped_offset],
+    )
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/layers/hib.py", line 60, in _uncompress
+    return bytes(xpress_lz77.lz77_huffman_decompress_py(data, 65536))
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+ValueError: EOF Error
+
+======================================================================
+ERROR: test_small_huffman_set_does_not_abort_the_conversion (test_hib_layer.HibernationLayerOnSyntheticFiles.test_small_huffman_set_does_not_abort_the_conversion) (layout='23h2')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<this branch>/contrib/hibernation_checks/test_hib_layer.py", line 94, in test_small_huffman_set_does_not_abort_the_conversion
+    self.assertEqual(layer.read(pfn * PAGE, PAGE), synth.decoded[pfn])
+                     ~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/interfaces/layers.py", line 497, in read
+    processed_data = self._decode_data(
+        unprocessed_data, mapped_offset, layer_offset, sublength
+    )
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/layers/hib.py", line 331, in _decode_data
+    decoded_data = self._uncompress(
+        data=data,
+        flag=self._compressed[mapped_offset],
+        out_size=self._uncompressed_size[mapped_offset],
+    )
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/layers/hib.py", line 60, in _uncompress
+    return bytes(xpress_lz77.lz77_huffman_decompress_py(data, 65536))
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+ValueError: EOF Error
+
+======================================================================
+ERROR: test_small_huffman_set_does_not_abort_the_conversion (test_hib_layer.HibernationLayerOnSyntheticFiles.test_small_huffman_set_does_not_abort_the_conversion) (layout='24h2-early')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<this branch>/contrib/hibernation_checks/test_hib_layer.py", line 94, in test_small_huffman_set_does_not_abort_the_conversion
+    self.assertEqual(layer.read(pfn * PAGE, PAGE), synth.decoded[pfn])
+                     ~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/interfaces/layers.py", line 497, in read
+    processed_data = self._decode_data(
+        unprocessed_data, mapped_offset, layer_offset, sublength
+    )
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/layers/hib.py", line 331, in _decode_data
+    decoded_data = self._uncompress(
+        data=data,
+        flag=self._compressed[mapped_offset],
+        out_size=self._uncompressed_size[mapped_offset],
+    )
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/layers/hib.py", line 60, in _uncompress
+    return bytes(xpress_lz77.lz77_huffman_decompress_py(data, 65536))
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+ValueError: EOF Error
+
+======================================================================
+ERROR: test_small_huffman_set_does_not_abort_the_conversion (test_hib_layer.HibernationLayerOnSyntheticFiles.test_small_huffman_set_does_not_abort_the_conversion) (layout='24h2')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<this branch>/contrib/hibernation_checks/test_hib_layer.py", line 94, in test_small_huffman_set_does_not_abort_the_conversion
+    self.assertEqual(layer.read(pfn * PAGE, PAGE), synth.decoded[pfn])
+                     ~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/interfaces/layers.py", line 497, in read
+    processed_data = self._decode_data(
+        unprocessed_data, mapped_offset, layer_offset, sublength
+    )
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/layers/hib.py", line 331, in _decode_data
+    decoded_data = self._uncompress(
+        data=data,
+        flag=self._compressed[mapped_offset],
+        out_size=self._uncompressed_size[mapped_offset],
+    )
+  File "<this branch>/contrib/hibernation_checks/../../volatility3/framework/layers/hib.py", line 60, in _uncompress
+    return bytes(xpress_lz77.lz77_huffman_decompress_py(data, 65536))
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+ValueError: EOF Error
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.142s
+
+FAILED (errors=6)
