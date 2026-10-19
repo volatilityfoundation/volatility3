@@ -1,0 +1,49 @@
+signature            : b'HIBR'
+file size            : about 8 GiB
+NumPagesForLoader    : 34786
+
+=== layout 23h2 (KernelPagesProcessed @ 0x230) ===
+KernelPagesProcessed : 34786
+boot section         : 2175 sets, 34786/34786 pages, ok, MATCH
+kernel section       : 47 sets, 749/34786 pages, INVALID SET HEADER, MISMATCH
+
+=== layout 24h2 (KernelPagesProcessed @ 0x250) ===
+KernelPagesProcessed : 5970
+boot section         : 2175 sets, 34786/34786 pages, ok, MATCH
+kernel section       : 374 sets, 5984/5970 pages, ok, MISMATCH
+
+=== layout 24h2-early (KernelPagesProcessed @ 0x238) ===
+KernelPagesProcessed : 339946
+boot section         : 2175 sets, 34786/34786 pages, ok, MATCH
+kernel section       : 21247 sets, 339946/339946 pages, ok, MATCH
+
+=== header bits, 24h2 rules ===
+  boot: set kinds (kind, bit29, bit30):
+     plain-lz77  bit29=0 bit30=0 : 2173
+     raw         bit29=0 bit30=0 : 2
+  boot: largest set size 65536 bytes (17 bits), header bits set:
+     bit 25 : 0 sets
+     bit 26 : 0 sets
+     bit 27 : 0 sets
+     bit 28 : 0 sets
+     bit 29 : 0 sets
+     bit 30 : 0 sets
+     bit 31 : 0 sets
+  boot: sets larger than 64 KiB : 0
+  boot: huffman sets with pages != 16 : 0
+  boot: compressed sets classified differently by the 23h2 rules : 0
+  boot: compressed sets sized differently by the 23h2 rules : 0
+
+=== kernel chain walked to its natural end, 23h2 set rules ===
+47 sets, 749 pages | header qwords equal to that page count: none | equal to its length in bytes: none
+
+=== kernel chain walked to its natural end, 24h2 set rules ===
+21247 sets, 339946 pages | header qwords equal to that page count: 0x238 | equal to its length in bytes: 0x248
+
+=== decompression (algorithm selected by each layout; output size checked) ===
+23h2 layout, boot section: 2173 compressed sets | plain LZ77 ok=2173 failed=0 | Huffman ok=0 failed=0 (failed with the fixed 65536 size, ok with the size of the set: 0)
+23h2 layout, kernel section: not walked (section skipped or chain does not match)
+24h2 layout, boot section: 2173 compressed sets | plain LZ77 ok=2173 failed=0 | Huffman ok=0 failed=0 (failed with the fixed 65536 size, ok with the size of the set: 0)
+24h2 layout, kernel section: not walked (section skipped or chain does not match)
+24h2-early layout, boot section: 2173 compressed sets | plain LZ77 ok=2173 failed=0 | Huffman ok=0 failed=0 (failed with the fixed 65536 size, ok with the size of the set: 0)
+24h2-early layout, kernel section: 20763 compressed sets | plain LZ77 ok=20334 failed=0 | Huffman ok=429 failed=0 (failed with the fixed 65536 size, ok with the size of the set: 0)

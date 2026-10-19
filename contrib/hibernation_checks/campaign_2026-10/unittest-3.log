@@ -1,0 +1,24 @@
+test_boot_unchanged_kernel_recovered (test_hib_layout.CompareOutputs.test_boot_unchanged_kernel_recovered) ... ok
+test_detects_a_changed_boot_page (test_hib_layout.CompareOutputs.test_detects_a_changed_boot_page) ... ok
+test_outside_scan (test_hib_layout.CompareOutputs.test_outside_scan) ... ok
+test_refuses_a_file_that_does_not_walk (test_hib_layout.CompareOutputs.test_refuses_a_file_that_does_not_walk) ... ok
+test_bit31_is_ignored_by_24h2 (test_hib_layout.HeaderParsing.test_bit31_is_ignored_by_24h2) ... ok
+test_example_from_the_pr (test_hib_layout.HeaderParsing.test_example_from_the_pr) ... ok
+test_only_bit29_differs_in_the_size_mask (test_hib_layout.HeaderParsing.test_only_bit29_differs_in_the_size_mask) ... ok
+test_23h2_layout_skips_the_kernel_section (test_hib_layout.SyntheticFile.test_23h2_layout_skips_the_kernel_section) ... ok
+test_23h2_rules_break_on_bit29_huffman (test_hib_layout.SyntheticFile.test_23h2_rules_break_on_bit29_huffman) ... ok
+test_24h2_chains_match (test_hib_layout.SyntheticFile.test_24h2_chains_match) ... ok
+test_decoded_content_matches (test_hib_layout.SyntheticFile.test_decoded_content_matches) ... ok
+test_decompression_24h2_and_23h2 (test_hib_layout.SyntheticFile.test_decompression_24h2_and_23h2) ... ok
+test_default_output_hides_identifying_values (test_hib_layout.SyntheticFile.test_default_output_hides_identifying_values) ... ok
+test_huffman_set_with_fewer_pages_is_reported (test_hib_layout.SyntheticFile.test_huffman_set_with_fewer_pages_is_reported) ... ok
+test_raw_set_with_bit30_is_raw_not_huffman (test_hib_layout.SyntheticFile.test_raw_set_with_bit30_is_raw_not_huffman) ... ok
+test_stats_and_bit_counters (test_hib_layout.SyntheticFile.test_stats_and_bit_counters) ... ok
+test_every_page_reads_back (test_hib_layer.HibernationLayerOnSyntheticFiles.test_every_page_reads_back) ... ok
+test_small_huffman_set_does_not_abort_the_conversion (test_hib_layer.HibernationLayerOnSyntheticFiles.test_small_huffman_set_does_not_abort_the_conversion) ... ok
+test_wrong_counter_offset_is_refused_for_24h2 (test_hib_layer.HibernationLayerOnSyntheticFiles.test_wrong_counter_offset_is_refused_for_24h2) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.381s
+
+OK

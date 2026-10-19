@@ -1,0 +1,16 @@
+== generation log of 2026-10-13 (hib-build.sh / hib-startup.sh)
+14:58:20 restore snapshot
+total 5
+drwxrwxrwx 1 root root  248 Oct 13 14:58 .
+drwxrwxrwx 1 root root 4096 Sep 27 15:50 ..
+-rwxrwxrwx 1 root root  174 Nov  4  2025 desktop.ini
+-rwxrwxrwx 1 root root   92 Oct 13 14:58 hib.cmd
+14:58:25 create
+15:08:27 VM still running after 10 min
+
+== injection result:
+"Plugin": "inject", "TimeStamp": "1791914707.545470", "Method": "CreateProc", "Status": "InitFail"}
+== file:
+signature: HIBR
+size: 2573459456 bytes
+sha256: 69cb7a88b267f0eb0a2e9c48f51758abee57b88e606e1d4a6299ccd00e607a4c

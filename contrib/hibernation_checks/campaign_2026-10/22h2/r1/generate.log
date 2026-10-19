@@ -1,0 +1,75 @@
+== 2026-10-14 00:38:56 build 22h2 round 1
+-- domains before:
+Name                                        ID   Mem VCPUs	State	Time(s)
+Domain-0                                     0  4096     8     r-----  295716.4
+-- restore snapshot after-install-cold
+rc=0
+-- cfg (cdroms removed, boot from disk):
+name = "win11-22h2-test"
+memory = 6144
+vcpus = 4
+boot = "c"
+disk = [
+acpi_s3 = 1
+acpi_s4 = 1
+-- 2026-10-14 00:38:57 xl create (host UTC: 2026-10-14 04:38:57)
+Parsing config from <work>/win11-22h2-test.cfg
+rc=0
+-- 120 s for the desktop to settle
+-- 2026-10-14 00:40:58 probe (procmon 15 s) with drakvuf
+   running processes seen: 92, explorer.exe PID: 1376
+4488
+-- 2026-10-14 00:41:14 inject: drakvuf -m createproc -i 1376
+4488 -e 'C:\Windows\System32\cmd.exe' (args in -e)
+   drakvuf exit=3 ; inject line: "Plugin": "inject", "TimeStamp": "1791952874.327107", "Method": "CreateProc", "Status": "InitFail"
+   stderr tail: 1791952874.036452 DRAKVUF v1.1-071b0f2 Copyright (C) 2014-2024 Tamas K Lengyel Process startup failed 
+   2026-10-14 00:46:15 domain still running 5 min after the injection
+   non-zero bytes in the screen dump: 26970
+-- 2026-10-14 00:46:15 probe (procmon 15 s) with drakvuf(build 2)
+   running processes seen: 92, explorer.exe PID: 1376
+4488
+-- 2026-10-14 00:46:30 inject: drakvuf(build 2) -m createproc -i 1376
+4488 -e 'C:\Windows\System32\cmd.exe' (args in -e)
+   drakvuf exit=3 ; inject line: "Plugin": "inject", "TimeStamp": "1791953191.066107", "Method": "CreateProc", "Status": "InitFail"
+   stderr tail: 1791953190.768719 DRAKVUF v1.1-b2f64d8 Copyright (C) 2014-2024 Tamas K Lengyel Process startup failed 
+   2026-10-14 00:51:32 domain still running 5 min after the injection
+   non-zero bytes in the screen dump: 26970
+-- 2026-10-14 00:51:32 probe (procmon 15 s) with drakvuf(build 2)
+   running processes seen: 92, explorer.exe PID: 1376
+4488
+-- 2026-10-14 00:51:47 inject: drakvuf(build 2) -m createproc -i 1376
+4488 -e 'C:\Windows\System32\cmd.exe' (args in -e)
+   drakvuf exit=3 ; inject line: "Plugin": "inject", "TimeStamp": "1791953507.820842", "Method": "CreateProc", "Status": "InitFail"
+   stderr tail: 1791953507.526566 DRAKVUF v1.1-45c7b26 Copyright (C) 2014-2024 Tamas K Lengyel Process startup failed 
+   2026-10-14 00:56:48 domain still running 5 min after the injection
+   non-zero bytes in the screen dump: 26970
+-- 2026-10-14 00:56:48 probe (procmon 15 s) with drakvuf
+   running processes seen: 92, explorer.exe PID: 1376
+4488
+-- 2026-10-14 00:57:04 inject: drakvuf -m shellexec -i 1376
+4488 -e 'C:\Windows\System32\cmd.exe' -f '/c powercfg /h on & shutdown /s /hybrid /t 5'
+   drakvuf exit=3 ; inject line: "Plugin": "inject", "TimeStamp": "1791953824.549031", "Method": "ShellExec", "Status": "InitFail"
+   stderr tail: 1791953824.253248 DRAKVUF v1.1-071b0f2 Copyright (C) 2014-2024 Tamas K Lengyel Process startup failed 
+   2026-10-14 01:02:05 domain still running 5 min after the injection
+   non-zero bytes in the screen dump: 26970
+-- no attempt stopped the domain, xl destroy
+-- ro mount of /dev/nbd0p2 rc=0
+-rwxrwxrwx 1 root root 6433652736 2026-09-27 12:47:57.329038600 -0400 /mnt/hibw/hiberfil.sys
+copy rc=0
+/dev/nbd0 disconnected
+-- signature: WAKE
+-- size: 6433652736 bytes
+-- sha256: 70d18b2c779f5e4b4acc2aa96e34c562d9a73dc7ae28a5f5e37a73663c621775
+-- windows.hibernation.Info (the SystemTime must be after the host UTC time of xl create, 2026-10-14 04:38:57):
+<this branch>/volatility3/framework/deprecation.py:105: FutureWarning: This plugin (PluginRequirement) has been renamed and will be removed in the first release after 2026-06-01. PluginRequirement is to be deprecated. Use VersionRequirement instead.
+  warnings.warn(
+Volatility 3 Framework 2.28.1
+
+Variable	Value
+
+Signature	WAKE
+Comment : 	The file is not an hibernation file or is corrupted.
+-- domains after:
+Name                                        ID   Mem VCPUs	State	Time(s)
+Domain-0                                     0  4096     8     r-----  297409.6
+== 2026-10-14 01:03:03 end, hybrid shutdown ok=0

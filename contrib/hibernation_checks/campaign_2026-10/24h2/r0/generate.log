@@ -1,0 +1,22 @@
+== generation log of 2026-10-13 (hib-build.sh / hib-startup.sh)
+13:54:43 restore snapshot
+13:54:44 create win11-24h2-test
+13:57:01 RunningProcess count=128
+13:57:01 explorer PID=3792
+548
+13:58:02 inject: 
+13:58:12 VM stopped by itself
+nbd0     64424509440 
+├─nbd0p1   314572800 ntfs
+├─nbd0p2 63433605120 ntfs
+└─nbd0p3   673185792 ntfs
+-rwxrwxrwx 1 root root 6433652736 Oct 13 11:57 /mnt/hibw/hiberfil.sys
+13:58:29 copied
+13:58:29 done
+
+== injection result:
+"Plugin": "inject", "TimeStamp": "1791914222.157917", "Method": "CreateProc", "Status": "Success", "ProcessName": "C:\\Windows\\System32\\cmd.exe", "Arguments": "/c powercfg /h on & shutdown /s /hybrid /t 5", "InjectedPid": 4944, "InjectedTid": 6988}
+== file:
+signature: HIBR
+size: 6433652736 bytes
+sha256: 770cef81febf34dfbc071ec9edabbda49bfb8261b3b5bedf8caec6eb49cfa403

@@ -1,0 +1,69 @@
+signature            : b'HIBR'
+file size            : about 6 GiB
+NumPagesForLoader    : 28246
+
+=== layout 23h2 (KernelPagesProcessed @ 0x230) ===
+KernelPagesProcessed : 28246
+boot section         : 1766 sets, 28246/28246 pages, ok, MATCH
+kernel section       : 34 sets, 544/28246 pages, INVALID SET HEADER, MISMATCH
+
+=== layout 24h2 (KernelPagesProcessed @ 0x250) ===
+KernelPagesProcessed : 9282
+boot section         : 1766 sets, 28246/28246 pages, ok, MATCH
+kernel section       : 581 sets, 9296/9282 pages, ok, MISMATCH
+
+=== layout 24h2-early (KernelPagesProcessed @ 0x238) ===
+KernelPagesProcessed : 429581
+boot section         : 1766 sets, 28246/28246 pages, ok, MATCH
+kernel section       : 26849 sets, 429581/429581 pages, ok, MATCH
+
+=== header bits, 24h2 rules ===
+  (boot section: sets of the 24h2 layout)
+  boot: set kinds (kind, bit29, bit30):
+     plain-lz77  bit29=0 bit30=0 : 1765
+     raw         bit29=0 bit30=0 : 1
+  boot: largest set size 65536 bytes (17 bits), header bits set:
+     bit 25 : 0 sets
+     bit 26 : 0 sets
+     bit 27 : 0 sets
+     bit 28 : 0 sets
+     bit 29 : 0 sets
+     bit 30 : 0 sets
+     bit 31 : 0 sets
+  boot: sets larger than 64 KiB : 0
+  boot: huffman sets with pages != 16 : 0
+  boot: compressed sets classified differently by the 23h2 rules : 0
+  boot: compressed sets sized differently by the 23h2 rules : 0
+  (kernel section: sets of the 24h2-early layout)
+  kernel: set kinds (kind, bit29, bit30):
+     huffman     bit29=0 bit30=1 : 13
+     huffman     bit29=1 bit30=1 : 26759
+     plain-lz77  bit29=0 bit30=0 : 16
+     raw         bit29=0 bit30=0 : 5
+     raw         bit29=1 bit30=1 : 56
+  kernel: largest set size 65536 bytes (17 bits), header bits set:
+     bit 25 : 0 sets
+     bit 26 : 0 sets
+     bit 27 : 0 sets
+     bit 28 : 0 sets
+     bit 29 : 26815 sets
+     bit 30 : 26828 sets
+     bit 31 : 0 sets
+  kernel: sets larger than 64 KiB : 0
+  kernel: huffman sets with pages != 16 : 1
+  kernel: compressed sets classified differently by the 23h2 rules : 26772
+  kernel: compressed sets sized differently by the 23h2 rules : 26759
+
+=== kernel chain walked to its natural end, 23h2 set rules ===
+34 sets, 544 pages | header qwords equal to that page count: none | equal to its length in bytes: none
+
+=== kernel chain walked to its natural end, 24h2 set rules ===
+26849 sets, 429581 pages | header qwords equal to that page count: 0x238 | equal to its length in bytes: 0x248
+
+=== decompression (algorithm selected by each layout; output size checked) ===
+23h2 layout, boot section: 1765 compressed sets | plain LZ77 ok=1765 failed=0 | Huffman ok=0 failed=0 (failed with the fixed 65536 size, ok with the size of the set: 0)
+23h2 layout, kernel section: not walked (section skipped or chain does not match)
+24h2 layout, boot section: 1765 compressed sets | plain LZ77 ok=1765 failed=0 | Huffman ok=0 failed=0 (failed with the fixed 65536 size, ok with the size of the set: 0)
+24h2 layout, kernel section: not walked (section skipped or chain does not match)
+24h2-early layout, boot section: 1765 compressed sets | plain LZ77 ok=1765 failed=0 | Huffman ok=0 failed=0 (failed with the fixed 65536 size, ok with the size of the set: 0)
+24h2-early layout, kernel section: 26788 compressed sets | plain LZ77 ok=16 failed=0 | Huffman ok=26771 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
