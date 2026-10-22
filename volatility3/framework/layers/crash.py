@@ -3,7 +3,7 @@
 #
 import logging
 import struct
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.layers import segmented
@@ -27,6 +27,9 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
     SIGNATURE = 0x45474150
     VALIDDUMP = 0x504D5544
+
+    DUMP_TYPE_FULL = 1
+    DUMP_TYPE_BITMAP_FULL = 5
 
     crashdump_json = "crash"
     supported_dumptypes = [0x01, 0x05]  # we need 0x5 for 32-bit bitmaps
@@ -99,108 +102,128 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             layer_name=self._base_layer,
         )
 
+    def _get_segments_from_dump_type_full(self) -> List[Tuple[int, int, int, int]]:
+        """Returns the segments contained in a full dump.
+
+        Returns:
+            A list of segment tuples (offset, mapped_offset, length, mapped_length)
+        """
+        segments = []
+        header = self.context.object(
+            self._crash_table_name + constants.BANG + self.dump_header_name,
+            offset=0,
+            layer_name=self._base_layer,
+        )
+
+        offset = self.headerpages
+        header.PhysicalMemoryBlockBuffer.Run.count = (
+            header.PhysicalMemoryBlockBuffer.NumberOfRuns
+        )
+        for run in header.PhysicalMemoryBlockBuffer.Run:
+            segments.append(
+                (
+                    run.BasePage * self._page_size,
+                    offset * self._page_size,
+                    run.PageCount * self._page_size,
+                    run.PageCount * self._page_size,
+                )
+            )
+            offset += run.PageCount
+
+        return segments
+
+    def _get_segments_from_dump_type_bitmap_full(
+        self,
+    ) -> List[Tuple[int, int, int, int]]:
+        """Returns the segments contained in a bitmap full dump.
+
+        Returns:
+            A list of segment tuples (offset, mapped_offset, length, mapped_length)
+        """
+        segments = []
+        summary_header = self.get_summary_header()
+        last_bit_seen = 0  # Most recent bit processed
+        seg_first_bit = None  # First bit in a run
+        seg_first_offset = 0  # File offset of first bit
+        offset = summary_header.HeaderSize  # Offset to the start of actual memory dump
+        ulong_bitmap_array = summary_header.get_buffer_long()
+        # outer_index points to a 32 bits array inside a list of arrays,
+        # each bit indicating a page mapping state
+        for outer_index in range(ulong_bitmap_array.vol.count):
+            ulong_bitmap = ulong_bitmap_array[outer_index]
+            # All pages in this 32 bits array are mapped (speedup iteration process)
+            if ulong_bitmap == 0xFFFFFFFF:
+                # New segment
+                if seg_first_bit is None:
+                    seg_first_offset = offset
+                    seg_first_bit = outer_index * 32
+                offset += 32 * self._page_size
+            # No pages in this 32 bits array are mapped (speedup iteration process)
+            elif ulong_bitmap == 0:
+                # End of segment
+                if seg_first_bit is not None:
+                    last_bit = (outer_index - 1) * 32 + 31
+                    segment_length = (last_bit - seg_first_bit + 1) * self._page_size
+                    segments.append(
+                        (
+                            seg_first_bit * self._page_size,
+                            seg_first_offset,
+                            segment_length,
+                            segment_length,
+                        )
+                    )
+                    seg_first_bit = None
+            # Some pages in this 32 bits array are mapped and some aren't
+            else:
+                for inner_bit_position in range(32):
+                    current_bit = outer_index * 32 + inner_bit_position
+                    page_mapped = ulong_bitmap & (1 << inner_bit_position)
+                    if page_mapped:
+                        # New segment
+                        if seg_first_bit is None:
+                            seg_first_offset = offset
+                            seg_first_bit = current_bit
+                        offset += self._page_size
+                    else:
+                        # End of segment
+                        if seg_first_bit is not None:
+                            segment_length = (
+                                current_bit - 1 - seg_first_bit + 1
+                            ) * self._page_size
+                            segments.append(
+                                (
+                                    seg_first_bit * self._page_size,
+                                    seg_first_offset,
+                                    segment_length,
+                                    segment_length,
+                                )
+                            )
+                            seg_first_bit = None
+            last_bit_seen = outer_index * 32 + 31
+
+        if seg_first_bit is not None:
+            segment_length = (last_bit_seen - seg_first_bit + 1) * self._page_size
+            segments.append(
+                (
+                    seg_first_bit * self._page_size,
+                    seg_first_offset,
+                    segment_length,
+                    segment_length,
+                )
+            )
+
+        return segments
+
     def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer.
         A segment is a set of contiguous memory pages."""
 
         segments = []
 
-        if self.dump_type == 0x1:
-            header = self.context.object(
-                self._crash_table_name + constants.BANG + self.dump_header_name,
-                offset=0,
-                layer_name=self._base_layer,
-            )
-
-            offset = self.headerpages
-            header.PhysicalMemoryBlockBuffer.Run.count = (
-                header.PhysicalMemoryBlockBuffer.NumberOfRuns
-            )
-            for run in header.PhysicalMemoryBlockBuffer.Run:
-                segments.append(
-                    (
-                        run.BasePage * self._page_size,
-                        offset * self._page_size,
-                        run.PageCount * self._page_size,
-                        run.PageCount * self._page_size,
-                    )
-                )
-                offset += run.PageCount
-
-        elif self.dump_type == 0x05:
-            summary_header = self.get_summary_header()
-            seg_first_bit = None  # First bit in a run
-            seg_first_offset = 0  # File offset of first bit
-            offset = (
-                summary_header.HeaderSize
-            )  # Offset to the start of actual memory dump
-            ulong_bitmap_array = summary_header.get_buffer_long()
-            # outer_index points to a 32 bits array inside a list of arrays,
-            # each bit indicating a page mapping state
-            for outer_index in range(ulong_bitmap_array.vol.count):
-                ulong_bitmap = ulong_bitmap_array[outer_index]
-                # All pages in this 32 bits array are mapped (speedup iteration process)
-                if ulong_bitmap == 0xFFFFFFFF:
-                    # New segment
-                    if seg_first_bit is None:
-                        seg_first_offset = offset
-                        seg_first_bit = outer_index * 32
-                    offset += 32 * self._page_size
-                # No pages in this 32 bits array are mapped (speedup iteration process)
-                elif ulong_bitmap == 0:
-                    # End of segment
-                    if seg_first_bit is not None:
-                        last_bit = (outer_index - 1) * 32 + 31
-                        segment_length = (
-                            last_bit - seg_first_bit + 1
-                        ) * self._page_size
-                        segments.append(
-                            (
-                                seg_first_bit * self._page_size,
-                                seg_first_offset,
-                                segment_length,
-                                segment_length,
-                            )
-                        )
-                        seg_first_bit = None
-                # Some pages in this 32 bits array are mapped and some aren't
-                else:
-                    for inner_bit_position in range(32):
-                        current_bit = outer_index * 32 + inner_bit_position
-                        page_mapped = ulong_bitmap & (1 << inner_bit_position)
-                        if page_mapped:
-                            # New segment
-                            if seg_first_bit is None:
-                                seg_first_offset = offset
-                                seg_first_bit = current_bit
-                            offset += self._page_size
-                        else:
-                            # End of segment
-                            if seg_first_bit is not None:
-                                segment_length = (
-                                    current_bit - 1 - seg_first_bit + 1
-                                ) * self._page_size
-                                segments.append(
-                                    (
-                                        seg_first_bit * self._page_size,
-                                        seg_first_offset,
-                                        segment_length,
-                                        segment_length,
-                                    )
-                                )
-                                seg_first_bit = None
-                last_bit_seen = outer_index * 32 + 31
-
-            if seg_first_bit is not None:
-                segment_length = (last_bit_seen - seg_first_bit + 1) * self._page_size
-                segments.append(
-                    (
-                        seg_first_bit * self._page_size,
-                        seg_first_offset,
-                        segment_length,
-                        segment_length,
-                    )
-                )
+        if self.dump_type == self.DUMP_TYPE_FULL:
+            segments = self._get_segments_from_dump_type_full()
+        elif self.dump_type == self.DUMP_TYPE_BITMAP_FULL:
+            segments = self._get_segments_from_dump_type_bitmap_full()
         else:
             vollog.log(
                 constants.LOGLEVEL_VVVV, f"unsupported dump format 0x{self.dump_type:x}"
@@ -209,18 +232,18 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
                 self.name, f"unsupported dump format 0x{self.dump_type:x}"
             )
 
-        if len(segments) == 0:
+        if not segments:
             raise WindowsCrashDumpFormatException(
                 self.name, f"No Crash segments defined in {self._base_layer}"
             )
-        else:
-            # report the segments for debugging. this is valuable for dev/troubleshooting but
-            # not important enough for a dedicated plugin.
-            for idx, (start_position, mapped_offset, length, _) in enumerate(segments):
-                vollog.log(
-                    constants.LOGLEVEL_VVVV,
-                    f"Segment {idx}: Position {start_position:#x} Offset {mapped_offset:#x} Length {length:#x}",
-                )
+
+        # report the segments for debugging. this is valuable for dev/troubleshooting but
+        # not important enough for a dedicated plugin.
+        for idx, (start_position, mapped_offset, length, _) in enumerate(segments):
+            vollog.log(
+                constants.LOGLEVEL_VVVV,
+                f"Segment {idx}: Position {start_position:#x} Offset {mapped_offset:#x} Length {length:#x}",
+            )
 
         self._segments = segments
 
