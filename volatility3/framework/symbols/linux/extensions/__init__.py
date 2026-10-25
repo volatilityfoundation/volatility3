@@ -3162,16 +3162,23 @@ class kernel_symbol(objects.StructType):
         if self.has_member("name_offset"):
             # kernel >= 4.19 and CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=y
             # See 7290d58095712a89f845e1bca05334796dd49ed2
-            name_offset = self._offset_to_ptr(self.name_offset)
+            # _offset_to_ptr returns a plain integer address, not a Pointer.
+            return utility.address_to_string(
+                context=self._context,
+                layer_name=self.vol.layer_name,
+                address=self._offset_to_ptr(self.name_offset),
+                count=linux_constants.KSYM_NAME_LEN,
+                errors="ignore",
+            )
         elif self.has_member("name"):
             # kernel < 4.19 or CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=n
-            name_offset = self.member("name")
+            return utility.pointer_to_string(
+                self.member("name"),
+                linux_constants.KSYM_NAME_LEN,
+                errors="ignore",
+            )
         else:
             raise AttributeError("Unsupported kernel_symbol type implementation")
-
-        return utility.pointer_to_string(
-            name_offset, linux_constants.KSYM_NAME_LEN, errors="ignore"
-        )
 
     def get_name(self) -> Optional[str]:
         try:
@@ -3200,16 +3207,23 @@ class kernel_symbol(objects.StructType):
         if self.has_member("namespace_offset"):
             # kernel >= 4.19 and CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=y
             # See 7290d58095712a89f845e1bca05334796dd49ed2
-            namespace_offset = self._offset_to_ptr(self.namespace_offset)
+            # _offset_to_ptr returns a plain integer address, not a Pointer.
+            return utility.address_to_string(
+                context=self._context,
+                layer_name=self.vol.layer_name,
+                address=self._offset_to_ptr(self.namespace_offset),
+                count=linux_constants.KSYM_NAME_LEN,
+                errors="ignore",
+            )
         elif self.has_member("namespace"):
             # kernel < 4.19 or CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=n
-            namespace_offset = self.member("namespace")
+            return utility.pointer_to_string(
+                self.member("namespace"),
+                linux_constants.KSYM_NAME_LEN,
+                errors="ignore",
+            )
         else:
             raise AttributeError("Unsupported kernel_symbol type implementation")
-
-        return utility.pointer_to_string(
-            namespace_offset, linux_constants.KSYM_NAME_LEN, errors="ignore"
-        )
 
     def get_namespace(self) -> Optional[str]:
         try:
