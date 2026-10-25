@@ -89,6 +89,24 @@ class TestActionsDecoding(unittest.TestCase):
                 f"ActionDecoder.decode should not raise exception:\n{traceback.format_exc()}"
             )
 
+    def test_decode_comhandler_action(self):
+        # version 3, empty context, ComHandler magic, empty identifier
+        header = struct.pack("<HIHI", 3, 0, 0x7777, 0)
+        # {0000031A-0000-0000-C000-000000000046}
+        clsid = bytes.fromhex("1a03000000000000c000000000000046")
+        buf = header + clsid + struct.pack("<I", 0)
+
+        actions = scheduled_tasks.ActionSet.decode(buf).actions  # type: ignore
+        self.assertEqual(len(actions), 1)
+        self.assertEqual(actions[0].action_type, scheduled_tasks.ActionType.ComHandler)
+        self.assertEqual(actions[0].action, "{0000031a-0000-0000-c000-000000000046}")
+
+    def test_decode_truncated_comhandler_action(self):
+        buf = struct.pack("<HIHI", 3, 0, 0x7777, 0) + bytes(8)
+
+        actions = scheduled_tasks.ActionSet.decode(buf).actions  # type: ignore
+        self.assertEqual(actions, [None])
+
 
 class TestTriggersDecoding(unittest.TestCase):
     def test_decode_all_triggers(self):

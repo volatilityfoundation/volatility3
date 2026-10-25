@@ -437,7 +437,7 @@ class TaskAction:
         cls, reader: _ScheduledTasksReader
     ) -> Optional["TaskAction"]:
         guid_raw = reader.read(16)
-        if not guid_raw and len(guid_raw) == 16:
+        if len(guid_raw) != 16:
             return None
         clsid = conversion.windows_bytes_to_guid(guid_raw)
         args = reader.read_bstring()
