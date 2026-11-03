@@ -423,7 +423,7 @@ class TaskAction:
                 + ">"
             )
 
-        cls(
+        return cls(
             ActionType.Email,
             ", ".join(
                 f"{key}: {value}" for key, value in props.items() if value is not None
