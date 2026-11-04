@@ -220,6 +220,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             # if the same port is used on different interfaces multiple objects are created
             # those can be found by following the pointer within the object's `Next` field until it is empty
+            seen_addresses = {next_obj_address}
             while next_obj_address:
                 try:
                     curr_obj = context.object(
@@ -236,6 +237,10 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     next_obj_address = cls._decode_pointer(curr_obj.Next)
                 except exceptions.InvalidAddressException:
                     return
+
+                if next_obj_address in seen_addresses:
+                    break
+                seen_addresses.add(next_obj_address)
 
     @classmethod
     def get_tcpip_module(
