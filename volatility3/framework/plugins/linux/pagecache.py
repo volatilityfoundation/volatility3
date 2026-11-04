@@ -220,6 +220,10 @@ class Files(plugins.PluginInterface, timeliner.TimeLinerInterface):
             # This allows us to have consistent paths
             if dentry.d_name.name:
                 basename = dentry.d_name.name_as_str()
+                # Sanitize path components from memory to prevent tar-slip
+                basename = basename.replace("/", "_").replace("\x00", "")
+                if basename in (".", "..") or not basename:
+                    continue
                 # Do NOT use os.path.join() below
                 file_path = parent_dir + "/" + basename
             else:
