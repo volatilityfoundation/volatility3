@@ -3162,7 +3162,15 @@ class kernel_symbol(objects.StructType):
         if self.has_member("name_offset"):
             # kernel >= 4.19 and CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=y
             # See 7290d58095712a89f845e1bca05334796dd49ed2
-            name_offset = self._offset_to_ptr(self.name_offset)
+            # _offset_to_ptr returns a plain int, so it cannot go through
+            # pointer_to_string (which insists on a Pointer).
+            return utility.address_to_string(
+                context=self._context,
+                layer_name=self.vol.layer_name,
+                address=self._offset_to_ptr(self.name_offset),
+                count=linux_constants.KSYM_NAME_LEN,
+                errors="ignore",
+            )
         elif self.has_member("name"):
             # kernel < 4.19 or CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=n
             name_offset = self.member("name")
@@ -3200,7 +3208,14 @@ class kernel_symbol(objects.StructType):
         if self.has_member("namespace_offset"):
             # kernel >= 4.19 and CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=y
             # See 7290d58095712a89f845e1bca05334796dd49ed2
-            namespace_offset = self._offset_to_ptr(self.namespace_offset)
+            # Same as _do_get_name: _offset_to_ptr yields an int.
+            return utility.address_to_string(
+                context=self._context,
+                layer_name=self.vol.layer_name,
+                address=self._offset_to_ptr(self.namespace_offset),
+                count=linux_constants.KSYM_NAME_LEN,
+                errors="ignore",
+            )
         elif self.has_member("namespace"):
             # kernel < 4.19 or CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=n
             namespace_offset = self.member("namespace")
