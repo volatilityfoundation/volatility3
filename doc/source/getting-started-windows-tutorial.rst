@@ -116,3 +116,8 @@ windows.hashdump
     Dennis	        1003	aad3b435b51404eeaad3b435b51404ee	cf96684bbc7877920adaa9663698bf54
 
 ``windows.hashdump`` helps to list the hashes of the users in the system.
+
+Further reading
+---------------
+
+For a broader overview of Windows memory-related files and artifacts, including ``pagefile.sys``, ``hiberfil.sys``, and ``MEMORY.DMP``, see HackITA's `Windows filesystem guide <https://en.hackita.it/articoli/windows/>`_.
