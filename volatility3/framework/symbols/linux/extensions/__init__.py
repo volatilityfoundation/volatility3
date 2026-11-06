@@ -874,6 +874,36 @@ class task_struct(generic.GenericIntelProcess):
 
         return ppid
 
+    def get_user_pointer_size(self) -> int:
+        """Returns the pointer size, in bytes, of this task's userland.
+
+        A 64-bit kernel can run 32-bit (compat) processes, so the userland pointer size
+        can differ from the kernel's. The kernel sets ``mm->task_size = TASK_SIZE`` at
+        every exec (fs/exec.c, setup_new_exec), and TASK_SIZE is below or equal to 4 GiB
+        for 32-bit tasks only:
+          - x86-64 compat: 0xFFFFe000, or 0xc0000000 with ADDR_LIMIT_3GB
+            (arch/x86/include/asm/page_64_types.h, IA32_PAGE_OFFSET); native tasks get
+            (1 << 47) - PAGE_SIZE, or (1 << 56) - PAGE_SIZE with 5-level paging
+          - arm64 compat: 0x100000000, or 0x100000000 - PAGE_SIZE
+            (arch/arm64/include/asm/processor.h, TASK_SIZE_32); native tasks get
+            1 << vabits_actual, at least 36 bits
+          - 32-bit kernels: PAGE_OFFSET on x86 and CONFIG_PAGE_OFFSET - 16M on arm
+        The arm64 64K-page case is exactly 4 GiB, hence ``<=``.
+
+        Tasks without a readable mm (kernel threads) use the kernel's pointer size.
+
+        Returns:
+            int: 4 or 8
+        """
+        try:
+            mm = self.mm
+            if mm and mm.is_readable():
+                return 4 if mm.task_size <= 0x100000000 else 8
+        except exceptions.InvalidAddressException:
+            pass
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        return vmlinux.get_type("pointer").size
+
 
 class fs_struct(objects.StructType):
     def get_root_dentry(self):

@@ -8,7 +8,7 @@ import datetime
 import struct
 from typing import List
 
-from volatility3.framework import constants, renderers, symbols, interfaces, exceptions
+from volatility3.framework import constants, renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.layers import scanners
@@ -58,70 +58,23 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
             ),
         ]
 
-    def _process_is_32bit(self, proc_layer, task, default):
-        """Whether a userspace process uses 32-bit pointers, taken from its main executable's
-        ELF class. A 64-bit kernel can run 32-bit (compat) processes, whose bash history uses
-        32-bit pointers, so the width must follow the process rather than the kernel.
-
-        The main executable is the file backing the VMA that contains ``mm->start_code``; its
-        ELF header sits at that file's lowest mapping. Returns ``default`` (the kernel's width)
-        if the executable cannot be identified or read."""
-        try:
-            mm = task.mm
-            if not mm or not mm.is_readable():
-                return default
-            vmas = list(mm.get_vma_iter())
-
-            # identify the executable by the file backing the VMA that holds start_code
-            exe_file = None
-            try:
-                start_code = int(mm.start_code)
-            except (AttributeError, exceptions.InvalidAddressException):
-                start_code = None
-            if start_code:
-                for vma in vmas:
-                    if vma.vm_file and vma.vm_start <= start_code < vma.vm_end:
-                        exe_file = int(vma.vm_file)
-                        break
-            if exe_file is None:
-                return default
-
-            # read e_ident from the executable's lowest mapping (where its ELF header lives)
-            exe_vmas = sorted(
-                (v for v in vmas if v.vm_file and int(v.vm_file) == exe_file),
-                key=lambda v: v.vm_start,
-            )
-            for vma in exe_vmas:
-                header = proc_layer.read(vma.vm_start, 5, pad=True)
-                if header[:4] == b"\x7fELF":
-                    return header[4] == 1  # e_ident[EI_CLASS]: 1 = ELFCLASS32
-        except (exceptions.InvalidAddressException, AttributeError):
-            pass
-        return default
+    def _bash_symbols(self, pointer_size):
+        """The hist_entry symbol table for a userland pointer size (4 or 8) and its
+        timestamp offset."""
+        bash_table_name = bash.BashIntermedSymbols.create(
+            self.context,
+            self.config_path,
+            "linux",
+            "bash32" if pointer_size == 4 else "bash64",
+        )
+        ts_offset = self.context.symbol_space.get_type(
+            bash_table_name + constants.BANG + "hist_entry"
+        ).relative_child_offset("timestamp")
+        return bash_table_name, ts_offset
 
     def _generator(self, tasks):
-        vmlinux = self.context.modules[self.config["kernel"]]
-        kernel_32bit = not symbols.symbol_table_is_64bit(
-            context=self.context, symbol_table_name=vmlinux.symbol_table_name
-        )
-
-        # A 64-bit kernel can host 32-bit (compat) processes, and bash's hist_entry pointer width
-        # follows the process, not the kernel; using the kernel's width parses a 32-bit bash wrongly
-        # and silently yields no entries. Build each width's symbol table lazily and pick per task
-        # from the process's own pointer width (see _process_is_32bit).
-        bash_tables = {}
-
-        def bash_table_for(is_32bit):
-            if is_32bit not in bash_tables:
-                bash_json_file = "bash32" if is_32bit else "bash64"
-                table_name = bash.BashIntermedSymbols.create(
-                    self.context, self.config_path, "linux", bash_json_file
-                )
-                ts = self.context.symbol_space.get_type(
-                    table_name + constants.BANG + "hist_entry"
-                ).relative_child_offset("timestamp")
-                bash_tables[is_32bit] = ("I" if is_32bit else "Q", table_name, ts)
-            return bash_tables[is_32bit]
+        # hist_entry holds pointers, so its layout follows the process, not the kernel
+        bash_symbols = {}
 
         for task in tasks:
             task_name = utility.array_to_string(task.comm)
@@ -134,9 +87,11 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             proc_layer = self.context.layers[proc_layer_name]
 
-            pack_format, bash_table_name, ts_offset = bash_table_for(
-                self._process_is_32bit(proc_layer, task, kernel_32bit)
-            )
+            pointer_size = task.get_user_pointer_size()
+            if pointer_size not in bash_symbols:
+                bash_symbols[pointer_size] = self._bash_symbols(pointer_size)
+            bash_table_name, ts_offset = bash_symbols[pointer_size]
+            pack_format = "I" if pointer_size == 4 else "Q"
 
             bang_addrs = []
 
