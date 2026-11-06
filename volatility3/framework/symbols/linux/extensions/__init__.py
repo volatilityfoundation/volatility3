@@ -453,6 +453,16 @@ class module(generic.GenericIntelProcess):
 
 
 class task_struct(generic.GenericIntelProcess):
+    # Bounds of mm_struct.task_size (TASK_SIZE) for 32-bit userland tasks, which tell them
+    # from 64-bit ones. See get_user_pointer_size for the kernel sources.
+    # Largest: arm64 compat with 64K pages and kuser helpers
+    # (arch/arm64/include/asm/processor.h, TASK_SIZE_32).
+    TASK_SIZE_32BIT_MAX = 0x100000000
+    # Smallest: arm with CONFIG_VMSPLIT_1G, CONFIG_PAGE_OFFSET (0x40000000) - 16M
+    # (arch/arm/include/asm/memory.h, TASK_SIZE). x86 is larger: 0x40000000 with
+    # CONFIG_VMSPLIT_1G.
+    TASK_SIZE_32BIT_MIN = 0x3F000000
+
     def is_valid(self) -> bool:
         layer = self._context.layers[self.vol.layer_name]
         # Make sure the entire task content is readable
@@ -873,6 +883,44 @@ class task_struct(generic.GenericIntelProcess):
             ppid = 0
 
         return ppid
+
+    def get_user_pointer_size(self) -> int:
+        """Returns the pointer size, in bytes, of this task's userland.
+
+        A 64-bit kernel can run 32-bit (compat) processes, so the userland pointer size
+        can differ from the kernel's. The kernel sets ``mm->task_size = TASK_SIZE`` at
+        every exec (fs/exec.c, setup_new_exec), and TASK_SIZE is below or equal to 4 GiB
+        for 32-bit tasks only:
+          - x86-64 compat: 0xFFFFe000, or 0xc0000000 with ADDR_LIMIT_3GB
+            (arch/x86/include/asm/page_64_types.h, IA32_PAGE_OFFSET); native tasks get
+            (1 << 47) - PAGE_SIZE, or (1 << 56) - PAGE_SIZE with 5-level paging
+          - arm64 compat: 0x100000000, or 0x100000000 - PAGE_SIZE
+            (arch/arm64/include/asm/processor.h, TASK_SIZE_32); native tasks get
+            1 << vabits_actual, at least 36 bits
+          - 32-bit kernels: PAGE_OFFSET on x86 and CONFIG_PAGE_OFFSET - 16M on arm
+        TASK_SIZE_32BIT_MAX is the largest of these (arm64 64K pages, exactly 4 GiB, hence
+        ``<=``) and TASK_SIZE_32BIT_MIN the smallest (arm with CONFIG_VMSPLIT_1G). A value
+        below it is not a real TASK_SIZE (a freed or reused mm_struct), and is treated as
+        unknown.
+
+        Tasks without a readable mm (kernel threads) or with an implausible task_size use
+        the kernel's pointer size.
+
+        Returns:
+            int: 4 or 8
+        """
+        try:
+            mm = self.mm
+            if mm and mm.is_readable():
+                task_size = int(mm.task_size)
+                if task_size > self.TASK_SIZE_32BIT_MAX:
+                    return 8
+                if task_size >= self.TASK_SIZE_32BIT_MIN:
+                    return 4
+        except exceptions.InvalidAddressException:
+            pass
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        return vmlinux.get_type("pointer").size
 
 
 class fs_struct(objects.StructType):
