@@ -453,6 +453,16 @@ class module(generic.GenericIntelProcess):
 
 
 class task_struct(generic.GenericIntelProcess):
+    # Bounds of mm_struct.task_size (TASK_SIZE) for 32-bit userland tasks, which tell them
+    # from 64-bit ones. See get_user_pointer_size for the kernel sources.
+    # Largest: arm64 compat with 64K pages and kuser helpers
+    # (arch/arm64/include/asm/processor.h, TASK_SIZE_32).
+    TASK_SIZE_32BIT_MAX = 0x100000000
+    # Smallest: arm with CONFIG_VMSPLIT_1G, CONFIG_PAGE_OFFSET (0x40000000) - 16M
+    # (arch/arm/include/asm/memory.h, TASK_SIZE). x86 is larger: 0x40000000 with
+    # CONFIG_VMSPLIT_1G.
+    TASK_SIZE_32BIT_MIN = 0x3F000000
+
     def is_valid(self) -> bool:
         layer = self._context.layers[self.vol.layer_name]
         # Make sure the entire task content is readable
@@ -888,9 +898,13 @@ class task_struct(generic.GenericIntelProcess):
             (arch/arm64/include/asm/processor.h, TASK_SIZE_32); native tasks get
             1 << vabits_actual, at least 36 bits
           - 32-bit kernels: PAGE_OFFSET on x86 and CONFIG_PAGE_OFFSET - 16M on arm
-        The arm64 64K-page case is exactly 4 GiB, hence ``<=``.
+        TASK_SIZE_32BIT_MAX is the largest of these (arm64 64K pages, exactly 4 GiB, hence
+        ``<=``) and TASK_SIZE_32BIT_MIN the smallest (arm with CONFIG_VMSPLIT_1G). A value
+        below it is not a real TASK_SIZE (a freed or reused mm_struct), and is treated as
+        unknown.
 
-        Tasks without a readable mm (kernel threads) use the kernel's pointer size.
+        Tasks without a readable mm (kernel threads) or with an implausible task_size use
+        the kernel's pointer size.
 
         Returns:
             int: 4 or 8
@@ -898,7 +912,11 @@ class task_struct(generic.GenericIntelProcess):
         try:
             mm = self.mm
             if mm and mm.is_readable():
-                return 4 if mm.task_size <= 0x100000000 else 8
+                task_size = int(mm.task_size)
+                if task_size > self.TASK_SIZE_32BIT_MAX:
+                    return 8
+                if task_size >= self.TASK_SIZE_32BIT_MIN:
+                    return 4
         except exceptions.InvalidAddressException:
             pass
         vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
