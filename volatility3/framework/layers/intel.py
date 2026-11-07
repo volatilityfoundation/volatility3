@@ -503,6 +503,40 @@ class WindowsMixin(Intel):
         """
         return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
 
+    @classmethod
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+        return super().get_requirements() + [
+            requirements.IntRequirement(
+                name="page_file_low_bit",
+                optional=True,
+                description="First bit of _MMPTE_SOFTWARE.PageFileLow (defaults to 1)",
+            ),
+            requirements.IntRequirement(
+                name="swizzle_bit",
+                optional=True,
+                description="Bit of _MMPTE_SOFTWARE.SwizzleBit",
+            ),
+            requirements.IntRequirement(
+                name="invalid_pte_mask",
+                optional=True,
+                description="MiState.Hardware.InvalidPteMask",
+            ),
+        ]
+
+    def _page_file_high(self, entry: int, bit_offset: int) -> int:
+        """Returns PageFileHigh of a software PTE.
+
+        The kernel adds InvalidPteMask to software PTEs whose swizzle bit is
+        clear, so the mask is removed from those only.
+        """
+        page_file_high = entry >> bit_offset
+        swizzle_bit = self.config.get("swizzle_bit", None)
+        invalid_pte_mask = self.config.get("invalid_pte_mask", None)
+        if swizzle_bit is not None and invalid_pte_mask:
+            if not entry & (1 << swizzle_bit):
+                page_file_high &= ~(invalid_pte_mask >> bit_offset)
+        return page_file_high
+
     def _translate_swap(
         self, layer: Intel, offset: int, bit_offset: int
     ) -> Tuple[int, int, str]:
@@ -517,13 +551,24 @@ class WindowsMixin(Intel):
             # upper level entry locates a page table
             if tbit or pbit or vbit or excp.invalid_bits != self._page_size_in_bits:
                 raise
-            unknown_bit = bool(entry & (1 << 7))
+            page_file_low_bit = self.config.get("page_file_low_bit", None)
+            if page_file_low_bit is None:
+                # Without the kernel's layout, keep the old test of bit 7
+                page_file_low_bit = 1
+                in_page_file = bool(entry & (1 << 7))
+            else:
+                # Protection (bits 5-9) is 0 in entries that are not paged out,
+                # such as the kernel's lists of free system PTEs
+                in_page_file = bool((entry >> 5) & 0x1F)
             # All ones means the PTE has to be rebuilt from the VAD
             lookup_needed = (1 << (self._entry_size * 8 - bit_offset)) - 1
-            if not unknown_bit or entry >> bit_offset in (0, lookup_needed):
+            if not in_page_file or entry >> bit_offset == lookup_needed:
                 raise
-            n = (entry >> 1) & 0xF
-            swap_offset = entry >> bit_offset << excp.invalid_bits
+            page_file_high = self._page_file_high(entry, bit_offset)
+            if not page_file_high:
+                raise
+            n = (entry >> page_file_low_bit) & 0xF
+            swap_offset = page_file_high << excp.invalid_bits
 
             if self.config.get("swap_layers", False):
                 swap_layer_name = self.config.get(
