@@ -130,6 +130,14 @@ class Intel(linear.LinearlyMappedLayer):
         """Returns whether a particular page is valid based on its entry."""
         return bool(entry & 1)
 
+    def _page_is_large(self, entry: int) -> bool:
+        """Returns whether a valid directory entry maps a large page instead of pointing to the next table."""
+        return bool(entry & self._PAGE_PSE)
+
+    def _large_page_frame_is_valid(self, frame: int, page_size: int) -> bool:
+        """Returns whether a large page's frame address is acceptable; layers may be stricter."""
+        return True
+
     @staticmethod
     def _page_is_dirty(entry: int) -> bool:
         """Returns whether a particular page is dirty based on its entry."""
@@ -172,10 +180,21 @@ class Intel(linear.LinearlyMappedLayer):
             )
 
         pfn = self._pte_pfn(entry)
+        page_size = 1 << (position + 1)
+        if page_size > self.page_size and not self._large_page_frame_is_valid(
+            pfn << self.page_shift, page_size
+        ):
+            raise exceptions.PagedInvalidAddressException(
+                self.name,
+                offset,
+                position + 1,
+                entry,
+                f"Large page frame {pfn << self.page_shift:#x} is not aligned to its size {page_size:#x}",
+            )
         page_offset = self._mask(offset, position, 0)
         page = pfn << self.page_shift | page_offset
 
-        return page, 1 << (position + 1), self._base_layer
+        return page, page_size, self._base_layer
 
     def _pte_pfn(self, entry: int) -> int:
         """Extracts the page frame number (PFN) from the page table entry (PTE) entry"""
@@ -256,7 +275,9 @@ class Intel(linear.LinearlyMappedLayer):
             (entry,) = struct.unpack(self._entry_format, entry_data)
 
             # Check if we're a large page
-            if large_page and (entry & self._PAGE_PSE):
+            # The bit test first keeps the common path as cheap as before: the method is only
+            # consulted for entries that could map a large page
+            if large_page and (entry & self._PAGE_PSE) and self._page_is_large(entry):
                 # Mask off the PAT bit
                 if entry & self._PAGE_PAT_LARGE:
                     entry -= self._PAGE_PAT_LARGE
@@ -502,6 +523,22 @@ class WindowsMixin(Intel):
         For more information, see Windows Internals (6th Ed, Part 2, pages 268-269)
         """
         return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
+
+    def _page_is_large(self, entry: int) -> bool:
+        """Returns whether an entry maps a large page; only a present entry can.
+
+        In a transition entry bits 5 to 9 hold the page protection, so bit 7 does not mean
+        "large page" there, and Windows never moves large pages to the transition state.
+        """
+        return bool(entry & self._PAGE_PRESENT and entry & self._PAGE_PSE)
+
+    def _large_page_frame_is_valid(self, frame: int, page_size: int) -> bool:
+        """Returns whether a large page's frame is aligned to the page's size.
+
+        The CPU faults on a large-page entry with any low frame bit set, so such an entry is not
+        a real mapping; it is stale page-table data.
+        """
+        return not frame & (page_size - 1)
 
     def _translate_swap(
         self, layer: Intel, offset: int, bit_offset: int
