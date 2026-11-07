@@ -525,28 +525,18 @@ class WindowsMixin(Intel):
         return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
 
     def _page_is_large(self, entry: int) -> bool:
-        """Only a present entry can map a large page.
+        """Returns whether an entry maps a large page; only a present entry can.
 
-        _page_is_valid also accepts transition entries (bit 0 clear, bit 11 set), the state
-        Windows gives a page table that is no longer mapped but still in RAM.  In that state
-        bits 5 to 9 hold the page protection, so bit 7 can be set by chance and does not mean
-        "large page"; Windows never pages large pages out, so they never reach transition.
-        Reading bit 7 there made a transition entry a fake 1 GB or 2 MB page, starting at the
-        next page table, and scan() and read() then disagreed about its bytes.  See upstream
-        pull request 518, which this follows for Windows only (Linux keeps PROT_NONE huge pages
-        with the present bit clear, so the rule cannot apply to every Intel layer).
+        In a transition entry bits 5 to 9 hold the page protection, so bit 7 does not mean
+        "large page" there, and Windows never moves large pages to the transition state.
         """
         return bool(entry & self._PAGE_PRESENT and entry & self._PAGE_PSE)
 
     def _large_page_frame_is_valid(self, frame: int, page_size: int) -> bool:
-        """A 2 MB or 1 GB page must start on a multiple of its size.
+        """Returns whether a large page's frame is aligned to the page's size.
 
-        The CPU treats the low frame bits of a large-page entry as reserved and faults if any is
-        set, so no real mapping looks like this.  Such entries come from a stale page-table page
-        that now holds other data.  Translating through one anyway made scan() (which adds the
-        offset to the frame) and read() (which ORs it in) disagree about the same address.  Kept
-        to Windows: Volatility's Linux layers recover PROT_NONE huge-page frames with a 4 KB mask,
-        which leaves low bits set, and changing that is a separate matter.
+        The CPU faults on a large-page entry with any low frame bit set, so such an entry is not
+        a real mapping; it is stale page-table data.
         """
         return not frame & (page_size - 1)
 

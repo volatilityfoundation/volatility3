@@ -53,6 +53,9 @@ jobs:
           pytest --cov-append --cov-report=html --cov= ./test/plugins/windows/windows.py --volatility=vol.py --image=./test_images/win-10_19041-2025_03.dmp -k "test_windows and not test_windows_volshell" -v --durations=0
           pytest --cov-append --cov-report=html --cov= ./test/plugins/linux/linux.py --volatility=vol.py --image-dir=./test_images -k "test_linux and not test_linux_volshell" -v --durations=0
 
+          # Layers
+          pytest ./test/test_intel_large_pages.py --volatility=vol.py -v
+
       - name: Create coverage artifacts
         uses: actions/upload-artifact@v4
         with:

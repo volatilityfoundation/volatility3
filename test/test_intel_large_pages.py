@@ -156,3 +156,72 @@ class TestMisalignedLargePageIsAFault:
             {1: PD | PRESENT_RW_USER}, pd_entry=0x200000 | PRESENT_RW_USER | PS
         )
         assert layer._translate(ONE_GB + 0x1234)[:2] == (0x200000 + 0x1234, 0x200000)
+
+
+FOUR_MB = 1 << 22
+TWO_MB = 1 << 21
+
+
+def build_tables(cls, entries, page_map_offset):
+    """A 32-bit layer over a 32 KB buffer; entries are (table address, index, value) tuples."""
+    memory = bytearray(0x8000)
+    size = struct.calcsize(cls._entry_format)
+    for table, index, value in entries:
+        struct.pack_into(cls._entry_format, memory, table + size * index, value)
+
+    context = contexts.Context()
+    context.add_layer(
+        physical.BufferDataLayer(context, "test.memory", "memory_layer", bytes(memory))
+    )
+    context.config["test.intel.memory_layer"] = "memory_layer"
+    context.config["test.intel.page_map_offset"] = page_map_offset
+    layer = cls(context, "test.intel", "intel")
+    context.add_layer(layer)
+    return layer
+
+
+class TestThirtyTwoBitLargePages:
+    """Large pages in the non-PAE (4 MB) and PAE (2 MB) Windows layers need an aligned frame."""
+
+    @staticmethod
+    def non_pae(entry):
+        return build_tables(intel.WindowsIntel, [(0x1000, 1, entry)], 0x1000)
+
+    @staticmethod
+    def pae(entry):
+        return build_tables(
+            intel.WindowsIntelPAE,
+            [(0x1000, 0, 0x2000 | 1), (0x2000, 1, entry)],
+            0x1000,
+        )
+
+    def test_aligned_4mb_page_translates(self):
+        layer = self.non_pae(FOUR_MB | PRESENT_RW_USER | PS)
+        assert layer._translate(FOUR_MB + 0x1234)[:2] == (FOUR_MB + 0x1234, FOUR_MB)
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            # PSE-36 bits are not implemented, so such an entry is treated as misaligned and faults
+            FOUR_MB | (1 << 13) | PRESENT_RW_USER | PS,
+            TWO_MB | PRESENT_RW_USER | PS,  # aligned to 2 MB but not to 4 MB
+        ],
+        ids=["pse36", "2mb-aligned-only"],
+    )
+    def test_misaligned_4mb_page_is_a_fault(self, entry):
+        layer = self.non_pae(entry)
+        with pytest.raises(exceptions.PagedInvalidAddressException):
+            layer._translate(FOUR_MB + 0x1234)
+
+    def test_pat_bit_is_not_misalignment(self):
+        layer = self.non_pae(FOUR_MB | (1 << 12) | PRESENT_RW_USER | PS)
+        assert layer._translate(FOUR_MB + 0x1234)[:2] == (FOUR_MB + 0x1234, FOUR_MB)
+
+    def test_aligned_pae_2mb_page_translates(self):
+        layer = self.pae(TWO_MB | PRESENT_RW_USER | PS)
+        assert layer._translate(TWO_MB + 0x1234)[:2] == (TWO_MB + 0x1234, TWO_MB)
+
+    def test_misaligned_pae_2mb_page_is_a_fault(self):
+        layer = self.pae(0x210000 | PRESENT_RW_USER | PS)
+        with pytest.raises(exceptions.PagedInvalidAddressException):
+            layer._translate(TWO_MB + 0x1234)
