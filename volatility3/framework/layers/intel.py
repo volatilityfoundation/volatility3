@@ -512,31 +512,35 @@ class WindowsMixin(Intel):
             entry = excp.entry
             tbit = bool(entry & (1 << 11))
             pbit = bool(entry & (1 << 10))
-            unknown_bit = bool(entry & (1 << 7))
-            n = (entry >> 1) & 0xF
             vbit = bool(entry & 1)
-            if (not tbit and not pbit and not vbit and unknown_bit) and (
-                (entry >> bit_offset) != 0
-            ):
-                swap_offset = entry >> bit_offset << excp.invalid_bits
+            # Only a page table entry locates data in a page file, a paged out
+            # upper level entry locates a page table
+            if tbit or pbit or vbit or excp.invalid_bits != self._page_size_in_bits:
+                raise
+            unknown_bit = bool(entry & (1 << 7))
+            # All ones means the PTE has to be rebuilt from the VAD
+            lookup_needed = (1 << (self._entry_size * 8 - bit_offset)) - 1
+            if not unknown_bit or entry >> bit_offset in (0, lookup_needed):
+                raise
+            n = (entry >> 1) & 0xF
+            swap_offset = entry >> bit_offset << excp.invalid_bits
 
-                if layer.config.get("swap_layers", False):
-                    swap_layer_name = layer.config.get(
-                        interfaces.configuration.path_join(
-                            "swap_layers", "swap_layers" + str(n)
-                        ),
-                        None,
-                    )
-                    if swap_layer_name:
-                        return swap_offset, 1 << excp.invalid_bits, swap_layer_name
-                raise exceptions.SwappedInvalidAddressException(
-                    layer_name=excp.layer_name,
-                    invalid_address=excp.invalid_address,
-                    invalid_bits=excp.invalid_bits,
-                    entry=excp.entry,
-                    swap_offset=swap_offset,
+            if self.config.get("swap_layers", False):
+                swap_layer_name = self.config.get(
+                    interfaces.configuration.path_join(
+                        "swap_layers", "swap_layers" + str(n)
+                    ),
+                    None,
                 )
-            raise
+                if swap_layer_name:
+                    return swap_offset, 1 << excp.invalid_bits, swap_layer_name
+            raise exceptions.SwappedInvalidAddressException(
+                layer_name=excp.layer_name,
+                invalid_address=excp.invalid_address,
+                invalid_bits=excp.invalid_bits,
+                entry=excp.entry,
+                swap_offset=swap_offset,
+            )
 
 
 ### These must be full separate classes so that JSON configs re-create them properly
