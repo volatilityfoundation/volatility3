@@ -2647,9 +2647,12 @@ class inode(objects.StructType):
         ):
             return
 
+        # the kernel this inode belongs to, which need not be the module named "kernel"
+        # (a context can hold several kernels, e.g. a VM host and its guest)
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         page_cache = linux.PageCache(
             context=self._context,
-            kernel_module_name="kernel",
+            kernel_module_name=vmlinux.name,
             page_cache=self.i_mapping.dereference(),
         )
 
@@ -2914,8 +2917,9 @@ class IDR(objects.StructType):
 
     def _new_kernel_get_entries(self) -> Iterable[int]:
         # Kernels >= 4.11
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         id_storage = linux.IDStorage.choose_id_storage(
-            self._context, kernel_module_name="kernel"
+            self._context, kernel_module_name=vmlinux.name
         )
         yield from id_storage.get_entries(root=self.idr_rt)
 
