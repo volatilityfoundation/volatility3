@@ -117,6 +117,22 @@ class TestSwizzledPtes:
             layer._translate(PAGE)
         assert excp.value.swap_offset == 5 * PAGE
 
+    def test_without_a_known_mask_a_pte_that_may_carry_it_is_not_read(self, arch):
+        """If the mask could not be read, reads from offset 0x2000000 must not come back."""
+        layout = {"page_file_low_bit": 12, "swizzle_bit": 4}
+        assert_not_swapped(build(arch, software_pte(MASK_HIGH), config=layout))
+        assert_not_swapped(build(arch, software_pte(5), config=layout))
+        entry = software_pte(MASK_HIGH | 5, swizzle=1)
+        expected = ((MASK_HIGH | 5) * PAGE, PAGE, "swap0")
+        assert build(arch, entry, config=layout)._translate(PAGE) == expected
+
+    def test_a_mask_of_zero_leaves_page_file_high_alone(self, arch):
+        """CPUs that need no mask report 0."""
+        layout = {**NEW_LAYOUT, "invalid_pte_mask": 0}
+        expected = (5 * PAGE, PAGE, "swap0")
+        assert build(arch, software_pte(5), config=layout)._translate(PAGE) == expected
+        assert_not_swapped(build(arch, software_pte(0), config=layout))
+
     def test_without_the_kernel_layout_the_old_layout_is_used(self, arch):
         """Number at bit 1 and no mask, as for kernels without SwizzleBit."""
         entry = software_pte(MASK_HIGH | 5, number=1, low_bit=1)
@@ -173,6 +189,20 @@ class TestWhichEntriesArePagedOut:
             layer = build(arch, pde=self.high(arch, 5) | READWRITE << 5, config=config)
             assert_not_swapped(layer)
             assert_not_swapped(layer, arch[4] - PAGE)
+
+    def test_a_read_only_paged_out_page_table_is_not_read(self, arch):
+        """Bit 7 is clear here, so this goes through the protection test, not the large page path."""
+        for config in (None, OLD_LAYOUT):
+            layer = build(arch, pde=self.high(arch, 5) | READONLY << 5, config=config)
+            assert_not_swapped(layer)
+            assert_not_swapped(layer, arch[4] - PAGE)
+
+    def test_a_page_file_without_a_layer_raises_swapped(self, arch):
+        entry = self.high(arch, 5) | READWRITE << 5 | 2 << 1
+        layer = build(arch, entry, config=OLD_LAYOUT)
+        with pytest.raises(exceptions.SwappedInvalidAddressException) as excp:
+            layer._translate(PAGE)
+        assert excp.value.swap_offset == 5 * PAGE
 
     def test_a_demand_zero_pte_is_not_paged_out(self, arch):
         assert_not_swapped(build(arch, READWRITE << 5, config=OLD_LAYOUT))
@@ -303,6 +333,11 @@ class TestLayoutFromTheKernel:
     def test_a_mask_outside_page_file_high_is_ignored(self, tmp_path):
         layer = self.run_automagic(tmp_path, mask=MASK | 0x10)
         assert self.settings(layer) == {**NEW_LAYOUT, "invalid_pte_mask": None}
+
+    def test_a_mask_of_zero_is_kept(self, tmp_path):
+        """A CPU that needs no mask reports 0, which is not the same as no mask."""
+        layer = self.run_automagic(tmp_path, mask=0)
+        assert self.settings(layer) == {**NEW_LAYOUT, "invalid_pte_mask": 0}
 
     def test_no_swizzle_bit_means_no_mask(self, tmp_path):
         layer = self.run_automagic(tmp_path, with_swizzle=False)

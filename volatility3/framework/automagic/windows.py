@@ -500,16 +500,16 @@ class WinSoftwarePteLayout(interfaces.automagic.AutomagicInterface):
             return layout
         layout["swizzle_bit"] = members["SwizzleBit"][1].vol.start_bit
         invalid_pte_mask = cls._read_invalid_pte_mask(kernel)
-        if invalid_pte_mask is None:
-            return layout
-        # The mask can only cover PageFileHigh, the top half of a 64-bit PTE
-        within_page_file_high = (
-            not invalid_pte_mask & 0xFFFFFFFF and invalid_pte_mask < 1 << 64
-        )
-        if invalid_pte_mask and within_page_file_high:
+        # The mask can only cover PageFileHigh, the top half of a 64-bit PTE.
+        # It is 0 on CPUs that need no mask, which is kept: without a mask the
+        # layer does not read PTEs that may carry one from a page file.
+        if invalid_pte_mask is not None and not invalid_pte_mask & 0xFFFFFFFF:
             layout["invalid_pte_mask"] = invalid_pte_mask
         else:
-            vollog.debug(f"Ignoring InvalidPteMask {invalid_pte_mask:#x}")
+            vollog.debug(
+                f"No usable InvalidPteMask ({invalid_pte_mask}), PTEs whose "
+                "swizzle bit is clear will not be read from a page file"
+            )
         return layout
 
     @classmethod

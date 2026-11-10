@@ -509,7 +509,7 @@ class WindowsMixin(Intel):
             requirements.IntRequirement(
                 name="page_file_low_bit",
                 optional=True,
-                description="First bit of _MMPTE_SOFTWARE.PageFileLow (defaults to 1)",
+                description="First bit of _MMPTE_SOFTWARE.PageFileLow (without it, bit 1 and the bit 7 test are used)",
             ),
             requirements.IntRequirement(
                 name="swizzle_bit",
@@ -519,23 +519,27 @@ class WindowsMixin(Intel):
             requirements.IntRequirement(
                 name="invalid_pte_mask",
                 optional=True,
-                description="MiState.Hardware.InvalidPteMask",
+                description="MiState.Hardware.InvalidPteMask (if swizzle_bit is set without it, PTEs whose swizzle bit is clear are not read from a page file)",
             ),
         ]
 
-    def _page_file_high(self, entry: int, bit_offset: int) -> int:
-        """Returns PageFileHigh of a software PTE.
+    def _page_file_high(self, entry: int, bit_offset: int) -> Optional[int]:
+        """Returns PageFileHigh of a software PTE, or None if it can't be known.
 
         The kernel adds InvalidPteMask to software PTEs whose swizzle bit is
-        clear, so the mask is removed from those only.
+        clear, so the mask is removed from those only.  When the kernel has a
+        swizzle bit but its mask could not be read, PageFileHigh of such a PTE
+        may or may not include the mask, so it is not used.
         """
         page_file_high = entry >> bit_offset
         swizzle_bit = self.config.get("swizzle_bit", None)
+        if swizzle_bit is None or entry & (1 << swizzle_bit):
+            return page_file_high
         invalid_pte_mask = self.config.get("invalid_pte_mask", None)
-        if swizzle_bit is not None and invalid_pte_mask:
-            if not entry & (1 << swizzle_bit):
-                page_file_high &= ~(invalid_pte_mask >> bit_offset)
-        return page_file_high
+        if invalid_pte_mask is None:
+            # The mask only exists in 64-bit PTEs
+            return page_file_high if self._entry_size < 8 else None
+        return page_file_high & ~(invalid_pte_mask >> bit_offset)
 
     def _translate_swap(
         self, layer: Intel, offset: int, bit_offset: int
