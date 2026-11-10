@@ -503,6 +503,44 @@ class WindowsMixin(Intel):
         """
         return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
 
+    @classmethod
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+        return super().get_requirements() + [
+            requirements.IntRequirement(
+                name="page_file_low_bit",
+                optional=True,
+                description="First bit of _MMPTE_SOFTWARE.PageFileLow (without it, bit 1 and the bit 7 test are used)",
+            ),
+            requirements.IntRequirement(
+                name="swizzle_bit",
+                optional=True,
+                description="Bit of _MMPTE_SOFTWARE.SwizzleBit",
+            ),
+            requirements.IntRequirement(
+                name="invalid_pte_mask",
+                optional=True,
+                description="MiState.Hardware.InvalidPteMask (if swizzle_bit is set without it, PTEs whose swizzle bit is clear are not read from a page file)",
+            ),
+        ]
+
+    def _page_file_high(self, entry: int, bit_offset: int) -> Optional[int]:
+        """Returns PageFileHigh of a software PTE, or None if it can't be known.
+
+        The kernel adds InvalidPteMask to software PTEs whose swizzle bit is
+        clear, so the mask is removed from those only.  When the kernel has a
+        swizzle bit but its mask could not be read, PageFileHigh of such a PTE
+        may or may not include the mask, so it is not used.
+        """
+        page_file_high = entry >> bit_offset
+        swizzle_bit = self.config.get("swizzle_bit", None)
+        if swizzle_bit is None or entry & (1 << swizzle_bit):
+            return page_file_high
+        invalid_pte_mask = self.config.get("invalid_pte_mask", None)
+        if invalid_pte_mask is None:
+            # The mask only exists in 64-bit PTEs
+            return page_file_high if self._entry_size < 8 else None
+        return page_file_high & ~(invalid_pte_mask >> bit_offset)
+
     def _translate_swap(
         self, layer: Intel, offset: int, bit_offset: int
     ) -> Tuple[int, int, str]:
@@ -512,31 +550,52 @@ class WindowsMixin(Intel):
             entry = excp.entry
             tbit = bool(entry & (1 << 11))
             pbit = bool(entry & (1 << 10))
-            unknown_bit = bool(entry & (1 << 7))
-            n = (entry >> 1) & 0xF
             vbit = bool(entry & 1)
-            if (not tbit and not pbit and not vbit and unknown_bit) and (
-                (entry >> bit_offset) != 0
-            ):
-                swap_offset = entry >> bit_offset << excp.invalid_bits
+            # Only a page table entry locates data in a page file, a paged out
+            # upper level entry locates a page table
+            if tbit or pbit or vbit or excp.invalid_bits != self._page_size_in_bits:
+                raise
+            page_file_low_bit = self.config.get("page_file_low_bit", None)
+            if page_file_low_bit is None:
+                # Without the kernel's layout, keep the old test of bit 7
+                page_file_low_bit = 1
+                in_page_file = bool(entry & (1 << 7))
+            else:
+                # Protection (bits 5-9) is 0 in entries that are not paged out,
+                # such as the kernel's lists of free system PTEs
+                in_page_file = bool((entry >> 5) & 0x1F)
+            # All ones means the PTE has to be rebuilt from the VAD
+            lookup_needed = (1 << (self._entry_size * 8 - bit_offset)) - 1
+            if not in_page_file or entry >> bit_offset == lookup_needed:
+                raise
+            page_file_high = self._page_file_high(entry, bit_offset)
+            if not page_file_high:
+                raise
+            n = (entry >> page_file_low_bit) & 0xF
+            swap_offset = page_file_high << excp.invalid_bits
 
-                if layer.config.get("swap_layers", False):
-                    swap_layer_name = layer.config.get(
-                        interfaces.configuration.path_join(
-                            "swap_layers", "swap_layers" + str(n)
-                        ),
-                        None,
-                    )
-                    if swap_layer_name:
-                        return swap_offset, 1 << excp.invalid_bits, swap_layer_name
-                raise exceptions.SwappedInvalidAddressException(
-                    layer_name=excp.layer_name,
-                    invalid_address=excp.invalid_address,
-                    invalid_bits=excp.invalid_bits,
-                    entry=excp.entry,
-                    swap_offset=swap_offset,
+            if self.config.get("swap_layers", False):
+                swap_layer_name = self.config.get(
+                    interfaces.configuration.path_join(
+                        "swap_layers", "swap_layers" + str(n)
+                    ),
+                    None,
                 )
-            raise
+                if swap_layer_name:
+                    # As for a present page, keep the offset inside the page
+                    page_offset = offset & ((1 << excp.invalid_bits) - 1)
+                    return (
+                        swap_offset | page_offset,
+                        1 << excp.invalid_bits,
+                        swap_layer_name,
+                    )
+            raise exceptions.SwappedInvalidAddressException(
+                layer_name=excp.layer_name,
+                invalid_address=excp.invalid_address,
+                invalid_bits=excp.invalid_bits,
+                entry=excp.entry,
+                swap_offset=swap_offset,
+            )
 
 
 ### These must be full separate classes so that JSON configs re-create them properly

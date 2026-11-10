@@ -43,6 +43,10 @@ jobs:
           unzip symbols_win-10_19041-2025_03.zip
           cd -
 
+      - name: Unit tests (no images)
+        run: |
+          pytest --cov-append --cov-report=html --cov= ./test/test_windows_swap_ptes.py --volatility=vol.py -v
+
       - name: Testing...
         run: |
           # VolShell

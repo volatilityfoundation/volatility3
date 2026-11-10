@@ -29,7 +29,7 @@ The self-referential indices for older versions of windows are listed below:
 
 import logging
 import struct
-from typing import Generator, Iterable, List, Optional, Tuple, Type, Union
+from typing import Dict, Generator, Iterable, List, Optional, Tuple, Type, Union
 
 from volatility3.framework import constants, exceptions, interfaces, layers
 from volatility3.framework.configuration import requirements
@@ -426,6 +426,121 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                 )
             )
         return layer
+
+
+class WinSoftwarePteLayout(interfaces.automagic.AutomagicInterface):
+    """Sets how a Windows kernel encodes paged out pages on its Intel layer.
+
+    Where _MMPTE_SOFTWARE keeps the page file number, and the InvalidPteMask
+    that the kernel adds to software PTEs, differ between kernels, so both are
+    read from the kernel's symbols rather than assumed.
+    """
+
+    # After the kernel's symbols are found (KernelPDBScanner, 30)
+    priority = 35
+    exclusion_list = ["linux", "mac"]
+
+    def __call__(
+        self,
+        context: interfaces.context.ContextInterface,
+        config_path: str,
+        requirement: interfaces.configuration.RequirementInterface,
+        progress_callback: constants.ProgressCallback = None,
+    ) -> None:
+        """Sets the layout on the Windows Intel layer of each kernel module."""
+        path_join = interfaces.configuration.path_join
+        for module_path, _ in self.find_requirements(
+            context=context,
+            config_path=config_path,
+            requirement_root=requirement,
+            requirement_type=requirements.ModuleRequirement,
+            shortcut=False,
+        ):
+            layer_name = context.config.get(path_join(module_path, "layer_name"))
+            table_name = context.config.get(path_join(module_path, "symbol_table_name"))
+            if layer_name not in context.layers or not table_name:
+                continue
+            layer = context.layers[layer_name]
+            if not isinstance(layer, intel.WindowsMixin):
+                continue
+            kvo = layer.config.get("kernel_virtual_offset", None)
+            if kvo is None or table_name not in context.symbol_space:
+                continue
+            layout = self.software_pte_layout(
+                context=context,
+                layer_name=layer_name,
+                table_name=table_name,
+                kernel_virtual_offset=kvo,
+            )
+            for name, value in layout.items():
+                if layer.config.get(name, None) is None:
+                    context.config[path_join(layer.config_path, name)] = value
+            vollog.debug(f"Software PTE layout for {layer_name}: {layout}")
+
+    @classmethod
+    def software_pte_layout(
+        cls,
+        context: interfaces.context.ContextInterface,
+        layer_name: str,
+        table_name: str,
+        kernel_virtual_offset: int,
+    ) -> Dict[str, int]:
+        """Returns the layer settings that the kernel's symbols support."""
+        kernel = context.module(
+            module_name=table_name, layer_name=layer_name, offset=kernel_virtual_offset
+        )
+        layout: Dict[str, int] = {}
+        try:
+            members = kernel.get_type("_MMPTE_SOFTWARE").vol.members
+        except exceptions.SymbolError:
+            return layout
+        if "PageFileLow" in members:
+            layout["page_file_low_bit"] = members["PageFileLow"][1].vol.start_bit
+        if "SwizzleBit" not in members:
+            return layout
+        layout["swizzle_bit"] = members["SwizzleBit"][1].vol.start_bit
+        invalid_pte_mask = cls._read_invalid_pte_mask(kernel)
+        # The mask can only cover PageFileHigh, the top half of a 64-bit PTE.
+        # It is 0 on CPUs that need no mask, which is kept: without a mask the
+        # layer does not read PTEs that may carry one from a page file.
+        if invalid_pte_mask is not None and not invalid_pte_mask & 0xFFFFFFFF:
+            layout["invalid_pte_mask"] = invalid_pte_mask
+        else:
+            vollog.debug(
+                f"No usable InvalidPteMask ({invalid_pte_mask}), PTEs whose "
+                "swizzle bit is clear will not be read from a page file"
+            )
+        return layout
+
+    @classmethod
+    def _read_invalid_pte_mask(
+        cls, kernel: interfaces.context.ModuleInterface
+    ) -> Optional[int]:
+        """Reads InvalidPteMask from MiState, or from the global MiInvalidPteMask
+        that older kernels use instead."""
+        try:
+            mi_state = kernel.object(
+                "_MI_SYSTEM_INFORMATION", offset=kernel.get_symbol("MiState").address
+            )
+            return int(mi_state.Hardware.InvalidPteMask)
+        except (
+            AttributeError,
+            exceptions.SymbolError,
+            exceptions.InvalidAddressException,
+        ):
+            # Not in MiState on this kernel, try the older global variable
+            pass
+        try:
+            # The mask only exists where PTEs are 64-bit (x64 and PAE)
+            return int(
+                kernel.object(
+                    "unsigned long long",
+                    offset=kernel.get_symbol("MiInvalidPteMask").address,
+                )
+            )
+        except (exceptions.SymbolError, exceptions.InvalidAddressException) as excp:
+            vollog.debug(f"Unable to read InvalidPteMask: {excp}")
+        return None
 
 
 class WinSwapLayers(interfaces.automagic.AutomagicInterface):
