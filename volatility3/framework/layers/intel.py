@@ -578,7 +578,13 @@ class WindowsMixin(Intel):
                     None,
                 )
                 if swap_layer_name:
-                    return swap_offset, 1 << excp.invalid_bits, swap_layer_name
+                    # As for a present page, keep the offset inside the page
+                    page_offset = offset & ((1 << excp.invalid_bits) - 1)
+                    return (
+                        swap_offset | page_offset,
+                        1 << excp.invalid_bits,
+                        swap_layer_name,
+                    )
             raise exceptions.SwappedInvalidAddressException(
                 layer_name=excp.layer_name,
                 invalid_address=excp.invalid_address,

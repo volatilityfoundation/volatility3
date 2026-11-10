@@ -141,6 +141,17 @@ class TestWhichEntriesArePagedOut:
         layer = build(arch, entry, config=OLD_LAYOUT)
         assert layer._translate(PAGE) == (5 * PAGE, PAGE, "swap0")
 
+    def test_a_read_inside_a_paged_out_page_starts_at_that_offset(self, arch):
+        """Before, the offset inside the page was dropped and every read started at the slot."""
+        layer = build(arch, self.high(arch, 5) | READWRITE << 5, config=OLD_LAYOUT)
+        assert layer._translate(PAGE + 4) == (5 * PAGE + 4, PAGE, "swap0")
+        assert layer.read(PAGE + 4, 4) == b"0005"
+
+    def test_a_read_across_a_paged_out_page_continues_in_the_next_page(self, arch):
+        entry = self.high(arch, 5) | READWRITE << 5
+        layer = build(arch, entry, config=OLD_LAYOUT, pages={2: b"NEXT"})
+        assert layer.read(2 * PAGE - 4, 8) == bytes(4) + b"NEXT"
+
     def test_without_the_kernel_layout_bit_7_is_still_required(self, arch):
         assert_not_swapped(build(arch, self.high(arch, 5) | READONLY << 5))
         entry = self.high(arch, 5) | READWRITE << 5
