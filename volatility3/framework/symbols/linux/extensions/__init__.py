@@ -1293,7 +1293,8 @@ class vm_area_struct(objects.StructType):
             # is not greater than the size of the file's inode.
             # Check only inode sizes greater than 0 to account for
             # special devices (e.g. "/dev/dri/card0") and prevent false negatives.
-            if inode.i_size > 0 and self.get_page_offset() > inode.i_size:
+            # get_inode() returns None when it finds no valid inode: skip the check.
+            if inode and inode.i_size > 0 and self.get_page_offset() > inode.i_size:
                 return False
 
         return True
@@ -2509,7 +2510,23 @@ class inode(objects.StructType):
     def is_valid(self) -> bool:
         # i_count is a 'signed' counter (atomic_t). Smear, or essentially a wrong inode
         # pointer, will easily cause an integer overflow here.
-        return self.i_ino > 0 and self.i_count.counter >= 0
+        if self.i_count.counter < 0:
+            return False
+        return self.i_ino > 0 or self._is_sysv_shm_segment()
+
+    def _is_sysv_shm_segment(self) -> bool:
+        """Inode number 0 is valid for System V shared memory segment 0: the kernel
+        sets the inode number of a segment's file to the segment id (ipc/shm.c,
+        newseg()), and the first segment of an IPC namespace has id 0. Such files
+        live on the kernel's internal shmem mount (shm_mnt)."""
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        if not vmlinux.has_symbol("shm_mnt"):
+            return False
+        try:
+            shm_mnt = vmlinux.object_from_symbol("shm_mnt")
+            return bool(shm_mnt) and self.i_sb == shm_mnt.mnt_sb
+        except exceptions.InvalidAddressException:
+            return False
 
     @property
     def is_dir(self) -> bool:
