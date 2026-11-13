@@ -112,8 +112,10 @@ def valid(
         validators[schema_key].validate(input)
         cached_validations.add(input_hash)
         vollog.debug("JSON validated against schema (result cached)")
-    except jsonschema.exceptions.SchemaError:
-        vollog.debug("Schema validation error", exc_info=True)
+    except jsonschema.exceptions.ValidationError as excp:
+        # str(excp) includes the whole input, so only report the cause
+        cause = jsonschema.exceptions.best_match([excp])
+        vollog.debug(f"Schema validation error at {cause.json_path}: {cause.message}")
         return False
 
     record_cached_validations(cached_validations)
