@@ -1293,7 +1293,14 @@ class vm_area_struct(objects.StructType):
             # is not greater than the size of the file's inode.
             # Check only inode sizes greater than 0 to account for
             # special devices (e.g. "/dev/dri/card0") and prevent false negatives.
-            if inode.i_size > 0 and self.get_page_offset() > inode.i_size:
+            # get_inode() returns None for inodes that fail inode.is_valid(), such as
+            # the inode of the first System V shared-memory segment, whose i_ino is its
+            # shmid 0. Such a VMA is kept; only the size check is skipped.
+            if (
+                inode is not None
+                and inode.i_size > 0
+                and self.get_page_offset() > inode.i_size
+            ):
                 return False
 
         return True
