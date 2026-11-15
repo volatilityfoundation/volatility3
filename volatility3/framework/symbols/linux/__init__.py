@@ -100,7 +100,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""
 
-    _version = (2, 4, 0)
+    _version = (2, 4, 1)
     _required_framework_version = (2, 0, 0)
     deleted = "(deleted)"
     smear = "<potentially smeared>"
@@ -480,7 +480,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             vmlinux:
             struct_name: name of the structure of the list elements
             list_member: name of the list_member holding the internal list
-            list_start: Starting (head) member of the list
+            list_start: Pointer to the first element (e.g. the list head's pointer member)
             max_count: Optional maximum amount of list elements that will be yielded
 
         Returns:
@@ -491,18 +491,21 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         seen = set()
 
         while list_start:
-            if list_start.vol.offset in seen:
+            if not list_start.is_readable():
+                break
+
+            # list_start and each list_member are pointers: the element is the
+            # structure they point to, not the pointer itself.
+            element_offset = list_start.dereference().vol.offset
+            if element_offset in seen:
                 vollog.debug(
                     "walk_internal_list: Repeat entry found. Stopping enumeration"
                 )
                 break
-            seen.add(list_start.vol.offset)
-
-            if not (list_start and list_start.is_readable()):
-                break
+            seen.add(element_offset)
 
             list_struct = vmlinux.object(
-                object_type=struct_name, offset=list_start.vol.offset, absolute=True
+                object_type=struct_name, offset=element_offset, absolute=True
             )
 
             yield list_struct
