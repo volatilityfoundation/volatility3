@@ -64,9 +64,11 @@ def lines(reader):
     return [row[-1] for row in reader.run()]
 
 
-def test_newest_record_is_reported():
+def test_newest_record_is_reported(caplog):
     reader = make_reader(3, 6, {i: FINALIZED for i in range(3, 7)})
-    assert lines(reader) == ["record 3", "record 4", "record 5", "record 6"]
+    with caplog.at_level("DEBUG", logger=kmsg.vollog.name):
+        assert lines(reader) == ["record 3", "record 4", "record 5", "record 6"]
+    assert "without reaching head_id" not in caplog.text
 
 
 def test_reserved_head_is_skipped():
@@ -79,6 +81,8 @@ def test_single_record_ring():
 
 
 @pytest.mark.parametrize("head_id", [100, 2])
-def test_inconsistent_ids_are_bounded_by_ring_size(head_id):
+def test_inconsistent_ids_are_bounded_and_logged(caplog, head_id):
     reader = make_reader(3, head_id, {i: FINALIZED for i in range(3, 11)})
-    assert len(lines(reader)) == 8
+    with caplog.at_level("DEBUG", logger=kmsg.vollog.name):
+        assert len(lines(reader)) == 8
+    assert "without reaching head_id" in caplog.text

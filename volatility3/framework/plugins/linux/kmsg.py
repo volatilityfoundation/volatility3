@@ -529,6 +529,12 @@ class Kmsg_5_10_to_(ABCKmsg):
             if cur_id == end_id:
                 break
             cur_id = (cur_id + 1) & desc_id_mask
+        else:
+            vollog.debug(
+                f"kmsg: stopped after {desc_count} descriptors without reaching "
+                f"head_id {end_id} (tail_id {desc_ring.tail_id.counter}); the "
+                "descriptor IDs are inconsistent and later records may be missing"
+            )
 
 
 class Kmsg(interfaces.plugins.PluginInterface):
