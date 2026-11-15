@@ -504,9 +504,11 @@ class Kmsg_5_10_to_(ABCKmsg):
         desc_flags_mask = 3 << desc_flags_shift
         desc_id_mask = ~desc_flags_mask
 
+        # tail_id and head_id are the IDs of the oldest and the newest descriptor,
+        # so both ends are read. The ring holds at most desc_count descriptors,
+        # which also bounds the walk if the IDs are inconsistent.
         cur_id = desc_ring.tail_id.counter
-        end_id = None
-        while cur_id != end_id:
+        for _ in range(desc_count):
             end_id = desc_ring.head_id.counter
             desc = desc_arr[cur_id % desc_count]  # type: ignore
             info = info_arr[cur_id % desc_count]  # type: ignore
@@ -524,8 +526,15 @@ class Kmsg_5_10_to_(ABCKmsg):
                 for line in self.get_dict_lines(info):
                     yield facility_txt, level_txt, timestamp, caller, line
 
-            cur_id += 1
-            cur_id &= desc_id_mask
+            if cur_id == end_id:
+                break
+            cur_id = (cur_id + 1) & desc_id_mask
+        else:
+            vollog.debug(
+                f"kmsg: stopped after {desc_count} descriptors without reaching "
+                f"head_id {end_id} (tail_id {desc_ring.tail_id.counter}); the "
+                "descriptor IDs are inconsistent and later records may be missing"
+            )
 
 
 class Kmsg(interfaces.plugins.PluginInterface):
@@ -533,7 +542,7 @@ class Kmsg(interfaces.plugins.PluginInterface):
 
     _required_framework_version = (2, 6, 0)
 
-    _version = (2, 0, 0)
+    _version = (2, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
