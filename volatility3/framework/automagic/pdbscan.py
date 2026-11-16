@@ -12,6 +12,7 @@ import contextlib
 import logging
 import math
 import os
+import struct
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from volatility3.framework import constants, exceptions, interfaces, layers
@@ -32,6 +33,9 @@ vollog = logging.getLogger(__name__)
 ValidKernelType = Tuple[str, int, Dict[str, Optional[Union[bytes, str, int]]]]
 KernelsType = Iterable[Dict[str, Any]]
 
+IMAGE_DIRECTORY_ENTRY_DEBUG = 6
+IMAGE_DEBUG_TYPE_CODEVIEW = 2
+
 
 class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     """Windows symbol loader based on PDB signatures.
@@ -48,7 +52,6 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     """
 
     priority = 30
-    max_pdb_size = 0x400000
     exclusion_list = ["linux", "mac"]
 
     @classmethod
@@ -365,32 +368,89 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         address: int,
         progress_callback: constants.ProgressCallback = None,
     ) -> Optional[ValidKernelType]:
-        """Scans a virtual address."""
-        # Scan a few megs of the virtual space at the location to see if they're potential kernels
+        """Checks whether a kernel image starts at a virtual address.
 
-        valid_kernel: Optional[ValidKernelType] = None
+        The image's own PE debug directory names its PDB, so the CodeView
+        record is read directly instead of scanning the following memory,
+        which could reach into the next image (e.g. from hal.dll into
+        ntoskrnl)."""
         kernel_pdb_names = [
             bytes(name + ".pdb", "utf-8")
             for name in constants.windows.KERNEL_MODULE_NAMES
         ]
-
-        virtual_layer_name = vlayer.name
         with contextlib.suppress(exceptions.InvalidAddressException):
-            if vlayer.read(address, 0x2) == b"MZ":
-                res = list(
-                    pdbutil.PDBUtility.pdbname_scan(
-                        ctx=context,
-                        layer_name=vlayer.name,
-                        page_size=vlayer.page_size,
-                        pdb_names=kernel_pdb_names,
-                        progress_callback=progress_callback,
-                        start=address,
-                        end=address + self.max_pdb_size,
-                    )
+            if vlayer.read(address, 0x2) != b"MZ":
+                return None
+            record = self._codeview_record(vlayer, address)
+            if record is None:
+                return None
+            record_offset, data = record
+            for guid, age, pdb_name, signature_offset in pdbutil.PdbSignatureScanner(
+                kernel_pdb_names
+            )(data, record_offset):
+                if signature_offset != record_offset:
+                    continue
+                return (
+                    vlayer.name,
+                    address,
+                    {
+                        "GUID": guid,
+                        "age": age,
+                        "pdb_name": str(pdb_name, "utf-8"),
+                        "signature_offset": signature_offset,
+                        "mz_offset": address,
+                    },
                 )
-                if res:
-                    valid_kernel = (virtual_layer_name, address, res[0])
-        return valid_kernel
+        return None
+
+    @staticmethod
+    def _codeview_record(
+        vlayer: interfaces.layers.DataLayerInterface, address: int
+    ) -> Optional[Tuple[int, bytes]]:
+        """Returns the virtual offset and bytes of the CodeView debug record of
+        the PE image mapped at address, located through its debug directory."""
+        (nt_header_offset,) = struct.unpack("<I", vlayer.read(address + 0x3C, 4))
+        nt_header = address + nt_header_offset
+        if vlayer.read(nt_header, 4) != b"PE\x00\x00":
+            return None
+        optional_header = nt_header + 0x18
+        (magic,) = struct.unpack("<H", vlayer.read(optional_header, 2))
+        # Offset of NumberOfRvaAndSizes in IMAGE_OPTIONAL_HEADER32/64
+        rva_count_offset = {0x10B: 0x5C, 0x20B: 0x6C}.get(magic)
+        if rva_count_offset is None:
+            return None
+        (rva_count,) = struct.unpack(
+            "<I", vlayer.read(optional_header + rva_count_offset, 4)
+        )
+        if rva_count <= IMAGE_DIRECTORY_ENTRY_DEBUG:
+            return None
+        debug_rva, debug_size = struct.unpack(
+            "<II",
+            vlayer.read(
+                optional_header
+                + rva_count_offset
+                + 4
+                + 8 * IMAGE_DIRECTORY_ENTRY_DEBUG,
+                8,
+            ),
+        )
+        # IMAGE_DEBUG_DIRECTORY entries are 28 bytes; the count is bounded to
+        # avoid huge reads from corrupted headers
+        for index in range(min(debug_size // 28, 16)):
+            entry = vlayer.read(address + debug_rva + 28 * index, 28)
+            debug_type, size_of_data, address_of_raw_data = struct.unpack_from(
+                "<III", entry, 12
+            )
+            if (
+                debug_type == IMAGE_DEBUG_TYPE_CODEVIEW
+                and address_of_raw_data
+                and size_of_data
+            ):
+                record_offset = address + address_of_raw_data
+                return record_offset, vlayer.read(
+                    record_offset, min(size_of_data, 0x400)
+                )
+        return None
 
     def method_low_stub_offset(
         self,
