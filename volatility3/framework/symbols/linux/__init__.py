@@ -491,7 +491,16 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         seen = set()
 
         while list_start:
+            if count == max_count:
+                vollog.debug(
+                    f"walk_internal_list: Breaking list enumeration at maximum allowed count of {count}"
+                )
+                break
+
             if not list_start.is_readable():
+                vollog.debug(
+                    f"walk_internal_list: Pointer at {list_start.vol.offset:#x} to unreadable {struct_name} at {int(list_start):#x}. Stopping enumeration"
+                )
                 break
 
             # list_start and each list_member are pointers: the element is the
@@ -509,16 +518,9 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             )
 
             yield list_struct
+            count += 1
 
             list_start = getattr(list_struct, list_member)
-
-            if count == max_count:
-                vollog.debug(
-                    f"walk_internal_list: Breaking list enumeration at maximum allowed count of {count}"
-                )
-                break
-
-            count += 1
 
     @classmethod
     def container_of(
