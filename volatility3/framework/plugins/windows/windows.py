@@ -17,7 +17,7 @@ class Windows(interfaces.plugins.PluginInterface):
     """Enumerates the Windows of Desktop instances"""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -118,7 +118,7 @@ class Windows(interfaces.plugins.PluginInterface):
                     format_hints.Hex(window.vol.offset),
                     station_name,
                     sess_id,
-                    desktop_name,
+                    desktop_name or renderers.NotAvailableValue(),
                     window_name or renderers.NotAvailableValue(),
                     window_proc,
                     process_name,
