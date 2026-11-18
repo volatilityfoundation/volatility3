@@ -517,6 +517,11 @@ class WindowsMixin(Intel):
                 description="Bit of _MMPTE_SOFTWARE.SwizzleBit",
             ),
             requirements.IntRequirement(
+                name="page_file_allocated_bit",
+                optional=True,
+                description="Bit of _MMPTE_SOFTWARE.PageFileAllocated (PTEs with it clear are not read from a page file)",
+            ),
+            requirements.IntRequirement(
                 name="invalid_pte_mask",
                 optional=True,
                 description="MiState.Hardware.InvalidPteMask (if swizzle_bit is set without it, PTEs whose swizzle bit is clear are not read from a page file)",
@@ -564,6 +569,13 @@ class WindowsMixin(Intel):
                 # Protection (bits 5-9) is 0 in entries that are not paged out,
                 # such as the kernel's lists of free system PTEs
                 in_page_file = bool((entry >> 5) & 0x1F)
+                # With PageFileAllocated clear, PageFileHigh can name a free
+                # slot or one that holds another page (decommitted and guard
+                # pages, for example), so only the slot of a PTE with it set
+                # holds the page
+                allocated_bit = self.config.get("page_file_allocated_bit", None)
+                if allocated_bit is not None and not entry & (1 << allocated_bit):
+                    in_page_file = False
             # All ones means the PTE has to be rebuilt from the VAD
             lookup_needed = (1 << (self._entry_size * 8 - bit_offset)) - 1
             if not in_page_file or entry >> bit_offset == lookup_needed:

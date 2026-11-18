@@ -431,9 +431,10 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
 class WinSoftwarePteLayout(interfaces.automagic.AutomagicInterface):
     """Sets how a Windows kernel encodes paged out pages on its Intel layer.
 
-    Where _MMPTE_SOFTWARE keeps the page file number, and the InvalidPteMask
-    that the kernel adds to software PTEs, differ between kernels, so both are
-    read from the kernel's symbols rather than assumed.
+    Where _MMPTE_SOFTWARE keeps the page file number and the PageFileAllocated
+    flag, and the InvalidPteMask that the kernel adds to software PTEs, differ
+    between kernels, so they are read from the kernel's symbols rather than
+    assumed.
     """
 
     # After the kernel's symbols are found (KernelPDBScanner, 30)
@@ -496,6 +497,9 @@ class WinSoftwarePteLayout(interfaces.automagic.AutomagicInterface):
             return layout
         if "PageFileLow" in members:
             layout["page_file_low_bit"] = members["PageFileLow"][1].vol.start_bit
+        if "PageFileAllocated" in members:
+            allocated = members["PageFileAllocated"][1].vol.start_bit
+            layout["page_file_allocated_bit"] = allocated
         if "SwizzleBit" not in members:
             return layout
         layout["swizzle_bit"] = members["SwizzleBit"][1].vol.start_bit

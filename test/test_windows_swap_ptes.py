@@ -33,11 +33,12 @@ def software_pte(high, number=0, protection=READWRITE, swizzle=0, low_bit=12):
     return high << 32 | number << low_bit | protection << 5 | swizzle << 4
 
 
-def build(arch, pte=None, pde=None, config=None, swap=True, pages=None):
+def build(arch, pte=None, pde=None, config=None, swap=True, pages=None, ptes=None):
     """A layer whose first page table holds `pte` at index 1 (virtual address 0x1000).
 
-    `pde` replaces the entry that points to that page table, and `pages` maps
-    page table indexes to the contents of present pages.
+    `pde` replaces the entry that points to that page table, `pages` maps
+    page table indexes to the contents of present pages, and `ptes` maps
+    page table indexes to further entries.
     """
     cls, fmt, levels, _, _ = arch
     size = struct.calcsize(fmt)
@@ -49,6 +50,8 @@ def build(arch, pte=None, pde=None, config=None, swap=True, pages=None):
         struct.pack_into(fmt, memory, tables[-2], pde)
     if pte is not None:
         struct.pack_into(fmt, memory, tables[-1] + size, pte)
+    for index, entry in (ptes or {}).items():
+        struct.pack_into(fmt, memory, tables[-1] + index * size, entry)
     for index, content in (pages or {}).items():
         frame = len(memory)
         memory += content.ljust(PAGE, b"\0")
@@ -66,8 +69,10 @@ def build(arch, pte=None, pde=None, config=None, swap=True, pages=None):
         context.config["test.intel.swap_layers"] = True
         for number in range(2):
             name = f"swap{number}"
+            # Each slot starts with "PFn:ssss" and ends with "Tsss"
             content = b"".join(
-                f"PF{number}:{slot:04x}".encode().ljust(PAGE, b"\0")
+                f"PF{number}:{slot:04x}".encode().ljust(PAGE - 4, b"\0")
+                + f"T{slot:03x}".encode()
                 for slot in range(16)
             )
             context.add_layer(
@@ -166,7 +171,14 @@ class TestWhichEntriesArePagedOut:
     def test_a_read_across_a_paged_out_page_continues_in_the_next_page(self, arch):
         entry = self.high(arch, 5) | READWRITE << 5
         layer = build(arch, entry, config=OLD_LAYOUT, pages={2: b"NEXT"})
-        assert layer.read(2 * PAGE - 4, 8) == bytes(4) + b"NEXT"
+        assert layer.read(2 * PAGE - 4, 8) == b"T005NEXT"
+
+    def test_a_read_across_two_paged_out_pages_uses_the_slot_of_each(self, arch):
+        """The two pages are in slots 9 and 5, so the second is not the next slot."""
+        first = self.high(arch, 9) | READWRITE << 5
+        second = self.high(arch, 5) | READWRITE << 5
+        layer = build(arch, first, config=OLD_LAYOUT, ptes={2: second})
+        assert layer.read(2 * PAGE - 4, 12) == b"T009PF0:0005"
 
     def test_without_the_kernel_layout_bit_7_is_still_required(self, arch):
         assert_not_swapped(build(arch, self.high(arch, 5) | READONLY << 5))
@@ -221,7 +233,50 @@ class TestWhichEntriesArePagedOut:
         assert_not_swapped(build(arch, self.high(arch, 5) | 1 << 10, config=NEW_LAYOUT))
 
 
-def kernel_isf(tmp_path, with_swizzle, mask_at):
+@pytest.mark.parametrize("arch", [X64, PAE], ids=["x64", "pae"])
+class TestPageFileAllocated:
+    """A PTE whose PageFileAllocated is clear can name a slot of another page."""
+
+    def test_a_pte_with_page_file_allocated_clear_is_not_paged_out(self, arch):
+        layout = {**NEW_LAYOUT, "page_file_allocated_bit": 2}
+        assert_not_swapped(build(arch, software_pte(5), config=layout))
+        decommitted = software_pte(5, protection=0x10)  # MM_DECOMMIT
+        assert_not_swapped(build(arch, decommitted, config=layout))
+        entry = software_pte(5) | 1 << 2
+        expected = (5 * PAGE, PAGE, "swap0")
+        assert build(arch, entry, config=layout)._translate(PAGE) == expected
+
+    def test_page_file_allocated_is_read_where_the_kernel_keeps_it(self, arch):
+        """Server 2016 (14393) keeps it at bit 13, and the page file number at bit 1."""
+        layout = {"page_file_low_bit": 1, "page_file_allocated_bit": 13}
+        entry = 5 << 32 | READONLY << 5
+        assert_not_swapped(build(arch, entry, config=layout))
+        expected = (5 * PAGE, PAGE, "swap0")
+        assert build(arch, entry | 1 << 13, config=layout)._translate(PAGE) == expected
+
+    def test_without_the_kernel_layout_page_file_allocated_is_not_used(self, arch):
+        entry = 5 << 32 | READWRITE << 5
+        layer = build(arch, entry, config={"page_file_allocated_bit": 13})
+        assert layer._translate(PAGE)[2] == "swap0"
+
+    def test_without_a_swap_layer_such_a_pte_is_not_reported_as_swapped(self, arch):
+        """It isn't in any page file, so there is no swap offset to report."""
+        layout = {**NEW_LAYOUT, "page_file_allocated_bit": 2}
+        layer = build(arch, software_pte(5, number=2), config=layout, swap=False)
+        assert_not_swapped(layer)
+        layer = build(
+            arch, software_pte(5, number=2) | 1 << 2, config=layout, swap=False
+        )
+        with pytest.raises(exceptions.SwappedInvalidAddressException):
+            layer._translate(PAGE)
+
+    def test_protection_zero_is_not_paged_out_with_page_file_allocated_set(self, arch):
+        layout = {**NEW_LAYOUT, "page_file_allocated_bit": 2}
+        entry = software_pte(5, protection=0) | 1 << 2
+        assert_not_swapped(build(arch, entry, config=layout))
+
+
+def kernel_isf(tmp_path, with_swizzle, mask_at, allocated_bit=None, low_bit=12):
     """An ISF with the kernel's PTE layout and the InvalidPteMask in MiState, in the
     older global MiInvalidPteMask, or (None) in neither."""
 
@@ -238,11 +293,13 @@ def kernel_isf(tmp_path, with_swizzle, mask_at):
 
     pte_fields = {
         "Valid": field(0, bitfield(0, 1)),
-        "PageFileLow": field(0, bitfield(12, 4)),
+        "PageFileLow": field(0, bitfield(low_bit, 4)),
         "PageFileHigh": field(0, bitfield(32, 32)),
     }
     if with_swizzle:
         pte_fields["SwizzleBit"] = field(0, bitfield(4, 1))
+    if allocated_bit is not None:
+        pte_fields["PageFileAllocated"] = field(0, bitfield(allocated_bit, 1))
     integer = {"kind": "int", "size": 8, "signed": False, "endian": "little"}
     hardware_fields = {}
     if mask_at == "MiState":
@@ -288,7 +345,14 @@ class TestLayoutFromTheKernel:
 
     @staticmethod
     def run_automagic(
-        tmp_path, with_swizzle=True, mask_at="MiState", arch=X64, config=None, mask=MASK
+        tmp_path,
+        with_swizzle=True,
+        mask_at="MiState",
+        arch=X64,
+        config=None,
+        mask=MASK,
+        allocated_bit=None,
+        low_bit=12,
     ):
         kernel_page = bytearray(PAGE)
         struct.pack_into("<Q", kernel_page, 0x100 + 0x10 + 8, mask)  # MiState
@@ -303,7 +367,7 @@ class TestLayoutFromTheKernel:
             context,
             "test.symbols",
             "kernel",
-            kernel_isf(tmp_path, with_swizzle, mask_at),
+            kernel_isf(tmp_path, with_swizzle, mask_at, allocated_bit, low_bit),
         )
         context.symbol_space.append(table)
         context.config["plugins.Test.kernel.layer_name"] = layer.name
@@ -338,6 +402,23 @@ class TestLayoutFromTheKernel:
         """A CPU that needs no mask reports 0, which is not the same as no mask."""
         layer = self.run_automagic(tmp_path, mask=0)
         assert self.settings(layer) == {**NEW_LAYOUT, "invalid_pte_mask": 0}
+
+    def test_page_file_allocated_is_set_when_the_kernel_has_it(self, tmp_path):
+        layer = self.run_automagic(tmp_path, allocated_bit=2)
+        assert layer.config.get("page_file_allocated_bit") == 2
+        assert self.settings(layer) == NEW_LAYOUT
+        without = self.run_automagic(tmp_path)
+        assert without.config.get("page_file_allocated_bit") is None
+
+    def test_page_file_allocated_is_set_without_a_swizzle_bit(self, tmp_path):
+        """As on 14393: PageFileLow at bit 1 and PageFileAllocated at bit 13."""
+        layer = self.run_automagic(
+            tmp_path, with_swizzle=False, allocated_bit=13, low_bit=1
+        )
+        assert layer.config.get("page_file_low_bit") == 1
+        assert layer.config.get("page_file_allocated_bit") == 13
+        configuration = layer.build_configuration()
+        assert configuration.get("page_file_allocated_bit") == 13
 
     def test_no_swizzle_bit_means_no_mask(self, tmp_path):
         layer = self.run_automagic(tmp_path, with_swizzle=False)
