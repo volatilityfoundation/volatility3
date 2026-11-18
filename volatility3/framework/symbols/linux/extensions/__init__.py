@@ -2518,12 +2518,19 @@ class inode(objects.StructType):
         """Inode number 0 is valid for System V shared memory segment 0: the kernel
         sets the inode number of a segment's file to the segment id (ipc/shm.c,
         newseg()), and the first segment of an IPC namespace has id 0. Such files
-        live on the kernel's internal shmem mount (shm_mnt)."""
+        live on the kernel's internal shmem mount (shm_mnt). Segments created with
+        SHM_HUGETLB live on hugetlbfs instead, so their segment 0 is not covered."""
         vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
         if not vmlinux.has_symbol("shm_mnt"):
             return False
         try:
-            shm_mnt = vmlinux.object_from_symbol("shm_mnt")
+            # Do not rely on the symbol's own type: ISFs built from BTF type shm_mnt
+            # as void, which has no mnt_sb member.
+            shm_mnt = vmlinux.object(
+                object_type="pointer",
+                offset=vmlinux.get_symbol("shm_mnt").address,
+                subtype=vmlinux.get_type("vfsmount"),
+            )
             return bool(shm_mnt) and self.i_sb == shm_mnt.mnt_sb
         except exceptions.InvalidAddressException:
             return False
