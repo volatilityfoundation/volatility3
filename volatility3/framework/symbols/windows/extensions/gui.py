@@ -70,19 +70,30 @@ class GUIExtensions(interfaces.configuration.VersionableInterface):
         def desktops(self, symbol_table_name, max_desktops: int = 12):
             seen = set()
 
+            try:
+                desktop = self.rpdeskList.dereference()
+            except exceptions.InvalidAddressException:
+                return
+
             while len(seen) < max_desktops:
-                try:
-                    desktop = self.rpdeskList.dereference()
-                    name = desktop.get_name(symbol_table_name)
-                except exceptions.InvalidAddressException:
+                if desktop.vol.offset in seen:
                     break
 
-                if desktop.vol.offset in seen:
+                try:
+                    name = desktop.get_name(symbol_table_name)
+                except exceptions.InvalidAddressException:
                     break
 
                 yield desktop, name
 
                 seen.add(desktop.vol.offset)
+
+                try:
+                    if not desktop.rpdeskNext:
+                        break
+                    desktop = desktop.rpdeskNext.dereference()
+                except exceptions.InvalidAddressException:
+                    break
 
     class tagDESKTOP(objects.StructType, pool.ExecutiveObject):
         def is_valid(self) -> bool:
