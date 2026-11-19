@@ -14,8 +14,6 @@ from volatility3.framework.symbols.linux.extensions import (
 
 SHM_SB = 0xFFFF888000001000
 OTHER_SB = 0xFFFF888000002000
-SHM_MNT_ADDRESS = 0xFFFFFFFF82000000
-VFSMOUNT_TYPE = object()
 
 
 class NullPointer(SimpleNamespace):
@@ -36,28 +34,15 @@ def make_inode(monkeypatch, i_ino, i_sb, i_count=1, shm_mnt="ok"):
         "null": NullPointer(mnt_sb=SHM_SB),
     }
 
-    def get_symbol(name):
+    def object_from_symbol(name):
         assert name == "shm_mnt"
-        return SimpleNamespace(address=SHM_MNT_ADDRESS)
-
-    def get_type(name):
-        assert name == "vfsmount"
-        return VFSMOUNT_TYPE
-
-    def make_object(object_type, offset, subtype):
-        # The symbol's own type is not used: BTF-derived ISFs type shm_mnt as void
-        assert object_type == "pointer"
-        assert offset == SHM_MNT_ADDRESS
-        assert subtype is VFSMOUNT_TYPE
         if shm_mnt == "unreadable":
             raise exceptions.InvalidAddressException("memory", 0)
         return mounts[shm_mnt]
 
     vmlinux = SimpleNamespace(
         has_symbol=lambda name: name == "shm_mnt" and shm_mnt != "missing",
-        get_symbol=get_symbol,
-        get_type=get_type,
-        object=make_object,
+        object_from_symbol=object_from_symbol,
     )
 
     def get_module_from_volobj_type(context, obj):

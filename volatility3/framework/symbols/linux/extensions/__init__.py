@@ -2524,13 +2524,7 @@ class inode(objects.StructType):
         if not vmlinux.has_symbol("shm_mnt"):
             return False
         try:
-            # Do not rely on the symbol's own type: ISFs built from BTF type shm_mnt
-            # as void, which has no mnt_sb member.
-            shm_mnt = vmlinux.object(
-                object_type="pointer",
-                offset=vmlinux.get_symbol("shm_mnt").address,
-                subtype=vmlinux.get_type("vfsmount"),
-            )
+            shm_mnt = vmlinux.object_from_symbol("shm_mnt")
             return bool(shm_mnt) and self.i_sb == shm_mnt.mnt_sb
         except exceptions.InvalidAddressException:
             return False
