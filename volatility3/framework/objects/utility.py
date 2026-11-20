@@ -135,7 +135,7 @@ def gather_contiguous_bytes_from_address(
 
             last_address = address + length
 
-    elif starting_address + count < data_layer.maximum_address:
+    elif starting_address + count - 1 <= data_layer.maximum_address:
         data = data_layer.read(starting_address, count)
 
     # if we were able to read from the first page, we want to try and construct the string
