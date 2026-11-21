@@ -30,6 +30,8 @@ def pe_image(pdb_name: bytes, guid: uuid.UUID, magic: int = 0x20B) -> bytes:
     nt_header = 0x80
     struct.pack_into("<I", image, 0x3C, nt_header)
     image[nt_header : nt_header + 4] = b"PE\x00\x00"
+    # IMAGE_FILE_HEADER.Machine: AMD64 for PE32+, i386 for PE32
+    struct.pack_into("<H", image, nt_header + 4, 0x8664 if magic == 0x20B else 0x14C)
     optional_header = nt_header + 0x18
     struct.pack_into("<H", image, optional_header, magic)
     rva_count_offset = optional_header + (0x6C if magic == 0x20B else 0x5C)

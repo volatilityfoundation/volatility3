@@ -12,14 +12,14 @@ import contextlib
 import logging
 import math
 import os
-import struct
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from volatility3.framework import constants, exceptions, interfaces, layers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, scanners
-from volatility3.framework.symbols import native
+from volatility3.framework.symbols import intermed, native
 from volatility3.framework.symbols.windows import pdbutil
+from volatility3.framework.symbols.windows.extensions import pe
 
 if __name__ == "__main__":
     import sys
@@ -35,6 +35,10 @@ KernelsType = Iterable[Dict[str, Any]]
 
 IMAGE_DIRECTORY_ENTRY_DEBUG = 6
 IMAGE_DEBUG_TYPE_CODEVIEW = 2
+# Bounds on what is read from a candidate image, so corrupted headers cannot
+# trigger huge reads
+MAX_DEBUG_DIRECTORIES = 16
+MAX_CODEVIEW_RECORD_SIZE = 0x400
 
 
 class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
@@ -53,6 +57,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     priority = 30
     exclusion_list = ["linux", "mac"]
+    _pe_table_name: Optional[str] = None
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -381,7 +386,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         with contextlib.suppress(exceptions.InvalidAddressException):
             if vlayer.read(address, 0x2) != b"MZ":
                 return None
-            record = self._codeview_record(vlayer, address)
+            record = self._codeview_record(context, vlayer, address)
             if record is None:
                 return None
             record_offset, data = record
@@ -403,52 +408,65 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 )
         return None
 
-    @staticmethod
+    def _get_pe_table_name(self, context: interfaces.context.ContextInterface) -> str:
+        """Returns the name of the PE symbol table, loading it into the
+        context the first time it is needed."""
+        if (
+            self._pe_table_name is None
+            or self._pe_table_name not in context.symbol_space
+        ):
+            self._pe_table_name = intermed.IntermediateSymbolTable.create(
+                context, self.config_path, "windows", "pe", class_types=pe.class_types
+            )
+        return self._pe_table_name
+
     def _codeview_record(
-        vlayer: interfaces.layers.DataLayerInterface, address: int
+        self,
+        context: interfaces.context.ContextInterface,
+        vlayer: interfaces.layers.DataLayerInterface,
+        address: int,
     ) -> Optional[Tuple[int, bytes]]:
         """Returns the virtual offset and bytes of the CodeView debug record of
         the PE image mapped at address, located through its debug directory."""
-        (nt_header_offset,) = struct.unpack("<I", vlayer.read(address + 0x3C, 4))
-        nt_header = address + nt_header_offset
-        if vlayer.read(nt_header, 4) != b"PE\x00\x00":
-            return None
-        optional_header = nt_header + 0x18
-        (magic,) = struct.unpack("<H", vlayer.read(optional_header, 2))
-        # Offset of NumberOfRvaAndSizes in IMAGE_OPTIONAL_HEADER32/64
-        rva_count_offset = {0x10B: 0x5C, 0x20B: 0x6C}.get(magic)
-        if rva_count_offset is None:
-            return None
-        (rva_count,) = struct.unpack(
-            "<I", vlayer.read(optional_header + rva_count_offset, 4)
+        pe_table_name = self._get_pe_table_name(context)
+        dos_header = context.object(
+            pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
+            layer_name=vlayer.name,
+            offset=address,
         )
-        if rva_count <= IMAGE_DIRECTORY_ENTRY_DEBUG:
+        try:
+            nt_header = dos_header.get_nt_header()
+        except ValueError:
             return None
-        debug_rva, debug_size = struct.unpack(
-            "<II",
-            vlayer.read(
-                optional_header
-                + rva_count_offset
-                + 4
-                + 8 * IMAGE_DIRECTORY_ENTRY_DEBUG,
-                8,
+        optional_header = nt_header.OptionalHeader
+        if optional_header.NumberOfRvaAndSizes <= IMAGE_DIRECTORY_ENTRY_DEBUG:
+            return None
+        debug_data_directory = optional_header.DataDirectory[
+            IMAGE_DIRECTORY_ENTRY_DEBUG
+        ]
+        debug_directory_type = context.symbol_space.get_type(
+            pe_table_name + constants.BANG + "_IMAGE_DEBUG_DIRECTORY"
+        )
+        debug_directories = context.object(
+            pe_table_name + constants.BANG + "array",
+            layer_name=vlayer.name,
+            offset=address + debug_data_directory.VirtualAddress,
+            subtype=debug_directory_type,
+            count=min(
+                debug_data_directory.Size // debug_directory_type.size,
+                MAX_DEBUG_DIRECTORIES,
             ),
         )
-        # IMAGE_DEBUG_DIRECTORY entries are 28 bytes; the count is bounded to
-        # avoid huge reads from corrupted headers
-        for index in range(min(debug_size // 28, 16)):
-            entry = vlayer.read(address + debug_rva + 28 * index, 28)
-            debug_type, size_of_data, address_of_raw_data = struct.unpack_from(
-                "<III", entry, 12
-            )
+        for debug_directory in debug_directories:
             if (
-                debug_type == IMAGE_DEBUG_TYPE_CODEVIEW
-                and address_of_raw_data
-                and size_of_data
+                debug_directory.Type == IMAGE_DEBUG_TYPE_CODEVIEW
+                and debug_directory.AddressOfRawData
+                and debug_directory.SizeOfData
             ):
-                record_offset = address + address_of_raw_data
+                record_offset = address + debug_directory.AddressOfRawData
                 return record_offset, vlayer.read(
-                    record_offset, min(size_of_data, 0x400)
+                    record_offset,
+                    min(debug_directory.SizeOfData, MAX_CODEVIEW_RECORD_SIZE),
                 )
         return None
 
