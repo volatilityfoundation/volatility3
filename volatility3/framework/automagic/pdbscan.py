@@ -9,10 +9,13 @@ based scanner for use within the framework by calling :func:`~volatility3.framew
 """
 
 import contextlib
+import io
 import logging
 import math
 import os
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
+
+import pefile
 
 from volatility3.framework import constants, exceptions, interfaces, layers
 from volatility3.framework.configuration import requirements
@@ -32,13 +35,6 @@ vollog = logging.getLogger(__name__)
 
 ValidKernelType = Tuple[str, int, Dict[str, Optional[Union[bytes, str, int]]]]
 KernelsType = Iterable[Dict[str, Any]]
-
-IMAGE_DIRECTORY_ENTRY_DEBUG = 6
-IMAGE_DEBUG_TYPE_CODEVIEW = 2
-# Bounds on what is read from a candidate image, so corrupted headers cannot
-# trigger huge reads
-MAX_DEBUG_DIRECTORIES = 16
-MAX_CODEVIEW_RECORD_SIZE = 0x400
 
 
 class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
@@ -428,46 +424,39 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     ) -> Optional[Tuple[int, bytes]]:
         """Returns the virtual offset and bytes of the CodeView debug record of
         the PE image mapped at address, located through its debug directory."""
-        pe_table_name = self._get_pe_table_name(context)
         dos_header = context.object(
-            pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
+            self._get_pe_table_name(context) + constants.BANG + "_IMAGE_DOS_HEADER",
             layer_name=vlayer.name,
             offset=address,
         )
+        pe_data = io.BytesIO()
         try:
-            nt_header = dos_header.get_nt_header()
-        except ValueError:
+            for offset, data in dos_header.reconstruct():
+                pe_data.seek(offset)
+                pe_data.write(data)
+            pe_obj = pefile.PE(data=pe_data.getvalue(), fast_load=True)
+        except (ValueError, pefile.PEFormatError):
             return None
-        optional_header = nt_header.OptionalHeader
-        if optional_header.NumberOfRvaAndSizes <= IMAGE_DIRECTORY_ENTRY_DEBUG:
-            return None
-        debug_data_directory = optional_header.DataDirectory[
-            IMAGE_DIRECTORY_ENTRY_DEBUG
-        ]
-        debug_directory_type = context.symbol_space.get_type(
-            pe_table_name + constants.BANG + "_IMAGE_DEBUG_DIRECTORY"
+        pe_obj.parse_data_directories(
+            [pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_DEBUG"]]
         )
-        debug_directories = context.object(
-            pe_table_name + constants.BANG + "array",
-            layer_name=vlayer.name,
-            offset=address + debug_data_directory.VirtualAddress,
-            subtype=debug_directory_type,
-            count=min(
-                debug_data_directory.Size // debug_directory_type.size,
-                MAX_DEBUG_DIRECTORIES,
-            ),
-        )
-        for debug_directory in debug_directories:
+        for debug_entry in getattr(pe_obj, "DIRECTORY_ENTRY_DEBUG", []):
+            debug_directory = debug_entry.struct
             if (
-                debug_directory.Type == IMAGE_DEBUG_TYPE_CODEVIEW
+                debug_directory.Type == pefile.DEBUG_TYPE["IMAGE_DEBUG_TYPE_CODEVIEW"]
                 and debug_directory.AddressOfRawData
                 and debug_directory.SizeOfData
             ):
-                record_offset = address + debug_directory.AddressOfRawData
-                return record_offset, vlayer.read(
-                    record_offset,
-                    min(debug_directory.SizeOfData, MAX_CODEVIEW_RECORD_SIZE),
-                )
+                # pefile parses the CodeView record (debug_entry.entry) from
+                # PointerToRawData, a file offset, which in an image mapped in
+                # memory does not necessarily hold the record; it is read from
+                # its RVA instead
+                try:
+                    return address + debug_directory.AddressOfRawData, pe_obj.get_data(
+                        debug_directory.AddressOfRawData, debug_directory.SizeOfData
+                    )
+                except pefile.PEFormatError:
+                    return None
         return None
 
     def method_low_stub_offset(

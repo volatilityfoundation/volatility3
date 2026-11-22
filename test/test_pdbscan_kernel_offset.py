@@ -33,16 +33,33 @@ def pe_image(pdb_name: bytes, guid: uuid.UUID, magic: int = 0x20B) -> bytes:
     # IMAGE_FILE_HEADER.Machine: AMD64 for PE32+, i386 for PE32
     struct.pack_into("<H", image, nt_header + 4, 0x8664 if magic == 0x20B else 0x14C)
     optional_header = nt_header + 0x18
+    optional_header_size = 0xF0 if magic == 0x20B else 0xE0
+    # IMAGE_FILE_HEADER.SizeOfOptionalHeader
+    struct.pack_into("<H", image, nt_header + 0x14, optional_header_size)
     struct.pack_into("<H", image, optional_header, magic)
+    # SizeOfImage and SizeOfHeaders: a single page with no sections
+    struct.pack_into("<II", image, optional_header + 0x38, len(image), len(image))
     rva_count_offset = optional_header + (0x6C if magic == 0x20B else 0x5C)
     struct.pack_into("<I", image, rva_count_offset, 16)
     debug_directory, codeview = 0x400, 0x500
     record = b"RSDS" + guid.bytes_le + struct.pack("<I", 1) + pdb_name + b"\x00"
     struct.pack_into("<II", image, rva_count_offset + 4 + 8 * 6, debug_directory, 28)
     # IMAGE_DEBUG_DIRECTORY: Characteristics, TimeDateStamp, versions, Type,
-    # SizeOfData, AddressOfRawData, PointerToRawData
+    # SizeOfData, AddressOfRawData, PointerToRawData. As in mapped images whose
+    # file and section alignments differ, the file offset does not hold the
+    # record.
     struct.pack_into(
-        "<IIHHIIII", image, debug_directory, 0, 0, 0, 0, 2, len(record), codeview, 0
+        "<IIHHIIII",
+        image,
+        debug_directory,
+        0,
+        0,
+        0,
+        0,
+        2,
+        len(record),
+        codeview,
+        codeview + 0x100,
     )
     image[codeview : codeview + len(record)] = record
     return bytes(image)
