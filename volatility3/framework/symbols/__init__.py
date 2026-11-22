@@ -143,16 +143,18 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             tables = self._dict.keys()
         for table_name in tables:
             table = self._dict[table_name]
-            if not table.producer:
+            # Native tables, like the one VmwareLayer adds, have no producer
+            table_producer = getattr(table, "producer", None)
+            if not table_producer:
                 vollog.debug(
                     f"Symbol table {table_name} could not be validated because no producer metadata was found"
                 )
                 continue
-            if table.producer.name == producer:
+            if table_producer.name == producer:
                 # Run the verification
                 if not validator(
-                    table.producer.version,
-                    table.producer.datetime,
+                    table_producer.version,
+                    table_producer.datetime,
                 ):
                     vollog.debug(f"Symbol table {table_name} does not pass validator")
                     return False
