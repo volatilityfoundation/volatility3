@@ -8,7 +8,7 @@ import datetime
 import struct
 from typing import List
 
-from volatility3.framework import constants, renderers, symbols, interfaces
+from volatility3.framework import constants, renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.layers import scanners
@@ -21,8 +21,8 @@ from volatility3.plugins.linux import pslist
 class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Recovers bash command history from memory."""
 
-    _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 2)
+    _required_framework_version = (2, 29, 0)
+    _version = (1, 0, 3)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -58,25 +58,23 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
             ),
         ]
 
-    def _generator(self, tasks):
-        vmlinux = self.context.modules[self.config["kernel"]]
-        is_32bit = not symbols.symbol_table_is_64bit(
-            context=self.context, symbol_table_name=vmlinux.symbol_table_name
-        )
-        if is_32bit:
-            pack_format = "I"
-            bash_json_file = "bash32"
-        else:
-            pack_format = "Q"
-            bash_json_file = "bash64"
-
+    def _bash_symbols(self, pointer_size):
+        """The hist_entry symbol table for a userland pointer size (4 or 8) and its
+        timestamp offset."""
         bash_table_name = bash.BashIntermedSymbols.create(
-            self.context, self.config_path, "linux", bash_json_file
+            self.context,
+            self.config_path,
+            "linux",
+            "bash32" if pointer_size == 4 else "bash64",
         )
-
         ts_offset = self.context.symbol_space.get_type(
             bash_table_name + constants.BANG + "hist_entry"
         ).relative_child_offset("timestamp")
+        return bash_table_name, ts_offset
+
+    def _generator(self, tasks):
+        # hist_entry holds pointers, so its layout follows the process, not the kernel
+        bash_symbols = {}
 
         for task in tasks:
             task_name = utility.array_to_string(task.comm)
@@ -88,6 +86,12 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 continue
 
             proc_layer = self.context.layers[proc_layer_name]
+
+            pointer_size = task.get_user_pointer_size()
+            if pointer_size not in bash_symbols:
+                bash_symbols[pointer_size] = self._bash_symbols(pointer_size)
+            bash_table_name, ts_offset = bash_symbols[pointer_size]
+            pack_format = "I" if pointer_size == 4 else "Q"
 
             bang_addrs = []
 
