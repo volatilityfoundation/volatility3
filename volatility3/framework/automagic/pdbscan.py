@@ -68,6 +68,11 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 component=scanners.BytesScanner,
                 version=(1, 0, 0),
             ),
+            requirements.VersionRequirement(
+                name="pdb_signature_scanner",
+                component=pdbutil.PdbSignatureScanner,
+                version=(1, 0, 0),
+            ),
         ]
 
     def find_virtual_layers_from_req(
