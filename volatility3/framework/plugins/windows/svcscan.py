@@ -35,7 +35,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
     """Scans for windows services."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (4, 0, 0)
+    _version = (4, 0, 1)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -301,7 +301,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
         else:
             service_tag = b"sErv"
 
-        seen = []
+        seen = set()
 
         for task in pslist.PsList.list_processes(
             context,
@@ -357,9 +357,12 @@ class SvcScan(interfaces.plugins.PluginInterface):
                         proc_layer_name,
                         offset,
                     ):
-                        if service_record in seen:
+                        # Compare by the record's offset: a tuple holding an absent
+                        # value never equals another, even for the same record
+                        record_offset = int(service_record[0])
+                        if record_offset in seen:
                             break
-                        seen.append(service_record)
+                        seen.add(record_offset)
                         yield service_record
 
     @classmethod
