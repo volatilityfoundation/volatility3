@@ -9,16 +9,20 @@ based scanner for use within the framework by calling :func:`~volatility3.framew
 """
 
 import contextlib
+import io
 import logging
 import math
 import os
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
+import pefile
+
 from volatility3.framework import constants, exceptions, interfaces, layers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, scanners
-from volatility3.framework.symbols import native
+from volatility3.framework.symbols import intermed, native
 from volatility3.framework.symbols.windows import pdbutil
+from volatility3.framework.symbols.windows.extensions import pe
 
 if __name__ == "__main__":
     import sys
@@ -48,8 +52,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     """
 
     priority = 30
-    max_pdb_size = 0x400000
     exclusion_list = ["linux", "mac"]
+    _pe_table_name: Optional[str] = None
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -62,6 +66,11 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             requirements.VersionRequirement(
                 name="bytes_scanner",
                 component=scanners.BytesScanner,
+                version=(1, 0, 0),
+            ),
+            requirements.VersionRequirement(
+                name="pdb_signature_scanner",
+                component=pdbutil.PdbSignatureScanner,
                 version=(1, 0, 0),
             ),
         ]
@@ -365,32 +374,95 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         address: int,
         progress_callback: constants.ProgressCallback = None,
     ) -> Optional[ValidKernelType]:
-        """Scans a virtual address."""
-        # Scan a few megs of the virtual space at the location to see if they're potential kernels
+        """Checks whether a kernel image starts at a virtual address.
 
-        valid_kernel: Optional[ValidKernelType] = None
+        The image's own PE debug directory names its PDB, so the CodeView
+        record is read directly instead of scanning the following memory,
+        which could reach into the next image (e.g. from hal.dll into
+        ntoskrnl)."""
         kernel_pdb_names = [
             bytes(name + ".pdb", "utf-8")
             for name in constants.windows.KERNEL_MODULE_NAMES
         ]
-
-        virtual_layer_name = vlayer.name
         with contextlib.suppress(exceptions.InvalidAddressException):
-            if vlayer.read(address, 0x2) == b"MZ":
-                res = list(
-                    pdbutil.PDBUtility.pdbname_scan(
-                        ctx=context,
-                        layer_name=vlayer.name,
-                        page_size=vlayer.page_size,
-                        pdb_names=kernel_pdb_names,
-                        progress_callback=progress_callback,
-                        start=address,
-                        end=address + self.max_pdb_size,
-                    )
+            if vlayer.read(address, 0x2) != b"MZ":
+                return None
+            record = self._codeview_record(context, vlayer, address)
+            if record is None:
+                return None
+            record_offset, data = record
+            for guid, age, pdb_name, signature_offset in pdbutil.PdbSignatureScanner(
+                kernel_pdb_names
+            )(data, record_offset):
+                if signature_offset != record_offset:
+                    continue
+                return (
+                    vlayer.name,
+                    address,
+                    {
+                        "GUID": guid,
+                        "age": age,
+                        "pdb_name": str(pdb_name, "utf-8"),
+                        "signature_offset": signature_offset,
+                        "mz_offset": address,
+                    },
                 )
-                if res:
-                    valid_kernel = (virtual_layer_name, address, res[0])
-        return valid_kernel
+        return None
+
+    def _get_pe_table_name(self, context: interfaces.context.ContextInterface) -> str:
+        """Returns the name of the PE symbol table, loading it into the
+        context the first time it is needed."""
+        if (
+            self._pe_table_name is None
+            or self._pe_table_name not in context.symbol_space
+        ):
+            self._pe_table_name = intermed.IntermediateSymbolTable.create(
+                context, self.config_path, "windows", "pe", class_types=pe.class_types
+            )
+        return self._pe_table_name
+
+    def _codeview_record(
+        self,
+        context: interfaces.context.ContextInterface,
+        vlayer: interfaces.layers.DataLayerInterface,
+        address: int,
+    ) -> Optional[Tuple[int, bytes]]:
+        """Returns the virtual offset and bytes of the CodeView debug record of
+        the PE image mapped at address, located through its debug directory."""
+        dos_header = context.object(
+            self._get_pe_table_name(context) + constants.BANG + "_IMAGE_DOS_HEADER",
+            layer_name=vlayer.name,
+            offset=address,
+        )
+        pe_data = io.BytesIO()
+        try:
+            for offset, data in dos_header.reconstruct():
+                pe_data.seek(offset)
+                pe_data.write(data)
+            pe_obj = pefile.PE(data=pe_data.getvalue(), fast_load=True)
+        except (ValueError, pefile.PEFormatError):
+            return None
+        pe_obj.parse_data_directories(
+            [pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_DEBUG"]]
+        )
+        for debug_entry in getattr(pe_obj, "DIRECTORY_ENTRY_DEBUG", []):
+            debug_directory = debug_entry.struct
+            if (
+                debug_directory.Type == pefile.DEBUG_TYPE["IMAGE_DEBUG_TYPE_CODEVIEW"]
+                and debug_directory.AddressOfRawData
+                and debug_directory.SizeOfData
+            ):
+                # pefile parses the CodeView record (debug_entry.entry) from
+                # PointerToRawData, a file offset, which in an image mapped in
+                # memory does not necessarily hold the record; it is read from
+                # its RVA instead
+                try:
+                    return address + debug_directory.AddressOfRawData, pe_obj.get_data(
+                        debug_directory.AddressOfRawData, debug_directory.SizeOfData
+                    )
+                except pefile.PEFormatError:
+                    return None
+        return None
 
     def method_low_stub_offset(
         self,
