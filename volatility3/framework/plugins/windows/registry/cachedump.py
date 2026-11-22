@@ -7,11 +7,11 @@ from typing import Tuple
 
 try:
     from Crypto.Cipher import ARC4, AES
-    from Crypto.Hash import HMAC
+    from Crypto.Hash import HMAC, MD5
 except ImportError:
     # Debian/Ubuntu ship pycryptodome under Cryptodome namespace
     from Cryptodome.Cipher import ARC4, AES
-    from Cryptodome.Hash import HMAC
+    from Cryptodome.Hash import HMAC, MD5
 
 from volatility3.framework import interfaces, renderers, exceptions
 from volatility3.framework.configuration import requirements
@@ -58,7 +58,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
     @classmethod
     def decrypt_hash(cls, edata: bytes, nlkm: bytes, ch, xp: bool):
         if xp:
-            hmac_md5 = HMAC.new(nlkm, ch)
+            hmac_md5 = HMAC.new(nlkm, ch, digestmod=MD5)
             rc4key = hmac_md5.digest()
             rc4 = ARC4.new(rc4key)
             data = rc4.encrypt(edata)  # lgtm [py/weak-cryptographic-algorithm]
