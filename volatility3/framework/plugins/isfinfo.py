@@ -153,8 +153,10 @@ class IsfInfo(plugins.PluginInterface):
                 constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME
             )
             cache = symbol_cache.SqliteCache(identifiers_path)
-            valid = "Unknown"
             for identifier, location in cache.get_identifier_dictionary().items():
+                # Reset per file: otherwise a cached validation leaks into every
+                # following entry, so the column depends on cache iteration order.
+                valid = "Unknown"
                 (
                     num_bases,
                     num_types,
