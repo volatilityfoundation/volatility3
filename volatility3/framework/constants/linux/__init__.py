@@ -430,6 +430,9 @@ NM_TYPES_DESC = {
     "?": "Symbol type is unknown",
 }
 
+# Superblock magic number of hugetlbfs, include/uapi/linux/magic.h
+HUGETLBFS_MAGIC = 0x958458F6
+
 # VMCOREINFO
 VMCOREINFO_MAGIC = b"VMCOREINFO\x00"
 # Aligned to 4 bytes. See storenote() in kernels < 4.19 or append_kcore_note() in kernels >= 4.19

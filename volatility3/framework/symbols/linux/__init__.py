@@ -730,6 +730,24 @@ class IDStorage(ABC):
 
         return nodep
 
+    def _iter_slot(self, slot, height) -> Iterator[int]:
+        """Yields the entries found through a non-empty slot of a node
+
+        Args:
+            slot: The slot value
+            height: The height of the node the slot belongs to
+
+        Yields:
+            A tree entry pointer
+        """
+        nodep = self._slot_to_nodep(slot)
+
+        if height == 1:
+            if self.is_valid_node(nodep):
+                yield nodep
+        else:
+            yield from self._iter_node(nodep, height - 1)
+
     def _iter_node(self, nodep, height) -> Iterator[int]:
         node = self.nodep_to_node(nodep)
         node_slots = node.slots
@@ -742,13 +760,7 @@ class IDStorage(ABC):
             if slot == 0:
                 continue
 
-            nodep = self._slot_to_nodep(slot)
-
-            if height == 1:
-                if self.is_valid_node(nodep):
-                    yield nodep
-            else:
-                yield from self._iter_node(nodep, height - 1)
+            yield from self._iter_slot(slot, height)
 
     def get_entries(self, root: interfaces.objects.ObjectInterface) -> Iterator[int]:
         """Walks the tree data structure
@@ -783,6 +795,7 @@ class IDStorage(ABC):
 class XArray(IDStorage):
     XARRAY_TAG_MASK = 3
     XARRAY_TAG_INTERNAL = 2
+    XARRAY_MAX_INTERNAL_ENTRY = 4096
 
     def get_tree_height(self, treep) -> int:
         return 0
@@ -817,6 +830,20 @@ class XArray(IDStorage):
     def is_valid_node(self, nodep) -> bool:
         # It should have the tag mask clear
         return not self.is_node_tagged(nodep)
+
+    def _iter_slot(self, slot, height) -> Iterator[int]:
+        # include/linux/xarray.h xa_is_node(). The other internal entries are sibling, retry and
+        # zero entries, which are small numbers and never point to anything.
+        if self.node_is_internal(slot):
+            if slot > self.XARRAY_MAX_INTERNAL_ENTRY and height > 1:
+                yield from self._iter_node(self._slot_to_nodep(slot), height - 1)
+            return
+
+        # Any other entry is returned at any level, not only in leaf nodes. An entry of order
+        # >= XA_CHUNK_SHIFT, such as a 2 MiB THP, is in the first slot of an inner node and the
+        # slots after it hold sibling entries. Value entries are tagged and skipped here.
+        if self.is_valid_node(slot):
+            yield slot
 
 
 class RadixTree(IDStorage):

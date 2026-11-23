@@ -2655,6 +2655,15 @@ class inode(objects.StructType):
 
         yield from page_cache.get_cached_pages()
 
+    def _hugetlb_index_in_huge_pages(self) -> bool:
+        """Whether the page cache index of this inode counts huge pages instead of pages"""
+        if self.i_sb.s_magic != linux_constants.HUGETLBFS_MAGIC:
+            return False
+
+        # Linux 6.7 changed the index of hugetlbfs to pages and removed hugetlb_basepage_index()
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        return vmlinux.has_symbol("hugetlb_basepage_index")
+
     def get_contents(self) -> Iterable[Tuple[int, bytes]]:
         """Get the inode cached pages from the page cache
 
@@ -2662,6 +2671,7 @@ class inode(objects.StructType):
             page_index (int): The page index in the Tree. File offset is page_index * PAGE_SIZE.
             page_content (bytes): The page content
         """
+        huge_page_index = self._hugetlb_index_in_huge_pages()
         for page_obj in self.get_pages():
             if page_obj.mapping != self.i_mapping:
                 vollog.warning(
@@ -2669,9 +2679,17 @@ class inode(objects.StructType):
                 )
                 continue
             page_index = int(page_obj.index)
-            page_content = page_obj.get_content()
-            if page_content:
-                yield page_index, page_content
+            page_size = page_obj.get_page_size()
+            nr_pages = page_obj.get_folio_nr_pages()
+            if huge_page_index:
+                page_index *= nr_pages
+            # A large folio is cached as one entry, but holds 2^order consecutive pages
+            for i in range(nr_pages):
+                if i and (page_index + i) * page_size >= self.i_size:
+                    break
+                page_content = page_obj.get_content(i)
+                if page_content:
+                    yield page_index + i, page_content
 
 
 class address_space(objects.StructType):
@@ -2804,8 +2822,65 @@ class page(objects.StructType):
 
         return page_paddr
 
-    def get_content(self) -> Union[bytes, None]:
+    def get_page_size(self) -> int:
+        """Returns the size of a page of the layer the page is in"""
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        return vmlinux.context.layers[vmlinux.layer_name].page_size
+
+    def get_folio_nr_pages(self) -> int:
+        """Returns the number of pages of the large folio this page is the head of
+
+        Returns:
+            The number of pages, 1 if the page is not the head of a compound page
+        """
+        head_bit = self.pageflags_enum.get("PG_head")
+        flags = getattr(self.flags, "f", self.flags)
+        if head_bit is None or not flags & (1 << head_bit):
+            return 1
+
+        # The size is kept in the first tail page, in a member that depends on the kernel version
+        vmlinux = linux.LinuxUtilities.get_module_from_volobj_type(self._context, self)
+        try:
+            if vmlinux.has_type("folio"):
+                folio = vmlinux.object("folio", offset=self.vol.offset, absolute=True)
+                if folio.has_member("_nr_pages"):
+                    return self._checked_nr_pages(folio._nr_pages)
+                if folio.has_member("_folio_nr_pages"):
+                    return self._checked_nr_pages(folio._folio_nr_pages)
+                if folio.has_member("_folio_order"):
+                    return self._checked_nr_pages(1 << folio._folio_order)
+                if folio.has_member("_flags_1"):
+                    # The order is in the low byte of the flags of the first tail page
+                    return self._checked_nr_pages(1 << (int(folio._flags_1) & 0xFF))
+
+            tail = vmlinux.object(
+                "page",
+                offset=self.vol.offset + vmlinux.get_type("page").size,
+                absolute=True,
+            )
+            if tail.has_member("compound_order"):
+                return self._checked_nr_pages(1 << tail.compound_order)
+        except exceptions.InvalidAddressException:
+            vollog.debug(
+                "Unable to read the size of the compound page at 0x%x", self.vol.offset
+            )
+
+        return 1
+
+    @staticmethod
+    def _checked_nr_pages(nr_pages: int) -> int:
+        # A power of two, at most a 1 GiB hugetlb page
+        nr_pages = int(nr_pages)
+        if nr_pages > 0 and nr_pages & (nr_pages - 1) == 0 and nr_pages <= 1 << 18:
+            return nr_pages
+
+        return 1
+
+    def get_content(self, subpage: int = 0) -> Union[bytes, None]:
         """Returns the page content
+
+        Args:
+            subpage: Which page of a large folio to return, 0 for the head page
 
         Returns:
             The page content
@@ -2820,6 +2895,8 @@ class page(objects.StructType):
         if not page_paddr:
             return None
 
+        # The pages of a folio are physically contiguous
+        page_paddr += subpage * vmlinux_layer.page_size
         if not physical_layer.is_valid(page_paddr, length=vmlinux_layer.page_size):
             vollog.debug(
                 "Unable to read page 0x%x content at 0x%x", self.vol.offset, page_paddr
