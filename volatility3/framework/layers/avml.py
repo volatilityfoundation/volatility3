@@ -110,10 +110,13 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
 
             if magic not in [0x4C4D5641] or version != 2:
                 raise exceptions.LayerException("File not completely in AVML format")
+            max_stream_size = (
+                (end - start + 1) + 10 + 8 * ((end - start) // 0x10000 + 1)
+            )
             chunk_data = base_layer.read(
                 offset + avml_header_size,
                 min(
-                    end - start,
+                    max_stream_size,
                     base_layer.maximum_address - (offset + avml_header_size),
                 ),
             )
@@ -157,6 +160,10 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
                 frame_header = data[offset : offset + frame_header_len]
                 frame_header_val = struct.unpack("<L", frame_header)[0]
                 frame_type, frame_size = frame_header_val & 0xFF, frame_header_val >> 8
+                if offset + frame_header_len + frame_size > len(data):
+                    raise exceptions.LayerException(
+                        f"Truncated snappy frame at offset: {offset}"
+                    )
                 if frame_type == 0xFF:
                     if (
                         data[
@@ -194,6 +201,10 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
                         f"Unskippable chunk of type {frame_type} found: {offset}"
                     )
                 offset += frame_header_len + frame_size
+            else:
+                raise exceptions.LayerException(
+                    f"Snappy stream ended after {decompressed_len} of {expected_length + 1} bytes: {offset}"
+                )
         return segments, offset
 
     def _decode_data(
