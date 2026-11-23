@@ -283,7 +283,9 @@ class Handles(interfaces.plugins.PluginInterface):
                     continue
 
                 try:
-                    if item.TypeIndex != 0x0:
+                    # In Windows 10+, TypeIndex is encoded with ObHeaderCookie and can evaluate to 0x0
+                    # for valid objects; object type validity is resolved by get_object_type().
+                    if item.TypeIndex is not None:
                         yield item
                 except AttributeError:
                     if item.Type.Name:
