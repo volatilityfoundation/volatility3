@@ -1471,3 +1471,32 @@ class TestWindowsVirtMap:
         )
         for expected_row in expected_rows:
             assert test_volatility.match_output_row(expected_row, json_out)
+
+
+class TestWindowsShutdown:
+    def test_windows_lastshutdown(self, volatility, python, image):
+        image = WindowsSamples.WINDOWS10_GENERIC.value.path
+
+        rc, out, _err = test_volatility.runvol_plugin(
+            "windows.registry.shutdown",
+            image,
+            volatility,
+            python,
+            globalargs=("-r", "json"),
+        )
+
+        assert rc == 0
+        json_out = json.loads(out)
+        assert isinstance(json_out, list)
+        assert len(json_out) > 0
+        expected_keys = {"Registry Key", "Last Shutdown Time"}
+
+        #Here I controll for every row in the output if there are
+        #the registry key and the value other than controlling
+        #if the output actually exists and is the right output to shutdown plugin
+        for row in json_out:
+            assert isinstance(row, dict)
+            assert expected_keys.issubset(row.keys())
+            assert row["Registry Key"]
+            assert row["Last Shutdown Time"]
+            assert "ControlSet" in row["Registry Key"]
