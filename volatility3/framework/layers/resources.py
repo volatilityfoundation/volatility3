@@ -186,9 +186,10 @@ class ResourceAccessor:
                 if not os.path.exists(temp_filename):
                     vollog.debug(f"Caching file at: {temp_filename}")
                     cache_file_size = -1
+                    partial_filename = f"{temp_filename}.{os.getpid()}.part"
 
                     try:
-                        with open(temp_filename, "wb") as cache_file:
+                        with open(partial_filename, "wb") as cache_file:
                             count = 0
                             block = fp.read(block_size)
                             while block:
@@ -204,8 +205,9 @@ class ResourceAccessor:
                             cache_file_size = cache_file.tell()
                     finally:
                         if cache_file_size < content_length:
-                            os.remove(temp_filename)
+                            os.remove(partial_filename)
                             raise ValueError("Cached file did not download completely")
+                    os.replace(partial_filename, temp_filename)
                 else:
                     vollog.debug(
                         f"Trying to use already cached file at: {temp_filename}"

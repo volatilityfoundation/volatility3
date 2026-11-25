@@ -25,7 +25,7 @@ vollog = logging.getLogger(__name__)
 class PDBUtility(interfaces.configuration.VersionableInterface):
     """Class to handle and manage all getting symbols based on MZ header"""
 
-    _version = (1, 0, 1)
+    _version = (1, 0, 2)
     _required_framework_version = (2, 0, 0)
 
     @classmethod
@@ -252,10 +252,11 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
             potential_output_filename = os.path.join(
                 path, "windows", filter_string + ".json.xz"
             )
+            partial_output_filename = f"{potential_output_filename}.{os.getpid()}.part"
             data_written = False
             try:
                 os.makedirs(os.path.dirname(potential_output_filename), exist_ok=True)
-                with lzma.open(potential_output_filename, "w") as of:
+                with lzma.open(partial_output_filename, "w") as of:
                     # Once we haven't thrown an error, do the computation
                     filename = pdbconv.PdbRetreiver().retreive_pdb(
                         guid + str(age),
@@ -287,6 +288,8 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
                             "Symbol file could not be downloaded from remote server"
                             + (" " * 100)
                         )
+                if data_written:
+                    os.replace(partial_output_filename, potential_output_filename)
                 break
             except PermissionError:
                 vollog.debug(
@@ -295,8 +298,8 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
                 continue
             finally:
                 # If something else failed, removed the symbol file so we don't pick it up in the future
-                if not data_written and os.path.exists(potential_output_filename):
-                    os.remove(potential_output_filename)
+                if not data_written and os.path.exists(partial_output_filename):
+                    os.remove(partial_output_filename)
                 # Clear out all the temporary file if we constructed one
                 for filename in tmp_files:
                     try:
