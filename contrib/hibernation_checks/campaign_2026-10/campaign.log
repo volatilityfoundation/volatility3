@@ -1,0 +1,284 @@
+2026-10-13 17:08:51 ===== campaign start: 3 rounds, builds: 21h2 22h2 23h2 24h2 25h2 26h1
+2026-10-13 17:08:51 branch tree: PACKAGE_VERSION = (
+2026-10-13 17:08:51 python: Python 3.13.5 ; xpress-lz77: Version: 1.0.1
+2026-10-13 17:08:51 kernel builds (ntoskrnl ProductVersion): 21h2=22000.318 22h2=22621.382 23h2=22621.2428 24h2=26100.1742 25h2=26100.6584 26h1=28000.1340
+2026-10-13 17:16:21 21h2 r1 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 17:16:29 21h2 r1 hib_check: 15601 sets, 249598 pages | header qwords equal to that page count: none | equal to its length in bytes: none
+2026-10-13 17:19:08 21h2 r1 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 7ed6fe0cbec3
+2026-10-13 17:26:38 22h2 r1 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 17:26:49 22h2 r1 hib_check: 16546 sets, 264758 pages | header qwords equal to that page count: none | equal to its length in bytes: none
+2026-10-13 17:29:21 22h2 r1 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: efc069df043f
+2026-10-13 17:36:51 23h2 r1 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 17:37:03 23h2 r1 hib_check: 16979 sets, 271664 pages | header qwords equal to that page count: 0x230 | equal to its length in bytes: 0x240
+2026-10-13 17:39:36 23h2 r1 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 6f9299f109cb
+2026-10-13 17:47:06 24h2 r1 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 17:47:18 24h2 r1 hib_check: 20143 sets, 322278 pages | header qwords equal to that page count: 0x238 | equal to its length in bytes: 0x248
+2026-10-13 17:50:11 24h2 r1 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 417096f0baca
+2026-10-13 17:57:48 25h2 r1 generate: signature=HIBR size=3432452096 (domain still present)
+2026-10-13 17:58:03 25h2 r1 hib_check: 21688 sets, 347002 pages | header qwords equal to that page count: 0x238 | equal to its length in bytes: 0x248
+2026-10-13 18:01:01 25h2 r1 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 981d21711874
+2026-10-13 18:08:32 26h1 r1 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 18:08:49 26h1 r1 hib_check: 24474 sets, 391575 pages | header qwords equal to that page count: 0x238 | equal to its length in bytes: 0x248
+2026-10-13 18:12:11 26h1 r1 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 3247d6a5d81f
+2026-10-13 18:19:41 21h2 r2 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 18:19:52 21h2 r2 hib_check: 15601 sets, 249598 pages | header qwords equal to that page count: none | equal to its length in bytes: none
+2026-10-13 18:22:31 21h2 r2 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 7ed6fe0cbec3
+2026-10-13 18:30:01 22h2 r2 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 18:30:12 22h2 r2 hib_check: 16546 sets, 264758 pages | header qwords equal to that page count: none | equal to its length in bytes: none
+2026-10-13 18:32:45 22h2 r2 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: efc069df043f
+2026-10-13 18:40:14 23h2 r2 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 18:40:24 23h2 r2 hib_check: 16979 sets, 271664 pages | header qwords equal to that page count: 0x230 | equal to its length in bytes: 0x240
+2026-10-13 18:42:57 23h2 r2 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 6f9299f109cb
+2026-10-13 18:50:27 24h2 r2 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 18:50:40 24h2 r2 hib_check: 20143 sets, 322278 pages | header qwords equal to that page count: 0x238 | equal to its length in bytes: 0x248
+2026-10-13 18:53:32 24h2 r2 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 417096f0baca
+2026-10-13 19:01:11 25h2 r2 generate: signature=HIBR size=3432452096 (domain still present)
+2026-10-13 19:01:26 25h2 r2 hib_check: 21688 sets, 347002 pages | header qwords equal to that page count: 0x238 | equal to its length in bytes: 0x248
+2026-10-13 19:04:24 25h2 r2 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 981d21711874
+2026-10-13 19:11:54 26h1 r2 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 19:12:11 26h1 r2 hib_check: 24474 sets, 391575 pages | header qwords equal to that page count: 0x238 | equal to its length in bytes: 0x248
+2026-10-13 19:15:35 26h1 r2 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 3247d6a5d81f
+2026-10-13 19:23:05 21h2 r3 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 19:23:15 21h2 r3 hib_check: 15601 sets, 249598 pages | header qwords equal to that page count: none | equal to its length in bytes: none
+2026-10-13 19:25:54 21h2 r3 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 7ed6fe0cbec3
+2026-10-13 19:33:24 22h2 r3 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 19:33:35 22h2 r3 hib_check: 16546 sets, 264758 pages | header qwords equal to that page count: none | equal to its length in bytes: none
+2026-10-13 19:36:07 22h2 r3 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: efc069df043f
+2026-10-13 19:43:36 23h2 r3 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 19:43:48 23h2 r3 hib_check: 16979 sets, 271664 pages | header qwords equal to that page count: 0x230 | equal to its length in bytes: 0x240
+2026-10-13 19:46:21 23h2 r3 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 6f9299f109cb
+2026-10-13 19:53:51 24h2 r3 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 19:54:02 24h2 r3 hib_check: 20143 sets, 322278 pages | header qwords equal to that page count: 0x238 | equal to its length in bytes: 0x248
+2026-10-13 19:56:59 24h2 r3 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 417096f0baca
+2026-10-13 20:04:36 25h2 r3 generate: signature=HIBR size=3432452096 (domain still present)
+2026-10-13 20:04:51 25h2 r3 hib_check: 21688 sets, 347002 pages | header qwords equal to that page count: 0x238 | equal to its length in bytes: 0x248
+2026-10-13 20:07:49 25h2 r3 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 981d21711874
+2026-10-13 20:15:19 26h1 r3 generate: signature=HIBR size=2573459456 (domain still present)
+2026-10-13 20:15:37 26h1 r3 hib_check: 24474 sets, 391575 pages | header qwords equal to that page count: 0x238 | equal to its length in bytes: 0x248
+2026-10-13 20:18:56 26h1 r3 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 3247d6a5d81f
+2026-10-13 20:18:56 ===== round-1 files: second run of the fix (determinism), the original code, and the wrong --version
+2026-10-13 20:21:36 21h2 r1 dump[fixed-run2] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 7ed6fe0cbec3
+2026-10-13 20:21:36 21h2 r1 determinism: run1 and run2 outputs identical (sha256)
+2026-10-13 20:24:18 21h2 r1 dump[orig-v0] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 7ed6fe0cbec3
+2026-10-13 20:24:22 21h2 r1 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:24:29 21h2 r1 dump[fixed-wrongversion] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:27:02 22h2 r1 dump[fixed-run2] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: efc069df043f
+2026-10-13 20:27:02 22h2 r1 determinism: run1 and run2 outputs identical (sha256)
+2026-10-13 20:29:37 22h2 r1 dump[orig-v0] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: efc069df043f
+2026-10-13 20:29:42 22h2 r1 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:29:49 22h2 r1 dump[fixed-wrongversion] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:32:26 23h2 r1 dump[fixed-run2] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 6f9299f109cb
+2026-10-13 20:32:26 23h2 r1 determinism: run1 and run2 outputs identical (sha256)
+2026-10-13 20:35:02 23h2 r1 dump[orig-v0] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 6f9299f109cb
+2026-10-13 20:35:07 23h2 r1 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:35:14 23h2 r1 dump[fixed-wrongversion] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:38:07 24h2 r1 dump[fixed-run2] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 417096f0baca
+2026-10-13 20:38:07 24h2 r1 determinism: run1 and run2 outputs identical (sha256)
+2026-10-13 20:38:14 24h2 r1 dump[orig-v0] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:38:18 24h2 r1 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:38:25 24h2 r1 dump[fixed-wrongversion] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:41:23 25h2 r1 dump[fixed-run2] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 981d21711874
+2026-10-13 20:41:24 25h2 r1 determinism: run1 and run2 outputs identical (sha256)
+2026-10-13 20:41:30 25h2 r1 dump[orig-v0] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:41:34 25h2 r1 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:41:40 25h2 r1 dump[fixed-wrongversion] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:45:00 26h1 r1 dump[fixed-run2] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 3247d6a5d81f
+2026-10-13 20:45:00 26h1 r1 determinism: run1 and run2 outputs identical (sha256)
+2026-10-13 20:45:07 26h1 r1 dump[orig-v0] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:45:11 26h1 r1 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:45:18 26h1 r1 dump[fixed-wrongversion] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-13 20:45:18 ===== unit tests x5 (contrib/hibernation_checks, real decoder, real layer)
+2026-10-13 20:45:18 unit tests run 1: OK (Ran 19 tests)
+2026-10-13 20:45:19 unit tests run 2: OK (Ran 19 tests)
+2026-10-13 20:45:20 unit tests run 3: OK (Ran 19 tests)
+2026-10-13 20:45:20 unit tests run 4: OK (Ran 19 tests)
+2026-10-13 20:45:21 unit tests run 5: OK (Ran 19 tests)
+2026-10-13 20:45:21 ===== unit tests with the fix reverted (must fail with EOF Error)
+2026-10-13 20:45:21 unit tests, fix reverted: FAILED (errors=6) ; EOF Error lines: 6
+2026-10-13 20:45:22 unit tests, fix restored: OK
+2026-10-13 20:45:22 ===== ruff (same as .github/workflows/ruff.yaml)
+2026-10-13 20:45:22 ruff: ruff check (PR files) exit=0;ruff format (PR files) exit=0;ruff check (tree) exit=1;ruff format (tree) exit=1;
+2026-10-13 20:45:22 ===== campaign end
+2026-10-13 23:59:19 ===== round 0: the six files generated before the campaign (injected hybrid shutdown, logged-in session)
+2026-10-13 23:59:47 21h2 r0 file: signature=HIBR size=6433652736
+2026-10-14 00:00:23 21h2 r0 hib_check: 23h2 layout, kernel section: 18369 compressed sets | plain LZ77 ok=22 failed=0 | Huffman ok=18346 failed=1 (failed with the fixed 65536 size, ok with 
+2026-10-14 00:06:04 ===== NOTE: rounds 1-3 above are INVALID as generations: windows.hibernation.Info shows a SystemTime of 2026-09-26/27 (the date of the VM snapshots), i.e. the hiberfil.sys deleted by the ntfs-3g remove_hiberfile mount was re-created by Windows on the same clusters with its old content, and the Startup-folder hib.cmd never ran (desktop still shown after 7 min). Their logs are kept under _invalid-startup-script-method/, their files are deleted. Layout results on them still describe genuine files of each build (written at install time), but the generation is redone with the injected hybrid shutdown (campaign v2).
+2026-10-14 00:06:04 ===== v2 generation test on 26h1
+2026-10-14 00:06:30 21h2 r0 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: fc7a34d418ac
+2026-10-14 00:11:15 26h1 rt generate: ok=1 method=drakvuf:createproc signature=HIBR size=6433652736 sha256=3f8001f227cb SystemTime=  (xl create at UTC 2026-10-14 04:06:05)
+2026-10-14 00:12:40 21h2 r0 dump[fixed-run2] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: fc7a34d418ac
+2026-10-14 00:12:40 21h2 r0 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 00:14:16 ===== campaign v2 start: 3 rounds, builds: 21h2 22h2 23h2 24h2 25h2 26h1 (hybrid shutdown injected with DRAKVUF, one VM at a time)
+2026-10-14 00:18:53 21h2 r0 dump[orig-v0] --version 0: exit=1 ValueError: EOF Error | raw sha256: 8f95ccabec37
+2026-10-14 00:19:00 21h2 r0 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 00:19:07 21h2 r0 dump[fixed-wrongversion] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 00:19:12 21h2 r1 generate: ok=1 method=drakvuf:createproc signature=HIBR size=6433652736 sha256=dff5de4bd7e4 SystemTime=2026-10-14 02:17:00+00:00 (xl create at UTC 2026-10-14 04:14:16)
+2026-10-14 00:19:35 22h2 r0 file: signature=HIBR size=6433652736
+2026-10-14 00:19:50 21h2 r1 hib_check: layouts 23h2/24h2/24h2-early kernel = MATCH MISMATCH MISMATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=21 failed=0 | Huffman ok=18325 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 00:20:10 22h2 r0 hib_check: 23h2 layout, kernel section: 18572 compressed sets | plain LZ77 ok=23 failed=0 | Huffman ok=18548 failed=1 (failed with the fixed 65536 size, ok with 
+2026-10-14 00:25:50 22h2 r0 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: c5d80ba251b7
+2026-10-14 00:26:08 21h2 r1 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 015b3682b59e
+2026-10-14 00:31:25 22h2 r0 dump[fixed-run2] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: c5d80ba251b7
+2026-10-14 00:31:25 22h2 r0 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 00:32:27 21h2 r1 dump[fixed-run2] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 015b3682b59e
+2026-10-14 00:32:27 21h2 r1 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 00:37:07 22h2 r0 dump[orig-v0] --version 0: exit=1 ValueError: EOF Error | raw sha256: 6e8fb98fa07d
+2026-10-14 00:37:12 22h2 r0 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 00:37:19 22h2 r0 dump[fixed-wrongversion] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 00:37:47 23h2 r0 file: signature=HIBR size=6433652736
+2026-10-14 00:38:18 23h2 r0 hib_check: 23h2 layout, kernel section: 18437 compressed sets | plain LZ77 ok=23 failed=0 | Huffman ok=18413 failed=1 (failed with the fixed 65536 size, ok with 
+2026-10-14 00:38:43 21h2 r1 dump[orig-v0] --version 0: exit=1 ValueError: EOF Error | raw sha256: 5ec54262fc1d
+2026-10-14 00:38:49 21h2 r1 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 00:38:56 21h2 r1 dump[fixed-wrongversion] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 00:43:37 23h2 r0 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: be2d486ac0f5
+2026-10-14 00:48:58 23h2 r0 dump[fixed-run2] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: be2d486ac0f5
+2026-10-14 00:48:58 23h2 r0 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 00:54:25 23h2 r0 dump[orig-v0] --version 0: exit=1 ValueError: EOF Error | raw sha256: ff8e96fc6e7c
+2026-10-14 00:54:29 23h2 r0 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 00:54:36 23h2 r0 dump[fixed-wrongversion] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 00:55:04 24h2 r0 file: signature=HIBR size=6433652736
+2026-10-14 00:55:42 24h2 r0 hib_check: 24h2-early layout, kernel section: 19345 compressed sets | plain LZ77 ok=17 failed=0 | Huffman ok=19327 failed=1 (failed with the fixed 65536 size, ok
+2026-10-14 01:01:49 24h2 r0 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 81a91907b216
+2026-10-14 01:03:31 22h2 r1 generate: ok=0 method=drakvuf:shellexec signature=WAKE size=6433652736 sha256=70d18b2c779f SystemTime=none (xl create at UTC 2026-10-14 04:38:57)
+2026-10-14 01:03:31 22h2 r1 generate FAILED (no hybrid shutdown), the file is NOT used
+2026-10-14 01:08:04 24h2 r0 dump[fixed-run2] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 81a91907b216
+2026-10-14 01:08:04 24h2 r0 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 01:08:10 24h2 r0 dump[orig-v0] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:08:11 23h2 r1 generate: ok=1 method=drakvuf:createproc signature=HIBR size=6433652736 sha256=c71f4d1125ac SystemTime=2026-10-14 03:06:15+00:00 (xl create at UTC 2026-10-14 05:03:32)
+2026-10-14 01:08:14 24h2 r0 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:08:21 24h2 r0 dump[fixed-wrongversion] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:08:40 23h2 r1 hib_check: layouts 23h2/24h2/24h2-early kernel = MATCH MISMATCH MISMATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=23 failed=0 | Huffman ok=16622 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 01:08:58 25h2 r0 file: signature=HIBR size=8581136384
+2026-10-14 01:09:14 25h2 r0 hib_check: 24h2-early layout, kernel section: 21183 compressed sets | plain LZ77 ok=20748 failed=0 | Huffman ok=435 failed=0 (failed with the fixed 65536 size, o
+2026-10-14 01:12:21 25h2 r0 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 748c4b082f9c
+2026-10-14 01:14:12 23h2 r1 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 22d70faf5974
+2026-10-14 01:15:26 25h2 r0 dump[fixed-run2] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 748c4b082f9c
+2026-10-14 01:15:26 25h2 r0 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 01:15:32 25h2 r0 dump[orig-v0] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:15:37 25h2 r0 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:15:43 25h2 r0 dump[fixed-wrongversion] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:15:54 26h1 r0 file: signature=HIBR size=2573459456
+2026-10-14 01:16:07 26h1 r0 hib_check: 24h2-early layout, kernel section: 24307 compressed sets | plain LZ77 ok=23819 failed=0 | Huffman ok=488 failed=0 (failed with the fixed 65536 size, o
+2026-10-14 01:19:34 23h2 r1 dump[fixed-run2] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 22d70faf5974
+2026-10-14 01:19:34 23h2 r1 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 01:19:42 26h1 r0 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 3247d6a5d81f
+2026-10-14 01:23:24 26h1 r0 dump[fixed-run2] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 3247d6a5d81f
+2026-10-14 01:23:24 26h1 r0 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 01:23:31 26h1 r0 dump[orig-v0] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:23:35 26h1 r0 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:23:41 26h1 r0 dump[fixed-wrongversion] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:23:41 ===== round 0 end
+2026-10-14 01:25:06 23h2 r1 dump[orig-v0] --version 0: exit=1 ValueError: EOF Error | raw sha256: 43569349ec06
+2026-10-14 01:25:12 23h2 r1 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:25:19 23h2 r1 dump[fixed-wrongversion] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:30:01 24h2 r1 generate: ok=1 method=drakvuf:createproc signature=HIBR size=6433652736 sha256=47fa9a5e86af SystemTime=2026-10-14 03:28:05+00:00 (xl create at UTC 2026-10-14 05:25:20)
+2026-10-14 01:30:34 24h2 r1 hib_check: layouts 23h2/24h2/24h2-early kernel = MISMATCH MISMATCH MATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=18 failed=0 | Huffman ok=18682 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 01:36:37 24h2 r1 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: a77fe1aa63cc
+2026-10-14 01:42:40 24h2 r1 dump[fixed-run2] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: a77fe1aa63cc
+2026-10-14 01:42:40 24h2 r1 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 01:42:47 24h2 r1 dump[orig-v0] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:42:51 24h2 r1 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:42:57 24h2 r1 dump[fixed-wrongversion] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:48:30 25h2 r1 generate: ok=1 method=drakvuf:createproc signature=HIBR size=8581136384 sha256=561484b3ab84 SystemTime=2026-10-14 03:45:56+00:00 (xl create at UTC 2026-10-14 05:42:58)
+2026-10-14 01:48:45 25h2 r1 hib_check: layouts 23h2/24h2/24h2-early kernel = MISMATCH MISMATCH MATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=20709 failed=0 | Huffman ok=434 failed=0 (failed with the fixed 65536 size, ok with the size of the set: 0
+2026-10-14 01:51:20 25h2 r1 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: e1b884c68f9d
+2026-10-14 01:53:57 25h2 r1 dump[fixed-run2] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: e1b884c68f9d
+2026-10-14 01:53:57 25h2 r1 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 01:54:04 25h2 r1 dump[orig-v0] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:54:08 25h2 r1 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 01:54:14 25h2 r1 dump[fixed-wrongversion] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 02:05:15 26h1 r1 generate: ok=1 method=drakvuf(build 2):createproc signature=HIBR size=6433652736 sha256=67b8ab54e398 SystemTime=2026-10-14 04:03:05+00:00 (xl create at UTC 2026-10-14 05:54:15)
+2026-10-14 02:06:05 26h1 r1 hib_check: layouts 23h2/24h2/24h2-early kernel = MISMATCH MISMATCH MATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=16 failed=0 | Huffman ok=26771 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 02:13:54 26h1 r1 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 1e1b3d8da466
+2026-10-14 02:21:40 26h1 r1 dump[fixed-run2] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 1e1b3d8da466
+2026-10-14 02:21:40 26h1 r1 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 02:21:47 26h1 r1 dump[orig-v0] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 02:21:51 26h1 r1 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 02:21:58 26h1 r1 dump[fixed-wrongversion] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 02:26:38 21h2 r2 generate: ok=1 method=drakvuf:createproc signature=HIBR size=6433652736 sha256=f4e8b843b1f7 SystemTime=2026-10-14 04:24:40+00:00 (xl create at UTC 2026-10-14 06:21:58)
+2026-10-14 02:27:11 21h2 r2 hib_check: layouts 23h2/24h2/24h2-early kernel = MATCH MISMATCH MISMATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=22 failed=0 | Huffman ok=18378 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 02:33:15 21h2 r2 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: b27581cafefd
+2026-10-14 02:37:50 22h2 r2 generate: ok=1 method=drakvuf:createproc signature=HIBR size=6433652736 sha256=f4996bae0c35 SystemTime=2026-10-14 04:35:58+00:00 (xl create at UTC 2026-10-14 06:33:15)
+2026-10-14 02:38:21 22h2 r2 hib_check: layouts 23h2/24h2/24h2-early kernel = MATCH MISMATCH MISMATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=24 failed=0 | Huffman ok=18036 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 02:43:35 22h2 r2 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: c31d4eeda7a9
+2026-10-14 02:48:29 23h2 r2 generate: ok=1 method=drakvuf:createproc signature=HIBR size=6433652736 sha256=ec34c5b0eaa9 SystemTime=2026-10-14 04:46:37+00:00 (xl create at UTC 2026-10-14 06:43:35)
+2026-10-14 02:49:00 23h2 r2 hib_check: layouts 23h2/24h2/24h2-early kernel = MATCH MISMATCH MISMATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=23 failed=0 | Huffman ok=18459 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 02:54:19 23h2 r2 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 907616f80c0d
+2026-10-14 03:18:47 24h2 r2 generate: ok=0 method=drakvuf:shellexec signature=WAKE size=6433652736 sha256=cdd2099614e9 SystemTime=none (xl create at UTC 2026-10-14 06:54:20)
+2026-10-14 03:18:47 24h2 r2 generate FAILED (no hybrid shutdown), the file is NOT used
+2026-10-14 03:24:13 25h2 r2 generate: ok=1 method=drakvuf:createproc signature=HIBR size=8581136384 sha256=4a19cf6cb384 SystemTime=2026-10-14 05:21:46+00:00 (xl create at UTC 2026-10-14 07:18:47)
+2026-10-14 03:24:29 25h2 r2 hib_check: layouts 23h2/24h2/24h2-early kernel = MISMATCH MISMATCH MATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=20334 failed=0 | Huffman ok=429 failed=0 (failed with the fixed 65536 size, ok with the size of the set: 0
+2026-10-14 03:27:08 25h2 r2 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: afc569fc3c24
+2026-10-14 03:32:00 26h1 r2 generate: ok=1 method=drakvuf:createproc signature=HIBR size=6433652736 sha256=25984384bb5d SystemTime=2026-10-14 05:29:55+00:00 (xl create at UTC 2026-10-14 07:27:09)
+2026-10-14 03:32:46 26h1 r2 hib_check: layouts 23h2/24h2/24h2-early kernel = MISMATCH MISMATCH MATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=17 failed=0 | Huffman ok=25608 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 03:40:13 26h1 r2 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: ad158bbfc430
+2026-10-14 03:56:10 21h2 r3 generate: ok=1 method=drakvuf(build 2):createproc signature=HIBR size=6433652736 sha256=357bd461c5e8 SystemTime=2026-10-14 05:53:25+00:00 (xl create at UTC 2026-10-14 07:40:14)
+2026-10-14 03:56:54 21h2 r3 hib_check: layouts 23h2/24h2/24h2-early kernel = MATCH MISMATCH MISMATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=24 failed=0 | Huffman ok=21940 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 04:03:28 21h2 r3 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 79ce18d61deb
+2026-10-14 04:08:05 22h2 r3 generate: ok=1 method=drakvuf:createproc signature=HIBR size=6433652736 sha256=58ce6e4030bb SystemTime=2026-10-14 06:06:13+00:00 (xl create at UTC 2026-10-14 08:03:29)
+2026-10-14 04:08:36 22h2 r3 hib_check: layouts 23h2/24h2/24h2-early kernel = MATCH MISMATCH MISMATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=22 failed=0 | Huffman ok=17912 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 04:13:50 22h2 r3 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: de5e9208b721
+2026-10-14 04:23:28 23h2 r3 generate: ok=1 method=drakvuf(build 2):createproc signature=HIBR size=6433652736 sha256=9f8ec611fe07 SystemTime=2026-10-14 06:21:33+00:00 (xl create at UTC 2026-10-14 08:13:51)
+2026-10-14 04:23:59 23h2 r3 hib_check: layouts 23h2/24h2/24h2-early kernel = MATCH MISMATCH MISMATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=22 failed=0 | Huffman ok=18834 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 04:29:24 23h2 r3 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: ae3f544cf58b
+2026-10-14 04:34:09 24h2 r3 generate: ok=1 method=drakvuf:createproc signature=HIBR size=6433652736 sha256=982629bef702 SystemTime=2026-10-14 06:32:11+00:00 (xl create at UTC 2026-10-14 08:29:25)
+2026-10-14 04:34:43 24h2 r3 hib_check: layouts 23h2/24h2/24h2-early kernel = MISMATCH MISMATCH MATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=18 failed=0 | Huffman ok=19473 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 04:40:46 24h2 r3 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: e0d19c79c9a1
+2026-10-14 04:46:19 25h2 r3 generate: ok=1 method=drakvuf:createproc signature=HIBR size=8581136384 sha256=44efcda73c95 SystemTime=2026-10-14 06:43:46+00:00 (xl create at UTC 2026-10-14 08:40:47)
+2026-10-14 04:46:33 25h2 r3 hib_check: layouts 23h2/24h2/24h2-early kernel = MISMATCH MISMATCH MATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=19044 failed=0 | Huffman ok=401 failed=0 (failed with the fixed 65536 size, ok with the size of the set: 0
+2026-10-14 04:49:05 25h2 r3 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 442b79144227
+2026-10-14 05:13:37 26h1 r3 generate: ok=0 method=drakvuf:shellexec signature=WAKE size=6433652736 sha256=888e8a478a81 SystemTime=none (xl create at UTC 2026-10-14 08:49:06)
+2026-10-14 05:13:37 26h1 r3 generate FAILED (no hybrid shutdown), the file is NOT used
+2026-10-14 05:13:37 ===== campaign v2 end
+2026-10-14 05:17:05 ===== campaign v2 extra round 4 for: 22h2 24h2 26h1
+2026-10-14 05:21:50 22h2 r4 generate: ok=1 method=drakvuf:createproc signature=HIBR size=6433652736 sha256=c7571ed73d51 SystemTime=2026-10-14 07:19:56+00:00 (xl create at UTC 2026-10-14 09:17:05)
+2026-10-14 05:22:21 22h2 r4 hib_check: layouts 23h2/24h2/24h2-early kernel = MATCH MISMATCH MISMATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=24 failed=0 | Huffman ok=17826 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 05:27:38 22h2 r4 dump[fixed] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 7a442255057d
+2026-10-14 05:32:57 22h2 r4 dump[fixed-run2] --version 0: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 7a442255057d
+2026-10-14 05:32:57 22h2 r4 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 05:38:18 22h2 r4 dump[orig-v0] --version 0: exit=1 ValueError: EOF Error | raw sha256: b0de91ba3e58
+2026-10-14 05:38:22 22h2 r4 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 05:38:29 22h2 r4 dump[fixed-wrongversion] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 05:43:14 24h2 r4 generate: ok=1 method=drakvuf:createproc signature=HIBR size=6433652736 sha256=215132d317c2 SystemTime=2026-10-14 07:41:17+00:00 (xl create at UTC 2026-10-14 09:38:29)
+2026-10-14 05:43:48 24h2 r4 hib_check: layouts 23h2/24h2/24h2-early kernel = MISMATCH MISMATCH MATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=18 failed=0 | Huffman ok=19331 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 05:49:57 24h2 r4 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 1f7593539217
+2026-10-14 05:56:06 24h2 r4 dump[fixed-run2] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 1f7593539217
+2026-10-14 05:56:06 24h2 r4 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 05:56:13 24h2 r4 dump[orig-v0] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 05:56:17 24h2 r4 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 05:56:23 24h2 r4 dump[fixed-wrongversion] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 06:01:27 26h1 r4 generate: ok=1 method=drakvuf:createproc signature=HIBR size=6433652736 sha256=1945c2cb87b2 SystemTime=2026-10-14 07:59:15+00:00 (xl create at UTC 2026-10-14 09:56:24)
+2026-10-14 06:02:14 26h1 r4 hib_check: layouts 23h2/24h2/24h2-early kernel = MISMATCH MISMATCH MATCH | huffman sets != 16 pages: 0 | plain LZ77 ok=17 failed=0 | Huffman ok=25413 failed=1 (failed with the fixed 65536 size, ok with the size of the set: 1)
+2026-10-14 06:09:45 26h1 r4 dump[fixed] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 691c46d72c44
+2026-10-14 06:17:17 26h1 r4 dump[fixed-run2] --version 4: exit=0 The hibernation file was converted to memory_layer.raw | raw sha256: 691c46d72c44
+2026-10-14 06:17:18 26h1 r4 determinism: run1 and run2 outputs identical (sha256)
+2026-10-14 06:17:24 26h1 r4 dump[orig-v0] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 06:17:28 26h1 r4 dump[orig-v4] --version 4: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 06:17:34 26h1 r4 dump[fixed-wrongversion] --version 0: exit=0 Your hibernation file could not be converted, this can be the case for multiple reasons: | 
+2026-10-14 06:17:34 ===== extra round 4 end
+2026-10-14 06:19:51 ===== final pass with the final tree: hib_check re-run on every kept file, unit tests x5, fix-reverted check, ruff
+2026-10-14 06:20:24 21h2 r0 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MATCH MISMATCH MISMATCH | kernel: huffman sets with pages != 16 : 1 | plain LZ77 ok=22 failed=0 | Huffman ok=18346 failed=1 (failed with the fixed 65536 size, ok with the size of t
+2026-10-14 06:20:57 21h2 r1 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MATCH MISMATCH MISMATCH | kernel: huffman sets with pages != 16 : 1 | plain LZ77 ok=21 failed=0 | Huffman ok=18325 failed=1 (failed with the fixed 65536 size, ok with the size of t
+2026-10-14 06:21:29 22h2 r0 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MATCH MISMATCH MISMATCH | kernel: huffman sets with pages != 16 : 1 | plain LZ77 ok=23 failed=0 | Huffman ok=18548 failed=1 (failed with the fixed 65536 size, ok with the size of t
+2026-10-14 06:21:38 22h2 r1 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MATCH MISMATCH MISMATCH | kernel: huffman sets with pages != 16 : 0 | plain LZ77 ok=15907 failed=0 | Huffman ok=332 failed=0 (failed with the fixed 65536 size, ok with the size of 
+2026-10-14 06:22:08 22h2 r4 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MATCH MISMATCH MISMATCH | kernel: huffman sets with pages != 16 : 1 | plain LZ77 ok=24 failed=0 | Huffman ok=17826 failed=1 (failed with the fixed 65536 size, ok with the size of t
+2026-10-14 06:22:40 23h2 r0 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MATCH MISMATCH MISMATCH | kernel: huffman sets with pages != 16 : 1 | plain LZ77 ok=23 failed=0 | Huffman ok=18413 failed=1 (failed with the fixed 65536 size, ok with the size of t
+2026-10-14 06:23:07 23h2 r1 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MATCH MISMATCH MISMATCH | kernel: huffman sets with pages != 16 : 1 | plain LZ77 ok=23 failed=0 | Huffman ok=16622 failed=1 (failed with the fixed 65536 size, ok with the size of t
+2026-10-14 06:23:41 24h2 r0 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MISMATCH MISMATCH MATCH | kernel: huffman sets with pages != 16 : 1 | plain LZ77 ok=17 failed=0 | Huffman ok=19327 failed=1 (failed with the fixed 65536 size, ok with the size of t
+2026-10-14 06:24:14 24h2 r1 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MISMATCH MISMATCH MATCH | kernel: huffman sets with pages != 16 : 1 | plain LZ77 ok=18 failed=0 | Huffman ok=18682 failed=1 (failed with the fixed 65536 size, ok with the size of t
+2026-10-14 06:24:25 24h2 r2 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MISMATCH MISMATCH MATCH | kernel: huffman sets with pages != 16 : 0 | plain LZ77 ok=19174 failed=0 | Huffman ok=405 failed=0 (failed with the fixed 65536 size, ok with the size of 
+2026-10-14 06:24:59 24h2 r4 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MISMATCH MISMATCH MATCH | kernel: huffman sets with pages != 16 : 1 | plain LZ77 ok=18 failed=0 | Huffman ok=19331 failed=1 (failed with the fixed 65536 size, ok with the size of t
+2026-10-14 06:25:10 25h2 r0 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MISMATCH MISMATCH MATCH | kernel: huffman sets with pages != 16 : 0 | plain LZ77 ok=20748 failed=0 | Huffman ok=435 failed=0 (failed with the fixed 65536 size, ok with the size of 
+2026-10-14 06:25:21 25h2 r1 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MISMATCH MISMATCH MATCH | kernel: huffman sets with pages != 16 : 0 | plain LZ77 ok=20709 failed=0 | Huffman ok=434 failed=0 (failed with the fixed 65536 size, ok with the size of 
+2026-10-14 06:25:33 26h1 r0 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MISMATCH MISMATCH MATCH | kernel: huffman sets with pages != 16 : 0 | plain LZ77 ok=23819 failed=0 | Huffman ok=488 failed=0 (failed with the fixed 65536 size, ok with the size of 
+2026-10-14 06:26:20 26h1 r1 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MISMATCH MISMATCH MATCH | kernel: huffman sets with pages != 16 : 1 | plain LZ77 ok=16 failed=0 | Huffman ok=26771 failed=1 (failed with the fixed 65536 size, ok with the size of t
+2026-10-14 06:26:32 26h1 r3 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MISMATCH MISMATCH MATCH | kernel: huffman sets with pages != 16 : 0 | plain LZ77 ok=23819 failed=0 | Huffman ok=488 failed=0 (failed with the fixed 65536 size, ok with the size of 
+2026-10-14 06:27:16 26h1 r4 hib_check (final tool): kernel layouts 23h2/24h2/24h2-early = MISMATCH MISMATCH MATCH | kernel: huffman sets with pages != 16 : 1 | plain LZ77 ok=17 failed=0 | Huffman ok=25413 failed=1 (failed with the fixed 65536 size, ok with the size of t
+2026-10-14 06:27:17 final unit tests run 1: OK (Ran 19 tests)
+2026-10-14 06:27:18 final unit tests run 2: OK (Ran 19 tests)
+2026-10-14 06:27:18 final unit tests run 3: OK (Ran 19 tests)
+2026-10-14 06:27:19 final unit tests run 4: OK (Ran 19 tests)
+2026-10-14 06:27:20 final unit tests run 5: OK (Ran 19 tests)
+2026-10-14 06:27:20 final unit tests, fix reverted: FAILED (errors=6) ; EOF Error lines: 6
+2026-10-14 06:27:20 final ruff: ruff check (PR files) exit=0;ruff format (PR files) exit=0;ruff check (tree) exit=1;ruff format (tree) exit=1;
+2026-10-14 06:27:20 ===== final pass end

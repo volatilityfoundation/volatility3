@@ -1,0 +1,50 @@
+== 2026-10-14 05:38:29 build 24h2 round 4
+-- domains before:
+Name                                        ID   Mem VCPUs	State	Time(s)
+Domain-0                                     0  4096     8     r-----  313884.6
+-- restore snapshot after-install-cold
+rc=0
+-- cfg (cdroms removed, boot from disk):
+name = "win11-24h2-test"
+memory = 6144
+vcpus = 4
+boot = "c"
+disk = [
+acpi_s3 = 1
+acpi_s4 = 1
+-- 2026-10-14 05:38:29 xl create (host UTC: 2026-10-14 09:38:29)
+Parsing config from <work>/win11-24h2-test.cfg
+rc=0
+-- 120 s for the desktop to settle
+-- 2026-10-14 05:40:31 probe (procmon 15 s) with drakvuf
+   running processes seen: 128, explorer.exe PID: 584
+1932
+-- 2026-10-14 05:40:46 inject: drakvuf -m createproc -i 584
+1932 -e 'C:\Windows\System32\cmd.exe' (args in -e)
+   drakvuf exit=0 ; inject line: "Plugin": "inject", "TimeStamp": "1791970846.972849", "Method": "CreateProc", "Status": "Success", "ProcessName": "C:\\Windows\\System32\\cmd.exe", "Arguments":
+   stderr tail: 1791970846.520897 DRAKVUF v1.1-071b0f2 Copyright (C) 2014-2024 Tamas K Lengyel 
+   2026-10-14 05:41:57 domain gone: hybrid shutdown done (on_poweroff=destroy)
+-- ro mount of /dev/nbd0p2 rc=0
+-rwxrwxrwx 1 root root 6433652736 2026-10-14 03:41:16.241518400 -0400 /mnt/hibw/hiberfil.sys
+copy rc=0
+/dev/nbd0 disconnected
+-- signature: HIBR
+-- size: 6433652736 bytes
+-- sha256: 215132d317c2d07d72b5c8805a32915f5e6cf1bacdfbea034cd1f33d03b36712
+-- windows.hibernation.Info (the SystemTime must be after the host UTC time of xl create, 2026-10-14 09:38:29):
+<this branch>/volatility3/framework/deprecation.py:105: FutureWarning: This plugin (PluginRequirement) has been renamed and will be removed in the first release after 2026-06-01. PluginRequirement is to be deprecated. Use VersionRequirement instead.
+  warnings.warn(
+Volatility 3 Framework 2.28.1
+
+Variable	Value
+
+Signature	HIBR
+Comment	The hibernation file header signature is correct.
+PageSize	4096
+SystemTime	2026-10-14 07:41:17+00:00
+FirstBootRestorePage	53
+NumPageForLoader	30364
+-- domains after:
+Name                                        ID   Mem VCPUs	State	Time(s)
+Domain-0                                     0  4096     8     r-----  314164.5
+== 2026-10-14 05:42:47 end, hybrid shutdown ok=1
