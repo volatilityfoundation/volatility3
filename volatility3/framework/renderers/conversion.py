@@ -37,16 +37,9 @@ def windows_bytes_to_guid(buf: bytes) -> str:
     if len(buf) != 16:
         raise ValueError("Expected 16 bytes for GUID")
 
-    head_components = [format(v, "x") for v in struct.unpack("<IHH", buf[:8])]
-    tail_component = [
-        format(v, "x")
-        for v in struct.unpack(
-            ">HQ",
-            buf[8:10] + b"\x00\x00" + buf[10:16],
-        )
-    ]
-    combined = head_components + tail_component
-    return "{" + "-".join(combined) + "}"
+    data1, data2, data3 = struct.unpack("<IHH", buf[:8])
+    data4, node = struct.unpack(">HQ", buf[8:10] + b"\x00\x00" + buf[10:16])
+    return f"{{{data1:08x}-{data2:04x}-{data3:04x}-{data4:04x}-{node:012x}}}"
 
 
 def unixtime_to_datetime(
