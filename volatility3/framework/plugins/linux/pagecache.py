@@ -2,21 +2,21 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import math
-import logging
 import datetime
-import time
+import logging
+import math
 import tarfile
-from dataclasses import dataclass, astuple
-from typing import IO, List, Set, Type, Iterable, Tuple, Union
+import time
+from dataclasses import astuple, dataclass
 from io import BytesIO
 from pathlib import PurePath
+from typing import IO, BinaryIO, Iterable, List, Set, Tuple, Type, Union
 
-from volatility3.framework.constants import architectures
-from volatility3.framework import constants, renderers, interfaces, exceptions
-from volatility3.framework.renderers import format_hints
-from volatility3.framework.interfaces import plugins
+from volatility3.framework import constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
+from volatility3.framework.constants import architectures
+from volatility3.framework.interfaces import plugins
+from volatility3.framework.renderers import format_hints
 from volatility3.plugins import timeliner
 from volatility3.plugins.linux import mountinfo
 
@@ -528,7 +528,8 @@ class InodePages(plugins.PluginInterface):
                 max_length = inode_size - current_fp
                 page_bytes_len = min(max_length, len(page_content))
                 if current_fp >= inode_size or current_fp + page_bytes_len > inode_size:
-                    vollog.error(
+                    vollog.log(
+                        constants.LOGLEVEL_VVV,
                         "Page out of file bounds: inode 0x%x, inode size %d, page index %d",
                         inode.vol.offset,
                         inode_size,
@@ -560,8 +561,9 @@ class InodePages(plugins.PluginInterface):
         try:
             for page_obj in inode.get_pages():
                 if page_obj.mapping != inode.i_mapping:
-                    vollog.warning(
-                        f"Cached page at {page_obj.vol.offset:#x} has a mismatched address space with the inode. Skipping page"
+                    vollog.log(
+                        constants.LOGLEVEL_VVV,
+                        f"Cached page at {page_obj.vol.offset:#x} has a mismatched address space with the inode. Skipping page",
                     )
                     continue
                 page_vaddr = page_obj.vol.offset
@@ -660,7 +662,7 @@ class RecoverFs(plugins.PluginInterface):
     Troubleshooting: to fix extraction errors related to long paths, please consider using https://github.com/mxmlnkn/ratarmount.
     """
 
-    _version = (1, 0, 1)
+    _version = (1, 0, 2)
     _required_framework_version = (2, 21, 0)
 
     @classmethod
@@ -789,117 +791,124 @@ class RecoverFs(plugins.PluginInterface):
             tar_info.mtime = mtime
         tar.addfile(tar_info)
 
-    def _generator(self):
+    def _recover_files(self, output_file: BinaryIO) -> Iterable[Tuple[int, Tuple]]:
+        """Recover files from the pagecache and store them in the specified
+        file.
+
+        Args:
+            output_file: Open file handler to write the raw buffer to."""
         vmlinux_module_name = self.config["kernel"]
         vmlinux = self.context.modules[vmlinux_module_name]
         vmlinux_layer = self.context.layers[vmlinux.layer_name]
-        tar_buffer = BytesIO()
-        tar = tarfile.open(
-            fileobj=tar_buffer,
+        with tarfile.open(
+            fileobj=output_file,
             mode=f"w:{self.config['compression_format']}",
-        )
-        # Set a unique timestamp for all extracted files
-        mtime = time.time()
+        ) as tar:
+            # Set a unique timestamp for all extracted files
+            mtime = time.time()
 
-        inodes_iter = Files.get_inodes(
-            context=self.context,
-            vmlinux_module_name=vmlinux_module_name,
-            follow_symlinks=False,
-        )
-
-        # Prefix paths with the superblock UUID's to prevent overlaps.
-        # Switch to device major and device minor for older kernels (< 2.6.39-rc1).
-        uuid_as_prefix = vmlinux.get_type("super_block").has_member("s_uuid")
-        if not uuid_as_prefix:
-            vollog.warning(
-                "super_block struct does not support s_uuid attribute. Consequently, level 0 directories won't refer to the superblock uuid's, but to its device_major:device_minor numbers."
+            inodes_iter = Files.get_inodes(
+                context=self.context,
+                vmlinux_module_name=vmlinux_module_name,
+                follow_symlinks=False,
             )
 
-        visited_paths = seen_prefixes = set()
-        for inode_in in inodes_iter:
-            # Code is slightly duplicated here with the if-block below.
-            # However this prevents unneeded tar manipulation if fifo
-            # or sock inodes come through for example.
-            if not (
-                inode_in.inode.is_reg or inode_in.inode.is_dir or inode_in.inode.is_link
-            ):
-                continue
-
-            if not inode_in.path.startswith("/"):
-                vollog.debug(
-                    f'Skipping processing of potentially smeared "{inode_in.path}" inode name as it does not starts with a "/".'
+            # Prefix paths with the superblock UUID's to prevent overlaps.
+            # Switch to device major and device minor for older kernels (< 2.6.39-rc1).
+            uuid_as_prefix = vmlinux.get_type("super_block").has_member("s_uuid")
+            if not uuid_as_prefix:
+                vollog.warning(
+                    "super_block struct does not support s_uuid attribute. Consequently, level 0 directories won't refer to the superblock uuid's, but to its device_major:device_minor numbers."
                 )
-                continue
 
-            sb_type = inode_in.superblock.get_type()
-            if not sb_type:
-                vollog.debug(
-                    f"Unable to read superblock type for inode at {inode_in.inode.vol.offset}"
-                )
-                continue
+            visited_paths = seen_prefixes = set()
+            for inode_in in inodes_iter:
+                # Code is slightly duplicated here with the if-block below.
+                # However this prevents unneeded tar manipulation if fifo
+                # or sock inodes come through for example.
+                if not (
+                    inode_in.inode.is_reg
+                    or inode_in.inode.is_dir
+                    or inode_in.inode.is_link
+                ):
+                    continue
 
-            if self.config["tmpfs_only"] and sb_type != "tmpfs":
-                vollog.debug(f"Skipping non-tmpfs filesystem {sb_type}")
-                continue
+                if not inode_in.path.startswith("/"):
+                    vollog.debug(
+                        f'Skipping processing of potentially smeared "{inode_in.path}" inode name as it does not starts with a "/".'
+                    )
+                    continue
 
-            # Construct the output path
-            if uuid_as_prefix:
-                prefix = f"/{inode_in.superblock.uuid}"
-            else:
-                prefix = f"/{inode_in.superblock.major}:{inode_in.superblock.minor}"
-            prefixed_path = prefix + inode_in.path
+                sb_type = inode_in.superblock.get_type()
+                if not sb_type:
+                    vollog.debug(
+                        f"Unable to read superblock type for inode at {inode_in.inode.vol.offset}"
+                    )
+                    continue
 
-            # Sanity check for already processed paths
-            if prefixed_path in visited_paths:
-                vollog.log(
-                    constants.LOGLEVEL_VV,
-                    f'Already processed prefixed inode path: "{prefixed_path}".',
-                )
-                continue
-            elif prefix not in seen_prefixes:
-                self._tar_add_dir(tar, prefix, mtime)
-                seen_prefixes.add(prefix)
+                if self.config["tmpfs_only"] and sb_type != "tmpfs":
+                    vollog.debug(f"Skipping non-tmpfs filesystem {sb_type}")
+                    continue
 
-            visited_paths.add(prefixed_path)
-            extracted_file_size = renderers.NotApplicableValue()
+                # Construct the output path
+                if uuid_as_prefix:
+                    prefix = f"/{inode_in.superblock.uuid}"
+                else:
+                    prefix = f"/{inode_in.superblock.major}:{inode_in.superblock.minor}"
+                prefixed_path = prefix + inode_in.path
 
-            # Inodes parent directory is yielded first, which
-            # ensures that a file parent path will exist beforehand.
-            # tarfile will take care of creating it anyway.
-            if inode_in.inode.is_reg:
-                extracted_file_size = self._tar_add_reg_inode(
-                    self.context,
-                    vmlinux_layer.name,
-                    tar,
-                    inode_in,
-                    prefix,
-                    mtime,
-                )
-            elif inode_in.inode.is_dir:
-                self._tar_add_dir(tar, prefixed_path, mtime)
-            elif (
-                inode_in.inode.is_link
-                and inode_in.inode.has_member("i_link")
-                and inode_in.inode.i_link
-                and inode_in.inode.i_link.is_readable()
-            ):
-                symlink_dest = inode_in.inode.i_link.dereference().cast(
-                    "string", max_length=255, encoding="utf-8", errors="replace"
-                )
-                self._tar_add_lnk(tar, inode_in.path, symlink_dest, prefix, mtime)
-                # Set path to a user friendly representation before yielding
-                inode_in.path = InodeUser.format_symlink(inode_in.path, symlink_dest)
-            else:
-                continue
+                # Sanity check for already processed paths
+                if prefixed_path in visited_paths:
+                    vollog.log(
+                        constants.LOGLEVEL_VV,
+                        f'Already processed prefixed inode path: "{prefixed_path}".',
+                    )
+                    continue
+                elif prefix not in seen_prefixes:
+                    self._tar_add_dir(tar, prefix, mtime)
+                    seen_prefixes.add(prefix)
 
-            inode_out = inode_in.to_user(vmlinux_layer)
-            yield (0, astuple(inode_out) + (extracted_file_size,))
+                visited_paths.add(prefixed_path)
+                extracted_file_size = renderers.NotApplicableValue()
 
-        tar.close()
-        tar_buffer.seek(0)
+                # Inodes parent directory is yielded first, which
+                # ensures that a file parent path will exist beforehand.
+                # tarfile will take care of creating it anyway.
+                if inode_in.inode.is_reg:
+                    extracted_file_size = self._tar_add_reg_inode(
+                        self.context,
+                        vmlinux_layer.name,
+                        tar,
+                        inode_in,
+                        prefix,
+                        mtime,
+                    )
+                elif inode_in.inode.is_dir:
+                    self._tar_add_dir(tar, prefixed_path, mtime)
+                elif (
+                    inode_in.inode.is_link
+                    and inode_in.inode.has_member("i_link")
+                    and inode_in.inode.i_link
+                    and inode_in.inode.i_link.is_readable()
+                ):
+                    symlink_dest = inode_in.inode.i_link.dereference().cast(
+                        "string", max_length=255, encoding="utf-8", errors="replace"
+                    )
+                    self._tar_add_lnk(tar, inode_in.path, symlink_dest, prefix, mtime)
+                    # Set path to a user friendly representation before yielding
+                    inode_in.path = InodeUser.format_symlink(
+                        inode_in.path, symlink_dest
+                    )
+                else:
+                    continue
+
+                inode_out = inode_in.to_user(vmlinux_layer)
+                yield (0, astuple(inode_out) + (extracted_file_size,))
+
+    def _generator(self):
         output_filename = f"recovered_fs.tar.{self.config['compression_format']}"
-        with self.open(output_filename) as f:
-            f.write(tar_buffer.getvalue())
+        with self.open(output_filename) as output_file:
+            yield from self._recover_files(output_file)
 
     def run(self):
         headers = [
