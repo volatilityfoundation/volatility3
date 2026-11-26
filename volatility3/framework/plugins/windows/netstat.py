@@ -633,6 +633,20 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         kernel = self.context.modules[self.config["kernel"]]
 
+        # netstat performs *active* enumeration by walking tcpip.sys's live
+        # tracking structures (partition tables, port bitmaps), which only exist
+        # on Vista and later. Windows XP / Server 2003 (NT 5.x) use an entirely
+        # different design, so direct the user to netscan (pool scanning) which
+        # does support those versions.
+        kuser = info.Info.get_kuser_structure(self.context, self.config["kernel"])
+        if int(kuser.NtMajorVersion) == 5:
+            vollog.warning(
+                "windows.netstat does not support Windows XP / Server 2003 "
+                "(NT 5.x); use windows.netscan instead, which scans the legacy "
+                "TCPT/TCPA pool allocations."
+            )
+            return
+
         netscan_symbol_table = netscan.NetScan.create_netscan_symbol_table(
             self.context, self.config["kernel"], self.config_path
         )
