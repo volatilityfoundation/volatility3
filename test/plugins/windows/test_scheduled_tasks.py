@@ -89,6 +89,43 @@ class TestActionsDecoding(unittest.TestCase):
                 f"ActionDecoder.decode should not raise exception:\n{traceback.format_exc()}"
             )
 
+    @staticmethod
+    def _bstring(value: str) -> bytes:
+        raw = value.encode("utf-16le")
+        return struct.pack("<I", len(raw)) + raw
+
+    def test_decode_email_action(self):
+        """An email action must survive decoding instead of coming back as None."""
+        buf = struct.pack("<H", 3)  # version
+        buf += self._bstring("LocalSystem")  # action context
+        buf += struct.pack("<H", 0x8888)  # ActionType.Email
+        buf += self._bstring("")  # action identifier
+        for field in [
+            "sender@example.com",
+            "recipient@example.com",
+            "",
+            "",
+            "",
+            "smtp.example.com",
+            "subject line",
+            "body text",
+        ]:
+            buf += self._bstring(field)
+        buf += struct.pack("<I", 1) + self._bstring("C:\\temp\\report.txt")
+        buf += struct.pack("<I", 1) + self._bstring("X-Header") + self._bstring("value")
+
+        action_set = scheduled_tasks.ActionSet.decode(buf)
+        self.assertIsNotNone(action_set)
+        actions = action_set.actions  # type: ignore
+        self.assertEqual(len(actions), 1)
+        self.assertIsNotNone(
+            actions[0],
+            "email action decoded to None; the decoded fields were discarded",
+        )
+        self.assertEqual(actions[0].action_type, scheduled_tasks.ActionType.Email)
+        self.assertIn("sender@example.com", actions[0].action)
+        self.assertIn("smtp.example.com", actions[0].action)
+
 
 class TestTriggersDecoding(unittest.TestCase):
     def test_decode_all_triggers(self):
