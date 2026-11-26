@@ -16,7 +16,7 @@ class Desktops(interfaces.plugins.PluginInterface):
     """Enumerates the Desktop instances of each Window Station"""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -67,7 +67,7 @@ class Desktops(interfaces.plugins.PluginInterface):
                         format_hints.Hex(desktop.vol.offset),
                         station_name,
                         session_id,
-                        desktop_name,
+                        desktop_name or renderers.NotAvailableValue(),
                         process_name,
                         process_pid,
                     )
