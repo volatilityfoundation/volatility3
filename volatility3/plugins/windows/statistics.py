@@ -37,14 +37,13 @@ class Statistics(plugins.PluginInterface):
 
         if isinstance(layer, intel.Intel):
             page_addr = 0
-            expected_page_size = 1 << layer.bits_per_register
+            expected_page_size = layer.page_size
+            memory_layer = layer.config["memory_layer"]
 
             while page_addr < layer.maximum_address:
                 try:
-                    _, _, _, page_size, layer_name = list(
-                        layer.mapping(page_addr, 2 * expected_page_size)
-                    )[0]
-                    if layer_name != layer.config["memory_layer"]:
+                    _, page_size, layer_name = layer._translate(page_addr)
+                    if layer_name != memory_layer:
                         swap_count += 1
                     else:
                         page_count += 1
@@ -67,7 +66,7 @@ class Statistics(plugins.PluginInterface):
                         f"A non-page lookup invalid address exception occurred at: {hex(excp.invalid_address)} in layer {excp.layer_name}"
                     )
 
-                page_addr += page_size
+                page_addr = (page_addr | (page_size - 1)) + 1
                 self._progress_callback(
                     (page_addr * 100) / layer.maximum_address, "Reading memory"
                 )
