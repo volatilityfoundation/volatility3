@@ -105,7 +105,14 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             ),
         ]
 
-        if symbol_table.startswith("netscan-win10-20348"):
+        if symbol_table.startswith(
+            (
+                "netscan-win10-20348",
+                "netscan-win10-22000",
+                "netscan-win10-22621",
+                "netscan-win10-26100",
+            )
+        ):
             vollog.debug("Adding additional pool constraint for `TTcb` tags")
             constraints.append(
                 poolscanner.PoolConstraint(
@@ -234,6 +241,16 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 (10, 0, 18363, 0): "netscan-win10-18363-x64",
                 (10, 0, 19041, 0): "netscan-win10-19041-x64",
                 (10, 0, 20348, 0): "netscan-win10-20348-x64",
+                # Windows 11 21H2 (build 22000): _TCP_ENDPOINT State/ports and Owner moved
+                (10, 0, 22000, 0): "netscan-win10-22000-x64",
+                # Windows 11 22H2 / 23H2 (build 22621): _TCP_ENDPOINT.Owner and CreateTime moved
+                (10, 0, 22621, 0): "netscan-win10-22621-x64",
+                # Windows 11 24H2 and later (build 26100): the objects start 8 bytes after the
+                # pool body (see pool_object_offset()) and _TCP_ENDPOINT changed. The original
+                # 26100.1742 has Owner/CreateTime 8 bytes before the serviced builds (26100.6584,
+                # 28000.1340); it is picked when tcpip.sys's FileVersion can be read
+                (10, 0, 26100, 0): "netscan-win10-26100-x64",
+                (10, 0, 26100, 1742): "netscan-win10-26100-1742-x64",
             }
 
         # we do not need to check for tcpip's specific FileVersion in every case
@@ -377,12 +394,53 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         """
 
         constraints = cls.create_netscan_constraints(context, netscan_symbol_table)
+        object_offset = cls.pool_object_offset(context, kernel_module_name)
+        if object_offset:
+            vollog.debug(
+                f"Network objects start {object_offset} bytes after the pool body on this build"
+            )
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
             context, kernel_module_name, constraints
         ):
             _constraint, mem_object, _header = result
+            if object_offset:
+                mem_object = context.object(
+                    mem_object.vol.type_name,
+                    layer_name=mem_object.vol.layer_name,
+                    offset=mem_object.vol.offset + object_offset,
+                )
             yield mem_object
+
+    @classmethod
+    def pool_object_offset(
+        cls, context: interfaces.context.ContextInterface, kernel_module_name: str
+    ) -> int:
+        """Offset of the network object inside its pool allocation.
+
+        On Windows 11 24H2 and later (build 26100) the _TCP_LISTENER, _TCP_ENDPOINT and
+        _UDP_ENDPOINT objects start 8 bytes after the pool body (the first 8 bytes of the
+        allocation are not part of the object), so every field would be read 8 bytes too
+        early and no object would validate. windows.netstat, which reaches the same objects
+        through the partition table, reports them at that +8 address.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            kernel_module_name: The name of the module for the kernel
+
+        Returns:
+            The number of bytes between the pool body and the object (0 before build 26100).
+        """
+        kuser = info.Info.get_kuser_structure(context, kernel_module_name)
+        vers = info.Info.get_version_structure(context, kernel_module_name)
+        try:
+            if int(kuser.NtMajorVersion) >= 10 and int(vers.MinorVersion) >= 26100:
+                return 8
+        except ValueError:
+            # The version fields are unreadable (smeared or paged out): keep the
+            # historical layout, where the object starts at the pool body
+            pass
+        return 0
 
     def _generator(self, show_corrupt_results: Optional[bool] = None):
         """Generates the network objects for use in rendering."""
