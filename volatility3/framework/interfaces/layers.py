@@ -549,68 +549,43 @@ class TranslationLayerInterface(DataLayerInterface, metaclass=ABCMeta):
         assumed to have no holes
         """
         for section_start, section_length in sections:
-            output: List[Tuple[str, int, int]] = []
-
-            # Hold the offsets of each chunk (including how much has been filled)
-            chunk_start = chunk_position = 0
-
             # For each section, find out which bits of its exists and where they map to
             # This is faster than cutting the entire space into scan_chunk sized blocks and then
             # finding out what exists (particularly if most of the space isn't mapped)
+
+            chunk_start = chunk_position = section_start
+
             for mapped in self.mapping(
                 section_start, section_length, ignore_errors=True
             ):
+                # coallesce adjacent sections
                 offset, sublength, mapped_offset, mapped_length, layer_name = mapped
 
-                # Setup the variables for this block
-                block_start = offset
-                block_end = offset + sublength
+                if chunk_start == chunk_position and chunk_start != offset:
+                    chunk_start = chunk_position = offset
 
-                # Setup the necessary bits for non-linear mappings
-                # For linear we give one layer down and mapped offsets (therefore the conversion)
-                # This saves an tiny amount of time not have to redo lookups we've already done
-                # For non-linear layers, we give the layer name and the offset in the layer name
-                # so that the read/conversion occurs properly
-                conversion = mapped_offset - offset if linear else 0
-                return_name = layer_name if linear else self.name
+                if chunk_position < offset:
+                    # New chunk, output the old chunk
+                    yield [
+                        (self.name, chunk_start, chunk_position - chunk_start)
+                    ], chunk_position
+                    chunk_start = offset
 
-                # If this isn't contiguous, start a new chunk
-                if chunk_position < block_start:
-                    yield output, chunk_position
-                    output = []
-                    chunk_start = chunk_position = block_start
+                if offset + sublength - chunk_start > scanner.chunk_size:
+                    for block_start in range(
+                        offset, offset + sublength, scanner.chunk_size
+                    ):
+                        yield [
+                            (self.name, chunk_start, chunk_position - chunk_start)
+                        ], chunk_position
+                        chunk_start = chunk_position = block_start
 
-                # Halfway through a chunk, finish the chunk, then take more
-                if chunk_position != chunk_start:
-                    chunk_size = min(
-                        chunk_position - chunk_start,
-                        scanner.chunk_size + scanner.overlap,
-                    )
-                    output += [(return_name, chunk_position + conversion, chunk_size)]
-                    chunk_start = chunk_position + chunk_size
-                    chunk_position = chunk_start
-
-                # Pack chunks, if we're enter the loop (starting a new chunk) and there's already chunk there, ship it
-                for chunk_start in range(chunk_position, block_end, scanner.chunk_size):
-                    if output:
-                        yield output, chunk_position
-                        output = []
-                        chunk_position = chunk_start
-                    # Take from chunk_position as far as the block can go,
-                    # or as much left of a scanner chunk as we can
-                    chunk_size = min(
-                        block_end - chunk_position,
-                        scanner.chunk_size
-                        + scanner.overlap
-                        - (chunk_position - chunk_start),
-                    )
-                    output += [(return_name, chunk_position + conversion, chunk_size)]
-                    chunk_start = chunk_position + chunk_size
-                    chunk_position = chunk_start
+                chunk_position = offset + sublength
 
             # Ship anything that might be left
-            if output:
-                yield output, chunk_position
+            yield [
+                (self.name, chunk_start, chunk_position - chunk_start)
+            ], chunk_position
 
 
 class LayerContainer(collections.abc.Mapping):

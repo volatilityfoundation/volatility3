@@ -22,6 +22,7 @@ class BytesScanner(layers.ScannerInterface):
     def __call__(self, data: bytes, data_offset: int) -> Generator[int, None, None]:
         """Runs through the data looking for the needle, and yields all offsets
         where the needle is found."""
+
         find_pos = data.find(self.needle)
         while find_pos >= 0:
             # Ensure that if we're in the overlap, we don't report it
