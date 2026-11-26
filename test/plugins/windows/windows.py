@@ -1039,6 +1039,35 @@ class TestWindowsModScan:
         for expected_row in expected_rows:
             assert test_volatility.match_output_row(expected_row, json_out)
 
+    def test_windows_generic_modscan_bases_are_page_aligned(
+        self, volatility, python, image
+    ):
+        """Pool matches whose base is not page aligned are false positives.
+
+        A loaded module is always mapped on a page boundary, so a base with
+        any of the low twelve bits set means the "MmLd" tag was found in
+        unrelated data rather than in a real pool allocation. A base of zero
+        is allowed, since that means the field could not be read.
+        """
+        rc, out, _err = test_volatility.runvol_plugin(
+            "windows.modscan.ModScan",
+            image,
+            volatility,
+            python,
+            globalargs=("-r", "json"),
+        )
+        assert rc == 0
+        json_out = json.loads(out)
+        assert len(json_out) > 0
+
+        misaligned = [row for row in json_out if row["Base"] % 0x1000 != 0]
+        assert misaligned == [], (
+            f"{len(misaligned)} module(s) reported with a base that is neither "
+            f"page aligned nor zero, e.g. "
+            f"base={misaligned[0]['Base']:#x} size={misaligned[0]['Size']:#x} "
+            f"offset={misaligned[0]['Offset']:#x}"
+        )
+
 
 class TestWindowsMutantScan:
     def test_windows_specific_mutantscan(self, volatility, python):
