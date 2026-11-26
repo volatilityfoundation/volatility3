@@ -1072,6 +1072,31 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
     """A class for double-linked lists on Windows."""
 
+    def _report_unreadable(
+        self,
+        list_name: str,
+        direction: str,
+        count: int,
+        layer_name: str,
+        offset: int,
+        reason: str,
+        strict: bool,
+        level: int = logging.WARNING,
+    ) -> None:
+        """Reports an unreadable address encountered while walking the list.
+
+        Raises an InvalidAddressException when strict is set, otherwise logs the
+        condition so that the caller can end the walk with the entries read so far.
+        """
+        message = (
+            f"Walk of {list_name} list from {self.vol.offset:#x} ({direction}) ended "
+            f"after {count} entries: {reason} at {offset:#x} is not readable in layer "
+            f"{layer_name}; any remaining entries are not reported"
+        )
+        if strict:
+            raise exceptions.InvalidAddressException(layer_name, offset, message)
+        vollog.log(level, message)
+
     def to_list(
         self,
         symbol_type: str,
@@ -1079,30 +1104,80 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
         forward: bool = True,
         sentinel: bool = True,
         layer: Optional[str] = None,
+        strict: bool = False,
     ) -> Iterator[interfaces.objects.ObjectInterface]:
-        """Returns an iterator of the entries in the list."""
+        """Returns an iterator of the entries in the list.
+
+        When a node (or the pointer to it) cannot be read, the walk ends and the
+        entries reached so far are the only ones yielded.  By default this is
+        logged as a warning; with strict set an InvalidAddressException is raised
+        instead, so that callers can tell a truncated list from a complete one.
+
+        Args:
+            symbol_type: Type of the list elements
+            member: Name of the _LIST_ENTRY member in the list elements
+            forward: Set false to go backwards
+            sentinel: Whether self is a "sentinel node", meaning it is not embedded in a member of the list
+                Sentinel nodes are NOT yielded. See https://en.wikipedia.org/wiki/Sentinel_node for further reference
+            layer: Name of layer to read from
+            strict: Raise InvalidAddressException on an unreadable node rather than logging and ending the walk
+
+        Yields:
+            Objects of the type specified via the "symbol_type" argument.
+        """
 
         layer_name = layer or self.vol.layer_name
         native_layer_name = layer_name or self.vol.native_layer_name
 
+        direction = "Flink" if forward else "Blink"
+        list_name = f"{symbol_type}.{member}"
+        count = 0
+
         trans_layer = self._context.layers[layer_name]
         if not trans_layer.is_valid(self.vol.offset):
+            self._report_unreadable(
+                list_name,
+                direction,
+                count,
+                layer_name,
+                self.vol.offset,
+                "list head",
+                strict,
+                level=logging.DEBUG,
+            )
             return None
 
         relative_offset = self._context.symbol_space.get_type(
             symbol_type
         ).relative_child_offset(member)
 
-        direction = "Flink" if forward else "Blink"
-
         link_ptr = getattr(self, direction)
         if not (link_ptr and link_ptr.is_readable()):
+            self._report_unreadable(
+                list_name,
+                direction,
+                count,
+                layer_name,
+                int(link_ptr),
+                f"{direction} target of list head",
+                strict,
+                level=logging.DEBUG,
+            )
             return None
         link = link_ptr.dereference()
 
         if not sentinel:
             obj_offset = self.vol.offset - relative_offset
             if not trans_layer.is_valid(obj_offset):
+                self._report_unreadable(
+                    list_name,
+                    direction,
+                    count,
+                    layer_name,
+                    obj_offset,
+                    "list entry",
+                    strict,
+                )
                 return None
 
             yield self._context.object(
@@ -1111,11 +1186,21 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
                 offset=obj_offset,
                 native_layer_name=native_layer_name,
             )
+            count += 1
 
         seen = {self.vol.offset}
         while link.vol.offset not in seen:
             obj_offset = link.vol.offset - relative_offset
             if not trans_layer.is_valid(obj_offset):
+                self._report_unreadable(
+                    list_name,
+                    direction,
+                    count,
+                    layer_name,
+                    obj_offset,
+                    "list entry",
+                    strict,
+                )
                 return None
 
             yield self._context.object(
@@ -1124,11 +1209,21 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
                 offset=obj_offset,
                 native_layer_name=native_layer_name,
             )
+            count += 1
 
             seen.add(link.vol.offset)
 
             link_ptr = getattr(link, direction)
             if not (link_ptr and link_ptr.is_readable()):
+                self._report_unreadable(
+                    list_name,
+                    direction,
+                    count,
+                    layer_name,
+                    int(link_ptr),
+                    f"{direction} target",
+                    strict,
+                )
                 return None
             link = link_ptr.dereference()
 
