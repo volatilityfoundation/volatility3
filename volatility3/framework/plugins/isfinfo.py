@@ -23,7 +23,7 @@ class IsfInfo(plugins.PluginInterface):
     """Determines information about the currently available ISF files, or a specific one"""
 
     _required_framework_version = (2, 0, 0)
-    _version = (2, 0, 0)
+    _version = (2, 0, 1)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -153,8 +153,8 @@ class IsfInfo(plugins.PluginInterface):
                 constants.CACHE_PATH, constants.IDENTIFIERS_FILENAME
             )
             cache = symbol_cache.SqliteCache(identifiers_path)
-            valid = "Unknown"
             for identifier, location in cache.get_identifier_dictionary().items():
+                valid = "Unknown"
                 (
                     num_bases,
                     num_types,
