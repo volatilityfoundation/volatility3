@@ -105,7 +105,7 @@ class PsAux(plugins.PluginInterface):
             yield (0, (pid, ppid, name, args))
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
+        filter_func = pslist.PsList.create_user_tid_filter(self.config.get("pid", None))
 
         return renderers.TreeGrid(
             [("PID", int), ("PPID", int), ("COMM", str), ("ARGS", str)],

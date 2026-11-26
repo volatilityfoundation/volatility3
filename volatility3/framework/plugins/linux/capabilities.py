@@ -186,7 +186,7 @@ class Capabilities(plugins.PluginInterface):
         self._check_capabilities_support(self.context, self.config["kernel"])
 
         pids = self.config.get("pids")
-        pid_filter = pslist.PsList.create_pid_filter(pids)
+        pid_filter = pslist.PsList.create_user_tid_filter(pids)
         tasks = pslist.PsList.list_tasks(
             self.context, self.config["kernel"], filter_func=pid_filter
         )

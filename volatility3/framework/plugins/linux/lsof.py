@@ -181,7 +181,7 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 yield FDInternal(task=task, fd_fields=fd_fields)
 
     def _generator(self, pids, vmlinux_module_name, include_files_only):
-        filter_func = pslist.PsList.create_pid_filter(pids)
+        filter_func = pslist.PsList.create_user_tid_filter(pids)
 
         for fd_internal in self.list_fds(
             self.context,
@@ -223,7 +223,7 @@ class Lsof(plugins.PluginInterface, timeliner.TimeLinerInterface):
         pids = self.config.get("pid", None)
         vmlinux_module_name = self.config["kernel"]
 
-        filter_func = pslist.PsList.create_pid_filter(pids)
+        filter_func = pslist.PsList.create_user_tid_filter(pids)
         for fd_internal in self.list_fds(
             self.context, vmlinux_module_name, filter_func=filter_func
         ):
