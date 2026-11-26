@@ -294,7 +294,10 @@ class QuickTextRenderer(CLIRenderer):
         """
         # TODO: Docstrings
         # TODO: Improve text output
-        outfd = sys.stdout
+
+        #Forces utf-8 encoding to prevent Windows powershell UnicodeEncodeError
+        from io import TextIOWrapper
+        outfd = TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
         line = []
         ignore_columns = self.ignored_columns(grid)
