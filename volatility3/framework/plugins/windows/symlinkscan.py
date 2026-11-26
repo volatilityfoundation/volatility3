@@ -5,7 +5,7 @@
 import datetime
 from typing import Iterable
 
-from volatility3.framework import renderers, exceptions, interfaces
+from volatility3.framework import exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins import timeliner
@@ -55,13 +55,19 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
         """
 
         kernel = context.modules[kernel_module_name]
+        scan_layer_name = context.layers[kernel.layer_name].config.get(
+            "memory_layer", kernel.layer_name
+        )
 
         constraints = poolscanner.PoolScanner.builtin_constraints(
             kernel.symbol_table_name, [b"Sym\xe2", b"Symb"]
         )
 
         for result in poolscanner.PoolScanner.generate_pool_scan(
-            context, kernel_module_name, constraints
+            context,
+            kernel_module_name,
+            constraints,
+            scan_layer_name=scan_layer_name,
         ):
             _constraint, mem_object, _header = result
             yield mem_object

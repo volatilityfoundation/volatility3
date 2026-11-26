@@ -230,6 +230,9 @@ class Callbacks(interfaces.plugins.PluginInterface):
             A list of callback objects found by scanning the `layer_name` layer for callback pool signatures
         """
         kernel = context.modules[kernel_module_name]
+        scan_layer_name = context.layers[kernel.layer_name].config.get(
+            "memory_layer", kernel.layer_name
+        )
 
         is_vista_or_later = versions.is_vista_or_later(
             context=context, symbol_table=kernel.symbol_table_name
@@ -248,7 +251,10 @@ class Callbacks(interfaces.plugins.PluginInterface):
             mem_object,
             _header,
         ) in poolscanner.PoolScanner.generate_pool_scan(
-            context, kernel_module_name, constraints
+            context,
+            kernel_module_name,
+            constraints,
+            scan_layer_name=scan_layer_name,
         ):
             try:
                 if isinstance(mem_object, callbacks._SHUTDOWN_PACKET):

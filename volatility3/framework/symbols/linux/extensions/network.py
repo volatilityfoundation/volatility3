@@ -9,7 +9,6 @@ from volatility3.framework.symbols import linux
 from volatility3.framework.renderers import conversion
 import socket as socket_module
 
-
 vollog = logging.getLogger(__name__)
 
 

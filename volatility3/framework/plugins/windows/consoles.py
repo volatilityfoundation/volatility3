@@ -21,7 +21,6 @@ from volatility3.framework.symbols.windows.extensions import pe, consoles
 from volatility3.plugins.windows import pslist, info, verinfo
 from volatility3.plugins.windows.registry import hivelist
 
-
 vollog = logging.getLogger(__name__)
 
 
@@ -244,10 +243,8 @@ class Consoles(interfaces.plugins.PluginInterface):
             )
 
             try:
-                (major, minor, product, build) = (
-                    verinfo.VerInfo.get_version_information(
-                        context, pe_table_name, conhost_layer_name, conhost_base
-                    )
+                major, minor, product, build = verinfo.VerInfo.get_version_information(
+                    context, pe_table_name, conhost_layer_name, conhost_base
                 )
                 conhost_mod_version = build
                 vollog.debug(

@@ -236,7 +236,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             raise WindowsCrashDumpFormatException(
                 base_layer.name, f"Crashdump header not found at offset {offset}"
             )
-        (signature, validdump) = cls._magic_struct.unpack(header_data)
+        signature, validdump = cls._magic_struct.unpack(header_data)
 
         if signature != cls.SIGNATURE:
             raise WindowsCrashDumpFormatException(

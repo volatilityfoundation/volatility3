@@ -375,6 +375,7 @@ class PoolScanner(plugins.PluginInterface):
         kernel_module_name: str,
         object_symbol_table_name: str,
         constraints: List[PoolConstraint],
+        scan_layer_name: Optional[str] = None,
     ) -> Generator[
         Tuple[
             PoolConstraint,
@@ -393,6 +394,7 @@ class PoolScanner(plugins.PluginInterface):
             kernel_module_name: The name of the module for the kernel
             object_symbol_table_name: The name of the symbol table for the object being scanned for
             constraints: List of pool constraints used to limit the scan results
+            scan_layer_name: Optional layer name to explicitly scan for pool tags
         Returns:
             Iterable of tuples, containing the constraint that matched, the object from memory, the object header used to determine the object
         """
@@ -419,6 +421,10 @@ class PoolScanner(plugins.PluginInterface):
         # switch to a non-virtual layer if necessary
         if not is_windows_10:
             scan_layer = context.layers[scan_layer].config["memory_layer"]
+
+        # callers can opt into a specific scan layer to avoid pathological scan ranges
+        if scan_layer_name is not None:
+            scan_layer = scan_layer_name
 
         if symbols.symbol_table_is_64bit(
             context=context, symbol_table_name=kernel.symbol_table_name
@@ -476,6 +482,7 @@ class PoolScanner(plugins.PluginInterface):
         context: interfaces.context.ContextInterface,
         kernel_module_name: str,
         constraints: List[PoolConstraint],
+        scan_layer_name: Optional[str] = None,
     ) -> Generator[
         Tuple[
             PoolConstraint,
@@ -492,6 +499,7 @@ class PoolScanner(plugins.PluginInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             kernel_module_name: The name of the module for the kernel
             constraints: List of pool constraints used to limit the scan results
+            scan_layer_name: Optional layer name to explicitly scan for pool tags
 
         Returns:
             Iterable of tuples, containing the constraint that matched, the object from memory, the object header used to determine the object
@@ -501,7 +509,11 @@ class PoolScanner(plugins.PluginInterface):
 
         # repeat the symbol table to match the original `generate_pool_scan` behaviour
         yield from cls.generate_pool_scan_extended(
-            context, kernel_module_name, kernel.symbol_table_name, constraints
+            context,
+            kernel_module_name,
+            kernel.symbol_table_name,
+            constraints,
+            scan_layer_name=scan_layer_name,
         )
 
     @classmethod
