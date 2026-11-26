@@ -24,7 +24,7 @@ class Sockscan(plugins.PluginInterface):
     """Scans for network connections found in memory layer."""
 
     _required_framework_version = (2, 6, 0)
-    _version = (1, 0, 0)
+    _version = (1, 0, 1)
 
     @classmethod
     def get_requirements(cls):
@@ -445,6 +445,8 @@ class Sockscan(plugins.PluginInterface):
                 psock = self._walk_file_ops_needles(
                     kernel_module_name, memory_layer_name, needle_addr, f_op_offset
                 )
+                if psock is not None:
+                    sock_physical_addr = psock.vol.offset
 
             if psock is not None and sock_physical_addr not in seen_sock_physical_addr:
                 seen_sock_physical_addr.add(sock_physical_addr)
