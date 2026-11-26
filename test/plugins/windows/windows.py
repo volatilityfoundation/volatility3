@@ -83,6 +83,50 @@ class TestWindowsPsscan:
         assert out.find(b"svchost.exe") != -1
         assert out.count(b"\n") > 10
 
+    def test_windows_specific_psscan_physical(self, volatility, python):
+        image = WindowsSamples.WINDOWSXP_GENERIC.value.path
+        rc, out, _err = test_volatility.runvol_plugin(
+            "windows.psscan.PsScan",
+            image,
+            volatility,
+            python,
+            pluginargs=("--physical",),
+        )
+        assert rc == 0
+        out = out.lower()
+        assert out.find(b"system") != -1
+        assert out.find(b"csrss.exe") != -1
+        assert out.find(b"svchost.exe") != -1
+        assert out.count(b"\n") > 10
+
+    def test_windows_10_specific_psscan(self, volatility, python):
+        image = WindowsSamples.WINDOWS10_GENERIC.value.path
+        rc, out, _err = test_volatility.runvol_plugin(
+            "windows.psscan.PsScan", image, volatility, python
+        )
+        assert rc == 0
+        out = out.lower()
+        assert out.find(b"system") != -1
+        assert out.find(b"csrss.exe") != -1
+        assert out.find(b"svchost.exe") != -1
+        assert out.count(b"\n") > 10
+
+    def test_windows_10_specific_psscan_physical(self, volatility, python):
+        image = WindowsSamples.WINDOWS10_GENERIC.value.path
+        rc, out, _err = test_volatility.runvol_plugin(
+            "windows.psscan.PsScan",
+            image,
+            volatility,
+            python,
+            pluginargs=("--physical",),
+        )
+        assert rc == 0
+        out = out.lower()
+        assert out.find(b"system") != -1
+        assert out.find(b"csrss.exe") != -1
+        assert out.find(b"svchost.exe") != -1
+        assert out.count(b"\n") > 10
+
 
 class TestWindowsDlllist:
     def test_windows_generic_dlllist(self, volatility, python, image):

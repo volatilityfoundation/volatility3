@@ -23,7 +23,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for processes present in a particular windows memory image."""
 
     _required_framework_version = (2, 3, 1)
-    _version = (2, 0, 0)
+    _version = (2, 0, 1)
 
     @classmethod
     def get_requirements(cls):
@@ -269,22 +269,27 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             filter_func=pslist.PsList.create_pid_filter(self.config.get("pid", None)),
         ):
             file_output = "Disabled"
-            if self.config["dump"]:
-                # windows 10 objects (maybe others in the future) are already in virtual memory
-                if proc.vol.layer_name == kernel.layer_name:
-                    vproc = proc
-                else:
-                    try:
-                        vproc = self.virtual_process_from_physical(
-                            self.context,
-                            self.config["kernel"],
-                            proc,
-                        )
-                    except exceptions.PagedInvalidAddressException:
-                        vproc = None
 
+            if isinstance(self.context.layers[proc.vol.layer_name], layers.intel.Intel):
+                vproc = proc
+                if self.config["physical"]:
+                    _, _, offset, _, _ = list(
+                        memory.mapping(offset=proc.vol.offset, length=0)
+                    )[0]
+                else:
+                    offset = proc.vol.offset
+            else:
+                vproc = self.virtual_process_from_physical(
+                    self.context, self.config["kernel"], proc
+                )
+                if self.config["physical"]:
+                    offset = proc.vol.offset
+                else:
+                    offset = vproc.vol.offset if vproc is not None else None
+
+            if self.config["dump"]:
                 file_output = "Error outputting file"
-                if vproc:
+                if vproc is not None:
                     file_handle = pslist.PsList.process_dump(
                         self.context,
                         kernel.symbol_table_name,
@@ -292,16 +297,14 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         vproc,
                         self.open,
                     )
-
                     if file_handle:
                         file_output = file_handle.preferred_filename
 
-            if not self.config["physical"]:
-                offset = proc.vol.offset
+            # format offset for display
+            if offset is None:
+                display_offset = renderers.UnreadableValue()
             else:
-                (_, _, offset, _, _) = list(
-                    memory.mapping(offset=proc.vol.offset, length=0)
-                )[0]
+                display_offset = format_hints.Hex(offset)
 
             try:
                 yield (
@@ -314,7 +317,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                             max_length=proc.ImageFileName.vol.count,
                             errors="replace",
                         ),
-                        format_hints.Hex(offset),
+                        display_offset,
                         proc.ActiveThreads,
                         proc.get_handle_count(),
                         proc.get_session_id(),
