@@ -1,0 +1,8 @@
+{
+  "jmp_rel32_template": "e900000000",
+  "jmp_rel8_template": "eb00",
+  "jmp_indirect_rip_template": "ff25000000000000000000000000",
+  "jmp_indirect_rip_layer_template": "ff25100000009090909090909090",
+  "movabs_jmp_rax_template": "48b80000000000000000ffe0",
+  "clean_standard_prologue": "558bec83ec08"
+}
