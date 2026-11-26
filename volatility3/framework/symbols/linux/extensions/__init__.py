@@ -2580,8 +2580,11 @@ class inode(objects.StructType):
         if self.has_member(f"{member}_sec") and self.has_member(f"{member}_nsec"):
             # kernels >= 6.11 it's i_*_sec -> time64_t and i_*_nsec -> u32
             # Ref Linux commit 3aa63a569c64e708df547a8913c84e64a06e7853
+            # Nanoseconds stay below 2**30, so clearing the I_CTIME_QUERIED bit is
+            # safe for all three members, as the kernel's inode_get_ctime_nsec() does
+            nsec = self.member(f"{member}_nsec") & ~linux_constants.I_CTIME_QUERIED
             return conversion.unixtime_to_datetime(
-                self.member(f"{member}_sec") + self.has_member(f"{member}_nsec") / 1e9
+                self.member(f"{member}_sec") + nsec / linux_constants.NSEC_PER_SEC
             )
         elif self.has_member(f"__{member}"):
             # 6.6 <= kernels < 6.11 it's a timespec64

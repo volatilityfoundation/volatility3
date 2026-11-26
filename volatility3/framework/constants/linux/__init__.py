@@ -398,6 +398,10 @@ class PT_FLAGS(enum.Flag):
 # Boot time
 NSEC_PER_SEC = 1e9
 
+# Multigrain timestamps (kernel 6.13) keep this flag in the top bit of inode.i_ctime_nsec.
+# Ref Linux commit 4e40eff0b5737c0de39e1ae5812509efbc0b986e, inode_get_ctime_nsec()
+I_CTIME_QUERIED = 1 << 31
+
 
 # Valid sizes for modules. Note that the Linux kernel does not define these values; they
 # are based on empirical observations of typical memory allocations for kernel modules.
