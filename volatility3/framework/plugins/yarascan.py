@@ -176,8 +176,31 @@ class YaraScan(plugins.PluginInterface):
         return not tuple(int(x) for x in yara.__version__.split(".")) < (4, 3)
 
     @classmethod
+    def _warn_ignored_string_options(cls, config: Dict[str, Any]) -> None:
+        """Warns when options that only affect yara_string rules are set at the
+        same time as a rules file, where they have no effect."""
+        ignored = [name for name in ("insensitive", "wide") if config.get(name, False)]
+        if ignored:
+            vollog.warning(
+                f"These options only apply to yara_string rules and are ignored when a rules file is supplied: {', '.join(ignored)}"
+            )
+
+    @classmethod
     def process_yara_options(cls, config: Dict[str, Any]):
         rules = None
+
+        # Only one rule source is ever used, so warn rather than silently pick one
+        # when the user supplies more than one.
+        rule_sources = [
+            name
+            for name in ("yara_string", "yara_file", "yara_compiled_file")
+            if config.get(name) is not None
+        ]
+        if len(rule_sources) > 1:
+            vollog.warning(
+                f"Multiple yara rule sources were supplied ({', '.join(rule_sources)}); only {rule_sources[0]} will be used"
+            )
+
         if config.get("yara_string") is not None:
             rule = config["yara_string"]
             if rule[0] not in ["{", "/"]:
@@ -188,9 +211,11 @@ class YaraScan(plugins.PluginInterface):
                 rule += " wide ascii"
             rules = YaraScanner.get_rule(rule)
         elif config.get("yara_file") is not None:
+            cls._warn_ignored_string_options(config)
             vollog.debug(f"Plain file: {config['yara_file']} - yara-x: {USE_YARA_X}")
             rules = YaraScanner.from_file(config["yara_file"])
         elif config.get("yara_compiled_file") is not None:
+            cls._warn_ignored_string_options(config)
             vollog.debug(
                 f"Compiled file: {config['yara_compiled_file']} - yara-x: {USE_YARA_X}"
             )
