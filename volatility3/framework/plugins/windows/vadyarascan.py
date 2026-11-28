@@ -58,7 +58,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
 
-        sanity_check = 1024 * 1024 * 1024  # 1 GB
+        max_size = self.config.get("max_size", 0x40000000)
 
         for task in pslist.PsList.list_processes(
             context=self.context,
@@ -72,9 +72,9 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
             vad_maps_to_scan = []
 
             for start, size in self.get_vad_maps(task):
-                if size > sanity_check:
+                if size > max_size:
                     vollog.debug(
-                        f"VAD at 0x{start:x} over sanity-check size, not scanning"
+                        f"VAD at 0x{start:x} over max_size ({max_size}), not scanning"
                     )
                     continue
                 max_vad_size = max(max_vad_size, size)
