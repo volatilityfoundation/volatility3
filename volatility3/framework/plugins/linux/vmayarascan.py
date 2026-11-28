@@ -56,7 +56,7 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
         # use yarascan to parse the yara options provided and create the rules
         rules = yarascan.YaraScan.process_yara_options(dict(self.config))
 
-        sanity_check = 1024 * 1024 * 1024  # 1 GB
+        max_size = self.config.get("max_size", 0x40000000)
 
         # filter based on the pid option if provided
         filter_func = pslist.PsList.create_pid_filter(self.config.get("pid", None))
@@ -77,9 +77,9 @@ class VmaYaraScan(interfaces.plugins.PluginInterface):
             max_vma_size = 0
             vma_maps_to_scan = []
             for start, size in self.get_vma_maps(task):
-                if size > sanity_check:
+                if size > max_size:
                     vollog.debug(
-                        f"VMA at 0x{start:x} over sanity-check size, not scanning"
+                        f"VMA at 0x{start:x} over max_size ({max_size}), not scanning"
                     )
                     continue
                 max_vma_size = max(max_vma_size, size)
